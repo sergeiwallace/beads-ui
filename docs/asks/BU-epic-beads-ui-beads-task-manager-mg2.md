@@ -123,3 +123,15 @@ body_sha256: e8969a0ef801cca5e901bdffed26b9e639affcef5768f7b9688ecaea3e4841af
 and have a repo for doc viewer and a repo for beads-view. and the shorthand alias / beads task / cc session alias will be `bv` / `BV`. the doc viewer will be doc-editor. or actually, should i just make the beads mod repo be called beads-ui? maybe i should because if im creating a tui via claude code mods, i could also have this repo have shared components for a claude desktop / web app MCP UI app and also a local / hostable (with templates / quick starts) web app and mobile app etc. or should i have some of those be separate? probably the mobile app should be separate but the web / mcp ui app / claude code mods tui app could share frontend components / code / modules, etc, right? what do you recommend? a separate repo for each or some of them or a single repo for beads claude code mods tui, desktop / web mcp ui app, and web app (local but also hostable with infra-as-config templates etc) . im leaning towards that unless you have a reason not to do that. and then later we can do a separate repo for beads-mobile which can either be a shared app for both ios and androids or separate apps for beads-ui-ios and beads-ui-android. and i think we can have the base one be beads-ui for the three other surfaces. and for desktop app, we can maybe do that one later. if it can re-use compoennts enough from web app, then we can have it be same repo. otherwise we can have it be beads-ui-mac and beads-ui-win and beads-ui-linux etc. or beads-ui-desktop if those should be combined under one stack. whatever  makes sense. add all these as separate /beads-task(s) under an overarching beads-ui epic /beads-task. we can have sub-epic /beads-task(S) for the ios / android / mac / linux / windows etc. so create an individual epic /beads-task for aech of those but don't create a cc task for android or windows, windows. just a /beads-task.
 ```
 ````
+````text
+entry_id: A003
+kind: FOLLOW-UP
+recorded_at: 2026-10-14T23:40:01Z
+speaker: human
+supersedes:
+body_sha256: bad4133ef5cd7da68ae2da7f8d5e261690ee8cc8ef094eddfa36e0ea378e1791
+
+```text
+and ship all these changes. and lmk what you reocmmend. add this as a resaerch topic as well for the /delegate fable /orchestrate /auto-flow that will /delegate /orchestrate /research-doc . they can research all these topics. mainly the web app, claude web / desktop mcp UI app, and claude code TUI for now. we'll do separate agents for ios / macos / linux later, in that order.
+```
+````
