@@ -135,3 +135,15 @@ body_sha256: bad4133ef5cd7da68ae2da7f8d5e261690ee8cc8ef094eddfa36e0ea378e1791
 and ship all these changes. and lmk what you reocmmend. add this as a resaerch topic as well for the /delegate fable /orchestrate /auto-flow that will /delegate /orchestrate /research-doc . they can research all these topics. mainly the web app, claude web / desktop mcp UI app, and claude code TUI for now. we'll do separate agents for ios / macos / linux later, in that order.
 ```
 ````
+````text
+entry_id: A004
+kind: FOLLOW-UP
+recorded_at: 2026-10-14T23:40:01Z
+speaker: human
+supersedes:
+body_sha256: 62d4425e3aeec49e0addfb4762ec453bcd2d102d0300f4c9788ff99fccba034d
+
+```text
+also, this beads UI should also incorporate the autonomous task queue system and any dashboard we created for that. we should merge the latter system / features or integrate / combine all that with beads UI. but we'll need to think about where the autonomous task queue system should live. because i could see it being a part of ai-harness / ai-chassis without a UI / TUI mod at all but also be tightly integrated with beads UI apps. maybe a separate repo / package? or we optionally import it from ai-chassis. idk, we can follow up on that later. for now, don't worry about migrating or refactoring or moving to new / different repo. keep it where it is but as a /beads-task and cc task under the beads UI epic for this and ship it. we'll follow-up on this later. i still need to open source ai-chassis anyway.
+```
+````
