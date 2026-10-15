@@ -22,10 +22,10 @@ and Linux.
 
 ## Planned layout
 
-A monorepo with one core package for data access, state, layout and theme, and one package per
-surface (TUI mod, MCP UI app, web app). A mod draws to the terminal and has no DOM, so the surfaces
-share logic and design tokens rather than UI components. The design doc settles the final package
-boundaries.
+A monorepo with one shared core for data access, domain logic, view models, commands and design
+tokens, and one package per surface (TUI mod, MCP UI app, web app). A mod draws to the terminal and
+has no DOM, so the surfaces share logic and design tokens rather than UI components or layout. The
+design doc settles the package boundaries and when the core moves out of the plugin.
 
 ## Open source
 
@@ -35,8 +35,9 @@ nothing of that kind may be committed to it. Copy `.env.example` to `.env` for l
 
 ## Repository setup
 
-The scaffold comes from a [Copier](https://copier.readthedocs.io/) template; `.copier-answers.yml`
-records the answers, and `copier update` pulls later template changes. Git hooks install with
+The scaffold comes from a [Copier](https://copier.readthedocs.io/) template that is private, so
+`copier update` works only for the maintainer; `.copier-answers.yml` records the answers it was
+generated with. Contributors need neither. Git hooks install with
 `bash .githooks/install.sh` (needs `pre-commit`).
 
 ## License
