@@ -110,7 +110,7 @@ Omission carries meaning. "OMITTING either member means the key is ABSENT there.
 
 Two more rules bear on a rank key. Numbers compare as their source literal, the store "decodes JSON numbers through a float", and the spec advises "For a coordination token, prefer a STRING". A swap that changes nothing writes nothing. [VERIFIABLE][^1] So a fractional-index rank stored as a string such as `"a0V"` is the shape this operation is built for. [INFERENCE]
 
-The landscape research's candidate row "`metadata.rank` as a fractional index, written with HTTP `:casMetadata`" is therefore sound at the wire level. A drag that also changes `status` is two writes under CAS, or one PATCH with `metadata.set` and `expected_version`. [INFERENCE]
+The landscape research's candidate representation, `metadata.rank` as a fractional index written with `:casMetadata`, is therefore sound at the wire level. A drag that also changes `status` is two writes under CAS, or one PATCH with `metadata.set` and `expected_version`. [INFERENCE]
 
 ### 1.6 `GET /v0/beads/events:watch` (`watchEvents`) and the journal
 
@@ -184,7 +184,7 @@ The specification also makes support explicit and negotiated. "As an extension, 
 
 ### 2.2 What Claude Code documents
 
-The answer to "what does Claude Code do with a tool whose visibility excludes `model`" is not stated. The MCP page was read in full and does not mention `visibility`, app-only tools or `_meta.ui` on tools. [VERIFIABLE][^13]
+What Claude Code does with a tool whose visibility excludes `model` is not stated. The MCP page was read in full and does not mention `visibility`, app-only tools or `_meta.ui` on tools. [VERIFIABLE][^13]
 
 The page does state one MCP Apps behaviour, for resources: "MCP Apps UI resources are entries with a `ui://` URI or the `text/html;profile=mcp-app` media type: pages for a host application to render rather than content for Claude to read. They don't appear in the `@` suggestions or in the resource list tool's results". [VERIFIABLE][^13] The changelog dates it to 2.1.281: "Changed MCP resource lists (the resource list tool and @-mention suggestions) to skip MCP Apps UI resources; reading one by URI still works". [VERIFIABLE][^14][^15]
 
@@ -196,7 +196,7 @@ The installed 2.1.296 binary contains the string `io.modelcontextprotocol/ui` fo
 
 ### 2.3 What the ext-apps SDK and its reference host do
 
-The README does not answer the question for non-Apps hosts. It says "There's no _supported_ host implementation in this repo (beyond the examples/basic-host example)" and "Host support varies". It says nothing about what a host without MCP Apps should do with app-only tools. [VERIFIABLE][^10]
+The README does not answer the question for non-Apps hosts. It says "There's no _supported_ host implementation in this repo" beyond the basic-host example, and points to the MCP clients page for host support. It says nothing about what a host without MCP Apps should do with app-only tools. [VERIFIABLE][^10]
 
 `basic-host` is an Apps host, and it filters. Its `isToolVisibleToModel` carries the comment "Tools with `visibility: ["app"]` should not be shown in tool lists." and returns `visibility.includes("model")`, defaulting to visible when `_meta.ui` is absent or does not parse. The function is applied in three `.filter` calls. [VERIFIABLE][^11]
 
@@ -212,8 +212,8 @@ Claude Code users have a documented second guard. A bare-name or glob deny rule 
 
 ### Hand-offs
 
-- A live spike for the design stage: start a stdio MCP server that logs the `initialize` request's `capabilities.extensions`, register one tool with `visibility: ["app"]`, and check `/mcp` and the model's tool list in Claude Code 2.1.29x. This settles both unknowns in under ten minutes of agent time.
-- Coordinator's design stage: adopt capability-gated registration of app-only tools, with a deny-rule fallback for Claude Code, or record why not.
+- A live spike for the design stage: start a stdio MCP server that logs the `initialize` request's `capabilities.extensions`. Register one tool with `visibility: ["app"]`, then check `/mcp` and the model's tool list in Claude Code 2.1.29x. This settles both unknowns in under ten minutes of agent time.
+- Coordinator's design stage: register app-only tools only for hosts that advertise the extension, with a deny-rule fallback for Claude Code, or record why not.
 - Sibling leg (MCP Apps rendering in Claude Desktop and claude.ai): unchanged by this packet.
 
 ## 3. Task-tool deny rules in background and cloud sessions
@@ -224,7 +224,7 @@ The permissions page states the general rule: "A bare tool name like `Bash` remo
 
 The page names no exception for background sessions, cloud sessions, headless runs or subagents. It also does not say the rule applies to them by name. [VERIFIABLE][^17]
 
-The tools reference's sentence is about model gating, not about permissions: "In background sessions and in cloud sessions, Claude Code provides the same tools on every model, listed or not." It follows the list of models that get the Task tools by default. [VERIFIABLE][^16] Read in place, "listed or not" means the model list does not apply there. It does not say whether a deny rule removes the tools. [INFERENCE]
+The tools reference's sentence is about model gating, not about permissions. It says that in background and cloud sessions "Claude Code provides the same tools on every model, listed or not." It follows the list of models that get the Task tools by default. [VERIFIABLE][^16] Read in place, "listed or not" means the model list does not apply there. It does not say whether a deny rule removes the tools. [INFERENCE]
 
 The changelog was searched in full for deny rules together with background or cloud sessions and holds no such entry. [VERIFIABLE][^15] The direct answer to Question 3 is `not stated`. [NO SOURCE]
 
@@ -282,7 +282,7 @@ The CLI refuses the two styles together: "cannot combine --metadata with --set-m
 
 ### 4.3 `--set-metadata key=value` types the value
 
-`--set-metadata` writes one top-level key per flag and keeps the rest. [VERIFIABLE][^6][^23] The value is typed from its spelling. `MetadataEditValue` documents: "`null` is JSON null, `true`/`false` are booleans, anything that scans as a float AND is valid JSON on its own is emitted as that literal (so 5 -> 5, 1e3 -> 1e3, while 05, +5 and NaN stay strings because they are not valid JSON), and everything else is a string." [VERIFIABLE][^6] The v1.3.0 release notes record the same contract: "`--set-metadata k=5` stores the typed scalar `5`". [VERIFIABLE][^3]
+`--set-metadata` writes one top-level key per flag and keeps the rest. [VERIFIABLE][^6][^23] The value is typed from its spelling. In `MetadataEditValue` the spellings `null`, `true` and `false` become JSON null and booleans, and "anything that scans as a float AND is valid JSON on its own is emitted as that literal (so 5 -> 5, 1e3 -> 1e3, while 05, +5 and NaN stay strings because they are not valid JSON), and everything else is a string." [VERIFIABLE][^6] The v1.3.0 release notes record the same contract: "`--set-metadata k=5` stores the typed scalar `5`". [VERIFIABLE][^3]
 
 | Command | Stored value | Type |
 |---|---|---|
@@ -307,7 +307,7 @@ No metadata-specific size limit is documented in the CLI help or the user docs. 
 
 Upstream reserves two prefixes. The metadata page's table gives `bd:` for "Beads internal use" and `_` for "Internal/private keys", followed by "Avoid these prefixes in user-defined keys to prevent conflicts with future Beads features." [VERIFIABLE][^5] The key regex rejects `:`, so a `bd:`-prefixed key cannot be written through `--set-metadata` or `:casMetadata` at all. [INFERENCE]
 
-The same page advises namespacing and shows a tracker round-trip example holding `board_id`, `sprint_id` and `remote_type` under one integration key, with "Prefer namespaced keys and keep tracker-specific policy in the integration." [VERIFIABLE][^5] That is upstream's own precedent for keeping sprint data in metadata. [INFERENCE]
+The same page advises namespacing. Its tracker round-trip example holds `board_id`, `sprint_id` and `remote_type` under one integration key, with "Prefer namespaced keys and keep tracker-specific policy in the integration." [VERIFIABLE][^5] That is upstream's own precedent for keeping sprint data in metadata. [INFERENCE]
 
 No document names an indexed metadata key. The list sort cannot use metadata (section 1.8), and the filters are equality and presence over top-level keys. [VERIFIABLE][^1] The source builds them as JSON path expressions, which reads as a scan, not an index lookup. [INFERENCE]
 
@@ -323,11 +323,11 @@ The v1.3.0 source does carry optional metadata validation that the user docs des
 
 ### Emergent findings
 
-The prior research read the wrong version of the spec. The first 100,000 characters of `main` are close to v1.3.0, but `main` is ahead by three operations and four members, and a client generated from `main` would call `issues:batchGet` and `issues:reclaim`, which bd 1.3.0 does not serve. [VERIFIABLE][^1][^2][^25] [INFERENCE]
+The prior research read the wrong version of the spec. The first 100,000 characters of `main` are close to v1.3.0, but `main` is ahead by three operations and four members. A client generated from `main` would offer `issues:batchGet` and `issues:reclaim`, which bd 1.3.0 does not serve. [VERIFIABLE][^1][^2][^25] [INFERENCE]
 
 `bd update --metadata` merges. The help text alone suggests replacement, and a designer reading only `--help` would build a read-modify-write that the CLI already does safely. [VERIFIABLE][^7][^23]
 
-Cloud sessions ignore user settings. The ask's "config file setting ... per machine profile" covers local sessions only. [VERIFIABLE][^19] [INFERENCE]
+Cloud sessions ignore user settings. The ask's "this should be a config file setting though per machine profile" can cover local sessions only. [VERIFIABLE][^19] [INFERENCE]
 
 The 1.3.0 spec's `updateIssue` description and `IssuePatchBody` disagree about additive label edits. A generated client follows the schema. [VERIFIABLE][^1]
 
@@ -345,7 +345,7 @@ The metadata column's size and type. Not read. [NO SOURCE]
 
 Three Claude Code pages were read partly. The env-vars page was read to 100,000 of 171,035 characters, agent view to 100,000 of 137,050, and the docs changelog in two chunks; the GitHub changelog was searched in full. A clause on the unread part of the first two could change section 3. [VERIFIABLE][^18][^20]
 
-WebFetch output for Claude Code pages passes through an extraction model. Quotes from the tools reference, permissions and settings pages came back as raw page text and were substring-checked; quotes from the env-vars page came back as an extracted table row and match the leg C packet's independent fetch. [HEURISTIC]
+WebFetch output for Claude Code pages passes through an extraction model. Quotes from the tools reference, permissions and settings pages came back as raw page text and were substring-checked. Quotes from the env-vars page came back as an extracted table row, and they match the leg C packet's independent fetch. [HEURISTIC]
 
 ### Critic pass
 
@@ -421,3 +421,120 @@ Skeptic: whether "listed or not" was over-read. Section 3.1 quotes the sentence 
 [^25]: Claude Opus 5.5 researcher leaf for aih-3 (beads-ui). (2026). [Measurements behind the bd serve and tool-visibility spike](https://github.com/sergeiwallace/beads-ui/blob/main/docs/research/findings/evidence/bd-1.3.0-create-events-help-and-spec-versions.md). sergeiwallace/beads-ui, added in this packet's pull request. (E-1 to E-6: versions, spec diff across refs, `bd create --help`, `bd events --help`, `bd events tail --help`, Claude Code binary strings.)
 
 [^26]: Claude Opus 5.5 researcher leaf for aih-3 (beads-ui). (2026). [beads-ui research leg B: Claude Code mods, MCP Apps and the shared core](https://github.com/sergeiwallace/beads-ui/blob/main/docs/research/findings/beads-ui-mods-and-shared-core.md). sergeiwallace/beads-ui, tracked on main. Read from the worktree 2026-10-15. (Its section on MCP Apps in Claude Code, which states "Claude Code is not an MCP Apps host" from its own sources.)
+
+## Appendix: Provenance Ledger
+
+Quotes from files fetched as raw text were checked as whitespace-normalised substrings of the fetched text. Those files are the bd spec, source and release notes, the MCP Apps spec and SDK files, the GitHub changelog, the tracked evidence files, and the Claude Code tools reference, permissions and settings pages. Quotes from the Claude Code MCP, env-vars, agent-view, cloud, todo-tracking and docs-changelog pages came from WebFetch output in this session and were compared by eye. The Verdict column says which.
+
+| Claim | Source URL | Verbatim quote | Verdict | Live? |
+|---|---|---|---|---|
+| Create accepts parent at create | https://raw.githubusercontent.com/steveyegge/beads/v1.3.0/internal/httpapi/spec/openapi.v0.yaml | "Creates a typed `parent-child` edge from the new issue to this target." | SUPPORTED (substring) | Yes, HTTP 200, 2026-10-15 |
+| Create accepts labels | same as above | "The complete label set the issue is created with." | SUPPORTED (substring) | Yes |
+| Create accepts dependencies | same as above | "The complete set of explicit edges created with the issue." | SUPPORTED (substring) | Yes |
+| Metadata value is any JSON | same as above | "One metadata value: ANY JSON value" | SUPPORTED (substring) | Yes |
+| Create is one transaction | same as above | "Every edge lands in the same transaction as the row: an edge this request could not write is a `400` and the issue is not created either." | SUPPORTED (substring) | Yes |
+| issue_type must be sent | same as above | "SEND ONE. The member is optional in this schema and the role validates the EMPTY type against the same vocabulary as any other" | SUPPORTED (substring) | Yes |
+| Label inheritance default diverges | same as above | "diverges from `bd create --parent`, whose default is to inherit" | SUPPORTED (substring) | Yes |
+| HTTP writes skip hooks | same as above | "Hooks do not fire and the per-command auto-commit machinery does not run" | SUPPORTED (substring) | Yes |
+| batchCreate lacks metadata | same as above | "no `status`, no `sender`, no `metadata`, no `ephemeral`, no `no_history`, no `id`." | SUPPORTED (substring) | Yes |
+| batchCreate is all or nothing | same as above | "Creates every item in the request, or none of them." | SUPPORTED (substring) | Yes |
+| batchCreate assigns ids | same as above | "THE SERVER ASSIGNS EVERY ID." | SUPPORTED (substring) | Yes |
+| batchApply items can name themselves | same as above | "a create item may NAME itself and later items address it by that name" | SUPPORTED (substring) | Yes |
+| batchApply create carries metadata | same as above | "`metadata` is the issue's own metadata document and must be a JSON" | SUPPORTED (substring) | Yes |
+| PATCH presence rule | same as above | "a member present is written, a member absent is untouched. An empty object is a `400`" | SUPPORTED (substring) | Yes |
+| Done-status moves answer to close policy | same as above | "A STATUS THAT CROSSES INTO THE DONE CATEGORY ANSWERS TO CLOSE POLICY" | SUPPORTED (substring) | Yes |
+| Labels member replaces | same as above | "COMPLETE REPLACEMENT of the label set." | SUPPORTED (substring) | Yes |
+| Label removal wins | same as above | "so REMOVAL WINS when one label appears in more than one of them" | SUPPORTED (substring) | Yes |
+| Revision token precision | same as above | "rounds anything past 2^53 to a value NEAR the token that is not it" | SUPPORTED (substring) | Yes |
+| PATCH description lags schema on labels | same as above | "an additive `labels_add`/`labels_remove` pair can join the vocabulary later" | SUPPORTED (substring) | Yes |
+| PATCH guard failure advice | same as above | "Re-read and recompose; never retry the same body." | SUPPORTED (substring) | Yes |
+| CAS definition | same as above | "Sets `metadata[key]` if and only if it currently holds `expected`, and reports what it found either way." | SUPPORTED (substring) | Yes |
+| CAS key syntax | same as above | "a letter or underscore, then letters, digits, underscores, dots and slashes" | SUPPORTED (substring) | Yes |
+| CAS key is not a path | same as above | "ONE KEY, NOT A PATH" | SUPPORTED (substring) | Yes |
+| CAS omission semantics | same as above | "So a first-writer-wins acquire omits `expected`, a release omits `value`, and an ordinary hand-off carries both." | SUPPORTED (substring) | Yes |
+| CAS refusal is a 200 | same as above | "A REFUSED SWAP IS A 200, not a 409." | SUPPORTED (substring) | Yes |
+| CAS refusal carries current | same as above | "`swapped` is false and `current` carries the value that refused it" | SUPPORTED (substring) | Yes |
+| CAS corrupt row is 500 | same as above | "An issue whose stored metadata is not a JSON object answers 500" | SUPPORTED (substring) | Yes |
+| CAS prefers string tokens | same as above | "For a coordination token, prefer a STRING" | SUPPORTED (substring) | Yes |
+| Store decodes numbers via float | same as above | "The metadata store decodes JSON numbers through a float" | SUPPORTED (substring) | Yes |
+| watchEvents is the journal pushed | same as above | "The same journal as `listEvents`, PUSHED: a held-open `text/event-stream` response that emits each committed mutation as it lands" | SUPPORTED (substring) | Yes |
+| watchEvents needs the journal | same as above | "The durable events journal is NOT ENABLED on this workspace, so there is nothing to stream and never will be until an operator turns it on" | SUPPORTED (substring) | Yes |
+| Capability is per build | same as above | "says this BUILD serves the operation, not that this workspace has a journal" | SUPPORTED (substring) | Yes |
+| Heartbeat frame | same as above | "a comment line every ~20 seconds of silence" | SUPPORTED (substring) | Yes |
+| Last-Event-ID resume | same as above | "Present, it REPLACES `since` as the resume point." | SUPPORTED (substring) | Yes |
+| Event op set | same as above | "`create`, `update`, `close`, `delete`, `dep_add`, `dep_remove` or `comment`" | SUPPORTED (substring) | Yes |
+| Poll is usually the answer | same as above | "WATCH OR POLL is a real choice and the answer is usually poll." | SUPPORTED (substring) | Yes |
+| Paged read never capacity-refused | same as above | "this is the one that is never refused for capacity" | SUPPORTED (substring) | Yes |
+| Merges are not journaled | same as above | "so `bd dolt pull` and the changes a merge settles into this workspace are NOT journaled" | SUPPORTED (substring) | Yes |
+| Claim names the actor | same as above | "The caller always names the actor" | SUPPORTED (substring) | Yes |
+| Delete requires every id to resolve | same as above | "An id naming no stored bead is a `404` and NOTHING is deleted" | SUPPORTED (substring) | Yes |
+| Delete guard takes one id | same as above | "IT REQUIRES A SINGLE-ID REQUEST" | SUPPORTED (substring) | Yes |
+| Delete dry run | same as above | "`dry_run: true` answers the same question and changes nothing" | SUPPORTED (substring) | Yes |
+| Unfiltered durable sweep refused | same as above | "A `durable` sweep with neither `closed_before` nor `pattern` is refused with `400` / `invalid_argument`." | SUPPORTED (substring) | Yes |
+| Destructive ops fail whole | same as above | "fails whole" | SUPPORTED (substring) | Yes |
+| List sorts | same as above | "`created` is `(created_at DESC, id ASC)`; `priority` is `(priority ASC, created_at DESC, id ASC)`" | SUPPORTED (substring) | Yes |
+| Other sorts withheld | same as above | "are not offered here at all rather than offered behind a cursor that would silently skip and duplicate" | SUPPORTED (substring) | Yes |
+| Metadata equality filter | same as above | "Top-level metadata equality filter as `key=value`" | SUPPORTED (substring) | Yes |
+| 1 MiB body cap | same as above | "the 1 MiB every body on this surface shares" | SUPPORTED (substring) | Yes |
+| Non-object metadata can be stored | same as above | "validates only that the value is WELL-FORMED JSON" | SUPPORTED (substring) | Yes |
+| main spec has moved | https://raw.githubusercontent.com/steveyegge/beads/main/internal/httpapi/spec/openapi.v0.yaml | "operationId: reclaimIssues" | SUPPORTED (substring; absent from the v1.3.0 file) | Yes, HTTP 200, 2026-10-15 |
+| bd serve operation count | https://github.com/steveyegge/beads/releases/tag/v1.3.0 | "41 OpenAPI-specified operations across 35 paths" | SUPPORTED (substring) | Yes, HTTP 200, 2026-10-15 |
+| Journal retention floors | same as above | "(`events-journal-retain-days` 7, `events-journal-retain-rows` 100000)" | SUPPORTED (substring) | Yes |
+| set-metadata typed scalar | same as above | "`--set-metadata k=5` stores the typed scalar `5`" | SUPPORTED (substring) | Yes |
+| v1.3.1 only re-stamps rc.2 | https://github.com/steveyegge/beads/releases/tag/v1.3.1 | "differs from `v1.3.1-rc.2`" | SUPPORTED (substring) | Yes, HTTP 200, 2026-10-15 |
+| v1.3.1 has bd serve proxied fixes | same as above | "This applies only to proxied-server workspaces and to `bd serve`." | SUPPORTED (substring) | Yes |
+| Reserved prefixes | https://github.com/steveyegge/beads/blob/v1.3.0/docs/core-concepts/metadata.md | "Avoid these prefixes in user-defined keys to prevent conflicts with future Beads features." | SUPPORTED (substring) | Yes, HTTP 200, 2026-10-15 |
+| Namespaced keys advice | same as above | "Prefer namespaced keys and keep tracker-specific policy in the integration." | SUPPORTED (substring) | Yes |
+| Schema enforcement called future | same as above | "Optional schema enforcement (future)" | SUPPORTED (substring) | Yes |
+| Merge is top-level | https://github.com/steveyegge/beads/blob/v1.3.0/internal/storage/metadata.go | "Top-level keys from incoming overwrite keys in existing; keys only in existing are preserved." | SUPPORTED (substring) | Yes, HTTP 200, 2026-10-15 |
+| set-metadata value typing | same as above | "anything that scans as a float AND is valid JSON on its own is emitted as that literal" | SUPPORTED (substring) | Yes |
+| Key regex | same as above | "regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_./]*$`)" | SUPPORTED (substring) | Yes |
+| Dotted key is not nested | same as above | "(which dolt interprets as a nested path: {gc: {routed_to: ...}})" | SUPPORTED (substring) | Yes |
+| Schema field types | same as above | "MetadataFieldEnum   MetadataFieldType = \"enum\"" | SUPPORTED (substring) | Yes |
+| update --metadata is a merge | https://github.com/steveyegge/beads/blob/v1.3.0/cmd/bd/update.go | "Passed as a merge OPERATION, not a pre-merged value" | SUPPORTED (substring) | Yes, HTTP 200, 2026-10-15 |
+| metadata flags exclusive | same as above | "cannot combine --metadata with --set-metadata or --unset-metadata" | SUPPORTED (substring) | Yes |
+| Validation mode default | https://github.com/steveyegge/beads/blob/v1.3.0/internal/config/config.go | "v.SetDefault(\"validation.metadata.mode\", \"none\")" | SUPPORTED (substring) | Yes, HTTP 200, 2026-10-15 |
+| MCP Apps is stable | https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx | "**Status:** Stable (2026-01-26)" | SUPPORTED (substring) | Yes, HTTP 200, 2026-10-15 |
+| App-only visibility meaning | same as above | "Tool is callable by the app from the same server connection only" | SUPPORTED (substring) | Yes |
+| Hosts must hide app-only tools | same as above | "Host MUST NOT include tools in the agent's tool list when their visibility does not include" | SUPPORTED (substring) | Yes |
+| Non-Apps host fallback | same as above | "If host does not support MCP Apps, tool behaves as standard tool (text-only fallback)" | SUPPORTED (substring) | Yes |
+| Extension is negotiated | same as above | "As an extension, MCP Apps is optional and must be explicitly negotiated between clients and servers through the extension capabilities mechanism" | SUPPORTED (substring) | Yes |
+| Servers check capabilities | same as above | "Servers SHOULD check client capabilities before registering UI-enabled tools." | SUPPORTED (substring) | Yes |
+| Servers may vary tools | same as above | "Servers MAY register different tool variants based on host capabilities" | SUPPORTED (substring) | Yes |
+| No supported host in repo | https://github.com/modelcontextprotocol/ext-apps/blob/main/README.md | "There's no _supported_ host implementation in this repo" | SUPPORTED (substring) | Yes, HTTP 200, 2026-10-15 |
+| basic-host filters app-only tools | https://github.com/modelcontextprotocol/ext-apps/blob/main/examples/basic-host/src/index.tsx | "Tools with `visibility: [\"app\"]` should not be shown in tool lists." | SUPPORTED (substring) | Yes, HTTP 200, 2026-10-15 |
+| basic-host filter body | same as above | "return visibility.includes(\"model\");" | SUPPORTED (substring) | Yes |
+| Extension id constant | https://github.com/modelcontextprotocol/ext-apps/blob/main/src/server/index.ts | "export const EXTENSION_ID = \"io.modelcontextprotocol/ui\";" | SUPPORTED (substring) | Yes, HTTP 200, 2026-10-15 |
+| getUiCapability text-only fallback | same as above | "// Text-only fallback" | SUPPORTED (substring) | Yes |
+| getUiCapability returns undefined | same as above | "or `undefined` if not supported" | SUPPORTED (substring) | Yes |
+| Claude Code hides UI resources | https://code.claude.com/docs/en/mcp | "They don't appear in the `@` suggestions or in the resource list tool's results" | SUPPORTED (WebFetch raw chunk, compared by eye) | Yes, HTTP 200, 2026-10-15 |
+| Claude Code elicitation capability | same as above | "Claude Code declares `elicitation: {form: {}, url: {}}` in its client capabilities" | SUPPORTED (WebFetch raw chunk, compared by eye) | Yes |
+| Changelog 2.1.281 UI resources | https://code.claude.com/docs/en/changelog.md | "Changed MCP resource lists (the resource list tool and @-mention suggestions) to skip MCP Apps UI resources; reading one by URI still works" | SUPPORTED (WebFetch at offset 180000; substring in the GitHub copy) | Yes, HTTP 200, 2026-10-15 |
+| Changelog deny fix for MCP tools | https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md | "permission rules not removing MCP server tools before sending to the model" | SUPPORTED (substring) | Yes, HTTP 200, 2026-10-15 |
+| Changelog 2.1.233 removal | same as above | "Todo/task-tracking tools (TaskCreate/Get/Update/List, TodoWrite) are no longer available on Opus 4.8, Sonnet 5, Fable 5, Mythos 5, and newer models" | SUPPORTED (substring) | Yes |
+| Changelog 2.1.268 default | same as above | "Changed the task-tracking tools (TaskCreate/Get/Update/List, TodoWrite) to be offered only on Claude 3.x, Opus 4.0–4.7, Sonnet 4.0–4.6, Haiku 4.5" | SUPPORTED (substring) | Yes |
+| Background and cloud tool sentence | https://code.claude.com/docs/en/tools-reference.md | "Claude Code provides the same tools on every model, listed or not." | SUPPORTED (substring) | Yes, HTTP 200, 2026-10-15 |
+| Default set version | same as above | "The default set described here applies in Claude Code v2.1.268 and later." | SUPPORTED (substring) | Yes |
+| Subagents follow the session | same as above | "Claude Code gives a subagent the tools only when your session has them" | SUPPORTED (substring) | Yes |
+| Opt-in through allowedTools | same as above | "Name one of the tools in" | SUPPORTED (substring) | Yes |
+| Bare-name deny removes the tool | https://code.claude.com/docs/en/permissions.md | "A bare tool name like `Bash` removes the tool from Claude's context entirely, so Claude never sees it." | SUPPORTED (substring) | Yes, HTTP 200, 2026-10-15 |
+| Glob deny removes the tool | same as above | "A tool matched by a bare-name glob deny rule is removed from Claude's context, the same as a bare tool name" | SUPPORTED (substring) | Yes |
+| Deny at any level | same as above | "If a tool is denied at any level, no other level can allow it." | SUPPORTED (substring) | Yes |
+| Mods and deny rules | same as above | "Anywhere else, the mod can approve a call that a deny rule refuses." | SUPPORTED (substring) | Yes |
+| ENABLE_TASKS row | https://code.claude.com/docs/en/env-vars.md | "Set to `0` to get the legacy `TodoWrite` tool instead." | SUPPORTED (WebFetch extraction; matches the leg C packet's ledger) | Yes, HTTP 200, 2026-10-15 |
+| ENABLE_TODO_TOOLS row | same as above | "Set to `1` to get the task-tracking tools on every model." | SUPPORTED (WebFetch extraction) | Yes |
+| Cloud sessions skip user settings | https://code.claude.com/docs/en/settings.md | "not read. Both stay on your machine" | SUPPORTED (substring) | Yes, HTTP 200, 2026-10-15 |
+| Multi-repo cloud sessions skip permission rules | same as above | "reads only the `enabledPlugins` and `extraKnownMarketplaces` keys from each repository's `.claude/settings.json`, not permission rules" | SUPPORTED (substring) | Yes |
+| Background sessions read normal settings | https://code.claude.com/docs/en/agent-view.md | "A background session reads its settings from the directory it runs in, the same as if you had started `claude` there" | SUPPORTED (WebFetch extraction, compared by eye; link markup removed) | Yes, HTTP 200, 2026-10-15 |
+| Cloud settings routes | https://code.claude.com/docs/en/claude-code-on-the-web.md | "set an environment variable on the environment, or in a session with one repository, commit the key to that repository's `.claude/settings.json`" | SUPPORTED (WebFetch raw page, compared by eye; link markup removed) | Yes, HTTP 200, 2026-10-15 |
+| SDK opt-in routes | https://code.claude.com/docs/en/agent-sdk/todo-tracking.md | "Set `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` in the `env` option" | SUPPORTED (WebFetch raw page, compared by eye) | Yes, HTTP 200, 2026-10-15 |
+| update help text | https://github.com/sergeiwallace/beads-ui/blob/main/docs/research/findings/evidence/bd-1.3.0-delete-and-update-help.md | "Set custom metadata (JSON string or @file.json to read from file)" | SUPPORTED (substring) | Yes, tracked on main |
+| serve sweep warning | same as above | "anyone who can reach this address can erase closed work" | SUPPORTED (substring) | Yes |
+| Journal off in BU store (leg C) | https://github.com/sergeiwallace/beads-ui/blob/main/docs/research/findings/evidence/beads-ui-beads-queue-and-panel-measurements.md | "`bd config get events-journal` returned" | SUPPORTED (substring) | Yes, tracked on main |
+| Fleet opt-in in rendered settings | same as above | "The live `~/.claude/settings.json` contains the variable name once." | SUPPORTED (substring) | Yes |
+| Spec hashes, help text, binary strings | https://github.com/sergeiwallace/beads-ui/blob/main/docs/research/findings/evidence/bd-1.3.0-create-events-help-and-spec-versions.md | "The v1.3.0 and v1.3.1 documents are byte-identical." | SUPPORTED (own measurement) | Added in this pull request |
+| Claude Code not an MCP Apps host | https://github.com/sergeiwallace/beads-ui/blob/main/docs/research/findings/beads-ui-mods-and-shared-core.md | "Claude Code is not an MCP Apps host" | SUPPORTED (substring) | Yes, tracked on main |
+
+## Run History
+
+2026-10-15, Claude Opus 5.5 (`us.anthropic.claude-opus-5-5`), effort high. Read the bd OpenAPI document at v1.3.0, v1.3.1 and main in full; bd 1.3.0 source files and release notes; the MCP Apps specification and ext-apps README, basic-host and server helpers; the Claude Code MCP, tools reference, permissions, env-vars, settings, agent view, cloud and SDK todo pages and the full changelog; `bd create`, `bd events` and `bd events tail` help; and a string search of the Claude Code 2.1.296 binary. 26 sources cited from about 45 fetches (WebFetch and GitHub REST API), 0 failed. Partial reads: three Claude Code pages truncated at 100,000 characters by WebFetch, two returned as extraction-model summaries, and one binary regex search hit the tool timeout and was replaced by an offset read.
