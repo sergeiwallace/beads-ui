@@ -88,7 +88,7 @@ The raw record is `docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md` in this
     - [D-4: Beads access route](#d-4)
     - [D-5: Sprint modelling on Beads](#d-5)
     - [D-6: Board order](#d-6)
-    - [D-7: Names: the npm package and the command alias](#d-7)
+    - [D-7: The command alias, with the npm scope resolved](#d-7)
     - [D-8: Drag in the mod](#d-8)
     - [D-9: Display-id minting](#d-9)
     - [D-10: Web stack](#d-10)
@@ -602,7 +602,7 @@ Every decision below ran through `/decision-framework` in its fresh-authoring co
 | D-4 | Beads access route | (a) `bd --json` subprocess in every surface, `bd serve` later behind loopback or a token; (b) `bd serve` everywhere; (c) Dolt SQL for writes | (a) | | | `bd serve` skips hooks and exposes bulk delete; criterion 1: a subprocess adapter is a two-way door | `✅ Resolved by aih-3 Fable coordinator` |
 | D-5 | Sprint modelling on Beads | (a) `sprint:<name>` label plus a `milestone` issue for dates, members linked by `tracks`; (b) `bd set-state sprint=<name>`; (c) a metadata key | (a) | | | Labels are indexed and filterable; `set-state` mints an event issue per change; criterion 4 weighted pass | `✅ Resolved by aih-3 Fable coordinator` |
 | D-6 | Board order | (a) no manual rank in the MVP, sort by priority then created; (b) `metadata.rank` fractional index from the start; (c) rank as a sidecar file | (a) now, (b) as the phase 3 enhancement | | | Criterion 5: rank is a feature nobody has asked to use yet; a fractional index in metadata stays available with no migration | `✅ Resolved by aih-3 Fable coordinator` |
-| D-7 | Names: npm package and the command alias | (a) npm `@sergeiwallace/beads-ui`, command `beads-ui`, alias `bu`; (b) keep `bv` and accept the shadow with Beads Viewer; (c) rename the project | (a) | | | Both names Sergei proposed are taken; Gate C: changing a stated name is a requirement change | `⏳ PENDING (human)` |
+| D-7 | The command alias (the npm scope is resolved inside this decision) | (a) alias `bu`, with npm `@sergeiwallace/beads-ui` and command `beads-ui`; (b) keep `bv` and accept the shadow with Beads Viewer; (c) rename the project | (a) | | | The npm scope is self-resolved (no stated requirement, two-way door); the alias `bv` was Sergei's stated choice and is taken by Beads Viewer, so changing it fires Gate C | `⏳ PENDING (human)` for the alias only |
 | D-8 | Drag in the mod | (a) keyboard "Move to" first, `Client` pointer drag in phase 2 behind fullscreen and tmux mouse mode; (b) `Client` drag in the MVP; (c) no pointer drag | (a) | | | Criterion 3: pointer capture is documented only in the types file and untested live | `✅ Resolved by aih-3 Fable coordinator` |
 | D-9 | Display-id minting | (a) core mints fleet-style ids behind `id_policy = auto`, on when the store already uses them; (b) call `bd-new`; (c) never mint | (a) | | | A create without minting reddens the fleet gate; the convention is fleet-only so a public tool needs the switch; criterion 2 | `✅ Resolved by aih-3 Fable coordinator` |
 | D-10 | Web stack | (a) React 19, Vite, TanStack Query, Table and Virtual, Zustand vanilla, shadcn/ui on Base UI, Pragmatic drag and drop, Recharts, cmdk; (b) Solid plus OpenTUI pattern; (c) lit-html as in mantoni's beads-ui | (a) | | | Research measured maintenance signals; app-portal already uses React 19 and shadcn-derived components; criterion 2 consistency | `✅ Resolved by aih-3 Fable coordinator` |
@@ -882,9 +882,9 @@ Criterion 5: manual rank is a feature with no present user; sort covers "reorder
 
 <a id="d-7"></a>
 
-#### D-7: Names: the npm package and the command alias — `⏳ PENDING (human)`
+#### D-7: The command alias, with the npm scope resolved — `⏳ PENDING (human)` for the alias only
 
-**Context.** Sergei's second follow-up proposed the alias `bv` and the repo name `beads-ui`. The research found both taken: `beads-ui` is a 755-star MIT Beads web UI on npm whose command is `bdui`, and `bv` is Beads Viewer's Homebrew binary, whose licence rider excludes Anthropic. The GitHub repo name `sergeiwallace/beads-ui` is unaffected. Gate C fires because changing a name Sergei stated changes a requirement.
+**Context.** Sergei's second follow-up stated "the shorthand alias / beads task / cc session alias will be `bv` / `BV`" and settled the repo name `beads-ui`. The research found both names taken: `beads-ui` is a 755-star MIT Beads web UI on npm whose command is `bdui`, and `bv` is Beads Viewer's Homebrew binary, whose licence rider excludes Anthropic. The GitHub repo name `sergeiwallace/beads-ui` is unaffected. Re-running the Authority test splits the decision. The npm package name was never stated, so publishing under the scope `@sergeiwallace/beads-ui` with the command `beads-ui` is a contained two-way door and is resolved here by the coordinator. The alias is different: `bv` is a requirement Sergei wrote down, and replacing it supplies a different intent, so Gate C fires on the alias and only the alias goes to Sergei.
 
 ##### (a) npm scope `@sergeiwallace/beads-ui`, command `beads-ui`, short alias `bu`
 
@@ -913,11 +913,11 @@ Criterion 5: manual rank is a feature with no present user; sort covers "reorder
 
 ##### Recommendation
 
-> **Decision:** `PENDING (human)` — recommended (a) npm scope `@sergeiwallace/beads-ui`, command `beads-ui`, alias `bu`
+> **Decision:** `PENDING (human)` for the alias — recommended (a) alias `bu`; the npm scope `@sergeiwallace/beads-ui` and the command `beads-ui` are resolved by aih-3 Fable coordinator (2026-10-15); confidence: high
 <!-- decision-record: chosen-option=PENDING; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
-<!-- decision-lineage: decision-id=BU-mg2.2/D-7; decision-topic=package and command names given the collisions; governs=repo:beads-ui/naming; normalized-proposition=the npm name is scoped and the command alias is bu; applicability=phases:0-6; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+<!-- decision-lineage: decision-id=BU-mg2.2/D-7; decision-topic=the command alias given the bv collision; governs=repo:beads-ui/naming; normalized-proposition=the command alias is bu and the npm name is scoped; applicability=phases:0-6; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-The coordinator recommends (a). The repo name stays; the npm scope is the only way to publish under the chosen name; `bu` avoids shadowing Beads Viewer, whose licence also rules out any code or API reuse. Escalated because the alias was Sergei's stated requirement (Gate C).
+The coordinator recommends (a). The repo name stays; the npm scope is the only way to publish under the chosen name and is settled here; `bu` avoids shadowing Beads Viewer, whose licence also rules out any code or API reuse, and it matches the store's Beads prefix. The alias alone is escalated: Gate C fires because `bv` is a requirement Sergei stated and the coordinator cannot supply a different one.
 
 ---
 
@@ -1083,7 +1083,7 @@ Criterion 2 (consistency with app-portal and the MCP App examples) and the measu
 <!-- decision-record: chosen-option=PENDING; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-11; decision-topic=whether beads-ui is the work queue's dashboard; governs=apps:web,integration:work-queue; normalized-proposition=the beads-ui web app is the queue's Phase 2 member app and consumes its read models; applicability=phase:3; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-The coordinator recommends (a), with the queue adapter behind `queue.url` so the public project works without it, and with the queue service untouched. Phase 3 is written so that (b) needs only the removal of the app-portal registration task. Escalated because it amends a ratified design in another repo (Gate C); the long-term home of the queue service is Open Question 1, deferred by Sergei.
+The coordinator recommends (a), with the queue adapter behind `queue.url` so the public project works without it, and with the queue service untouched. Phase 3 is written so that (b) needs only the removal of the app-portal registration task. Re-running the Authority test: Sergei's fourth follow-up asks to "merge the latter system / features or integrate / combine all that with beads UI", which every option satisfies, and it does not say which of the two boards survives. Choosing (a) supersedes the Phase 2 deliverable (`ai-core web/`) of a design Sergei ratified on 2026-09-15, in another repo, so Gate C fires on the decision itself and it goes to Sergei. The long-term home of the queue service is Open Question 1, deferred by Sergei.
 
 ---
 
@@ -1124,7 +1124,7 @@ The coordinator recommends (a), with the queue adapter behind `queue.url` so the
 <!-- decision-record: chosen-option=PENDING; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-12; decision-topic=where the task-panel backups are stored; governs=phase:5/backup; normalized-proposition=panel backups go to a private repository matching the data's classification; applicability=phase:5; outcome-id=; relation=different-question; related-decision-id=BU-mg2.2/D-21; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-The coordinator recommends (a). Escalated under Gate D: the call is one-way for data that cannot be unpublished, crosses repo and employer boundaries, and the coordinator's confidence is medium because the employer repo's own rules on stored session data were not measured.
+The coordinator recommends (a). Re-running the Authority test: no act is performed here (Gate A clear), no protected text is changed (Gate B clear), and the backup is a requirement Sergei stated (Gate C clear), so the gate that fires is Gate D: a push of employer session subjects into any repository is one-way, it crosses the personal-versus-employer boundary, and the coordinator's confidence is low because the employer repo's own rules on storing session data were not measured and cannot be from this host. It goes to Sergei.
 
 ---
 
