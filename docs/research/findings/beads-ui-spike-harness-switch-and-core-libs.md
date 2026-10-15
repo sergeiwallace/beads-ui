@@ -15,8 +15,8 @@ template_version: "research-findings-1.0.0"
 > because nothing was installed, built or run.
 
 This packet answers the three questions of the design spike for the beads-ui design doc. It reads
-ai-harness at commit `01d5ee82d4`, the base of the read-only ai-harness worktree, on 2026-10-15
-between 01:10 and 01:30 UTC. ai-harness `main` moved to `f0189b93` during the run. The GitHub
+ai-harness at commit `01d5ee82d4`, the base of the read-only ai-harness worktree. The reading ran on
+2026-10-15 between 01:10 and 01:30 UTC, and ai-harness `main` moved to `f0189b93` during it. The GitHub
 compare API lists three changed files between the two, and none is cited here.
 
 The library sources were read at their release tags through the GitHub API, and their published
@@ -32,7 +32,7 @@ leg C's sections 3 and 4 [^43] and leg B's section 5 [^44].
    that scrubs two env keys. The config home that matches the ask is a new attribute in the
    `[machine.<name>]` registry, which already exports to `machines.json`. [VERIFIABLE][^2][^6]
 3. A machine fragment cannot carry the switch. install.sh Step 4b keeps an existing `permissions.deny`
-   list whole, so fragment deny rules are dropped, and it never deletes an env key. [VERIFIABLE][^3]
+   list whole, which drops fragment deny rules, and it never deletes an env key. [VERIFIABLE][^3]
 4. `plan` and `doctor` have no settings output today, so the switch needs a new plan line and a new
    doctor check. `apply` already reports each deny rule it appends. [VERIFIABLE][^1][^2]
 5. 92 tracked files name a Task symbol: 28 break, 23 degrade, 40 are unaffected and one is the
@@ -93,7 +93,7 @@ flowchart LR
 
 Orders 3 and 7 decide the switch's shape. Order 3's docstring says "``existing`` wins at every leaf,
 a list included". An installed machine already holds `"CLAUDE_CODE_ENABLE_TODO_TOOLS": "1"`, so
-removing the key from the template or a fragment leaves it in place, and only order 6 deletes it.
+removing the key from the template or a fragment leaves it in place. Only order 6 deletes it.
 Order 7 is the only route that adds a deny rule to an existing user list. Its docstring says the
 user's file "wins the list wholesale in the merge" and ends "Append missing, never remove one."
 [VERIFIABLE][^1]
@@ -130,8 +130,8 @@ and its deny rules never land. [INFERENCE from install.sh:4130-4140 and the temp
 ### 1.3 The closest existing per-machine key
 
 The closest precedent in mechanism is `_MOUSE_CAPTURE_MACHINES`, a hardcoded set that drops two env
-keys on one profile through the `scrub_env_keys` argument a task-panel switch needs. It is declared
-at cli.py:743-752 and applied at 755-763:
+keys on one profile. It works through the same `scrub_env_keys` argument a task-panel switch needs.
+It is declared at cli.py:743-752 and applied at 755-763:
 
 ```python
 _MOUSE_CAPTURE_MACHINES = frozenset({"sem-kg-sagemaker"})
@@ -210,7 +210,7 @@ The proposal below names every file and line a change would touch. It was not bu
     `tests/test_settings_template_parity.py` keeps the two template copies identical.
 
 Both halves are needed. The Task tools "are available by default only on Opus 4.7, Sonnet 4.6,
-Haiku 4.5, and earlier models", so a session on those models gets them without the env key. The
+Haiku 4.5, and earlier models". A session on those models gets them without the env key. The
 key's row says "Set to `1` to get the task-tracking tools on every model", and
 `CLAUDE_CODE_ENABLE_TASKS` only picks the Task tools or `TodoWrite`. Other opt-in routes exist:
 "Name one of the tools in `--allowedTools`", or use `--tools` or the Agent SDK options.
@@ -221,9 +221,9 @@ for either flag followed by a Task name returned nothing. As a positive control,
 matched three files in `scripts/`, `src/`, `.claude/bin/` and `skills/`. The `ai c` launcher lives
 in ai-cli-utils and was not read. [VERIFIABLE][^15]
 
-A bare deny rule closes every route. "A bare tool name like `Bash` removes the tool from Claude's
-context entirely", "Rules are evaluated in order: deny, then ask, then allow", and "a user-level deny
-blocks a project-level allow". [VERIFIABLE][^13]
+A bare deny rule closes every route: "A bare tool name like `Bash` removes the tool from Claude's
+context entirely". Precedence favours it, since "Rules are evaluated in order: deny, then ask, then
+allow" and "a user-level deny blocks a project-level allow". [VERIFIABLE][^13]
 
 The template itself does not change under this proposal, and both copies stay byte-identical (blob
 `7b825e1a10`). It sets `DISABLE_GROWTHBOOK` to an empty string, so the feature-flag gates on the
@@ -245,8 +245,8 @@ check would follow. [VERIFIABLE][^2][^9]
 report reads `unchanged` (line 334). The contract's `<scope> apply: <count> mutations` line exists in
 ai-harness only for storage. [VERIFIABLE][^1][^9]
 
-So the switch needs a plan line naming the env key it drops and the rules it adds, a report line
-for the scrub, and a doctor check. [INFERENCE from the two paragraphs above.]
+So the switch needs a new plan line that names the env key it drops and the rules it adds. The scrub
+needs its own report line, and `doctor` needs a new check. [INFERENCE from the two paragraphs above.]
 
 A task-panel doctor check would fail a `retired` profile whose settings still hold the env key or
 lack any of the five deny rules. It would also fail an `enabled` profile that holds the switch's deny
@@ -318,8 +318,8 @@ counts are my classification of the 92 matches. [INFERENCE from the tables below
 | `docs/procedures/background-agent-lifecycle.md` | 351-352 | Same rule for background agents |
 | `docs/procedures/landing-the-plane.md` | 214 | "every `TaskCreate` requires an existing owning `bd` issue" |
 
-The shadow Codex path is the only one that breaks in code rather than in instruction text. The
-resolver raises `TaskPreconditionError` on a missing namespace, and the module's docstring says
+The shadow Codex path is the only break that raises an error in code. The curation scripts lose
+their input, and the remaining breaks are instruction text. The resolver raises `TaskPreconditionError` on a missing namespace, and the module's docstring says
 "Claude Code exposes no documented external TaskUpdate interface". [VERIFIABLE][^17]
 
 ### 2.3 Degrade (23 files)
@@ -353,7 +353,7 @@ directory is a true zero". On a retired machine every pinned session would repor
 work, and the reader cannot tell that from idleness. [VERIFIABLE][^16]
 
 The two injection templates make the panel the place Sergei sees an escalation. On a retired
-machine that surface moves to beads-ui, so the templates need new wording rather than a guard.
+machine that surface moves to beads-ui, so the templates need new wording.
 [VERIFIABLE][^15]
 
 ### 2.4 Found by the second search (5 files)
@@ -379,9 +379,9 @@ machine that surface moves to beads-ui, so the templates need new wording rather
 `context_supervisor.py` appears in two groups and is counted once. `agent-delegation.md:1780-1781`
 holds hook design notes that are unaffected, but the file is classed break for its other lines.
 
-28 of the 40 files use `CLAUDE_CODE_TASK_LIST_ID` as the fleet's session identity key, three docs
-describe it that way, and three skills classed degrade use it for held-doc identity. Claude Code
-documents it only as the task-list directory: "To share a task list across sessions, set
+28 of the 40 files use `CLAUDE_CODE_TASK_LIST_ID` as the fleet's session identity key, and three
+docs describe it that way. Three skills classed degrade also use it for held-doc identity. Claude
+Code documents it only as the task-list directory: "To share a task list across sessions, set
 `CLAUDE_CODE_TASK_LIST_ID` to use a named directory in `~/.claude/tasks/`". The fleet reads it as
 `${CLAUDE_CODE_TASK_LIST_ID}@${AI_HOST}` in the held-doc skills. [VERIFIABLE][^15][^45]
 
@@ -392,7 +392,7 @@ submit FIFO. [INFERENCE from the identity group above.]
 The context supervisor touches the panel twice, and neither use needs the directory. Its key fallback
 reads the variable directly and is marked "LIBRARY-ABSENT FALLBACK ONLY" (context_supervisor.py:
 9403-9411). Its force gate allows the four Task tools because "The CC panel is a display mirror of
-Beads" (line 247), so removing the tools only shortens that list. [VERIFIABLE][^19]
+Beads" (line 247). Removing the tools only shortens that list. [VERIFIABLE][^19]
 
 ### 2.6 Near misses that are not the panel
 
@@ -406,10 +406,10 @@ variable. [VERIFIABLE][^15][^18]
 ### 2.7 What the inventory adds to the retirement preconditions
 
 The instruction text is the largest single dependency. The rules in `claude-delta.md:17-19` compile
-into all nine machines' context files, and the compile step has per-machine overlay modules
+into all nine machines' context files. The compile step has per-machine overlay modules
 (ai-harness.toml:72-80) but no per-machine variant of the shared delta. Hook wiring already has a
-per-machine scope: each `hooks-manifest.json` entry carries a `machines` field, `"all"` for the two
-whose matchers name Task tools (matchers at lines 978 and 997). [VERIFIABLE][^6][^20][^21]
+per-machine scope. Each `hooks-manifest.json` entry carries a `machines` field, which is `"all"` for
+the two entries whose matchers name Task tools (lines 978 and 997). [VERIFIABLE][^6][^20][^21]
 
 ### Hand-offs
 
@@ -425,7 +425,7 @@ whose matchers name Task tools (matchers at lines 978 and 997). [VERIFIABLE][^6]
 
 ### 3.1 The environment a copied file must run in
 
-The mods API page states the limit plainly. "The hooks module itself has no Node.js APIs, no timer
+The mods API page states the limit: "The hooks module itself has no Node.js APIs, no timer
 globals such as `setTimeout`, and no network or file access of its own." It adds that `URL`,
 `TextEncoder`, `AbortController` and `crypto.subtle` are available. [VERIFIABLE][^22]
 
@@ -442,13 +442,13 @@ ECMAScript's own built-ins, such as `Promise`, `Map`, `Set` and `Symbol`, come f
 the `es2023` lib. [INFERENCE from the block above.]
 
 Time comes from the mods API instead. `$.clock.after(ms, fn)` and `$.clock.every(ms, fn)` each
-return a `Timer` whose `cancel()` stops it (types lines 2923-2939 and 9963-9974), and the API page
-says they "take the place of `setInterval` and `setTimeout`". A `Client` module has only
-`every(ms, fn)`, which returns a stop function (types lines 1280-1285). [VERIFIABLE][^22][^23]
+return a `Timer` whose `cancel()` stops it (types lines 2923-2939 and 9963-9974). The API page says
+they "take the place of `setInterval` and `setTimeout`". A `Client` module has only `every(ms, fn)`,
+which returns a stop function (types lines 1280-1285). [VERIFIABLE][^22][^23]
 
 `$` is not a global: "Every hook receives it as its first argument, `$`". The API page's example
 calls `$.process.run` inside a `$.clock.every` callback started from `session.start`. The types file
-calls `$` "the engine interface, frozen, the same object at every invocation" (line 3978), so a timer
+calls `$` "the engine interface, frozen, the same object at every invocation" (line 3978). So a timer
 provider can close over the `$` it was built from. [VERIFIABLE][^22][^23]
 
 ### 3.2 Zustand vanilla store
@@ -502,9 +502,9 @@ build keeps them unguarded. The fetch counted four in `build/modern/timeoutManag
 timer or fetch reads an undeclared `process` and throws a `ReferenceError`. [INFERENCE from the
 source lines and the environment in section 3.1.]
 
-query-core treats a runtime with no `window` as a server, which "disables scheduling refetch timers
-and changes the default `retry` count", and `gcTime` with it (`environmentManager.ts:16-20`). In a
-mod that removes most timers. Staleness and refetch timers are skipped (`queryObserver.ts:502-508`),
+query-core treats a runtime with no `window` as a server. That "disables scheduling refetch timers
+and changes the default `retry` count", and `gcTime` too (`environmentManager.ts:16-20`). In a mod
+that removes most timers. Staleness and refetch timers are skipped (`queryObserver.ts:502-508`),
 retry defaults to 0 (`retryer.ts:251`), and `gcTime` defaults to `Infinity`, so no collection timer
 starts (`removable.ts:30-46`). One timer stays: the default batch scheduler on every notification is
 `systemSetTimeoutZero` (`notifyManager.ts:19`), which calls the global `setTimeout`.
@@ -619,9 +619,9 @@ The panel's environment variable outlives the panel. `CLAUDE_CODE_TASK_LIST_ID` 
 docs, FIFOs and injection targets across 28 files (section 2.5). A retirement that drops the pin
 would break those, and no panel test would notice. [VERIFIABLE][^15]
 
-install.sh Step 4b drops a fragment's deny rules on every machine, not only for this switch. The
-repo holds two fragment merges with different list rules, and only the shell one runs, so any future
-per-machine deny rule placed in a fragment would be lost without a message. [VERIFIABLE][^2][^3]
+install.sh Step 4b drops a fragment's deny rules on every machine. The repo holds two fragment
+merges with different list rules, and only the shell one runs. Any future per-machine deny rule
+placed in a fragment would be lost without a message. [VERIFIABLE][^2][^3]
 
 `ai-harness plan` prints no settings, plugin or session-model line, while the contract says `plan`
 "prints every intended mutation". That sentence is written for ai-core's `[WOULD_APPLY]` lines, so
@@ -714,8 +714,8 @@ ai-harness repo". Section 1 covers it with measured insertion points, and option
 wording. The backup half of that sentence is leg C's and is not repeated here.
 
 A001 also asks to "disable the claude task panel / tasks feature entirely". The switch covers the
-four Task tools and `TodoWrite`. The instruction text, skills and shadow Codex path that depend on
-the panel are listed in section 2 and handed to the design stage, because they are not settings.
+four Task tools and `TodoWrite`. Section 2 lists the instruction text, skills and shadow Codex path
+that depend on the panel. They are not settings, so they go to the design stage.
 
 A002 asks whether the web app, the MCP UI app and the TUI mod can share code. Section 3 narrows the
 state layer's answer. `zustand/vanilla` crosses into the mod as is, query-core crosses only as a
@@ -778,4 +778,74 @@ verified, as the blindspots state.
 [^44]: Wallace, S. (2026). [beads-ui research leg B: Claude Code mods, MCP Apps and the shared core](https://github.com/sergeiwallace/beads-ui/blob/main/docs/research/findings/beads-ui-mods-and-shared-core.md). sergeiwallace/beads-ui, GitHub. Read at main `f68067e`. Verified accessible (HTTP 200, GitHub API) 2026-10-15. (Sections 1.2 and 5.)
 [^45]: Anthropic. (2026). [Interactive mode](https://code.claude.com/docs/en/interactive-mode.md). Claude Code Docs. Verified accessible (HTTP 200) 2026-10-15. (Section "Task list": `Ctrl+T`, five visible tasks, `CLAUDE_CODE_TASK_LIST_ID`.)
 
-<!-- LEDGER -->
+## Appendix: Provenance Ledger
+
+One row per `[VERIFIABLE]` claim, in body order. "Checked" means a whitespace-normalized substring
+test against the raw file (GitHub API bytes, `git` working tree or the saved page). "Fetch output"
+means the quote came from WebFetch's model and was not checked against raw bytes.
+
+| Claim | Source URL | Verbatim quote | Verdict | Live? |
+|---|---|---|---|---|
+| S1 user file wins every leaf | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/settings_merge.py | "``existing`` wins at every leaf, a list included" | SUPPORTED | Yes, HTTP 200 (API); checked |
+| S2 mouse precedent; registry export | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/cli.py ; https://github.com/sergeiwallace/ai-harness/blob/main/projects-wide-session-config/ai-harness.toml | "_MOUSE_CAPTURE_MACHINES = frozenset({"sem-kg-sagemaker"})" / "exports them to ~/.config/ai-fleet/machines.json" | SUPPORTED | Yes, HTTP 200 (API); checked |
+| S3 Step 4b add-only merge | https://github.com/sergeiwallace/ai-harness/blob/main/install.sh | "adds new keys, never removes existing ones." | SUPPORTED | Yes, HTTP 200 (API); checked |
+| S4 plan and doctor lack settings output | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/cli.py ; https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/settings_merge.py | ""write committed manifest"," / "permissions.deny: added" | SUPPORTED | Yes, HTTP 200 (API); checked |
+| S5 inventory and identity key | https://github.com/sergeiwallace/ai-harness/tree/main | ""CLAUDE_CODE_ENABLE_TODO_TOOLS": "1"," / "TASK_LIST_ID_ENV = "CLAUDE_CODE_TASK_LIST_ID"" | SUPPORTED | Yes, HTTP 200 (API tree); checked |
+| S6 zustand vanilla has no globals | https://unpkg.com/zustand@5.0.15/esm/vanilla.mjs ; https://github.com/pmndrs/zustand/blob/v5.0.15/src/vanilla.ts | "const listeners: Set<Listener> = new Set()" | SUPPORTED | Yes, HTTP 200; checked (source), fetch output (build) |
+| S7 query-core unguarded process | https://github.com/TanStack/query/tree/%40tanstack/query-core%405.104.2/packages/query-core/src ; https://unpkg.com/@tanstack/query-core@5.104.2/build/modern/timeoutManager.js | "if (process.env.NODE_ENV !== 'production') {" | SUPPORTED | Yes, HTTP 200; checked (source), fetch output (build) |
+| S8 XState reads console at import | https://github.com/anthropics/claude-code/blob/main/mods/types/claude-code.d.ts ; https://github.com/statelyai/xstate/tree/xstate%405.33.2/packages/core/src ; https://unpkg.com/xstate@5.33.2/dist/raise-97446fd4.esm.js | "A surface module's environment (Client) has the same globals and a" / "logger: console.log.bind(console)," | SUPPORTED | Yes, HTTP 200; checked (source), fetch output (build) |
+| 1.1 render path and writers | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/cli.py ; https://github.com/sergeiwallace/ai-harness/blob/main/install.sh | "install.sh's retired Step 4" / "_aih_apply_step settings \|\|" | SUPPORTED | Yes, HTTP 200 (API); checked |
+| 1.1 env and deny composition sites | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/settings_merge.py ; https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/defaults/settings.template.json | "_scrub_env_keys(merged, scrub_env_keys)" / ""Agent(general-purpose)"," | SUPPORTED | Yes, HTTP 200 (API); checked |
+| 1.1 orders 3 and 7 | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/settings_merge.py | "Append missing, never remove one." | SUPPORTED | Yes, HTTP 200 (API); checked |
+| 1.2 registry, loader, alias-only read | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/machine_registry.py | "a missing attribute fails naming the machine and the attribute" | SUPPORTED | Yes, HTTP 200 (API); checked |
+| 1.2 overlays and fragments | https://github.com/sergeiwallace/ai-harness/blob/main/.claude/settings.acn-mac.json ; https://github.com/sergeiwallace/ai-harness/blob/main/projects-wide-session-config/ai-harness.toml | ""totalTokensReminder": "off"" / "[modules.overlay.claude]" | SUPPORTED | Yes, HTTP 200 (API); checked |
+| 1.2 fragment path idle; Step 4b drops lists | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/cli.py ; https://github.com/sergeiwallace/ai-harness/blob/main/install.sh | "the machine fragment (Step 4b) is still the shell's" / "adds new keys, never removes existing ones." | SUPPORTED | Yes, HTTP 200 (API); checked |
+| 1.3 scrub rationale and test | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/cli.py | "pins the scope both ways" | SUPPORTED | Yes, HTTP 200 (API); checked |
+| 1.3 `billing_mode` declaration | https://github.com/sergeiwallace/ai-harness/blob/main/projects-wide-session-config/ai-harness.toml | "billing_mode       = ["subscription", "api"]" | SUPPORTED | Yes, HTTP 200 (API); checked |
+| 1.5 default models and opt-in routes | https://code.claude.com/docs/en/tools-reference.md ; https://code.claude.com/docs/en/env-vars.md | "are available by default only on Opus 4.7, Sonnet 4.6, Haiku 4.5, and earlier models" / "Set to `1` to get the task-tracking tools on every model." | SUPPORTED | Yes, HTTP 200; checked (tools page), fetch output (env page) |
+| 1.5 no flag opt-in in ai-harness | https://github.com/sergeiwallace/ai-harness/tree/main | Positive control hit: "fields.get("disallowedTools", "")" | SUPPORTED | Yes, HTTP 200 (API tree); checked |
+| 1.5 bare deny rules | https://code.claude.com/docs/en/permissions.md | "A bare tool name like `Bash` removes the tool from Claude's context entirely" | SUPPORTED | Yes, HTTP 200; checked |
+| 1.5 template unchanged; flag gates | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/defaults/settings.template.json ; https://github.com/sergeiwallace/ai-harness/blob/main/docs/research/cross-session-messaging-vs-task-tools-vs-remote-control-growthbook-tension.md | ""DISABLE_GROWTHBOOK": ""," / "families, `DISABLE_GROWTHBOOK=1` now leaves Task/Todo tools off unless" | SUPPORTED | Yes, HTTP 200 (API); checked |
+| 1.6 verbs; plan and doctor today | https://github.com/sergeiwallace/ai-harness/blob/main/docs/procedures/machine-install-contract.md | "\| `doctor` \| never \| 0 healthy, 1 unhealthy \|" | SUPPORTED | Yes, HTTP 200 (API); checked |
+| 1.6 apply report and idempotency | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/settings_merge.py | "{'merged' if changed else 'unchanged'}" | SUPPORTED | Yes, HTTP 200 (API); checked |
+| 1.6 restart; sync triggers | https://github.com/sergeiwallace/ai-harness/blob/main/docs/procedures/new-machine-bootstrap.md | "\| `CLAUDE_CODE_ENABLE_TODO_TOOLS` → the CC task panel \| restart \|" | SUPPORTED | Yes, HTTP 200 (API); checked |
+| 2.1 search method, 92 files | https://github.com/sergeiwallace/ai-harness/tree/main | ""CLAUDE_CODE_ENABLE_TODO_TOOLS": "1"," | SUPPORTED | Yes, HTTP 200 (API tree); checked |
+| 2.1 second search | https://github.com/sergeiwallace/ai-harness/tree/main | "resolver = TaskRowResolver(Path.home() / ".claude" / "tasks")" | SUPPORTED | Yes, HTTP 200 (API tree); checked |
+| 2.2 shadow Codex path breaks in code | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/shadow_watcher.py | "Claude Code exposes no documented external TaskUpdate interface." | SUPPORTED | Yes, HTTP 200 (API); checked |
+| 2.3 chief-of-staff zero | https://github.com/sergeiwallace/ai-harness/blob/main/scripts/chief_of_staff_cli.py | "under a pin an absent or empty directory is a true zero" | SUPPORTED | Yes, HTTP 200 (API); checked |
+| 2.3 panel as escalation surface | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/defaults/injection-repair-limit-escalation.md | "so it shows on the task panel, which is the surface Sergei" | SUPPORTED | Yes, HTTP 200 (API); checked |
+| 2.5 identity key; Claude Code's definition | https://github.com/sergeiwallace/ai-harness/tree/main ; https://code.claude.com/docs/en/interactive-mode.md | "To share a task list across sessions, set `CLAUDE_CODE_TASK_LIST_ID` to use a named directory in `~/.claude/tasks/`" | SUPPORTED | Yes, HTTP 200; checked |
+| 2.5 context supervisor uses | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/context_supervisor.py | "LIBRARY-ABSENT FALLBACK ONLY" / "The CC panel is a display mirror of Beads." | SUPPORTED | Yes, HTTP 200 (API); checked |
+| 2.6 near misses; `wq next` design only | https://github.com/sergeiwallace/ai-harness/blob/main/docs/designs/autonomous-work-queue-coordinator-and-pwa-dashboard.md | "An inaccessible or missing task-list namespace is logged and skipped" | SUPPORTED | Yes, HTTP 200 (API); checked |
+| 2.7 compiled rules; hook scope | https://github.com/sergeiwallace/ai-harness/blob/main/projects-wide-session-config/modules/claude-delta.md ; https://github.com/sergeiwallace/ai-harness/blob/main/projects-wide-session-config/hooks-manifest.json | "Every agent launch gets its own panel row" / ""machines": "all"," | SUPPORTED | Yes, HTTP 200 (API); checked |
+| 3.1 API page environment | https://code.claude.com/docs/en/plugins/mods/api.md | "The hooks module itself has no Node.js APIs, no timer globals such as `setTimeout`" | SUPPORTED | Yes, HTTP 200; fetch returned the page text |
+| 3.1 types file globals | https://github.com/anthropics/claude-code/blob/main/mods/types/claude-code.d.ts | "No code generation either: `eval` and `new Function` over a" / "neither has timers (a hooks module waits on `$.clock`, a" | SUPPORTED | Yes, HTTP 200 (API); checked |
+| 3.1 `$.clock` and `surface.every` | https://code.claude.com/docs/en/plugins/mods/api.md ; https://github.com/anthropics/claude-code/blob/main/mods/types/claude-code.d.ts | "take the place of `setInterval` and `setTimeout`" / "Calls `fn` every `ms` milliseconds on the surface's frame clock until" | SUPPORTED | Yes, HTTP 200; checked (types) |
+| 3.1 `$` is passed and stable | https://code.claude.com/docs/en/plugins/mods/api.md ; https://github.com/anthropics/claude-code/blob/main/mods/types/claude-code.d.ts | "Every hook receives it as its first argument, `$`" / "the engine interface, frozen, the same object at every invocation;" | SUPPORTED | Yes, HTTP 200; checked (types) |
+| 3.2 zustand release and build | https://registry.npmjs.org/zustand/latest ; https://unpkg.com/zustand@5.0.15/esm/vanilla.mjs | "listeners.forEach((listener) => listener(state, previousState));" | SUPPORTED | Yes, HTTP 200; fetch output |
+| 3.2 zustand source and docs | https://github.com/pmndrs/zustand/blob/v5.0.15/src/vanilla.ts ; https://zustand.docs.pmnd.rs/reference/apis/create-store | "export const createStore = ((createState) =>" / "lets you create a vanilla store that exposes API utilities" | SUPPORTED | Yes, HTTP 200; checked (source), fetch output (docs) |
+| 3.2 middleware globals | https://unpkg.com/zustand@5.0.15/esm/middleware.mjs | "storage: createJSONStorage(() => window.localStorage)," | SUPPORTED | Yes, HTTP 200; fetch output, line numbers approximate |
+| 3.3 query-core release and size | https://registry.npmjs.org/@tanstack/query-core/latest ; https://bundlephobia.com/api/size?package=@tanstack/query-core@5.104.2 | "5.104.2" / "40039" | SUPPORTED | Yes, HTTP 200; fetch output |
+| 3.3 ten unguarded reads | https://github.com/TanStack/query/tree/%40tanstack/query-core%405.104.2/packages/query-core/src ; https://unpkg.com/@tanstack/query-core@5.104.2/build/modern/query.js | "if (process.env.NODE_ENV !== 'production') {" / "const abortController = new AbortController()" | SUPPORTED | Yes, HTTP 200; checked (source), fetch output (build) |
+| 3.3 server mode and the remaining timer | https://github.com/TanStack/query/tree/%40tanstack/query-core%405.104.2/packages/query-core/src ; https://tanstack.com/query/latest/docs/reference/notifyManager | "export const defaultScheduler: ScheduleFunction = systemSetTimeoutZero" / "The default behavior is `setTimeout(callback, 0)`." | SUPPORTED | Yes, HTTP 200; checked (source), fetch output (docs) |
+| 3.3 changes 2 to 4 | https://tanstack.com/query/latest/docs/reference/timeoutManager ; https://tanstack.com/query/latest/docs/reference/environmentManager | "export type ManagedTimerId = number \| { [Symbol.toPrimitive]: () => number }" / "It is important to call `setTimeoutProvider` before creating a" | SUPPORTED | Yes, HTTP 200; checked (source), fetch output (docs) |
+| 3.4 xstate release and size | https://registry.npmjs.org/xstate/latest ; https://bundlephobia.com/api/size?package=xstate@5.33.2 | "5.33.2" / "46874" | SUPPORTED | Yes, HTTP 200; fetch output |
+| 3.4 line 70 and entry paths | https://github.com/statelyai/xstate/tree/xstate%405.33.2/packages/core/src | "logger: console.log.bind(console)," / "import { createActor } from './createActor.ts';" | SUPPORTED | Yes, HTTP 200 (API tarball); checked |
+| 3.4 published build keeps it | https://unpkg.com/xstate@5.33.2/dist/xstate.esm.js ; https://unpkg.com/xstate@5.33.2/dist/raise-97446fd4.esm.js | "import './xstate-dev.esm.js';" / "logger: console.log.bind(console)," | SUPPORTED | Yes, HTTP 200; fetch output, corroborated by checked source |
+| 3.4 Client needs a clock | https://github.com/statelyai/xstate/tree/xstate%405.33.2/packages/core/src | "By default, the native `setTimeout` and `clearTimeout` functions are used." | SUPPORTED | Yes, HTTP 200 (API tarball); checked |
+| 3.6 zustand algorithm | https://unpkg.com/zustand@5.0.15/esm/vanilla.mjs | "if (!Object.is(nextState, state)) {" | SUPPORTED | Yes, HTTP 200; fetch output |
+| 3.6 `$.state` | https://github.com/sergeiwallace/beads-ui/blob/main/docs/research/findings/beads-ui-mods-and-shared-core.md | "is reactive for the session and redraws the sites that read it" | SUPPORTED | Yes, HTTP 200 (API); checked |
+| G identity key outlives panel | https://github.com/sergeiwallace/ai-harness/tree/main | "TASK_LIST_ID_ENV = "CLAUDE_CODE_TASK_LIST_ID"" | SUPPORTED | Yes, HTTP 200 (API tree); checked |
+| G two fragment merges | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/cli.py ; https://github.com/sergeiwallace/ai-harness/blob/main/install.sh | "matched_machine.settings_fragment if matched_machine is not None else None" / "adds new keys, never removes existing ones." | SUPPORTED | Yes, HTTP 200 (API); checked |
+| G plan sentence in the contract | https://github.com/sergeiwallace/ai-harness/blob/main/docs/procedures/machine-install-contract.md | "prints every intended mutation" | SUPPORTED | Yes, HTTP 200 (API); checked |
+| G stale fallback path | https://github.com/sergeiwallace/ai-harness/blob/main/projects-wide-session-config/ai-harness.toml ; https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/machine_registry.py | "module src/ai_harness/_fleet_machines.py" / "``scripts/_fleet_machines.py`` is the generated committed fallback." | SUPPORTED | Yes, HTTP 200 (API); checked |
+| G leg C correction | https://github.com/sergeiwallace/beads-ui/blob/main/docs/research/findings/beads-ui-beads-queue-and-panel.md ; https://github.com/sergeiwallace/ai-harness/blob/main/docs/designs/autonomous-work-queue-coordinator-and-pwa-dashboard.md | "The queue's `wq next` reconciles `TaskList` before offering pool work" / "fail-closed for pool work" | SUPPORTED | Yes, HTTP 200 (API); checked |
+| G silent server mode | https://github.com/TanStack/query/tree/%40tanstack/query-core%405.104.2/packages/query-core/src | "!isServerEnvironment() &&" | SUPPORTED | Yes, HTTP 200 (API); checked |
+| G console absence is types-only | https://github.com/anthropics/claude-code/blob/main/mods/types/claude-code.d.ts ; https://code.claude.com/docs/en/plugins/mods/api.md | "A surface module's environment (Client) has the same globals and a" | SUPPORTED | Yes, HTTP 200; checked (types) |
+| G 70 test files | https://github.com/sergeiwallace/ai-harness/tree/main | "{"tool": "TaskList", "result": [{"id": 1}]}," | SUPPORTED | Yes, HTTP 200 (API tree); checked |
+| G `$.state` contrarian | https://github.com/sergeiwallace/beads-ui/blob/main/docs/research/findings/beads-ui-mods-and-shared-core.md | "is reactive for the session and redraws the sites that read it" | SUPPORTED | Yes, HTTP 200 (API); checked |
+| G env key alone on newer models | https://code.claude.com/docs/en/tools-reference.md | "On every other model, Claude Code leaves the tools out unless you opt in." | SUPPORTED | Yes, HTTP 200; checked |
+
+## Run History
+
+2026-10-15, Claude Opus 5.5 (`us.anthropic.claude-opus-5-5`), effort high: read ai-harness at `01d5ee82d4` (settings merge, cli, install.sh, registry, contract, 92-file Task-symbol grep plus a path-join grep), the public mods types file, and the three libraries at their release tags; 26 WebFetch calls and about 40 GitHub API reads, with 2 WebFetch failures, both HTTP 404 (a GitHub contents URL with the wrong tag name, retried through the API, and a moved zustand docs path, replaced by its new URL).
