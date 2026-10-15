@@ -596,6 +596,14 @@ These go beyond the questions, which counters anchor bias:
 - `bd serve` skips hooks on HTTP writes.
 - shadcn/ui changed its default primitives in July 2026.
 
+### Cross-leg check
+
+The sibling packets landed on `origin/main` before this one: [`beads-ui-mods-and-shared-core.md`](beads-ui-mods-and-shared-core.md) (leg B) and [`beads-ui-beads-queue-and-panel.md`](beads-ui-beads-queue-and-panel.md) (leg C). Their summaries agree with this packet and resolve two of its hand-offs:
+
+- Leg B reports that drag works inside a `Client`, because the instance holds the pointer from `down` to `up`. That answers this packet's §9 hand-off.
+- Leg C measured no sprint, rank or story-point field in the Beads schema. It found the same `beads-ui` and `bv` name collisions independently.
+- Leg C also found an existing queue SPA in ai-core with Board, Sessions and Review views, which bears on founding ask entry A004.
+
 ### Founding ask alignment
 
 | Entry | Requirement | Where covered | Disposition |
