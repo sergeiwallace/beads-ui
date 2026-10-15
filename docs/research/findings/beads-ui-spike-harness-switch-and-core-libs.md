@@ -23,23 +23,41 @@ The library sources were read at their release tags through the GitHub API, and 
 builds through unpkg. The starting evidence was the landscape doc's sections 5.2 and 6.3 [^42],
 leg C's sections 3 and 4 [^43] and leg B's section 5 [^44].
 
-<!-- SUMMARY -->
+## Summary
+
+1. ai-harness renders `~/.claude/settings.json` in `merge_settings_template`, where the user's file
+   wins every leaf. Removing the opt-in key from a layer changes nothing on an installed machine;
+   only `scrub_env_keys` deletes it. [VERIFIABLE][^1]
+2. The closest per-machine precedent is `_MOUSE_CAPTURE_MACHINES` (cli.py:743-763), a hardcoded set
+   that scrubs two env keys. The config home that matches the ask is a new attribute in the
+   `[machine.<name>]` registry, which already exports to `machines.json`. [VERIFIABLE][^2][^6]
+3. A machine fragment cannot carry the switch. install.sh Step 4b keeps an existing `permissions.deny`
+   list whole, so fragment deny rules are dropped, and it never deletes an env key. [VERIFIABLE][^3]
+4. `plan` and `doctor` have no settings output today, so the switch needs a new plan line and a new
+   doctor check. `apply` already reports each deny rule it appends. [VERIFIABLE][^1][^2]
+5. 92 tracked files name a Task symbol: 28 break, 23 degrade, 40 are unaffected and one is the
+   switch's target. 28 files use `CLAUDE_CODE_TASK_LIST_ID` as the session identity key, so the
+   launcher must keep pinning it. [VERIFIABLE][^15]
+6. `zustand/vanilla` 5.0.15 is a 25-line file with no timer, host global or import, so it runs in a
+   mod unmodified. [VERIFIABLE][^33][^34]
+7. `@tanstack/query-core` 5.104.2 loads in a mod, then throws on an unguarded `process.env.NODE_ENV`
+   at its first timer or fetch. It runs only as a build output with a define, a scheduler and a
+   timeout provider over `$.clock`. [VERIFIABLE][^25][^29]
+8. `xstate` 5.33.2 cannot load in a hooks module. `createActor.ts:70` reads `console` at import, the
+   hooks environment has none, and every XState entry path imports that file. [VERIFIABLE][^23][^38][^40]
 
 ## 1. Where a per-profile task-panel switch lives in ai-harness's settings rendering
 
 ### 1.1 The render path, step by step
 
-Three writers produce `~/.claude/settings.json` on an install, in this order. install.sh Step 4
-calls `_aih_apply_step settings` (install.sh:4063), which runs `ai-harness apply --only settings`.
-Step 4b then merges a machine fragment, and Step 4d writes the session-model pins. [VERIFIABLE][^3]
-
-The renderer module is `src/ai_harness/settings_merge.py`. Its entry is `merge_settings_template`
-(lines 275-335). The apply step reaches it through `_settings_step` (cli.py:846-849), which calls
-`_merge_settings` (cli.py:755-763) with the canonical machine name and no fragment. [VERIFIABLE][^1][^2]
-
-The function that applies per-machine differences is `_merge_settings`. It is the only place that
-branches on the machine name, and it does so through one argument, `scrub_env_keys`. The function's
-own docstring calls it "install.sh's retired Step 4". [VERIFIABLE][^2]
+Three writers produce `~/.claude/settings.json` on an install. install.sh Step 4 calls
+`_aih_apply_step settings` (install.sh:4063), Step 4b merges a machine fragment, and Step 4d writes
+the session-model pins. The renderer module is `src/ai_harness/settings_merge.py`, entry
+`merge_settings_template` (lines 275-335). `_settings_step` (cli.py:846-849) reaches it through
+`_merge_settings` (cli.py:755-763), passing the canonical machine name and no fragment.
+`_merge_settings` is the function that applies per-machine differences. It is the only one that
+branches on the machine name, through its `scrub_env_keys` argument, and its docstring calls it
+"install.sh's retired Step 4". [VERIFIABLE][^1][^2][^3]
 
 `merge_settings_template` applies its layers in a fixed order (settings_merge.py:315-327). The
 table names each operation and the lines that implement it.
@@ -73,13 +91,12 @@ flowchart LR
   B4 --> SM[Step 4d: session-model pins]
 ```
 
-Order 3 decides the switch's shape. The docstring says "``existing`` wins at every leaf, a list
-included". An installed machine already holds `"CLAUDE_CODE_ENABLE_TODO_TOOLS": "1"`, so removing
-the key from the template or a fragment leaves it in place. Only order 6 deletes it. [VERIFIABLE][^1]
-
-Order 7 is the only route that adds a deny rule to a user list that already exists. Its docstring
-says the user's file "wins the list wholesale in the merge" and ends "Append missing, never remove
-one." [VERIFIABLE][^1]
+Orders 3 and 7 decide the switch's shape. Order 3's docstring says "``existing`` wins at every leaf,
+a list included". An installed machine already holds `"CLAUDE_CODE_ENABLE_TODO_TOOLS": "1"`, so
+removing the key from the template or a fragment leaves it in place, and only order 6 deletes it.
+Order 7 is the only route that adds a deny rule to an existing user list. Its docstring says the
+user's file "wins the list wholesale in the merge" and ends "Append missing, never remove one."
+[VERIFIABLE][^1]
 
 ### 1.2 How machines.json and the per-machine inputs feed it
 
@@ -87,45 +104,34 @@ There are three per-machine inputs. Only one reaches `settings.json`, and it doe
 through the Python renderer.
 
 The machine registry is the `[machine.<name>]` tables in `projects-wide-session-config/ai-harness.toml`
-(lines 1355-1618). Its closed vocabulary is `[machine_schema.attributes]` and
-`[machine_schema.tooling]` (lines 1387-1409). `scripts/fleet_machines.py generate` exports the
-tables to `~/.config/ai-fleet/machines.json` (toml comment at lines 1358-1362). [VERIFIABLE][^6]
+(lines 1355-1618), with a closed vocabulary at lines 1387-1409. `scripts/fleet_machines.py generate`
+exports them to `~/.config/ai-fleet/machines.json` (lines 1358-1362). The loader,
+`src/ai_harness/machine_registry.py`, is schema-generic, so a new attribute needs a vocabulary line
+and no loader code. Every attribute is required, and "a missing attribute fails naming the machine
+and the attribute" (lines 15-17, 215-219). The settings merge reads the registry only to
+canonicalize aliases (`_canonical_machine`, cli.py:725-740). [VERIFIABLE][^2][^6][^7]
 
-The loader is `src/ai_harness/machine_registry.py`. It is schema-generic: a new attribute needs a
-vocabulary line in the toml and no loader code. Every declared attribute is required on every
-machine, and "a missing attribute fails naming the machine and the attribute" (lines 15-17,
-215-219). [VERIFIABLE][^7]
-
-The settings merge reads the registry only to canonicalize aliases (`_canonical_machine`,
-cli.py:725-740). No registry attribute reaches `settings.json` today. [VERIFIABLE][^2]
-
-The per-machine context overlays are `[modules.overlay.claude]` (toml lines 72-80). They compile into
-`CLAUDE.<machine>.md` context files and do not feed `settings.json`. [VERIFIABLE][^6]
-
-The machine settings fragments are `.claude/settings.<machine>.json`. Four exist: `acn-mac`,
-`sem-kg-ec2`, `sem-kg-sagemaker` and `sem-kg-windows`. Each sets only `env` keys, plus
-`totalTokensReminder` on `sem-kg-ec2`. [VERIFIABLE][^5]
+The context overlays, `[modules.overlay.claude]` (toml lines 72-80), compile into
+`CLAUDE.<machine>.md` files and do not feed `settings.json`. The settings fragments are
+`.claude/settings.<machine>.json` for `acn-mac`, `sem-kg-ec2`, `sem-kg-sagemaker` and
+`sem-kg-windows`. Each sets `env` keys only, plus `totalTokensReminder` on `sem-kg-ec2`.
+[VERIFIABLE][^5][^6]
 
 A fragment reaches the Python renderer only through `[[site.machine]] settings_fragment`
-(config.py:89-93, 263-264; consumed at cli.py:1497-1510). ai-harness.toml declares no
-`[[site.machine]]` entry, so that path is idle in production. The `_settings_step` comment says
-"the machine fragment (Step 4b) is still the shell's". [VERIFIABLE][^2][^6][^8]
-
-install.sh Step 4b merges the fragment with its own inline Python (install.sh:4088-4271). Its
-`deep_merge` "adds new keys, never removes existing ones" (line 4131). A list that already exists
-is kept whole, so a fragment's `permissions.deny` entries are silently dropped on every machine,
-because the template has already written a deny list. [VERIFIABLE][^3]
+(config.py:89-93, 263-264; cli.py:1497-1510). ai-harness.toml declares no such entry, and the step's
+comment says "the machine fragment (Step 4b) is still the shell's". Step 4b's inline `deep_merge`
+"adds new keys, never removes existing ones" (install.sh:4131). It keeps an existing list whole, so a
+fragment's deny entries never land, because the template already wrote a deny list.
+[VERIFIABLE][^2][^3][^8]
 
 That rules out the fragment as the switch's carrier for either half. It cannot delete the env key,
 and its deny rules never land. [INFERENCE from install.sh:4130-4140 and the template's deny list.]
 
 ### 1.3 The closest existing per-machine key
 
-The closest precedent in mechanism is `_MOUSE_CAPTURE_MACHINES` in cli.py. It is a hardcoded set
-that drops two env keys on one machine profile, through the same `scrub_env_keys` argument a task
-panel switch needs. [VERIFIABLE][^2]
-
-Declared at cli.py:743-752 and applied at 755-763:
+The closest precedent in mechanism is `_MOUSE_CAPTURE_MACHINES`, a hardcoded set that drops two env
+keys on one profile through the `scrub_env_keys` argument a task-panel switch needs. It is declared
+at cli.py:743-752 and applied at 755-763:
 
 ```python
 _MOUSE_CAPTURE_MACHINES = frozenset({"sem-kg-sagemaker"})
@@ -146,9 +152,10 @@ def _merge_settings(machine: str | None, fragment_path: Path | None = None) -> N
     )
 ```
 
-The comment above it explains why scrubbing is needed: "a stale `1` from the reversed AIH-524 pin
-would otherwise survive 'user wins'". That is the same trap the task-panel key sits in.
-`tests/test_settings_machine_scoped_env.py` pins the scope in both directions. [VERIFIABLE][^2]
+The comment above it explains why scrubbing is needed. A stale `1` left by an earlier pin would
+"otherwise survive" the user-wins merge (cli.py:744-745). The task-panel key sits in the same trap.
+The comment adds that `tests/test_settings_machine_scoped_env.py` "pins the scope both ways".
+[VERIFIABLE][^2]
 
 The closest precedent in declaration style is a registry attribute such as `billing_mode`. It is
 declared once in the vocabulary (toml line 1395) and once per machine table (for example line 1417).
@@ -202,19 +209,12 @@ The proposal below names every file and line a change would touch. It was not bu
     explicitly in every case. `tests/test_settings_permissions_deny.py` covers the deny append, and
     `tests/test_settings_template_parity.py` keeps the two template copies identical.
 
-The template itself does not change under this proposal. The fleet default stays `enabled`, and
-both template copies stay byte-identical (blob `7b825e1a10` for each). [VERIFIABLE][^4]
-
-Both halves are needed, for reasons the Claude Code docs give. The Task tools "are available by
-default only on Opus 4.7, Sonnet 4.6, Haiku 4.5, and earlier models", so the env key matters only on
-newer models. A session on one of those older models still gets the tools without it. [VERIFIABLE][^11]
-
-The env key's own row says "Set to `1` to get the task-tracking tools on every model". Its sibling
-`CLAUDE_CODE_ENABLE_TASKS` only chooses between the four Task tools and `TodoWrite`, so it cannot
-retire the panel. [VERIFIABLE][^12]
-
-The opt-in has routes other than the env key. The tools reference lists `--allowedTools`, `--tools`
-and the Agent SDK options, as in "Name one of the tools in `--allowedTools`". [VERIFIABLE][^11]
+Both halves are needed. The Task tools "are available by default only on Opus 4.7, Sonnet 4.6,
+Haiku 4.5, and earlier models", so a session on those models gets them without the env key. The
+key's row says "Set to `1` to get the task-tracking tools on every model", and
+`CLAUDE_CODE_ENABLE_TASKS` only picks the Task tools or `TodoWrite`. Other opt-in routes exist:
+"Name one of the tools in `--allowedTools`", or use `--tools` or the Agent SDK options.
+[VERIFIABLE][^11][^12]
 
 No tracked ai-harness file passes a Task tool to `--allowedTools` or `--tools`. The repo-wide search
 for either flag followed by a Task name returned nothing. As a positive control, `allowedTools` alone
@@ -225,42 +225,36 @@ A bare deny rule closes every route. "A bare tool name like `Bash` removes the t
 context entirely", "Rules are evaluated in order: deny, then ask, then allow", and "a user-level deny
 blocks a project-level allow". [VERIFIABLE][^13]
 
-The fleet's own research records feature-flag gates on the Task tools, separate from the model test.
-The template sets `DISABLE_GROWTHBOOK` to an empty string, so those flags are live. The deny rules
-make the switch independent of them. [VERIFIABLE][^4][^14]
+The template itself does not change under this proposal, and both copies stay byte-identical (blob
+`7b825e1a10`). It sets `DISABLE_GROWTHBOOK` to an empty string, so the feature-flag gates on the
+Task tools that the fleet's research records are live. The deny rules make the switch independent
+of them. [VERIFIABLE][^4][^14]
 
 ### 1.6 How the switch surfaces in plan, apply and doctor
 
-The machine-install contract defines three verbs. `plan` never mutates and exits 0 when a plan was
-produced. `apply` is "the only verb that does". `doctor` never mutates and exits "0 healthy, 1
-unhealthy". [VERIFIABLE][^9]
-
-`plan` today prints the generation and link mutations (cli.py:637-655) and the Docker defaults and
-roots (cli.py:1457-1482). It prints no settings line. A retired profile would need a new line naming
-the env key it drops and the deny rules it adds. [VERIFIABLE][^2]
+The machine-install contract defines three verbs. `plan` never mutates, `apply` is "the only verb
+that does", and `doctor` exits "0 healthy, 1 unhealthy". ai-harness `plan` prints generation, link
+and Docker lines (cli.py:637-655, 1457-1482) and no settings line. `doctor` aggregates generation,
+capability, hook, storage, boot-order and Buzz checks (cli.py:1422-1450) and has no settings check.
+`_buzz_allow_list_doctor` (cli.py:682-695) returns `(lines, healthy)`, the pattern a task-panel
+check would follow. [VERIFIABLE][^2][^9]
 
 `apply` already prints each deny rule it appends, as `[+ ]  permissions.deny: added ...`
-(settings_merge.py:326-330). `_scrub_env_keys` prints nothing (lines 199-203), so a scrub needs its
-own report line. [VERIFIABLE][^1]
+(settings_merge.py:326-330), while `_scrub_env_keys` prints nothing (lines 199-203). A second
+`apply` writes nothing, because `_write_if_changed` compares bytes first (lines 338-347), and the
+report reads `unchanged` (line 334). The contract's `<scope> apply: <count> mutations` line exists in
+ai-harness only for storage. [VERIFIABLE][^1][^9]
 
-A second `apply` on a converged machine writes nothing, because `_write_if_changed` compares bytes
-first (settings_merge.py:338-347). The report then reads `(unchanged)` (line 334). The contract's
-`<scope> apply: <count> mutations` line exists in ai-harness only for storage. [VERIFIABLE][^1][^9]
-
-`doctor` today aggregates generation, capability, hook, storage, boot-order and Buzz allow-list
-checks (cli.py:1422-1450). It has no settings check. `_buzz_allow_list_doctor` (cli.py:682-695)
-returns `(lines, healthy)` and is the pattern a task-panel check would follow. [VERIFIABLE][^2]
+So the switch needs a plan line naming the env key it drops and the rules it adds, a report line
+for the scrub, and a doctor check. [INFERENCE from the two paragraphs above.]
 
 A task-panel doctor check would fail a `retired` profile whose settings still hold the env key or
 lack any of the five deny rules. It would also fail an `enabled` profile that holds the switch's deny
 rules. [INFERENCE from section 1.5.]
 
-The change takes effect only after a restart. The bootstrap procedure's table lists
-"`CLAUDE_CODE_ENABLE_TODO_TOOLS` → the CC task panel | restart". [VERIFIABLE][^10]
-
-The contract's sync prompt fires only for its three trigger files in ai-harness. Option A edits none
-of them, so it needs no cross-machine sync prompt. ai-core does read `machines.json`, and whether it
-tolerates a new attribute was not checked. [VERIFIABLE][^9]
+The change takes effect only after a restart: the bootstrap table lists
+"`CLAUDE_CODE_ENABLE_TODO_TOOLS` → the CC task panel | restart". The contract's sync prompt fires
+only for its three ai-harness trigger files, and option A edits none of them. [VERIFIABLE][^9][^10]
 
 ### Hand-offs
 
@@ -277,20 +271,16 @@ tolerates a new attribute was not checked. [VERIFIABLE][^9]
 ### 2.1 Method
 
 The search used `git grep -E` over tracked files at `01d5ee82d4`, so the haystack is the git index.
-The symbols searched were `TaskCreate`, `TaskUpdate`, `TaskList`, `TaskGet`, `TodoWrite`,
-`\.claude/tasks`, `CLAUDE_CODE_TASK_LIST_ID`, `CLAUDE_CODE_ENABLE_TODO_TOOLS` and
-`CLAUDE_CODE_ENABLE_TASKS`. [VERIFIABLE][^15]
-
-The directories were `skills/`, `scripts/`, `src/`, `.claude/hooks/`, `projects-wide-session-config/`
-and `docs/procedures/`. I added `.claude/bin/`, `.githooks/`, `hooks/` and `install.sh`, which also
-run on every machine. [VERIFIABLE][^15]
-
-The search matched 92 files. `hooks/` and `install.sh` matched none. The template's own line 7 is
-in the result, which is the positive control that the pattern fires. [VERIFIABLE][^15]
+The symbols were `TaskCreate`, `TaskUpdate`, `TaskList`, `TaskGet`, `TodoWrite`, `\.claude/tasks`,
+`CLAUDE_CODE_TASK_LIST_ID`, `CLAUDE_CODE_ENABLE_TODO_TOOLS` and `CLAUDE_CODE_ENABLE_TASKS`. The
+directories were the six the brief named plus `.claude/bin/`, `.githooks/`, `hooks/` and
+`install.sh`, which also run on every machine. It matched 92 files, none in `hooks/` or `install.sh`.
+The template's line 7 is in the result, the positive control that the pattern fires.
+[VERIFIABLE][^15]
 
 A path join such as `Path.home() / ".claude" / "tasks"` does not contain the string `.claude/tasks`.
-A second search for `"tasks"`, `/tasks`, `tasks_root` and `.highwatermark` found five more panel
-readers, listed in section 2.4. [VERIFIABLE][^15]
+A second search for `"tasks"`, `/tasks`, `tasks_root` and `.highwatermark` found five more files,
+listed in section 2.4. [VERIFIABLE][^15]
 
 Each file gets one class, defined here once:
 
@@ -300,8 +290,8 @@ Each file gets one class, defined here once:
   runs, but that step yields nothing or a wrong zero.
 - Unaffected: the symbol appears, but the behaviour does not depend on the tools or the directory.
 
-The count is 28 break, 23 degrade, 40 unaffected, and one file that is the switch's own target.
-[VERIFIABLE][^15]
+The count is 28 break, 23 degrade, 40 unaffected, and one file that is the switch's own target. The
+counts are my classification of the 92 matches. [INFERENCE from the tables below.]
 
 ### 2.2 Break (28 files)
 
@@ -315,7 +305,7 @@ The count is 28 break, 23 degrade, 40 unaffected, and one file that is the switc
 | `skills/clean-task-panel/SKILL.md` | 14-15 | `TaskList`, then `TaskUpdate status: deleted` for each completed row |
 | `docs/procedures/cc-task-panel-audit.md` | 22-41 | A procedure whose output is a list of Task calls to apply |
 | `skills/shadow-codex-launch/SKILL.md` | 11-50 | Creates a child row with `TaskCreate`, then stops: "If `TaskCreate fails`, stop" |
-| `scripts/shadow_codex_launch.py` | 4 | "The live turn owns `TaskCreate`, `TaskUpdate`, and its claimed Bash call" |
+| `scripts/shadow_codex_launch.py` | 4 | Its docstring says the live turn owns the `TaskCreate` and `TaskUpdate` calls |
 | `scripts/agent_session_registry.py` | 2066 | The live-turn binding requires a `TaskCreate` row before any watcher lease |
 | `src/ai_harness/shadow_watcher.py` | 3, 238-290 | Writes the row file directly and raises when the namespace is missing |
 | `src/ai_harness/shadow_watcher_pickup.py` | 369-370 | Tells the session to `TaskCreate` a dedicated child before the claim |
@@ -336,11 +326,11 @@ resolver raises `TaskPreconditionError` on a missing namespace, and the module's
 
 | Path | Lines | What it does with the panel |
 |---|---|---|
-| `skills/next/SKILL.md` and `skills/next/SKILL.share.md` | 62-251 (7 hits each) | "Call `TaskList` on every `/next` run" (203) and match rows to Beads |
+| `skills/next/SKILL.md` and `skills/next/SKILL.share.md` | 62-251 (7 hits each) | Calls `TaskList` on every `/next` run (line 203) and matches rows to Beads |
 | `skills/save-state/SKILL.md` | 55, 325, 352-358 | Panel reconciliation before the docket refresh; lists the force-gate Task tools |
 | `skills/progress-review/SKILL.md` | 25, 66, 96 | `TaskList` and `TaskGet` for every in-progress row |
 | `skills/beads-task/SKILL.md` | 82, 173 | Creates the mirror row after the Beads issue |
-| `skills/auto-start/SKILL.md` | 30 | "Open CC tasks: `TaskList`" as a startup step |
+| `skills/auto-start/SKILL.md` | 30 | Reads open CC tasks with `TaskList` as a startup step |
 | `skills/track/SKILL.md` | 21 | `TaskList` as the first discovery step |
 | `skills/status-update/SKILL.md` | 19 | Checks `TaskList` for in-progress items |
 | `skills/start-goal/SKILL.md` | 99 | Reads each session's `TaskList` before arming |
@@ -348,7 +338,7 @@ resolver raises `TaskPreconditionError` on a missing namespace, and the module's
 | `docs/procedures/development-workflow.md` | 27 | A `TaskList` reconciliation after every ship event |
 | `docs/procedures/goal-exit-robustness.md` | 235 | `TaskList` per session before arming a goal |
 | `docs/procedures/chief-of-staff-vp-coordination.md` | 426 | Reads the same namespace count |
-| `src/ai_harness/defaults/goal-waker-nudge.md` and `goal-waker-nudge.sem-kg.md` | 2 | The injected nudge says to re-read "CC tasks (... TaskList)" |
+| `src/ai_harness/defaults/goal-waker-nudge.md` and `goal-waker-nudge.sem-kg.md` | 2 | The injected nudge says to re-read in-progress Beads issues and CC tasks with `TaskList` |
 | `src/ai_harness/defaults/injection-repair-limit-escalation.md` | 11 | Asks for a mirror row "so it shows on the task panel, which is the surface Sergei" watches |
 | `src/ai_harness/defaults/injection-self-heal-bug-fix.md` | 12 | Same request for a repair round |
 | `.claude/hooks/install-harness-remediation-pickup.sh` | 3, 33 | Tells the session to create one `TaskCreate` mirror for a remediation |
@@ -389,46 +379,37 @@ machine that surface moves to beads-ui, so the templates need new wording rather
 `context_supervisor.py` appears in two groups and is counted once. `agent-delegation.md:1780-1781`
 holds hook design notes that are unaffected, but the file is classed break for its other lines.
 
-28 of the 40 files use `CLAUDE_CODE_TASK_LIST_ID` as the fleet's session identity key, and three docs
-describe it that way. Three skills classed degrade use it the same way for held-doc identity.
-[VERIFIABLE][^15]
-
-Claude Code documents the variable only as the task-list directory: "To share a task list across
-sessions, set `CLAUDE_CODE_TASK_LIST_ID` to use a named directory in `~/.claude/tasks/`". The fleet
-reads it as `${CLAUDE_CODE_TASK_LIST_ID}@${AI_HOST}` in the held-doc skills. [VERIFIABLE][^15][^45]
+28 of the 40 files use `CLAUDE_CODE_TASK_LIST_ID` as the fleet's session identity key, three docs
+describe it that way, and three skills classed degrade use it for held-doc identity. Claude Code
+documents it only as the task-list directory: "To share a task list across sessions, set
+`CLAUDE_CODE_TASK_LIST_ID` to use a named directory in `~/.claude/tasks/`". The fleet reads it as
+`${CLAUDE_CODE_TASK_LIST_ID}@${AI_HOST}` in the held-doc skills. [VERIFIABLE][^15][^45]
 
 So a retired machine must keep the launcher pinning the variable, even though no task is ever
 written under it. Dropping the pin with the panel would break resume, held-doc identity and the
 submit FIFO. [INFERENCE from the identity group above.]
 
-The context supervisor has a fallback that reads the variable directly, and its comment calls it
-"LIBRARY-ABSENT FALLBACK ONLY" (context_supervisor.py:9403-9411). It still depends on the variable,
-not on the directory. [VERIFIABLE][^19]
+The context supervisor touches the panel twice, and neither use needs the directory. Its key fallback
+reads the variable directly and is marked "LIBRARY-ABSENT FALLBACK ONLY" (context_supervisor.py:
+9403-9411). Its force gate allows the four Task tools because "The CC panel is a display mirror of
+Beads" (line 247), so removing the tools only shortens that list. [VERIFIABLE][^19]
 
 ### 2.6 Near misses that are not the panel
 
-Several files read `/tmp/claude-<uid>/<slug>/<session>/tasks/<id>.output`. That directory holds
-background task output, not panel rows. They are `.claude/bin/agent-transcript:9`,
-`scripts/agent_transcript_locate.py:17-305`, `scripts/background_wait_guard.py:24-629` and
-`scripts/machine_contention.py:374-388`. All are unaffected. [VERIFIABLE][^15]
-
-The work queue's `wq next` panel reconciliation exists in the design, not in ai-harness code. The
-design says "An inaccessible or missing task-list namespace is logged and skipped". In code,
-`scripts/wq_hooks.py:201` only records the variable in the session registry. [VERIFIABLE][^15][^18]
-
-The force gate allows the four Task tools at full context because "The CC panel is a display mirror
-of Beads" (context_supervisor.py:247). Removing the tools leaves that gate with fewer allowed tools
-and no failure. [VERIFIABLE][^19]
+Several files read `/tmp/claude-<uid>/<slug>/<session>/tasks/<id>.output`, which holds background
+task output, not panel rows: `.claude/bin/agent-transcript:9`, `scripts/agent_transcript_locate.py`,
+`scripts/background_wait_guard.py` and `scripts/machine_contention.py:374-388`. The `wq next` panel
+reconciliation exists in the queue design, which says "An inaccessible or missing task-list
+namespace is logged and skipped". In ai-harness code, `scripts/wq_hooks.py:201` only records the
+variable. [VERIFIABLE][^15][^18]
 
 ### 2.7 What the inventory adds to the retirement preconditions
 
 The instruction text is the largest single dependency. The rules in `claude-delta.md:17-19` compile
-into all nine machines' context files. The compile step has per-machine overlay modules
-(ai-harness.toml:72-80) but no per-machine variant of the shared delta. [VERIFIABLE][^6][^21]
-
-Hook wiring already has a per-machine scope. Each `hooks-manifest.json` entry carries a `machines`
-field, set to `"all"` for the two entries whose matchers name Task tools (the matchers at lines 978
-and 997, the fields at lines 980 and 999). [VERIFIABLE][^20]
+into all nine machines' context files, and the compile step has per-machine overlay modules
+(ai-harness.toml:72-80) but no per-machine variant of the shared delta. Hook wiring already has a
+per-machine scope: each `hooks-manifest.json` entry carries a `machines` field, `"all"` for the two
+whose matchers name Task tools (matchers at lines 978 and 997). [VERIFIABLE][^6][^20][^21]
 
 ### Hand-offs
 
@@ -448,49 +429,39 @@ The mods API page states the limit plainly. "The hooks module itself has no Node
 globals such as `setTimeout`, and no network or file access of its own." It adds that `URL`,
 `TextEncoder`, `AbortController` and `crypto.subtle` are available. [VERIFIABLE][^22]
 
-The public types file is stricter. Its `global` block (lines 11570-11705) is introduced as "The
-globals of a hooks module's environment: these and no others (no DOM, no Node)". [VERIFIABLE][^23]
+The public types file is stricter. Its `global` block (lines 11570-11705) opens "The globals of a
+hooks module's environment: these and no others (no DOM, no Node)". It adds "No code generation
+either: `eval` and `new Function` over a string throw". It then says "A surface module's environment
+(Client) has the same globals and a `console`; neither has timers". The listed host globals are `h`,
+`Fragment`, `AbortSignal`, `AbortController`, `TextEncoder`, `TextDecoder`, `URLSearchParams`, `URL`,
+`atob`, `btoa`, `structuredClone`, `crypto` and `performance`. The suggested `tsconfig.json` (line 66)
+sets `"lib": ["es2023"], "types": []`. [VERIFIABLE][^23]
 
-The same comment says "No code generation either: `eval` and `new Function` over a string throw".
-It then separates the two module kinds: "A surface module's environment (Client) has the same globals
-and a `console`; neither has timers". [VERIFIABLE][^23]
-
-The listed host globals are `h`, `Fragment`, `AbortSignal`, `AbortController`, `TextEncoder`,
-`TextDecoder`, `URLSearchParams`, `URL`, `atob`, `btoa`, `structuredClone`, `crypto` and
-`performance`. A hooks module therefore has no `console`, `process`, `window`, `queueMicrotask`
-or `setTimeout`. [VERIFIABLE][^23]
-
-ECMAScript's own built-ins, such as `Promise`, `Map`, `Set` and `Symbol`, belong to the language
-rather than the host. The types file's suggested `tsconfig.json` (line 66) sets
-`"lib": ["es2023"], "types": []`, which declares them and nothing else. [VERIFIABLE][^23]
+So a hooks module has no `console`, `process`, `window`, `queueMicrotask` or `setTimeout`.
+ECMAScript's own built-ins, such as `Promise`, `Map`, `Set` and `Symbol`, come from the language and
+the `es2023` lib. [INFERENCE from the block above.]
 
 Time comes from the mods API instead. `$.clock.after(ms, fn)` and `$.clock.every(ms, fn)` each
-return a `Timer` whose `cancel()` stops it (types lines 2923-2939 and 9963-9974). The API page says
-they "take the place of `setInterval` and `setTimeout`". [VERIFIABLE][^22][^23]
+return a `Timer` whose `cancel()` stops it (types lines 2923-2939 and 9963-9974), and the API page
+says they "take the place of `setInterval` and `setTimeout`". A `Client` module has only
+`every(ms, fn)`, which returns a stop function (types lines 1280-1285). [VERIFIABLE][^22][^23]
 
-A `Client` surface module has only `every(ms, fn)`, which returns a stop function (types lines
-1280-1285). It has no one-shot timer. [VERIFIABLE][^23]
-
-`$` is not a global. "Every hook receives it as its first argument, `$`". The API page's own
-example calls `$.process.run` inside a `$.clock.every` callback started from `session.start`, so a
-timer provider can close over the `$` it was built from. [VERIFIABLE][^22]
+`$` is not a global: "Every hook receives it as its first argument, `$`". The API page's example
+calls `$.process.run` inside a `$.clock.every` callback started from `session.start`. The types file
+calls `$` "the engine interface, frozen, the same object at every invocation" (line 3978), so a timer
+provider can close over the `$` it was built from. [VERIFIABLE][^22][^23]
 
 ### 3.2 Zustand vanilla store
 
-The current release is `zustand` 5.0.15, and every peer dependency is optional. The vanilla entry
-needs none of them. [VERIFIABLE][^32]
-
-The published `esm/vanilla.mjs` is 25 lines. It uses `new Set`, `Object.is` and `Object.assign`,
-and contains no timer, no host global, no `process`, no `import.meta` and no import statement.
-[VERIFIABLE][^33]
+The current release is `zustand` 5.0.15, and every peer dependency is optional. The published
+`esm/vanilla.mjs` is 25 lines. It uses `new Set`, `Object.is` and `Object.assign`, and contains no
+timer, no host global, no `process`, no `import.meta` and no import statement. Listeners run
+synchronously inside `setState` (line 9), so the store needs no scheduler. [VERIFIABLE][^32][^33]
 
 The TypeScript source at the tag, `src/vanilla.ts` (100 lines), agrees. Its only runtime references
-are `new Set` (line 64), `Object.is` (73) and `Object.assign` (78), with `createStore` exported at
-line 99. [VERIFIABLE][^34]
-
-Listeners run synchronously inside `setState` (line 9 of the published file), so the store needs no
-scheduler. The docs describe it as a function that "lets you create a vanilla store that exposes API
-utilities". [VERIFIABLE][^33][^35]
+are `new Set` (line 64), `Object.is` (73) and `Object.assign` (78), and it exports `createStore` at
+line 99. The docs say `createStore` "lets you create a vanilla store that exposes API utilities".
+[VERIFIABLE][^34][^35]
 
 The middleware entry is different. The fetch reported `devtools` reading `import.meta.env` and
 `window.__REDUX_DEVTOOLS_EXTENSION__` near line 64. It reported `persist` defaulting to
@@ -501,8 +472,9 @@ unmodified. The middleware should not be copied. [INFERENCE from sections 3.1 an
 
 ### 3.3 TanStack Query core
 
-The current release is `@tanstack/query-core` 5.104.2, with no runtime dependencies. All 23 source
-files were read at tag commit `b699b52d60`. [VERIFIABLE][^24][^25]
+The current release is `@tanstack/query-core` 5.104.2, with no runtime dependencies and 40,039 bytes
+minified, far under the 1 MB module ceiling leg B recorded. All 23 source files were read at tag
+commit `b699b52d60`. [VERIFIABLE][^24][^25][^31][^44]
 
 Every identifier the brief named was searched. The table gives each hit and when it is evaluated.
 
@@ -530,41 +502,36 @@ build keeps them unguarded. The fetch counted four in `build/modern/timeoutManag
 timer or fetch reads an undeclared `process` and throws a `ReferenceError`. [INFERENCE from the
 source lines and the environment in section 3.1.]
 
-query-core treats a runtime with no `window` as a server. The source says this "disables scheduling
-refetch timers and changes the default `retry` count", and `gcTime` with it
-(`environmentManager.ts:16-20`). [VERIFIABLE][^25][^27]
-
-In a mod, that removes most timers. Staleness and refetch timers are skipped (`queryObserver.ts:502-508`).
-The default retry count is 0 (`retryer.ts:251`), and the default `gcTime` is `Infinity`, so no
-collection timer starts (`removable.ts:30-46`). [VERIFIABLE][^25]
-
-One timer stays on every notification. The default batch scheduler is `systemSetTimeoutZero`
-(`notifyManager.ts:19`), which calls the global `setTimeout`. [VERIFIABLE][^25][^28]
+query-core treats a runtime with no `window` as a server, which "disables scheduling refetch timers
+and changes the default `retry` count", and `gcTime` with it (`environmentManager.ts:16-20`). In a
+mod that removes most timers. Staleness and refetch timers are skipped (`queryObserver.ts:502-508`),
+retry defaults to 0 (`retryer.ts:251`), and `gcTime` defaults to `Infinity`, so no collection timer
+starts (`removable.ts:30-46`). One timer stays: the default batch scheduler on every notification is
+`systemSetTimeoutZero` (`notifyManager.ts:19`), which calls the global `setTimeout`.
+[VERIFIABLE][^25][^27][^28]
 
 A copy can run only with four changes, none of them to the library's logic:
 
 1. A copy-time define that replaces `process.env.NODE_ENV` with `"production"`. Dead-code
    elimination then drops every development branch and its `console` call. [HEURISTIC]
 2. `notifyManager.setScheduler` with a `Promise`-based microtask. The docs offer `queueMicrotask` as
-   an example scheduler, and a mod lacks it, so the `Promise` form stands in. [VERIFIABLE][^28]
+   an example scheduler, and a mod lacks it, so the `Promise` form stands in.
 3. `timeoutManager.setTimeoutProvider` over `$.clock.after` and `$.clock.every`, set before any
    `QueryClient` exists, as the docs require. A timer id must be a number or have
    `Symbol.toPrimitive` (`timeoutManager.ts:17`), so the provider keeps a map from numbers to
-   `Timer` handles. [VERIFIABLE][^25][^26]
-4. A choice on server mode. Keeping it means polling with `$.clock.every`. Calling
+   `Timer` handles.
+4. A choice on server mode. Keeping it means polling with `$.clock.every`, and
    `environmentManager.setIsServer(() => false)` restores client timers through the provider.
-   [VERIFIABLE][^27]
 
-The minified package is 40,039 bytes. Leg B's practitioner report put the module ceiling at 1 MB.
-[VERIFIABLE][^31][^44]
+Items 2 to 4 rest on the three reference pages and the source line cited. [VERIFIABLE][^25][^26][^27][^28]
 
 Verdict: query-core cannot run as a copy of its published files. It can run as a build output with
 the four changes above. [INFERENCE from this section.]
 
 ### 3.4 XState
 
-The current release is `xstate` 5.33.2, with no dependencies. The core sources were read from the
-release tarball at commit `fbee62e7c1`. [VERIFIABLE][^37][^38]
+The current release is `xstate` 5.33.2, with no dependencies and 46,874 bytes minified. The core
+sources were read from the release tarball at commit `fbee62e7c1`. [VERIFIABLE][^37][^38][^41]
 
 | Identifier | File and line | Context | Evaluated |
 |---|---|---|---|
@@ -579,11 +546,10 @@ release tarball at commit `fbee62e7c1`. [VERIFIABLE][^37][^38]
 | `process`, `navigator`, `document` | none in code | `document` appears in doc comments only | |
 
 Line 70 decides the verdict. `logger: console.log.bind(console),` sits in a top-level `const`, so
-importing `createActor.ts` reads `console` at once. A hooks module has no `console`. [VERIFIABLE][^23][^38]
-
-Every entry path imports that file. `StateMachine.ts:3`, `actions/spawnChild.ts:3` and `spawn.ts:1`
-import `createActor`. The pure `transition` API imports `getNextSnapshot.ts` (`transition.ts:2`),
-which imports `createActor` (`getNextSnapshot.ts:1`). [VERIFIABLE][^38]
+importing `createActor.ts` reads `console` at once, and a hooks module has no `console`. Every entry
+path imports that file: `StateMachine.ts:3`, `actions/spawnChild.ts:3` and `spawn.ts:1` import it,
+and the pure `transition` API reaches it through `getNextSnapshot.ts` (`transition.ts:2`,
+`getNextSnapshot.ts:1`). [VERIFIABLE][^23][^38]
 
 The published build keeps the line. The fetch found `logger: console.log.bind(console),` inside
 `const defaultOptions` in `dist/raise-97446fd4.esm.js`. It also found that `dist/xstate.esm.js` <!-- gitignored-path-ok: file paths inside the published xstate@5.33.2 npm package, cited by unpkg URL in the footnotes; not paths in this repo -->
@@ -600,8 +566,6 @@ listener on every actor, so `reportUnhandledError` never reaches the global `set
 
 The shim route depends on a module being allowed to add a global. The types file says nothing on
 that, and nothing was run. [NO SOURCE]
-
-The minified package is 46,874 bytes. [VERIFIABLE][^41]
 
 Verdict: XState cannot load in a hooks module as published. It loads in a `Client` module, and it
 runs there only with a custom `clock`. [INFERENCE from this section.]
@@ -647,7 +611,124 @@ a state machine. XState can still serve the two DOM surfaces, where its globals 
 - Which state approach the shared core adopts: the coordinator's design stage, against leg B's
   package rules.
 
-<!-- GAPS -->
+## Gaps, blindspots and emergent findings
+
+### Emergent findings beyond the question list
+
+The panel's environment variable outlives the panel. `CLAUDE_CODE_TASK_LIST_ID` keys resume, held
+docs, FIFOs and injection targets across 28 files (section 2.5). A retirement that drops the pin
+would break those, and no panel test would notice. [VERIFIABLE][^15]
+
+install.sh Step 4b drops a fragment's deny rules on every machine, not only for this switch. The
+repo holds two fragment merges with different list rules, and only the shell one runs, so any future
+per-machine deny rule placed in a fragment would be lost without a message. [VERIFIABLE][^2][^3]
+
+`ai-harness plan` prints no settings, plugin or session-model line, while the contract says `plan`
+"prints every intended mutation". That sentence is written for ai-core's `[WOULD_APPLY]` lines, so
+whether it binds ai-harness is a reading of the contract. [VERIFIABLE][^2][^9]
+
+The registry comment at ai-harness.toml:1362 says `emit-fallback` writes
+`src/ai_harness/_fleet_machines.py`. The generator writes `scripts/_fleet_machines.py`
+(`scripts/fleet_machines.py:77-78`), the loader's docstring agrees (`machine_registry.py:6`), and the
+`src/` path does not exist. The comment is stale. [VERIFIABLE][^6][^7]
+
+Leg C wrote that "The queue's `wq next` reconciles `TaskList` before offering pool work". In
+ai-harness code that reconciliation is design text only (section 2.6). ai-core's queue service was
+not read. [VERIFIABLE][^18][^43]
+
+In a mod, query-core's server mode drops `refetchInterval` and staleness timers without an error. A
+mod author who sets `refetchInterval` would see no polling. [VERIFIABLE][^25]
+
+### Defects found and not fixed
+
+Two pre-existing defects surfaced: the stale fallback path in the ai-harness.toml comment, and the
+missing settings line in `ai-harness plan`. Both live in ai-harness.
+
+I did not fix them, and I did not file them. This brief makes the ai-harness worktree read-only and
+forbids `bd` write verbs, which closes both routes. The coordinator should file both in the
+ai-harness store.
+
+### Blindspots I could not resolve
+
+Nothing was run. No `claude plugin test` probe loaded any library, so every runtime claim rests on
+docs, the types file and source reading. [NO SOURCE]
+
+The absence of `console` in a hooks module is stated by the types file and not by the API page. The
+XState verdict depends on it. [VERIFIABLE][^22][^23]
+
+Whether a hooks module may assign to `globalThis` is not stated anywhere I read. The types file has
+no hit for `globalThis`, `lockdown` or `harden(`, and its "frozen" hits describe `$`, event objects
+and element tables. The API page, read in full, does not mention it. [NO SOURCE]
+
+The `ai c` launcher is in ai-cli-utils, which was not in scope. Whether it passes `--allowedTools`
+or sets the opt-in key itself is unknown, and either would bypass the env half of the switch. The
+deny half would still hold. [NO SOURCE]
+
+ai-core reads `machines.json`. Whether its reader accepts an attribute it does not know was not
+checked. [NO SOURCE]
+
+Whether a deny rule removes the Task tools in background and cloud sessions belongs to the sibling
+spike. [NO SOURCE]
+
+70 test files under `tests/` name a Task symbol. They were outside the named directories and were
+not classified. They include `tests/test_curate_task_panel_cli.py` and
+`tests/test_shadow_codex_launch.py`, which exercise break-class code. [VERIFIABLE][^15]
+
+Other fleet repos, such as ai-core, ai-cli-utils and sw-bms-workspace, were not searched. [NO SOURCE]
+
+The published-build observations for query-core and XState came through WebFetch, whose model quoted
+the lines. Each was corroborated against the raw source at the tag, which was substring-checked.
+
+### Contrarian evidence
+
+The mod may need no state library. `$.state` already redraws the sites that read it, and pure
+reducers over it cover a board's view state. That weakens the case for copying any of the three
+into the mod. [VERIFIABLE][^44]
+
+Option B, the hardcoded set, has an exact precedent and an existing test pattern. Option A costs a
+registry digest change, regenerated `machines.json` and fallbacks, and an untested ai-core reader.
+The ask's "config file setting" wording is the argument for A. [INFERENCE from section 1.4.]
+
+Dropping the env key alone retires the panel in any session on a model newer than those the tools
+reference lists. The deny rules matter only for Opus 4.7, Sonnet 4.6, Haiku 4.5 and older, and for
+the other opt-in routes. Leaving them out would avoid the removal code of section 1.5 step 8.
+[VERIFIABLE][^11]
+
+### Five-perspective critic pass
+
+I ran this pass myself over the draft. No second model reviewed the packet.
+
+| Perspective | Finding | Severity | Resolution |
+|---|---|---|---|
+| Conventional | The standard answer is "bundle with a define and test under `claude plugin test`"; the packet must not imply the copies were tested | High | Conceded: every verdict is tagged as source reading, and the probe is a hand-off |
+| Contrarian | `$.state` plus reducers makes the library question moot for the mod | Medium | Evidenced in "Contrarian evidence" and section 3.6 |
+| Historical | The query-core verdict depends on `timeoutManager` and `environmentManager`, and an older pin may lack them | Medium | Conceded: the verdict holds for 5.104.2; the docs pages name no version that added either |
+| Adjacent | ai-core consumes `machines.json`, so option A crosses a repo boundary | Medium | Evidenced as a hand-off and a blindspot |
+| Skeptic | The panel-retirement count could hide panel readers that use other spellings | High | Fixed: the second search found five more files (section 2.4); tests and other repos are named as unsearched |
+| Skeptic | Build-file quotes came from a fetch model | Medium | Fixed: each is corroborated by the raw source at the tag |
+
+### Alignment with the founding ask
+
+A001 asks that retiring the panel "should be a config file setting though per machine profile for
+ai-harness repo". Section 1 covers it with measured insertion points, and option A matches the
+wording. The backup half of that sentence is leg C's and is not repeated here.
+
+A001 also asks to "disable the claude task panel / tasks feature entirely". The switch covers the
+four Task tools and `TodoWrite`. The instruction text, skills and shadow Codex path that depend on
+the panel are listed in section 2 and handed to the design stage, because they are not settings.
+
+A002 asks whether the web app, the MCP UI app and the TUI mod can share code. Section 3 narrows the
+state layer's answer. `zustand/vanilla` crosses into the mod as is, query-core crosses only as a
+build output, and XState does not reach a hooks module.
+
+A003 names the three surfaces for now. Section 3 bears on the mod surface only, because the web app
+and the MCP App have a DOM, timers and `console`.
+
+A004 asks to keep the queue where it is. Section 2.6 records that its panel reconciliation is design
+text in ai-harness, which changes nothing about where it lives.
+
+No requirement was dropped. The runtime behaviour of every library in a live mod could not be
+verified, as the blindspots state.
 
 ## Sources
 
@@ -673,7 +754,7 @@ a state machine. XState can still serve the two DOM surfaces, where its globals 
 [^20]: Wallace, S. (2026). [projects-wide-session-config/hooks-manifest.json](https://github.com/sergeiwallace/ai-harness/blob/main/projects-wide-session-config/hooks-manifest.json), lines 970-1005. sergeiwallace/ai-harness (private), GitHub. Read at commit 01d5ee82d4. Verified accessible (HTTP 200, GitHub API tree listing) 2026-10-15. (Hook matchers naming Task tools, and the per-hook `machines` field.)
 [^21]: Wallace, S. (2026). [projects-wide-session-config/modules/claude-delta.md](https://github.com/sergeiwallace/ai-harness/blob/main/projects-wide-session-config/modules/claude-delta.md), lines 17-19. sergeiwallace/ai-harness (private), GitHub. Read at commit 01d5ee82d4. Verified accessible (HTTP 200, GitHub API tree listing) 2026-10-15. (The panel-mirror and one-row-per-agent rules every machine compiles.)
 [^22]: Anthropic. (2026). [Use the mods API](https://code.claude.com/docs/en/plugins/mods/api.md). Claude Code Docs. Verified accessible (HTTP 200) 2026-10-15. (The `$` argument, `$.clock`, and the hooks module's environment.)
-[^23]: Anthropic. (2026). [mods/types/claude-code.d.ts](https://github.com/anthropics/claude-code/blob/main/mods/types/claude-code.d.ts), lines 1-40, 60-70, 1275-1290, 2897-2940, 9960-9974 and 11570-11705. anthropics/claude-code, GitHub. Read in full through the GitHub API (517,451 bytes; header "Written by Claude Code 2.1.277"; last commit to the path `bf2323b302`, 2026-10-13). Verified accessible (HTTP 200) 2026-10-15. (The hooks and surface module globals, `$.clock` and `surface.every`.)
+[^23]: Anthropic. (2026). [mods/types/claude-code.d.ts](https://github.com/anthropics/claude-code/blob/main/mods/types/claude-code.d.ts), lines 1-40, 60-70, 1275-1290, 2897-2940, 3976-3982, 9960-9974 and 11570-11705. anthropics/claude-code, GitHub. Read in full through the GitHub API (517,451 bytes; header "Written by Claude Code 2.1.277"; last commit to the path `bf2323b302`, 2026-10-13). Verified accessible (HTTP 200) 2026-10-15. (The hooks and surface module globals, `$.clock` and `surface.every`.)
 [^24]: npm. (2026). [@tanstack/query-core, latest](https://registry.npmjs.org/@tanstack/query-core/latest). npm registry. Verified accessible (HTTP 200) 2026-10-15. (Version 5.104.2, no runtime dependencies.)
 [^25]: TanStack. (2026). [query/packages/query-core/src at @tanstack/query-core@5.104.2](https://github.com/TanStack/query/tree/%40tanstack/query-core%405.104.2/packages/query-core/src). GitHub. All 23 source files read through the GitHub API at commit `b699b52d60` (2026-10-11). Verified accessible (HTTP 200) 2026-10-15. (The `grep` results in section 3.3.)
 [^26]: TanStack. (2026). [timeoutManager reference](https://tanstack.com/query/latest/docs/reference/timeoutManager). TanStack Query Docs. Verified accessible (HTTP 200) 2026-10-15.
