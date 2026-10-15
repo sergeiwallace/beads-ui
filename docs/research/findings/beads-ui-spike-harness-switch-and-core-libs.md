@@ -440,7 +440,212 @@ and 997, the fields at lines 980 and 999). [VERIFIABLE][^20]
   code path that cannot run.
 - The chief-of-staff and fleet-brief counts: a guard that reports "panel retired" instead of zero.
 
-<!-- Q3 -->
+## 3. Timer-free state cores for a Claude Code mod
+
+### 3.1 The environment a copied file must run in
+
+The mods API page states the limit plainly. "The hooks module itself has no Node.js APIs, no timer
+globals such as `setTimeout`, and no network or file access of its own." It adds that `URL`,
+`TextEncoder`, `AbortController` and `crypto.subtle` are available. [VERIFIABLE][^22]
+
+The public types file is stricter. Its `global` block (lines 11570-11705) is introduced as "The
+globals of a hooks module's environment: these and no others (no DOM, no Node)". [VERIFIABLE][^23]
+
+The same comment says "No code generation either: `eval` and `new Function` over a string throw".
+It then separates the two module kinds: "A surface module's environment (Client) has the same globals
+and a `console`; neither has timers". [VERIFIABLE][^23]
+
+The listed host globals are `h`, `Fragment`, `AbortSignal`, `AbortController`, `TextEncoder`,
+`TextDecoder`, `URLSearchParams`, `URL`, `atob`, `btoa`, `structuredClone`, `crypto` and
+`performance`. A hooks module therefore has no `console`, `process`, `window`, `queueMicrotask`
+or `setTimeout`. [VERIFIABLE][^23]
+
+ECMAScript's own built-ins, such as `Promise`, `Map`, `Set` and `Symbol`, belong to the language
+rather than the host. The types file's suggested `tsconfig.json` (line 66) sets
+`"lib": ["es2023"], "types": []`, which declares them and nothing else. [VERIFIABLE][^23]
+
+Time comes from the mods API instead. `$.clock.after(ms, fn)` and `$.clock.every(ms, fn)` each
+return a `Timer` whose `cancel()` stops it (types lines 2923-2939 and 9963-9974). The API page says
+they "take the place of `setInterval` and `setTimeout`". [VERIFIABLE][^22][^23]
+
+A `Client` surface module has only `every(ms, fn)`, which returns a stop function (types lines
+1280-1285). It has no one-shot timer. [VERIFIABLE][^23]
+
+`$` is not a global. "Every hook receives it as its first argument, `$`". The API page's own
+example calls `$.process.run` inside a `$.clock.every` callback started from `session.start`, so a
+timer provider can close over the `$` it was built from. [VERIFIABLE][^22]
+
+### 3.2 Zustand vanilla store
+
+The current release is `zustand` 5.0.15, and every peer dependency is optional. The vanilla entry
+needs none of them. [VERIFIABLE][^32]
+
+The published `esm/vanilla.mjs` is 25 lines. It uses `new Set`, `Object.is` and `Object.assign`,
+and contains no timer, no host global, no `process`, no `import.meta` and no import statement.
+[VERIFIABLE][^33]
+
+The TypeScript source at the tag, `src/vanilla.ts` (100 lines), agrees. Its only runtime references
+are `new Set` (line 64), `Object.is` (73) and `Object.assign` (78), with `createStore` exported at
+line 99. [VERIFIABLE][^34]
+
+Listeners run synchronously inside `setState` (line 9 of the published file), so the store needs no
+scheduler. The docs describe it as a function that "lets you create a vanilla store that exposes API
+utilities". [VERIFIABLE][^33][^35]
+
+The middleware entry is different. The fetch reported `devtools` reading `import.meta.env` and
+`window.__REDUX_DEVTOOLS_EXTENSION__` near line 64. It reported `persist` defaulting to
+`window.localStorage` near line 332. [VERIFIABLE][^36]
+
+Verdict: `zustand/vanilla` can run as a copied file in a hooks module and in a `Client` module,
+unmodified. The middleware should not be copied. [INFERENCE from sections 3.1 and 3.2.]
+
+### 3.3 TanStack Query core
+
+The current release is `@tanstack/query-core` 5.104.2, with no runtime dependencies. All 23 source
+files were read at tag commit `b699b52d60`. [VERIFIABLE][^24][^25]
+
+Every identifier the brief named was searched. The table gives each hit and when it is evaluated.
+
+| Identifier | File and line | Context | Evaluated |
+|---|---|---|---|
+| `setTimeout`, `clearTimeout`, `setInterval`, `clearInterval` | `timeoutManager.ts:62-68` | The default provider's closures | At call |
+| `setTimeout` | `timeoutManager.ts:258-259` | `systemSetTimeoutZero`, the `notifyManager` default (`notifyManager.ts:19`) | At call |
+| `timeoutManager.setTimeout` and `setInterval` | `removable.ts:31`, `queryObserver.ts:527, 553`, `utils.ts:528` | Garbage collection, staleness, refetch interval, retry sleep | At call, through the provider |
+| `window` | `focusManager.ts:25-32`, `onlineManager.ts:26-36` | Behind `typeof window !== 'undefined'` | Guarded |
+| `document` | `focusManager.ts:137` | `globalThis.document?.visibilityState` | Guarded |
+| `window`, `Deno` | `utils.ts:116` | `isServer`, a `typeof` test | At load, safe |
+| `process.env.NODE_ENV` | `hydration.ts:150`; `query.ts:739, 872`; `utils.ts:549, 652`; `queriesObserver.ts:143`; `timeoutManager.ts:121, 142, 170, 217` | Unguarded development checks | At call |
+| `console.error`, `console.warn` | Inside the branches above | Development only | At call |
+| `AbortController` | `query.ts:747` | One per fetch | At call; present in a mod |
+| `queueMicrotask`, `requestAnimationFrame` | `notifyManager.ts:134, 137` | Doc comments only | Never |
+| `navigator`, `require`, `node:` imports | none | | |
+
+All ten `process.env.NODE_ENV` reads sit inside function bodies, so the module loads. The published
+build keeps them unguarded. The fetch counted four in `build/modern/timeoutManager.js` and two in
+`build/modern/query.js`, and reported that neither of the latter has a `typeof process` test.
+[VERIFIABLE][^25][^29][^30]
+
+`timeoutManager.setTimeout` checks `process.env.NODE_ENV` before it calls the provider
+(`timeoutManager.ts:169-173`). So even a custom provider does not help a verbatim copy. The first
+timer or fetch reads an undeclared `process` and throws a `ReferenceError`. [INFERENCE from the
+source lines and the environment in section 3.1.]
+
+query-core treats a runtime with no `window` as a server. The source says this "disables scheduling
+refetch timers and changes the default `retry` count", and `gcTime` with it
+(`environmentManager.ts:16-20`). [VERIFIABLE][^25][^27]
+
+In a mod, that removes most timers. Staleness and refetch timers are skipped (`queryObserver.ts:502-508`).
+The default retry count is 0 (`retryer.ts:251`), and the default `gcTime` is `Infinity`, so no
+collection timer starts (`removable.ts:30-46`). [VERIFIABLE][^25]
+
+One timer stays on every notification. The default batch scheduler is `systemSetTimeoutZero`
+(`notifyManager.ts:19`), which calls the global `setTimeout`. [VERIFIABLE][^25][^28]
+
+A copy can run only with four changes, none of them to the library's logic:
+
+1. A copy-time define that replaces `process.env.NODE_ENV` with `"production"`. Dead-code
+   elimination then drops every development branch and its `console` call. [HEURISTIC]
+2. `notifyManager.setScheduler` with a `Promise`-based microtask. The docs offer `queueMicrotask` as
+   an example scheduler, and a mod lacks it, so the `Promise` form stands in. [VERIFIABLE][^28]
+3. `timeoutManager.setTimeoutProvider` over `$.clock.after` and `$.clock.every`, set before any
+   `QueryClient` exists, as the docs require. A timer id must be a number or have
+   `Symbol.toPrimitive` (`timeoutManager.ts:17`), so the provider keeps a map from numbers to
+   `Timer` handles. [VERIFIABLE][^25][^26]
+4. A choice on server mode. Keeping it means polling with `$.clock.every`. Calling
+   `environmentManager.setIsServer(() => false)` restores client timers through the provider.
+   [VERIFIABLE][^27]
+
+The minified package is 40,039 bytes. Leg B's practitioner report put the module ceiling at 1 MB.
+[VERIFIABLE][^31][^44]
+
+Verdict: query-core cannot run as a copy of its published files. It can run as a build output with
+the four changes above. [INFERENCE from this section.]
+
+### 3.4 XState
+
+The current release is `xstate` 5.33.2, with no dependencies. The core sources were read from the
+release tarball at commit `fbee62e7c1`. [VERIFIABLE][^37][^38]
+
+| Identifier | File and line | Context | Evaluated |
+|---|---|---|---|
+| `setTimeout`, `clearTimeout` | `createActor.ts:61-69` | The default `clock` in `defaultOptions` | At call |
+| `console` | `createActor.ts:70` | `logger: console.log.bind(console)` in the top-level `defaultOptions` | At module load |
+| `setTimeout` | `reportUnhandledError.ts:9-13` | Rethrows an actor error nobody observed | When an error has no listener |
+| `setTimeout`, `clearTimeout` | `waitFor.ts:64-73` | The `timeout` option | Only with a finite timeout |
+| `clock.setTimeout`, `clock.clearTimeout` | `system.ts:125, 142` | Delayed events through the injected clock | At call |
+| `new Function`, `eval` | `scxml.ts:151, 588` | The SCXML converter | Not exported from `index.ts` |
+| `window`, `self`, `global` | `dev/index.ts:21-33, 51, 63` | Behind `typeof` tests | Guarded |
+| `console.warn`, `console.error` | `assign.ts:166`, `send.ts:252`, `State.ts:310`, `createActor.ts:742` and nine more | Each behind `isDevelopment` | Development only |
+| `process`, `navigator`, `document` | none in code | `document` appears in doc comments only | |
+
+Line 70 decides the verdict. `logger: console.log.bind(console),` sits in a top-level `const`, so
+importing `createActor.ts` reads `console` at once. A hooks module has no `console`. [VERIFIABLE][^23][^38]
+
+Every entry path imports that file. `StateMachine.ts:3`, `actions/spawnChild.ts:3` and `spawn.ts:1`
+import `createActor`. The pure `transition` API imports `getNextSnapshot.ts` (`transition.ts:2`),
+which imports `createActor` (`getNextSnapshot.ts:1`). [VERIFIABLE][^38]
+
+The published build keeps the line. The fetch found `logger: console.log.bind(console),` inside
+`const defaultOptions` in `dist/raise-97446fd4.esm.js`. It also found that `dist/xstate.esm.js` <!-- gitignored-path-ok: file paths inside the published xstate@5.33.2 npm package, cited by unpkg URL in the footnotes; not paths in this repo -->
+imports that chunk at top level. [VERIFIABLE][^39][^40]
+
+A `Client` surface module has a `console`, so XState loads there. Its delayed transitions still need
+a `clock` option, because "By default, the native `setTimeout` and `clearTimeout` functions are
+used" (`types.ts:1890-1908`). A `Client` has only `every`. [VERIFIABLE][^23][^38]
+
+A hooks-module copy needs three changes. The first is a `console` shim or a copy-time patch of line
+70. The second is `clock` and `logger` options on every `createActor`. The third is an error
+listener on every actor, so `reportUnhandledError` never reaches the global `setTimeout`.
+[INFERENCE from the table.]
+
+The shim route depends on a module being allowed to add a global. The types file says nothing on
+that, and nothing was run. [NO SOURCE]
+
+The minified package is 46,874 bytes. [VERIFIABLE][^41]
+
+Verdict: XState cannot load in a hooks module as published. It loads in a `Client` module, and it
+runs there only with a custom `clock`. [INFERENCE from this section.]
+
+### 3.5 Comparison
+
+| Criterion | `zustand/vanilla` 5.0.15 | `@tanstack/query-core` 5.104.2 | `xstate` 5.33.2 |
+|---|---|---|---|
+| Timer globals referenced | None | Default provider and `systemSetTimeoutZero` | Default clock, `reportUnhandledError`, `waitFor` |
+| Read at module load | Nothing missing | `window` and `Deno` through `typeof` only | `console` (`createActor.ts:70`) |
+| Unguarded host globals at call time | None | `process` (10 sites) | `setTimeout` in two helpers |
+| Node built-ins or `require` | None | None | None |
+| Code generation | None | None | SCXML only, not exported |
+| Loads in a hooks module | Yes | Yes | No |
+| Runs in a hooks module unmodified | Yes | No | No |
+| Changes needed | None | Define, scheduler, timeout provider, server-mode choice | `console` shim or patch, `clock`, `logger`, error listeners |
+| Minified size | 25-line file | 40,039 bytes | 46,874 bytes |
+
+### 3.6 The minimal alternative
+
+No hand-written replacement is needed for the store. `zustand/vanilla` qualifies as is. Its whole
+algorithm is a `Set` of listeners, an `Object.is` check and a shallow merge. [VERIFIABLE][^33]
+
+A mod also has its own reactive store. Leg B records that `$.state` "is reactive for the session and
+redraws the sites that read it". Pure reducers over `$.state` may need no store library at all.
+[VERIFIABLE][^44]
+
+For data fetching in the mod, query-core's value in server mode is deduplication and a cache. A
+`Map` from query key to data, fetch time and in-flight promise gives the same, with `$.clock.every`
+for polling. [INFERENCE]
+
+For flows such as drag and confirm-delete, a discriminated-union reducer is the plain substitute for
+a state machine. XState can still serve the two DOM surfaces, where its globals exist.
+[INFERENCE]
+
+### Hand-offs
+
+- A one-file import probe of each candidate under `claude plugin test`: the coordinator's first
+  build task. Nothing here was run.
+- Whether `claude plugin validate` refuses a `process` or `console` reference by static reading:
+  the same probe.
+- Whether a hooks module may assign to `globalThis`: the same probe, before any shim is designed.
+- Which state approach the shared core adopts: the coordinator's design stage, against leg B's
+  package rules.
 
 <!-- GAPS -->
 
@@ -468,7 +673,7 @@ and 997, the fields at lines 980 and 999). [VERIFIABLE][^20]
 [^20]: Wallace, S. (2026). [projects-wide-session-config/hooks-manifest.json](https://github.com/sergeiwallace/ai-harness/blob/main/projects-wide-session-config/hooks-manifest.json), lines 970-1005. sergeiwallace/ai-harness (private), GitHub. Read at commit 01d5ee82d4. Verified accessible (HTTP 200, GitHub API tree listing) 2026-10-15. (Hook matchers naming Task tools, and the per-hook `machines` field.)
 [^21]: Wallace, S. (2026). [projects-wide-session-config/modules/claude-delta.md](https://github.com/sergeiwallace/ai-harness/blob/main/projects-wide-session-config/modules/claude-delta.md), lines 17-19. sergeiwallace/ai-harness (private), GitHub. Read at commit 01d5ee82d4. Verified accessible (HTTP 200, GitHub API tree listing) 2026-10-15. (The panel-mirror and one-row-per-agent rules every machine compiles.)
 [^22]: Anthropic. (2026). [Use the mods API](https://code.claude.com/docs/en/plugins/mods/api.md). Claude Code Docs. Verified accessible (HTTP 200) 2026-10-15. (The `$` argument, `$.clock`, and the hooks module's environment.)
-[^23]: Anthropic. (2026). [mods/types/claude-code.d.ts](https://github.com/anthropics/claude-code/blob/main/mods/types/claude-code.d.ts), lines 1-40, 1275-1290, 2897-2940, 9960-9974 and 11570-11705. anthropics/claude-code, GitHub. Read in full through the GitHub API (517,451 bytes; header "Written by Claude Code 2.1.277"; last commit to the path `bf2323b302`, 2026-10-13). Verified accessible (HTTP 200) 2026-10-15. (The hooks and surface module globals, `$.clock` and `surface.every`.)
+[^23]: Anthropic. (2026). [mods/types/claude-code.d.ts](https://github.com/anthropics/claude-code/blob/main/mods/types/claude-code.d.ts), lines 1-40, 60-70, 1275-1290, 2897-2940, 9960-9974 and 11570-11705. anthropics/claude-code, GitHub. Read in full through the GitHub API (517,451 bytes; header "Written by Claude Code 2.1.277"; last commit to the path `bf2323b302`, 2026-10-13). Verified accessible (HTTP 200) 2026-10-15. (The hooks and surface module globals, `$.clock` and `surface.every`.)
 [^24]: npm. (2026). [@tanstack/query-core, latest](https://registry.npmjs.org/@tanstack/query-core/latest). npm registry. Verified accessible (HTTP 200) 2026-10-15. (Version 5.104.2, no runtime dependencies.)
 [^25]: TanStack. (2026). [query/packages/query-core/src at @tanstack/query-core@5.104.2](https://github.com/TanStack/query/tree/%40tanstack/query-core%405.104.2/packages/query-core/src). GitHub. All 23 source files read through the GitHub API at commit `b699b52d60` (2026-10-11). Verified accessible (HTTP 200) 2026-10-15. (The `grep` results in section 3.3.)
 [^26]: TanStack. (2026). [timeoutManager reference](https://tanstack.com/query/latest/docs/reference/timeoutManager). TanStack Query Docs. Verified accessible (HTTP 200) 2026-10-15.
