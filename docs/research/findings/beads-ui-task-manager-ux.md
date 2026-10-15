@@ -286,19 +286,256 @@ The human-versus-agent split has no Beads field. Options include an assignee per
 
 ## 6. Open-source React building blocks
 
-(drafting)
+The web app and the MCP App can share one React component set, because an MCP App is web content in an iframe and "you can use any framework or none at all". [VERIFIABLE][^76] The Claude Code mod cannot use these components. A mod returns an element tree of `Box`, `Text`, `Button` and similar elements, with no DOM. [VERIFIABLE][^34]
+
+Most candidates below are permissively licensed and actively maintained as of 2026-10-15. Five need care: Planby is now "All Rights Reserved", react-beautiful-dnd and gantt-task-react are archived, and Tremor and `cmdk` show slowing activity.
+
+### 6.1 Measured signals
+
+All counts below were read from the GitHub GraphQL API on 2026-10-15 about 00:05Z. [VERIFIABLE][^53]
+
+| Area | Library | Licence | Stars | Last push | Latest release | Open issues |
+| --- | --- | --- | --- | --- | --- | --- |
+| Drag and drop | dnd-kit | MIT | 17,711 | 2026-09-12 | `@dnd-kit/collision@0.5.0`, 2026-06-11 | 94 |
+| Drag and drop | Pragmatic drag and drop | Apache-2.0 (LICENSE file; GitHub reports NOASSERTION) | 12,783 | 2026-10-14 | none on GitHub | 96 |
+| Drag and drop | @hello-pangea/dnd | not checked (GitHub reports NOASSERTION) | 4,033 | 2026-10-14 | v18.0.1, 2025-02-09 | 71 |
+| Table | TanStack Table | MIT | 28,491 | 2026-10-12 | 9.3.1 (devtools tag), 2026-10-12 | 47 |
+| Virtualization | TanStack Virtual | MIT | 7,145 | 2026-10-14 | 3.13.45, 2026-10-13 | 55 |
+| Server state | TanStack Query | MIT | 50,428 | 2026-10-14 | release-2026-10-11 | 56 |
+| Client state | Zustand | MIT | 58,821 | 2026-10-14 | v5.0.15, 2026-08-13 | 2 |
+| Client state | Jotai | MIT | 21,294 | 2026-10-07 | v3.0.1, 2026-09-29 | 1 |
+| State machines | XState | MIT | 30,298 | 2026-10-14 | 2026-10-08 (package tag) | 93 |
+| UI kit | shadcn/ui | MIT | 125,615 | 2026-10-14 | shadcn@4.21.5, 2026-10-14 | 804 |
+| Primitives | Radix Primitives | MIT | 19,394 | 2026-10-14 | none on GitHub | 118 |
+| Primitives | Base UI | MIT | 11,149 | 2026-10-14 | v1.9.0, 2026-10-09 | 331 |
+| UI kit | Mantine | MIT | 31,832 | 2026-10-11 | 9.7.2, 2026-10-11 | 14 |
+| Command palette | cmdk | MIT | 13,016 | 2025-10-29 | v1.1.1, 2025-03-14 | 52 |
+| Gantt | Frappe Gantt | MIT | 6,144 | 2026-06-18 | v1.0.3, 2025-02-03 | 43 |
+| Timeline | vis-timeline | Apache-2.0 or MIT | 2,568 | 2026-10-14 | v8.5.4, 2026-08-12 | 266 |
+| Gantt | SVAR React Gantt | MIT core, paid PRO edition | 214 | 2026-10-12 | none on GitHub | 12 |
+| Gantt | gantt-task-react | MIT, archived | 1,098 | 2024-08-12 | v0.3.9, 2022-07-10 | 129 |
+| EPG timeline | Planby | "Custom License - All Rights Reserved" | 1,720 | 2026-08-23 | v2.1.0, 2026-08-23 | 10 |
+| Charts | Recharts | MIT | 27,628 | 2026-10-14 | v3.10.1, 2026-07-25 | 418 |
+| Charts | visx | MIT | 21,077 | 2026-06-22 | v4.0.0, 2026-06-11 | 116 |
+| Charts | Observable Plot | ISC | 5,405 | 2026-09-01 | v0.6.17, 2025-02-14 | 251 |
+| Charts | Tremor | Apache-2.0 | 3,660 | 2025-10-10 | none on GitHub | 18 |
+| Charts | Apache ECharts | Apache-2.0 | 67,512 | 2026-10-13 | 6.1.0, 2026-05-19 | 1,284 |
+| Calendar | FullCalendar | MIT | 20,687 | 2026-10-12 | v7.1.2, 2026-10-12 | 1,072 |
+| Calendar | react-big-calendar | MIT | 8,763 | 2026-06-01 | v1.20.0, 2026-06-01 | 39 |
+| Calendar | Schedule-X | MIT | 2,601 | 2026-10-14 | none on GitHub | 37 |
+
+The Pragmatic drag and drop licence file opens "Licensed under the Apache License, Version 2.0". [VERIFIABLE][^26] vis-timeline declares "SPDX-License-Identifier: Apache-2.0 OR MIT". [VERIFIABLE][^56] The Planby licence file is titled "Custom License - All Rights Reserved". [VERIFIABLE][^57]
+
+### 6.2 Drag and drop
+
+Pragmatic drag and drop "enables safe and successful usage of the browsers built in drag and drop functionality". Its core is about 4.7 kB, and its README says it is "powering some of the biggest products on the web", naming Trello, Jira and Confluence. [VERIFIABLE][^26] That adoption claim is the vendor's own and names its own products. Its strength for beads-ui is that a Jira-like board is its home use case. [INFERENCE]
+
+dnd-kit lists itself as "Framework agnostic" and describes sortables that "can be reordered within and across lists". Its docs split into Latest and Legacy sections. [VERIFIABLE][^25] Its keyboard sensor and announcements are documented on the legacy pages. [VERIFIABLE][^24] A build on the newer packages should check that those features carried over. [INFERENCE]
+
+react-beautiful-dnd is archived and "deprecated on `npm`", and its README sends readers to Pragmatic drag and drop. [VERIFIABLE][^27] `@hello-pangea/dnd` is a maintained fork but has not released since February 2025. [VERIFIABLE][^53]
+
+### 6.3 Tables, data and state
+
+TanStack Table, Virtual and Query are all MIT, active, and released within the last week. [VERIFIABLE][^53] TanStack Query's optimistic-update guide covers the drag rollback pattern from §2.6. [VERIFIABLE][^30] Zustand and Jotai each show one or two open issues against tens of thousands of stars. [VERIFIABLE][^53]
+
+### 6.4 UI primitives and the command palette
+
+shadcn/ui switched its default primitives in July 2026: "Starting today, Base UI is the default component library in shadcn/ui", and "Radix is still fully supported". [VERIFIABLE][^54] A new beads-ui project generated with the shadcn CLI would therefore start on Base UI. [INFERENCE]
+
+shadcn/ui distributes components as source code the project owns. [HEURISTIC] Tremor uses the same copy-and-paste model, "Built on top of Tailwind CSS and Radix UI". [VERIFIABLE][^58] Tremor's repository has not been pushed since 2025-10-10, which is a maintenance warning. [VERIFIABLE][^53]
+
+`cmdk` composes "Radix UI's Dialog component", filters and sorts items itself, and supports nested pages. [VERIFIABLE][^20] Its last release was 2025-03-14 and its last push 2025-10-29. [VERIFIABLE][^53] It still works, but a maintained fork or a Base UI combobox may replace it. [INFERENCE]
+
+### 6.5 Timeline, gantt and calendars
+
+Frappe Gantt is MIT, drags and resizes bars, and has a `move_dependencies` option. Its last release is from February 2025. [VERIFIABLE][^33][^53]
+
+SVAR React Gantt states "React 19 compatibility" and "The ability to drag tasks from a backlog". It ships an "open-source core" and a separate PRO edition. [VERIFIABLE][^55] With 214 stars it has little adoption evidence, so it is exploratory under the source-vetting rule. [INFERENCE]
+
+vis-timeline carries a permissive dual licence and released in August 2026, but has 266 open issues against 2,568 stars. [VERIFIABLE][^53][^56] Planby is closed source now, and gantt-task-react is archived. [VERIFIABLE][^53][^57]
+
+FullCalendar, react-big-calendar and Schedule-X are all MIT and active. [VERIFIABLE][^53] Beads has due and defer dates, so a calendar view can place items by due date as Plane's does. [VERIFIABLE][^16][^32] [INFERENCE]
+
+### 6.6 Charts
+
+Recharts, visx and ECharts are permissive and active. [VERIFIABLE][^53] Observable Plot has not released since February 2025. [VERIFIABLE][^53] In the terminal mod, charts must be drawn as `Raster` cells, which the mods docs suggest "for a heat map, a sparkline, or a game board". [VERIFIABLE][^34]
+
+### Hand-offs
+
+- Leg B: which of these React packages bundle cleanly into an MCP App resource under its CSP, and how much of the view layer the mod can share (data and view models only, given no DOM).
+- Coordinator: an existing fleet app (`app-portal`) already uses React 19, Tailwind CSS 4 and shadcn-derived components, per its `package.json` read on 2026-10-15. Reusing its tokens is a design choice outside this leg.
 
 ## 7. Open-source Jira and Linear clones
 
-(drafting)
+The general-purpose clones are useful as UX references. Most cannot donate code to an MIT repository, because they are AGPL, GPL, EPL or custom-licensed. The closest prior art is the Beads ecosystem itself. Two existing projects collide with names Sergei proposed: Beads Viewer ships a `bv` command, and the npm package `beads-ui` belongs to another author.
+
+### 7.1 General-purpose clones
+
+Signals below were read from the GitHub GraphQL API on 2026-10-15 about 00:07Z. [VERIFIABLE][^59]
+
+| Project | Licence | Main language | Stars | Latest release | Status |
+| --- | --- | --- | --- | --- | --- |
+| Plane | AGPL-3.0 | TypeScript | 60,851 | v1.4.2, 2026-08-23 | Active |
+| Huly | EPL-2.0 | TypeScript | 27,905 | v0.7.426, 2026-07-05 | Hosted service shut down |
+| Focalboard | NOASSERTION | TypeScript | 26,502 | v8.0.0, 2024-06-13 | "currently not maintained" |
+| Wekan | MIT | JavaScript | 21,116 | v12.46, 2026-10-14 | Active |
+| OpenProject | GPL-3.0 | Ruby | 16,421 | v17.9.1, 2026-10-01 | Active |
+| Planka | PLANKA Community, Fair Use and Pro licences | JavaScript | 12,617 | v2.2.1, 2026-08-10 | Active |
+| Leantime | AGPL-3.0 | PHP | 11,830 | v3.11.0, 2026-10-09 | Active |
+| Kanboard | MIT | PHP | 9,907 | v1.2.54, 2026-08-29 | Active |
+| Vikunja | AGPL-3.0 | Go | 5,732 | v2.7.0, 2026-10-02 | Active |
+| Taiga (front end) | AGPL-3.0 | CoffeeScript | 383 | none on GitHub | Active |
+
+Huly's README states "Hosted Huly has shut down" because "its hosting is no longer funded". [VERIFIABLE][^60] Focalboard's README opens "This repository is currently not maintained". [VERIFIABLE][^61]
+
+Planka's licence prohibits "operating PLANKA as a hosted service for third parties for any commercial gain whatsoever". [VERIFIABLE][^62] That is a source-available licence, so Planka code is off limits for an MIT project. [INFERENCE]
+
+Copying AGPL, GPL or EPL source into an MIT project would bring those terms with it. [HEURISTIC] UX patterns, layouts and interaction ideas can still be studied and re-implemented from scratch. [HEURISTIC]
+
+Plane is the strongest UX reference among the clones. It has the most stars, the five-layout switcher, and cycle charts. [VERIFIABLE][^16][^17][^59] OpenProject is the reference for dependency-aware Gantt scheduling. [VERIFIABLE][^18] The two MIT clones, Wekan and Kanboard, run on stacks unlike a React and TypeScript monorepo, so little of their code would transfer. [INFERENCE]
+
+Whether Plane, Huly or the other general clones ship a terminal or CLI surface was not established in this run. [NO SOURCE]
+
+### 7.2 The Beads ecosystem
+
+A GitHub search for Beads UIs, viewers and kanbans returned 36 repositories on 2026-10-15. [VERIFIABLE][^65] Two have real adoption.
+
+`mantoni/beads-ui` is a local web UI for Beads: MIT, JavaScript, 755 stars, v0.12.6 released 2026-08-11. [VERIFIABLE][^59] It installs with `npm i beads-ui -g` and starts with `bdui start --open`. Its views are Issues, Epics and a Board with "Blocked / Ready / In progress / Closed columns". It lists "Live updates", "Keyboard navigation" and "Multi-workspace". [VERIFIABLE][^21] The npm package `beads-ui` belongs to its maintainers, and its command is `bdui`. [VERIFIABLE][^21]
+
+Beads Viewer is a Go TUI for Beads with 1,713 stars and v0.25.2 released 2026-10-01. [VERIFIABLE][^59] It installs with `brew install dicklesworthstone/tap/bv`. Its board is opened with `b`, cycles swimlane modes with `s`, and agents are told "Use ONLY --robot-* flags". [VERIFIABLE][^63]
+
+Beads Viewer's licence adds a rider to MIT. "Restricted Parties" include "Anthropic, PBC", and "no rights are granted to any Restricted Party". Its definition of "use" covers "analyzing, indexing, or incorporating" the software into "any dataset, training corpus, evaluation harness, or pipeline for machine learning or other automated systems". [VERIFIABLE][^64]
+
+beads-ui is being researched and built by Claude agents. Using Beads Viewer's code, binary or robot API in that work carries legal risk under the rider. [INFERENCE] This packet read only Beads Viewer's README and LICENSE, and used its README for interaction patterns. Whether reading its documentation is within the rider is a legal question this packet does not answer.
+
+Smaller Beads front ends in the search include a web viewer (33 stars), an agent dashboard with TUI and React web modes (31 stars), several read-only TUIs, a VS Code extension for `bv` and an Emacs interface. [VERIFIABLE][^65] The VS Code and Emacs projects name `bv` as Beads Viewer's command, so the name already has users. [VERIFIABLE][^65]
+
+### 7.3 Name collisions with the founding ask
+
+Founding ask entry A002 proposes the alias `bv` and the name `beads-ui`. The `bv` command is already Beads Viewer's Homebrew binary. [VERIFIABLE][^63] A second `bv` on the same machine would shadow one or the other on `PATH`. [INFERENCE]
+
+The GitHub repository `sergeiwallace/beads-ui` coexists with `mantoni/beads-ui` without conflict, since owners differ. [VERIFIABLE][^59] Publishing to npm under the bare name `beads-ui` is not possible, because the name is taken. A scoped name such as `@sergeiwallace/beads-ui` would avoid that. [VERIFIABLE][^21] [INFERENCE]
+
+### Hand-offs
+
+- Coordinator: the `bv` alias and the npm package name are naming decisions for the design stage.
+- Coordinator: whether to treat Beads Viewer as off limits entirely. This packet makes no legal finding.
+- Leg C: `mantoni/beads-ui` groups its board by readiness (Blocked, Ready, In progress, Closed) rather than raw status; leg C can say whether `bd ready` semantics should drive columns.
 
 ## 8. Web app hosting and auth for a small open-source app
 
-(drafting)
+Comparable local-first tools ship one install command first and a Docker Compose file second. Deploy buttons come last. beads-ui has a constraint most of them lack: its data lives in a git checkout with a Dolt store. `bd serve` already exposes that store as a loopback HTTP API with optional token auth and no TLS. A hosted beads-ui is therefore a long-running process with a persistent volume behind a TLS and auth layer. Static and serverless hosts fit only the client bundle.
+
+### 8.1 What comparable apps ship as the local run path
+
+| Project | Local run path | Source |
+| --- | --- | --- |
+| mantoni/beads-ui | `npm i beads-ui -g`, then `bdui start --open` | [VERIFIABLE][^21] |
+| Vibe Kanban | `npx vibe-kanban` | [VERIFIABLE][^51] |
+| Beads Viewer | `brew install dicklesworthstone/tap/bv` | [VERIFIABLE][^63] |
+| Plane | download and run `setup.sh`; 2 CPU cores and 4 GB RAM minimum | [VERIFIABLE][^66] |
+| Vikunja | one container with SQLite: "You can also remove the db section." | [VERIFIABLE][^67] |
+
+The two Beads-adjacent web tools both start from a single package-manager command. [VERIFIABLE][^21][^51] Plane's stack needs 4 GB of RAM, which is heavy for a single-user tool. [VERIFIABLE][^66] Vikunja's SQLite mode is the closest analogue to a file-backed store in one container. [VERIFIABLE][^67] [INFERENCE]
+
+### 8.2 `bd serve` as the backend
+
+`bd serve` serves "the same work surface the CLI answers, for automation clients that would otherwise fork a bd subprocess per call". An OpenAPI document describes the wire contract at `/v0`. [VERIFIABLE][^32]
+
+Its defaults suit a local app. It binds `127.0.0.1:0` unless told otherwise, and the help advises an explicit port so a second serve fails to bind. Authentication is "off by default on loopback". [VERIFIABLE][^32]
+
+Its limits shape a hosted deployment. `--allow-non-loopback` "REQUIRES a token file". Under "WHAT THIS DOES NOT DO" the help lists "No TLS" and states that hooks do not fire on HTTP writes. It also refuses to start under `--readonly`. [VERIFIABLE][^32]
+
+The web app and the MCP App server can both call `bd serve` and avoid spawning `bd` per request. [INFERENCE] Any Beads hook the fleet relies on would not run for writes made through the UI on that route. [INFERENCE]
+
+### 8.3 Deploy templates and buttons
+
+| Target | What the maintainer ships | Fit for a `bd`-backed app |
+| --- | --- | --- |
+| Docker Compose | A compose file; Plane and Vikunja both document one | Fits: a volume holds the checkout and Dolt state [VERIFIABLE][^66][^67] [INFERENCE] |
+| Railway | A published template plus a "Deploy on Railway" button | Fits if the service has a volume [VERIFIABLE][^68] [INFERENCE] |
+| Render | A `render.yaml` Blueprint "at the root of your repo" | Fits as a web service with a disk [VERIFIABLE][^69] [INFERENCE] |
+| Fly.io | `fly launch` and a `fly.toml` | Fits with a volume; volume details not read [VERIFIABLE][^72] [INFERENCE] |
+| Cloudflare | A Deploy button that clones the repo and provisions resources from the Wrangler config | Client bundle only; Workers cannot run `bd` [VERIFIABLE][^70] [INFERENCE] |
+| Vercel | A Deploy Button that clones the repo and creates a project | Client bundle only [VERIFIABLE][^71] [INFERENCE] |
+
+Cloudflare's button "clones your source repository into the user's GitHub/GitLab account". Required resources "are automatically provisioned and bound to the Worker". [VERIFIABLE][^70] Vercel's button follows the same clone-then-deploy flow. [VERIFIABLE][^71]
+
+Render's Deploy-to-Render button page returned 404, so only the Blueprint file format was verified. [NO SOURCE] AWS CDK, Copilot, App Runner and Helm templates were not researched in this run; §Gaps lists them.
+
+### 8.4 Auth for a self-hosted single-user app
+
+Tailscale Serve routes tailnet traffic to a local service and needs HTTPS enabled in the tailnet. It adds `Tailscale-User-Login`, `Tailscale-User-Name` and `Tailscale-User-Profile-Pic` headers. Those headers "are not populated for traffic originating from tagged devices". [VERIFIABLE][^73]
+
+oauth2-proxy is "A reverse proxy and static file server that provides authentication using Providers (Google, GitHub, and others)". [VERIFIABLE][^74] It is MIT, has 15,185 stars and released v7.15.5 on 2026-10-01. [VERIFIABLE][^77]
+
+Caddy's `basic_auth` requires hashed passwords, and the docs warn "basic auth is not secure over plain HTTP". [VERIFIABLE][^75]
+
+Passkeys have two maintained routes. SimpleWebAuthn is an MIT TypeScript library (2,365 stars, v14.0.3 on 2026-09-25). Pocket ID is a BSD-2-Clause OpenID Connect provider that "lets users sign in to your applications with passkeys" (9,592 stars, v2.18.0 on 2026-10-04). [VERIFIABLE][^77]
+
+These pieces stack in order of exposure. Loopback with no auth suits one machine, and `bd serve` defaults to it. Tailscale Serve adds TLS and identity across a tailnet. oauth2-proxy or Pocket ID in front of `bd serve` with a token covers the open internet. [INFERENCE]
+
+### 8.5 The MCP App as a second delivery route
+
+An MCP App's UI is "an HTML page, often bundled with its JavaScript and CSS", rendered in a sandboxed iframe. It talks to the host over `postMessage`. [VERIFIABLE][^76] Claude, Claude Desktop, VS Code GitHub Copilot, Microsoft 365 Copilot and Goose are among its listed hosts. [VERIFIABLE][^76] The MCP App needs no web hosting of its own, because the MCP server delivers the bundle as a `ui://` resource. [VERIFIABLE][^76] [INFERENCE]
+
+### Hand-offs
+
+- Leg B: how the MCP App server reaches `bd serve` or `bd` and whether its CSP allows a loopback call.
+- Leg C: whether Beads hooks must fire for UI writes, given `bd serve` skips them, and how a hosted checkout syncs with the git remote.
+- Design stage: the first-class local command name, the template set for the first release, and the default auth layer.
 
 ## 9. Terminal parallels
 
-(drafting)
+Terminal kanban tools pair vim-style keys with optional mouse support, and the careful ones confirm only destructive actions. A Claude Code mod pane is stricter than a full-screen TUI. Claude Code owns Tab, the arrow keys and Esc. Hotkeys are one digit or one lowercase letter on a `Button`, and pointer input exists only inside a `Client` region. The patterns that translate are letter hotkeys, a "Move to" menu, a focused confirmation pane and a per-session board.
+
+### 9.1 What the terminal tools do
+
+`kanban-tui` is built on Textual. It moves cards between columns with `H` and `L` and reorders with `J` and `K`. "Movement between columns and reordering within a column are also supported via mouse drag and drop." [VERIFIABLE][^52] It lists `d` for delete without a documented confirmation, and it can run "as a local mcp server". [VERIFIABLE][^52]
+
+taskwarrior-tui uses `j` and `k` to move, `a` to add, `m` to modify, `x` to delete and `u` to undo. `v` toggles a mark and `V` marks every task in the current filter. [VERIFIABLE][^78] Its delete confirmation behaviour is not documented on that page. [NO SOURCE]
+
+lazygit turns on mouse capture with `mouseEvents: true` and warns that captured mouse events make text selection harder. Its config has per-action warning toggles such as `skipDiscardChangeWarning`, and `?` opens the options menu. [VERIFIABLE][^79]
+
+k9s opens a command mode with `:` and filters with `/`. Ctrl-D deletes a resource with "TAB and ENTER to confirm", while Ctrl-K kills one with "no confirmation dialog". [VERIFIABLE][^80] That split keeps a confirmation on the normal delete and offers a deliberate fast path.
+
+dooit uses vim-like keybindings and shows them on `?`. [VERIFIABLE][^81] Beads Viewer opens its board on `b`, moves with `h`, `l`, `j` and `k`, and cycles swimlane modes with `s`. It filters with `o`, `c` and `r` for open, closed and ready. [VERIFIABLE][^63]
+
+Adoption differs widely across these tools. lazygit has 83,181 stars and k9s 34,814. dooit has 2,962, taskwarrior-tui 2,142 and `kanban-tui` 286. [VERIFIABLE][^59]
+
+### 9.2 The constraints of a mod pane
+
+`Box`, `Text`, `Button`, `Link`, `Code` and `Markdown` draw everywhere. `Input` and `Select` draw in the terminal and Desktop. `Raster` and `Image` draw in the terminal only. [VERIFIABLE][^34]
+
+`Client` is "A region drawn by a second file of yours, for animation and pointer input". It draws in the terminal and Desktop. [VERIFIABLE][^34]
+
+Claude Code routes keys to a mod's controls only while its pane has focus. "A mod can't bind Tab or the arrow keys to anything else." A hotkey is "one digit or one lowercase letter", and Esc "Returns keyboard focus to the prompt". [VERIFIABLE][^34]
+
+A pane takes focus only "while the prompt is empty and nothing else has keyboard focus". A pane the mod opens unprompted needs a terminal at least 144 columns wide. [VERIFIABLE][^34]
+
+`holdToasts: true` exists for "a dialog the user answers and leaves". The permission prompt is not a render site, though `AskUserQuestion` is. [VERIFIABLE][^34]
+
+### 9.3 Which patterns translate
+
+| Terminal pattern | Precedent | Translation into a mod pane |
+| --- | --- | --- |
+| Move card between columns with `H`/`L` | `kanban-tui` [VERIFIABLE][^52] | Uppercase is not a valid hotkey; use lowercase letter buttons or a `Move to` `Select` [VERIFIABLE][^34] [INFERENCE] |
+| Mouse drag between columns | `kanban-tui` [VERIFIABLE][^52] | Only inside a `Client` region with pointer input; leg B must confirm drag is feasible [VERIFIABLE][^34] [INFERENCE] |
+| Confirm delete, skip confirm on a separate key | k9s Ctrl-D and Ctrl-K [VERIFIABLE][^80] | A focused confirm pane opened with `holdToasts`; Enter confirms and Esc returns focus [VERIFIABLE][^34] [INFERENCE] |
+| Mark then bulk act | taskwarrior-tui `v` and `V` [VERIFIABLE][^78] | Lowercase hotkey `v` on a button; uppercase `V` needs another key [INFERENCE] |
+| Filter with `/` | k9s, taskwarrior-tui [VERIFIABLE][^78][^80] | `/` is not a valid hotkey; an `Input` filter field instead [VERIFIABLE][^34] [INFERENCE] |
+| Command mode with `:` | k9s [VERIFIABLE][^80] | Mod-registered slash commands such as `/beads-board` [VERIFIABLE][^34] [INFERENCE] |
+| Cycle swimlanes with `s` | Beads Viewer [VERIFIABLE][^63] | Direct: lowercase `s` is a valid hotkey [INFERENCE] |
+| Help on `?` | lazygit, dooit [VERIFIABLE][^79][^81] | `?` is not a valid hotkey; a help button or a digit [INFERENCE] |
+| Inline charts | Terminal dashboards | `Raster` cells for sparklines and heat maps [VERIFIABLE][^34] |
+
+The mod also loses one thing every full-screen TUI has. Claude Code's prompt shares the screen and takes Esc, so the pane is a side panel and not the whole application. [INFERENCE]
+
+### Hand-offs
+
+- Leg B: whether a `Client` region can receive uppercase keys or `/` through its own key handler, which would relax the hotkey limits above.
+- Leg B: whether pointer events in a `Client` carry enough position data to implement drag between columns.
+- Leg C: whether `kanban-tui`'s reading of `~/.claude/tasks/` matches the Claude Code task panel data leg C measures.
 
 ## Gaps, blindspots and emergent findings
 
