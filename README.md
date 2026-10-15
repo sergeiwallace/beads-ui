@@ -22,10 +22,10 @@ and Linux.
 
 ## Planned layout
 
-A monorepo with one core package for data access, state, layout and theme, and one package per
-surface (TUI mod, MCP UI app, web app). A mod draws to the terminal and has no DOM, so the surfaces
-share logic and design tokens rather than UI components. The design doc settles the final package
-boundaries.
+A monorepo with one shared core for data access, domain logic, view models, commands and design
+tokens, and one package per surface (TUI mod, MCP UI app, web app). A mod draws to the terminal and
+has no DOM, so the surfaces share logic and design tokens rather than UI components or layout. The
+design doc settles the package boundaries and when the core moves out of the plugin.
 
 ## Open source
 
