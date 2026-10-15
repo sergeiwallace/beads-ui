@@ -379,19 +379,369 @@ The verdicts are [INFERENCE] from the licence and activity figures above.
 
 ## 4. MCP Apps for a Beads app
 
-(filled in the next commit)
+### 4.1 Specification status and SDK
+
+MCP Apps is specified in SEP-1865, whose status reads "Stable (2026-01-26)" [VERIFIABLE][^7]. The
+extension identifier is `io.modelcontextprotocol/ui` [VERIFIABLE][^10]. A `draft` version of the
+spec also sits in the repository; it was not read in this run [NO SOURCE].
+
+The SDK is `@modelcontextprotocol/ext-apps`. Its latest release is v2.0.3 (2026-09-25). Version 2.0
+moved to the split MCP TypeScript SDK 2.0 packages and zod 4.2, and "The MCP Apps wire protocol is
+unchanged" [VERIFIABLE][^36]. The repository has 2,957 stars and 404 forks [VERIFIABLE][^36].
+
+MCP-UI, the earlier community project, now says "MCP-UI is now standardized into MCP Apps!". Its
+`@mcp-ui/client` package renders MCP Apps inside a host [VERIFIABLE][^43]. The MCP blog says MCP-UI
+and the OpenAI Apps SDK "pioneered the patterns" that MCP Apps standardizes [VERIFIABLE][^41].
+
+### 4.2 How a server declares a UI
+
+A tool's description carries `_meta.ui.resourceUri`, which points at a `ui://` resource. The host
+can fetch that resource before the tool is called [VERIFIABLE][^35]. The resource "MUST use the
+`ui://` URI scheme" and has the MIME type `text/html;profile=mcp-app` [VERIFIABLE][^7].
+
+The resource's `_meta.ui.csp` declares `connectDomains`, `resourceDomains`, `frameDomains` and
+`baseUriDomains`. Without it, the host applies a default that includes `connect-src 'none';`
+[VERIFIABLE][^7]. A tool's `visibility` decides who may call it. `"app"` means the tool "is callable
+by the app from the same server connection only", and the host hides it from the model
+[VERIFIABLE][^7].
+
+### 4.3 Sandbox, bridge and display modes
+
+"MCP Apps run in a sandboxed iframe controlled by the host." The app talks to the host over
+`postMessage` in a JSON-RPC dialect of MCP that shares `tools/call` with core MCP and adds `ui/`
+methods [VERIFIABLE][^35]. A web host wraps the view in a sandbox proxy on a different origin, and
+"The Sandbox MUST have the following permissions: `allow-scripts`, `allow-same-origin`"
+[VERIFIABLE][^7].
+
+The spec defines three display modes: `"inline" | "fullscreen" | "pip"` [VERIFIABLE][^7]. The host
+passes `containerDimensions` with a fixed or maximum width and height [VERIFIABLE][^7].
+
+### 4.4 What Claude supports as of this run
+
+| Fact | Detail |
+|---|---|
+| Hosts | Claude web and Claude Desktop render MCP Apps; Claude Code has no row in the matrix [VERIFIABLE][^10] |
+| Plans and surfaces at launch | Free, Pro, Max, Team and Enterprise; mobile, web and desktop [VERIFIABLE][^42] |
+| Permission | "Claude asks for permission to display the app", with Allow and Always allow [VERIFIABLE][^8] |
+| Local servers | Claude Desktop runs example servers locally over stdio from `claude_desktop_config.json` [VERIFIABLE][^8] |
+| Sandbox origin | `ui.domain` is `{hash}.claudemcpcontent.com`; local stdio connectors cannot use it [VERIFIABLE][^8][^38] |
+| Nested iframes | "The `frameDomains` field ... is restricted in Claude pending security review" [VERIFIABLE][^37] |
+| Tool result size | About 150,000 characters on claude.ai and Desktop; Claude Code's own limit is 25,000 tokens [VERIFIABLE][^9][^38] |
+| Tool call timeout | 240 seconds per call on claude.ai and Desktop [VERIFIABLE][^9] |
+| Mobile | A native WebView instead of an iframe; a connector must be added on web or desktop first [VERIFIABLE][^37] |
+| Gestures on mobile | Inline, "vertical pan gestures that start inside it go to the conversation scroll instead of to your content" [VERIFIABLE][^37] |
+| Network path | MCP tool calls are proxied through Claude's backend and leave from Anthropic's IP ranges [VERIFIABLE][^38] |
+| Unsupported MCP features | Resource subscriptions, sampling and draft capabilities [VERIFIABLE][^9] |
+
+Claude's design guidelines steer a board-shaped app to full screen. Inline cards should have no
+nested scrolling, no menus or popovers and no drill-ins. Full screen suits dashboards and detailed
+tools, with the composer always visible [VERIFIABLE][^37]. Claude passes its style tokens as CSS
+variables such as `--color-background-primary` and `--font-sans`, in light and dark modes
+[VERIFIABLE][^37].
+
+### 4.5 Developer tooling and task-manager examples
+
+The developer route is the SDK quickstart, the `ext-apps` examples (React, Vue, Svelte, Preact,
+Solid and vanilla starters), Claude Desktop's developer tools and the MCP Apps skills plugin for
+Claude Code [VERIFIABLE][^8][^35][^38]. The `basic-host` example shows how a host embeds a view with
+the SDK's App Bridge [VERIFIABLE][^35].
+
+Asana was a launch partner on 2026-01-26. Its app is described as "Turn chats into projects, tasks,
+and timelines your team can see and execute in Asana" [VERIFIABLE][^42]. No Asana source code or
+open-source task-manager MCP App was found. Searches for Linear, Jira, monday.com and ClickUp MCP
+Apps returned nothing usable [NO SOURCE].
+
+### 4.6 What a Beads MCP App needs
+
+| Need | Claude Desktop (local) | claude.ai (web) |
+|---|---|---|
+| Server kind | Local stdio server, or an MCPB bundle with Node bundled [VERIFIABLE][^8][^40] | Remote server over Streamable HTTP, "reachable over the internet" [VERIFIABLE][^9] |
+| Reaching the Beads store | The server runs on the machine, so it can run `bd` in the repo [INFERENCE] | Claude reaches the server from Anthropic's infrastructure, so a local server needs a tunnel [VERIFIABLE][^39] |
+| Authentication | None needed for stdio [VERIFIABLE][^40] | OAuth 2.0, a static header credential, or none; a tunnelled server should keep auth on [VERIFIABLE][^9][^39] |
+| Stable sandbox origin | Not available for local stdio [VERIFIABLE][^38] | `ui.domain` from the connector URL [VERIFIABLE][^8] |
+| Platforms | Claude Desktop on macOS and Windows [VERIFIABLE][^40] | Any browser; mobile after the connector is added on web or desktop [VERIFIABLE][^37] |
+
+Both paths can share one server package that offers both transports, with the `ui://` view bundled
+into it [INFERENCE]. For claude.ai, the options are a tunnel to the user's machine or a hosted server
+with its own copy of the Beads store [INFERENCE]. Which one is safer is a design question.
+
+A drag-heavy board on mobile has to run in full screen, because inline vertical drags scroll the
+conversation [INFERENCE from the gesture rule in §4.4].
+
+### Hand-offs
+
+- To leg C: how a hosted server gets a current Beads store (Dolt remote, sync, or a tunnel), and
+  the write contention when the TUI mod and a hosted app write the same issues.
+- To leg A: hosting the web app and the hosted MCP server (templates, auth, deploy targets).
+- To the design stage: whether claude.ai support belongs in the MVP or a later phase.
 
 ## 5. The shared core across the TUI mod, the MCP App and the web app
 
-(filled in the next commit)
+### 5.1 What a mod renders with
+
+React does not run inside a mod. JSX compiles to Claude Code's `h`, which calls the element
+constructors that `$.ui.resolve(e)` hands out [VERIFIABLE][^2]. Ink draws the resulting tree in the
+terminal, and the Desktop app draws it natively [VERIFIABLE][^2]. A mod cannot bring its own
+reconciler, renderer or layout engine; it returns Claude Code's elements and gets Ink's flex layout
+[INFERENCE from §1.1 and §1.2].
+
+Third-party npm packages are allowed only as copies inside the plugin folder, because "the one bare
+import allowed is `claude-code`" [VERIFIABLE][^1]. Such a copy must also avoid timers, Node and the
+DOM [VERIFIABLE][^2][^16]. A practitioner reports "A module file over 1 MB is not read", and asks
+Anthropic to promise static multi-file imports [VERIFIABLE][^21].
+
+The README's planned layout lists "data access, state, layout and theme" in the core package
+(measured in the README at `c9261f3`). Layout cannot be shared with the mod, and only some state
+code can. Section "Gaps" carries this as an alignment note.
+
+### 5.2 Layer by layer
+
+| Layer | Mod | MCP App view | Web app | Shared by |
+|---|---|---|---|---|
+| Beads data access | `bd` through `$.process.run`, or the Beads MCP server through `$.mcp.call` | `tools/call` through the host to the server | Its own server running `bd` | Argv builders, JSON parsers and validators: all three. Transports: per surface |
+| Domain logic (columns, sort, filter, rank, burndown, dependency graph) | Pure TypeScript | Same | Same | All three |
+| View models and state | Module variables, `$.state`, `$.store`, `Client` local state | Any DOM state library | Same | Pure reducers and selectors: all three. React state libraries: two |
+| Commands and keys | `Button` hotkeys and `Client` `onKey` | DOM key events | DOM key events | The command catalog as data: all three. Bindings: per surface |
+| Layout | `Box` with Ink's flex props | CSS | CSS | Between the two DOM surfaces only |
+| Theme | Theme keys or raw colours | Claude's CSS variables | Its own tokens | Semantic token names: all three. Values: per surface |
+| Components | Element constructors | React DOM | React DOM | MCP App and web app |
+
+Sources for the mod column: §1.1 and §1.2 [VERIFIABLE][^2][^15]. The MCP App column follows §4
+[VERIFIABLE][^35]. The "Shared by" column is [INFERENCE].
+
+Whether TanStack Query core, Zustand's vanilla store or XState run without timer globals was not
+checked [NO SOURCE]. A one-file import probe under `claude plugin test` would settle each.
+
+### 5.3 Codebases that target terminal and web from one core
+
+| Project | Terminal | Web or other | What is shared | Signal |
+|---|---|---|---|---|
+| opencode | OpenTUI with Solid (`@opentui/solid`) | Solid DOM app with Kobalte, TanStack Solid Query and Vite | `@opencode/client` (with a `./solid` export), schema, core, util and plugin packages; UI code separate; the TUI imports `@opencode/ui` only for audio files | 213,531 stars [VERIFIABLE][^11] |
+| OpenTUI | Zig core with React and Solid renderers | `@opentui/keymap`: "A host-agnostic keymap engine for terminal and DOM apps" | The keymap engine | 13,537 stars [VERIFIABLE][^44] |
+| Ink | React renderer using Yoga flexbox | None of its own | React code above the renderer, inferred | 40,102 stars; v8 requires React 19.3+ [VERIFIABLE][^45] |
+| Textual with textual-serve | Textual app | "With 3 lines of code, any Textual app can run in the browser." | The whole app, shown as a terminal in a browser | 37,463 and 407 stars [VERIFIABLE][^47][^49] |
+| Ratzilla | Ratatui | Browser through WebAssembly with a DOM backend | The whole app, with a terminal look | 1,470 stars [VERIFIABLE][^46] |
+| Bubble Tea with Wish | Bubble Tea | SSH: "render TUIs directly over an SSH connection" | The whole app, over SSH | 45,417 and 5,554 stars [VERIFIABLE][^48][^49] |
+| react-blessed, react-nil | React renderers | None | Not applicable | Last pushes 2021-05-06 and 2025-01-13 [VERIFIABLE][^49] |
+| Claude Code mods | Ink | Desktop and other remote surfaces draw the same element tree | The element tree | First party [VERIFIABLE][^2] |
+
+Two patterns appear. Textual, Ratzilla and Wish share everything by putting a terminal UI on the
+web. opencode shares the client and domain packages and writes separate UI per surface
+[INFERENCE from the table]. beads-ui's ask, Jira-like web views plus a TUI, matches the opencode
+pattern [INFERENCE].
+
+### 5.4 The MCP server as a shared boundary
+
+The mod can call the same Beads MCP server with `$.mcp.call` that the MCP App calls through the
+host [VERIFIABLE][^2][^35]. That gives one validated write path for both [INFERENCE]. The `$.mcp.call` route
+has "No permission prompt", so the mod must draw its own confirmation [VERIFIABLE][^2]. The
+Social Champ mod already works this way, through its vendor's MCP connector [VERIFIABLE][^18].
+
+Claude Code is not an MCP Apps host [VERIFIABLE][^10]. Whether it hides `visibility: ["app"]`
+tools from its model is unknown [NO SOURCE]. If it does not, app-only Beads write tools would show
+up as model tools in Claude Code.
+
+### 5.5 Estimate of the shareable fraction
+
+Let $L$ be lines of code in each layer after the MVP. Then
+
+$$f_{3} = \frac{L_{core}}{L_{total}}, \qquad f_{\ge 2} = \frac{L_{core} + L_{dom} + L_{node}}{L_{total}}$$
+
+where $L_{core}$ is the DOM-free core, $L_{dom}$ the React components shared by the web app and
+the MCP App, and $L_{node}$ the Node `bd` adapter shared by the web server and the MCP server.
+
+The assumed MVP split is core 40 percent, DOM components 30, mod renderer and adapter 15, and
+servers and adapters 15, of which half is the shared `bd` adapter. That gives $f_{3} \approx 0.40$
+and $f_{\ge 2} \approx 0.78$. The stated ranges, 35 to 45 percent and 75 to 85 percent, allow for
+the split being wrong in either direction [INFERENCE].
+
+The split is an assumption, not a measurement. Three facts support it: the mod cannot share
+components or layout (§5.1), opencode shares only client and domain code (§5.3), and a board's
+domain logic carries no rendering [INFERENCE]. The coordinator can test it after the MVP by
+counting lines per package and checking the import graph.
+
+### 5.6 Package boundary proposal
+
+This is a proposal for the design stage to test. It decides nothing.
+
+```mermaid
+flowchart LR
+  core[packages/core: types, parsers, domain, view models, commands, token names]
+  bdnode[packages/bd-node: Node adapter for bd]
+  webui[packages/web-ui: React DOM components]
+  mcp[packages/mcp-server: stdio and HTTP, tools, ui resource]
+  view[apps/mcp-app-view: single HTML bundle]
+  web[apps/web: local or hosted web app]
+  mod[apps/claude-mod: plugin folder with core copied in]
+  core --> bdnode
+  core --> webui
+  core --> mod
+  bdnode --> mcp
+  bdnode --> web
+  webui --> view
+  webui --> web
+  view --> mcp
+  mod --> mcp
+```
+
+Rules for `packages/core`, each one a check the coordinator can run:
+
+1. It compiles under the tsconfig the types file suggests: `lib: ["es2023"]`, `types: []`, no DOM
+   [VERIFIABLE][^2].
+2. It uses no timer globals and no Node or DOM APIs; a lint rule bans them [INFERENCE].
+3. It has no runtime dependency, or only small copies that pass rule 1 [INFERENCE].
+4. Its tests pass under Vitest and under `claude plugin test` in the mod [INFERENCE].
+5. The mod's hooks module, with core copied in, passes `claude plugin validate` and stays under
+   1 MB [VERIFIABLE][^1][^21].
+
+The mod adapter that calls `$` lives in `apps/claude-mod`. The validator reads `$` calls from the
+source, so they stay in the mod's own files [VERIFIABLE][^1].
+
+### Hand-offs
+
+- To leg A: the React component library and the board, backlog and roadmap components in
+  `packages/web-ui`.
+- To leg C: the Beads data model that `packages/core` types and parses.
+- To the design stage: whether the mod writes through `bd` directly or through the MCP server.
 
 ## 6. Monorepo tooling
 
-(filled in the next commit)
+### 6.1 Maintenance signals
+
+| Need | Tool | Stars | Last push | Weekly npm downloads |
+|---|---|---|---|---|
+| Workspaces | pnpm | 36,810 | 2026-10-15 | not read |
+| Task runner | Turborepo (`turbo`) | 31,197 | 2026-10-15 | 29,886,059 |
+| Task runner | Nx (`nx`) | 29,406 | 2026-10-15 | 10,795,403 |
+| App build | Vite | 83,303 | 2026-10-14 | 195,261,248 |
+| Library build | tsdown | 4,301 | 2026-10-14 | 4,296,519 |
+| Library build | tsup | 11,300 | 2026-10-14 | 9,515,999 |
+| Bundler | esbuild | 40,083 | 2026-08-09 | 303,541,978 |
+| Unit tests | Vitest | 17,226 | 2026-10-14 | 125,253,587 |
+| Browser tests | Playwright | 97,728 | 2026-10-15 | not read |
+| Ink tests | ink-testing-library | 153 | 2024-06-28 | 779,650 |
+| Release | changesets (`@changesets/cli`) | 12,487 | 2026-10-11 | 5,632,233 |
+| Lint and format | Biome (`@biomejs/biome`) | 25,953 | 2026-10-14 | 17,944,016 |
+| Lint | oxlint (oxc) | 23,051 | 2026-10-14 | 26,765,467 |
+| Lint | ESLint | 27,557 | 2026-10-14 | 158,743,826 |
+| Format | Prettier | 52,371 | 2026-10-14 | 139,055,087 |
+
+Sources: repository metadata [VERIFIABLE][^50] and npm downloads for 2026-10-06 to 2026-10-12
+[VERIFIABLE][^51].
+
+tsup's README reads "This project is not actively maintained anymore. Please consider using tsdown
+instead." [VERIFIABLE][^12]. ink-testing-library tests Ink components, and a mod is not an Ink
+component tree of its own, so it does not apply to the mod [INFERENCE from §5.1].
+
+### 6.2 What comparable projects use
+
+| Project | Workspaces | Runner | Lint and format | Tests | Release |
+|---|---|---|---|---|---|
+| opencode | Bun 1.4.2 with catalogs | Turborepo | oxlint, Prettier | Bun test | not read |
+| ext-apps | npm workspaces | npm scripts, a Bun build | Prettier | Playwright end-to-end | GitHub releases |
+| mantoni/beads-ui | Single package | npm scripts | ESLint, Prettier | Vitest, jsdom | `@studio/changes` |
+| baselane-sh/mods | Single repo with a build script | Node scripts | not read | `claude plugin test` | Release branches |
+
+Sources: [VERIFIABLE][^4][^6][^11][^36].
+
+### 6.3 Constraints the mod adds
+
+The plugin folder must be self-contained, so a build step copies core into it. baselane-sh/mods
+generates its plugin folders this way and marks them "Edit the engine or the catalog, not this
+folder" [VERIFIABLE][^4]. A marketplace installs from the repository, so the generated folder must
+be committed or published on a release branch [INFERENCE].
+
+The validator reads each `$.namespace.method` call from source [VERIFIABLE][^1]. Minifying or
+renaming `$` in the hooks module would break that, so only `$`-free core code should be bundled
+[INFERENCE]. The practitioner who bundles to "about 900 KB minified" reports that it loads, so
+bundling itself works [VERIFIABLE][^21].
+
+`claude plugin test` runs each test file "in an environment like the one a plugin's hooks run in
+(no fs, network or process)" [VERIFIABLE][^2]. Core tests that need fixtures should load them as
+imported data.
+
+The beads-ui scaffold at `c9261f3` is a Copier template with pre-commit (markdownlint, a test gate,
+a Beads check). Its root `package.json` holds only `markdownlint-cli2` (measured 2026-10-15). The
+JavaScript tooling has to plug into that test gate.
+
+### 6.4 Options for the design stage
+
+- pnpm workspaces with Turborepo fit a repo of four to seven packages. Nx adds generators and
+  module-boundary rules the repo may not need [HEURISTIC].
+- Vite builds the web app and the single-file MCP App view; tsdown or esbuild builds the libraries
+  and the core copy for the mod [HEURISTIC].
+- Vitest covers core and the servers; Playwright covers the web app and the MCP App view inside the
+  `basic-host` example; `claude plugin test` covers the mod [HEURISTIC].
+- changesets versions the publishable packages under a scope, given the npm name collision
+  [HEURISTIC].
+- Biome replaces ESLint and Prettier with one tool; oxlint with Prettier is the opencode choice
+  [HEURISTIC].
+
+### Hand-offs
+
+- To the design stage: the choice among these options. No tool was installed or run here.
 
 ## Gaps, blindspots and emergent findings
 
-(filled in the next commit)
+### Gaps
+
+- Nothing was run in a session or a terminal. No pane was drawn, no drag was tried and no MCP App
+  was rendered. Every behaviour claim comes from docs, types, READMEs or issue text [NO SOURCE].
+- The types file lists `mobile` and `vscode` render surfaces, and its test kit mounts trees on them.
+  The overview says only the terminal and Desktop draw. This may be unreleased work; it is
+  unresolved [VERIFIABLE][^2][^17].
+- Pixel mouse positions conflict: the types file says they arrive on kitty and four others, and
+  terminal-browser says Claude Code does not enable pixel reporting [VERIFIABLE][^2][^27].
+- Whether clicks reach a `Client` inside tmux with mouse mode off was not found [NO SOURCE].
+- Which mouse tracking mode Claude Code sets is not documented [NO SOURCE].
+- Whether common state libraries load in the mod environment was not checked [NO SOURCE].
+- Whether Claude Code hides MCP Apps' app-only tools from its model is unknown [NO SOURCE].
+- The Claude Code docs index lists "Claude Desktop on Linux (beta)", and the MCPB page names only
+  macOS and Windows. Linux is out of scope here; the page was not read.
+- Social sources were not searched. The `bms-web-search` tool was not available, and Bing returned
+  little for Claude-specific queries. Coverage is vendor docs, GitHub, npm and the two catalogues.
+
+### Emergent findings
+
+- The `beads-ui` npm name belongs to an established MIT project with 755 stars [VERIFIABLE][^6].
+  Publishing needs a scope or other names.
+- The seed fleet doc records that disabling a mod did not stop it in a running session, which led
+  to a live off-switch rule [VERIFIABLE][^18]. A write-capable board mod needs the same switch
+  [INFERENCE].
+- The Desktop Code tab has a built-in Browser pane, so the web app can sit beside a Desktop session
+  with no mod [VERIFIABLE][^18].
+- Claude mobile renders MCP Apps [VERIFIABLE][^37]. A Beads MCP App would reach phones before any
+  native mobile app exists [INFERENCE].
+- `$.agent.list()` returns "this session's subagents and teammates" only [VERIFIABLE][^14]. A view
+  of every Claude Code session's tasks needs another source.
+
+### Five-perspective critic pass
+
+| Perspective | Challenge | Disposition |
+|---|---|---|
+| Conventional | Build the TUI in Ink and share React with the web | Rejected for the mod by §5.1. A standalone Ink TUI outside Claude Code could share React code; the ask names the Claude Code TUI |
+| Contrarian | Skip the mod; use the web app in Desktop's Browser pane | Recorded above as a cheaper Desktop route. It does not cover terminal sessions in tmux |
+| Historical | The fleet already removed one mod that could not be stopped live | Carried as an emergent finding |
+| Adjacent | Contribute to mantoni/beads-ui or bead-me-up-scotty | Not assessed; the ask chose a new public repo. Recorded for the design stage |
+| Skeptic | The 35 to 45 percent figure rests on an assumed split | Conceded; §5.5 marks it as inference and gives the test |
+
+The same model that wrote this packet ran the critic pass. A different model should review it.
+
+### Alignment with the founding ask
+
+| Entry | Requirement for this leg | Disposition |
+|---|---|---|
+| A001 | A board in the Claude Code TUI with mouse control, drag, reorder, create, update, delete with an "are you sure?" step | Covered by §1 and §2. Narrowed: mouse needs fullscreen, and tmux without mouse mode is keyboard-only. The confirmation can be drawn in the pane or asked with `$.ui.ask` |
+| A001 | View all Claude Code session tasks | Narrowed: a mod lists this session's agents only. Handed to leg C |
+| A001 | Timeline and roadmap views, burndown and analytics charts | Narrowed: `Svg` draws in Desktop only, so the terminal needs `Raster` or text charts (§1.1) |
+| A001 | Retire the Claude Code task panel per machine profile | Not covered; belongs to leg C and the design stage |
+| A002 | One repo with shared components for the mod, the MCP UI app and the web app | Narrowed: logic is shared by all three, components by two (§5) |
+| A002 | Mobile and desktop apps separate, later | Deferred by the brief. Emergent: MCP Apps already render on Claude mobile |
+| A003 | Research mainly the web app, the Claude web and desktop MCP UI app and the Claude Code TUI | Covered for the MCP App and the TUI; web hosting handed to leg A |
+| A004 | Integrate the autonomous task queue | Not covered; leg C |
+
+The README's planned core of "data access, state, layout and theme" is narrowed by §5.1: layout
+cannot be shared with the mod.
 
 ## Sources
 
