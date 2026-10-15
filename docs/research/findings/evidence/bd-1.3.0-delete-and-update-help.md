@@ -1,11 +1,13 @@
 # bd 1.3.0 help output: delete and update
 
-Captured 2026-10-15T00:16Z on the sem-kg-ec2 host by the leg A researcher for BU-mg2.1.1.
-Commands were run from the beads-ui worktree root and are read-only: `bd --version`,
-`bd delete --help` and `bd update --help`. The global-flags block is shown once, under `bd update`.
+Captured 2026-10-15T00:16Z to 00:40Z on the sem-kg-ec2 host by the leg A researcher for
+BU-mg2.1.1. Commands were run from the beads-ui worktree root and are read-only: `bd --version`,
+`bd delete --help`, `bd update --help`, `bd --help`, `bd serve --help`, `bd batch --help` and
+`bd statuses`. The global-flags block is shown once, under `bd update`.
 
 The findings packet `../beads-ui-task-manager-ux.md` cites this file for the delete preview, the
-cascade flag, the compare-and-set guards, the metadata flags and the read-only global flag.
+cascade flag, the compare-and-set guards, the metadata flags, the read-only global flag, the
+command list, the loopback HTTP API, single-transaction batches and the status categories.
 
 ## bd --version
 
@@ -134,4 +136,337 @@ Global Flags:
       --readonly                  Read-only mode: block write operations (for worker sandboxes)
       --sandbox                   Sandbox mode: disables Dolt auto-push
   -v, --verbose                   Enable verbose/debug output
+```
+
+## bd --help (command list, global flags omitted)
+
+```text
+Issues chained together like beads. A lightweight issue tracker with first-class dependency support.
+
+Usage:
+  bd [flags]
+  bd [command]
+
+Working With Issues:
+  assign            Assign an issue to someone
+  children          List child beads of a parent
+  close             Close one or more issues
+  comment           Add a comment to an issue
+  comments          View or manage comments on an issue
+  create            Create a new issue (or batch from markdown/graph JSON)
+  create-form       Create a new issue using an interactive form
+  delete            Delete one or more issues and clean up references
+  edit              Edit an issue field in $EDITOR
+  gate              Manage async coordination gates
+  heartbeat         Refresh the lease on an issue you hold in_progress
+  label             Manage issue labels
+  link              Link two issues with a dependency
+  list              List issues
+  merge-slot        Manage merge-slot gates for serialized conflict resolution
+  note              Append a note to an issue
+  priority          Set the priority of an issue
+  promote           Promote a wisp to a permanent bead
+  provenance        Append-only provenance event log
+  q                 Quick capture: create issue and output only ID
+  query             Query issues using a simple query language
+  reclaim           Revert stale-lease in_progress issues back to ready (dead-worker recovery)
+  reopen            Reopen one or more closed issues
+  search            Search issues by text query
+  set-state         Set operational state (creates event + updates label)
+  show              Show issue details
+  state             Query the current value of a state dimension
+  tag               Add a label to an issue
+  todo              Manage TODO items (convenience wrapper for task issues)
+  unclaim           Release a claimed issue
+  update            Update one or more issues
+
+Views & Reports:
+  count             Count issues matching filters
+  diff              Show changes between two commits or branches
+  find-duplicates   Find semantically similar issues using text analysis or AI
+  history           Show version history for an issue
+  lint              Check issues for missing template sections
+  stale             Show stale issues (not updated recently)
+  status            Show issue database overview and statistics
+  statuses          List valid issue statuses
+  types             List valid issue types
+
+Dependencies & Structure:
+  dep               Manage dependencies
+  duplicate         Mark an issue as a duplicate of another
+  duplicates        Find and optionally merge duplicate issues
+  epic              Epic management commands
+  graph             Display issue dependency graph
+  supersede         Mark an issue as superseded by a newer one
+  swarm             Swarm management for structured epics
+
+Sync & Data:
+  backup            Back up your beads database
+  branch            List or create branches
+  conflicts         Inspect and resolve live merge conflicts
+  export            Export issues to JSONL format
+  federation        Manage peer-to-peer federation with other workspaces
+  import            Import issues from a JSONL file or stdin into the database
+  restore           Restore the pre-compaction content of a compacted issue
+  sync              Pull, check for conflicts, repair is_blocked, and push (the federation loop)
+  vc                Version control operations
+
+Setup & Configuration:
+  bootstrap         Non-destructive database setup for fresh clones and recovery
+  config            Manage configuration settings
+  context           Show effective backend identity and repository context
+  dolt              Configure Dolt database settings
+  forget            Remove a persistent memory
+  hooks             Manage git hooks for beads integration
+  human             Show essential commands for human users
+  info              Show database information
+  init              Initialize bd in the current directory
+  kv                Key-value store commands
+  memories          List or search persistent memories
+  migrate-personal  Move personal planning issues from the project database to your planning repo
+  onboard           Display minimal snippet for agent instructions file
+  prime             Output AI-optimized workflow context
+  quickstart        Quick start guide for bd
+  recall            Retrieve a specific memory
+  remember          Store a persistent memory
+  setup             Setup integration with AI editors
+  where             Show active beads location
+
+Maintenance:
+  batch             Run multiple write operations in a single database transaction
+  compact           Squash old Dolt commits to reduce history size
+  doctor            Check and fix beads installation health (start here)
+  events            Read and manage the durable events journal
+  flatten           Squash all Dolt history into a single commit
+  gc                Garbage collect: decay old issues, compact Dolt commits, run Dolt GC
+  migrate           Database migration commands
+  ping              Check database connectivity
+  preflight         Show PR readiness checklist
+  prune             Delete old closed beads to reclaim space and shrink exports
+  purge             Delete closed ephemeral beads to reclaim space
+  recompute-blocked Recompute is_blocked for all issues (repairs stale flags after a pull)
+  rename-prefix     Rename the issue prefix for all issues in the database
+  rules             Audit and compact Claude rules
+  sql               Execute raw SQL against the beads database
+  upgrade           Check and manage bd version upgrades
+  worktree          Manage git worktrees for parallel development
+
+Integrations & Advanced:
+  admin             Administrative commands for database maintenance
+  jira              Jira integration commands
+  linear            Linear integration commands
+  repo              Manage multiple repository configuration
+
+Additional Commands:
+  ado               Azure DevOps integration commands
+  audit             Record and label agent interactions (append-only JSONL)
+  blocked           Show blocked issues
+  completion        Generate the autocompletion script for the specified shell
+  cook              Compile a formula into a proto (ephemeral by default)
+  defer             Defer one or more issues for later
+  formula           Manage workflow formulas
+  github            GitHub integration commands
+  gitlab            GitLab integration commands
+  help              Help about any command
+  init-safety       Explain bd init flag semantics and the destroy-token format
+  mail              Delegate to mail provider (e.g., gt mail)
+  metrics           Show or change anonymous usage-metrics settings
+  mol               Molecule commands (work templates)
+  notion            Notion integration commands
+  orphans           Identify orphaned issues (referenced in commits but still open)
+  ready             Show ready work (open, no active blockers)
+  rename            Rename an issue ID
+  schema            Print the JSON Schema for bd's --json / export output
+  serve             Serve the beads HTTP API over loopback
+  ship              Publish a capability for cross-project dependencies
+  undefer           Undefer one or more issues (restore to open)
+  version           Print version information
+
+```
+
+## bd serve --help (global flags omitted)
+
+```text
+Serve the beads HTTP API — the same work surface the CLI answers, for
+automation clients that would otherwise fork a bd subprocess per call.
+
+The wire contract is described by an OpenAPI document (/v0); GET
+/v0/beads/context reports which operations this build actually implements.
+
+DEPLOYMENT
+
+  Pass an explicit port. The default 127.0.0.1:0 takes an ephemeral one, which
+  is right for ad-hoc and test use — where the bound address printed on stdout
+  is read immediately — but carries no mutual exclusion: two serves against one
+  workspace then run side by side on different ports with no way to enumerate
+  them. On a fixed port the second one fails to bind, which is the intended
+  behavior. Concurrent serves are data-safe either way; claims are arbitrated
+  in the SQL server.
+
+  Run it under a supervisor. bd shuts down gracefully on SIGHUP as well as
+  SIGINT and SIGTERM, so closing the terminal of a foreground bd serve stops it.
+
+PROBES
+
+  GET /healthz is LIVENESS only: it answers from the process and never touches
+  the database, so it stays green while the database is unreachable. For
+  readiness use GET /v0/beads/ready?limit=1 — a real query, where 200 means
+  ready and 503 means live but not ready.
+
+AUTHENTICATION
+
+  Optional, and off by default on loopback — where the trust model is the
+  loopback boundary itself, the same one the database behind it already relies
+  on. --auth-token-file turns it on: every operation except GET /healthz then
+  requires an "Authorization: Bearer <token>" header, GET /v0/beads/context
+  included, because it reports the repo root, beads directory and database name.
+
+  The file holds ONE TOKEN PER LINE and every line is accepted. That is the
+  rotation mechanism: write the new token alongside the old, roll the clients
+  over, then delete the old line. The file is re-read while the server runs, so
+  both the addition and the removal take effect within about a second and
+  neither needs a restart. Write it atomically (a temp file plus rename; a
+  Kubernetes secret mount already does this).
+
+  There is deliberately no --auth-token flag. A credential passed as an
+  argument is readable by every local user in the process listing.
+
+  --allow-non-loopback REQUIRES a token file. Beyond loopback, reaching the
+  address would otherwise be the whole authorization: any peer could read every
+  issue and claim work as any actor. --insecure-no-auth is the explicit,
+  auditable way to say you meant that anyway.
+
+  The Host allowlist is what a service deployment usually trips over first. The
+  DNS-rebinding check answers only to loopback spellings and the bind address,
+  so a client dialing a service name gets 400 on every request; enumerate the
+  names it dials with --allowed-host (repeatable). Matching is exact — no
+  wildcards — and the startup log line prints the effective allowlist.
+
+WHAT THIS DOES NOT DO
+
+  No TLS. Even with a token, the credential and every issue body travel in
+  plaintext, so a deployment beyond loopback has to supply confidentiality
+  itself — a service mesh, or a network boundary you already trust.
+
+  Hooks do not fire. A hook is a user-controlled subprocess per mutation: in a
+  concurrent server that is an unbounded latency multiplier and an orphaned
+  child at shutdown, and its working-directory-derived hook lookup is
+  meaningless in a server process. A CLI claim runs on_update; an HTTP claim
+  does not.
+
+  The per-command auto-commit machinery does not run. Durability is per request:
+  a successful claim commits inside its own transaction, exactly as a proxied
+  CLI claim does today.
+
+  An actor on an HTTP request is caller-asserted provenance for the audit trail,
+  not authenticated identity — the same thing it has always been on the CLI,
+  where any local process can pass any --actor.
+
+  It does not run under --readonly, and refuses to start rather than binding.
+  Every server it binds publishes the issue-claim operation, and the capability
+  set it advertises is a property of the build rather than of the flags on the
+  process that started it — so a read-only server would advertise a write it
+  could never land.
+
+DESTRUCTIVE OPERATIONS
+
+  POST /v0/beads/issues:sweep deletes closed beads in bulk — the operation
+  behind bd purge and bd prune — and nothing it deletes comes back. It shares
+  the library surface those commands call, so it inherits their guards: pinned
+  beads are never swept, and a durable sweep with neither a cutoff nor an id
+  pattern is refused rather than clearing every closed bead in the workspace.
+  Combined with the trust model above, that means anyone who can reach this
+  address can erase closed work; bind it accordingly.
+
+Usage:
+  bd serve [flags]
+
+Flags:
+      --addr string                Address to bind as IP:PORT; the host must be a numeric IP literal, and port 0 takes an ephemeral port (default "127.0.0.1:0")
+      --allow-non-loopback         Permit a bind beyond loopback. Requires --auth-token-file, since reaching the address would otherwise be the whole authorization
+      --allowed-host stringArray   Additional Host header value to answer to, e.g. a service DNS name. Repeatable; matched exactly, with no wildcards
+      --auth-token-file string     Require an Authorization: Bearer token from this file, one token per line, all accepted. Re-read while running, so rewriting it rotates tokens without a restart (env BEADS_SERVE_TOKEN_FILE)
+  -h, --help                       help for serve
+      --insecure-no-auth           Serve a non-loopback bind with NO authentication. Every peer that can reach the address gets full read and claim access
+
+```
+
+## bd batch --help (global flags omitted)
+
+```text
+Run multiple write operations in a single database transaction.
+
+Commands are read from stdin (one per line) or from a file via -f/--file.
+All operations execute inside a single dolt transaction: on any error the
+whole batch is rolled back, otherwise it is committed with one DOLT_COMMIT.
+
+This is intended for shell scripts that currently invoke 'bd' many times in
+a loop, which causes severe write amplification on a dolt sql-server backed
+by btrfs+compression. Batching collapses N invocations into one transaction
+and one dolt commit.
+
+Grammar (one command per line):
+  close <id> [reason...]
+  update <id> <key>=<value> [<key>=<value> ...]
+  create <type> <priority> <title...>
+  dep add <from-id> <to-id> [type]
+  dep remove <from-id> <to-id>
+  #comment  (blank lines and '# ...' comments are ignored)
+
+Supported 'update' keys: status, priority, title, assignee, force
+Supported dependency types: see 'bd dep add --help' (default: blocks)
+
+'force' is not a field. An update whose status moves the issue into closed
+(or a configured done status) is refused when it still has open children or
+a live blocker, the same as 'bd close'; 'force=true' overrides that refusal.
+Because the batch is one transaction, an unforced refusal rolls back EVERY
+operation in the batch, not just the offending line. Note the asymmetry with
+'close <id>', which does not apply that policy at all.
+
+Tokens are whitespace-separated. Double-quoted strings ("like this") may
+contain spaces; use \" to embed a quote and \\ for a backslash.
+
+Examples:
+  # From a pipe
+  bd list --status stale -q | awk '{print "close",$1," stale"}' | bd batch
+
+  # From a file
+  bd batch -f operations.txt
+
+  # Inline
+  printf 'close bd-1 done\nupdate bd-2 status=in_progress\n' | bd batch
+
+On success, exits 0 and prints a summary (or JSON with --json). On any error,
+rolls back the entire transaction and exits non-zero with the failing line.
+
+NOTE: This is a narrow subset. Commands like 'show', 'list', 'ready', 'sync',
+complex create flows, or any flag not listed above are NOT accepted. Use
+normal 'bd' subcommands for interactive/read operations.
+
+Usage:
+  bd batch [flags]
+
+Flags:
+      --dry-run          Parse input and echo commands without executing
+  -f, --file string      Read commands from file instead of stdin
+  -h, --help             help for batch
+  -m, --message string   DOLT_COMMIT message (default: 'bd: batch N ops by <actor>')
+
+```
+
+## bd statuses (this store, 2026-10-15)
+
+```text
+Built-in statuses:
+  ○ open           [active]  Available to work (default)
+  ◐ in_progress    [wip   ]  Actively being worked on
+  ● blocked        [wip   ]  Blocked by a dependency
+  ❄ deferred       [frozen]  Deliberately put on ice for later
+  ✓ closed         [done  ]  Completed
+  📌 pinned         [frozen]  Persistent, stays open indefinitely
+  ◇ hooked         [wip   ]  Attached to an agent's hook
+
+Custom statuses:
+  ◐ review         [wip   ]
+  ◐ uat            [wip   ]
 ```
