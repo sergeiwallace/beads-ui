@@ -225,6 +225,11 @@ A bare deny rule closes every route: "A bare tool name like `Bash` removes the t
 context entirely". Precedence favours it, since "Rules are evaluated in order: deny, then ask, then
 allow" and "a user-level deny blocks a project-level allow". [VERIFIABLE][^13]
 
+Session kind changes what the switch reaches. In background sessions "Claude Code provides the same
+tools on every model, listed or not", so only the deny half retires the panel there. Cloud sessions
+never read the rendered file: user settings are "not read. Both stay on your machine". The sibling
+spike, merged to main during this run, reached the same reading. [VERIFIABLE][^11][^46][^47]
+
 The template itself does not change under this proposal, and both copies stay byte-identical (blob
 `7b825e1a10`). It sets `DISABLE_GROWTHBOOK` to an empty string, so the feature-flag gates on the
 Task tools that the fleet's research records are live. The deny rules make the switch independent
@@ -261,7 +266,8 @@ only for its three ai-harness trigger files, and option A edits none of them. [V
 - The choice between options A, B and C, and the attribute's name and values: the coordinator's
   design stage, implemented in ai-harness.
 - The removal path for switch-added deny rules: the design stage.
-- Whether a deny rule removes the Task tools in background and cloud sessions: the sibling spike.
+- Whether cloud sessions are in scope, which only a repo-level or server-managed deny can reach: the
+  design stage, per the sibling spike's hand-off.
 - Whether ai-core's `machines.json` reader accepts an unknown attribute: an ai-core check before the
   registry change lands.
 - The backup of `~/.claude/tasks/` and its destination: leg C's hand-off to the coordinator.
@@ -667,8 +673,8 @@ deny half would still hold. [NO SOURCE]
 ai-core reads `machines.json`. Whether its reader accepts an attribute it does not know was not
 checked. [NO SOURCE]
 
-Whether a deny rule removes the Task tools in background and cloud sessions belongs to the sibling
-spike. [NO SOURCE]
+No document states outright that a bare-name deny removes the Task tools in a background session.
+The sibling spike searched the changelog for it and found nothing. [NO SOURCE]
 
 70 test files under `tests/` name a Task symbol. They were outside the named directories and were
 not classified. They include `tests/test_curate_task_panel_cli.py` and
@@ -689,10 +695,10 @@ Option B, the hardcoded set, has an exact precedent and an existing test pattern
 registry digest change, regenerated `machines.json` and fallbacks, and an untested ai-core reader.
 The ask's "config file setting" wording is the argument for A. [INFERENCE from section 1.4.]
 
-Dropping the env key alone retires the panel in any session on a model newer than those the tools
-reference lists. The deny rules matter only for Opus 4.7, Sonnet 4.6, Haiku 4.5 and older, and for
-the other opt-in routes. Leaving them out would avoid the removal code of section 1.5 step 8.
-[VERIFIABLE][^11]
+Dropping the env key alone retires the panel in a terminal session on a model newer than those the
+tools reference lists. "On every other model, Claude Code leaves the tools out unless you opt in."
+The deny rules could be skipped, avoiding step 8's removal code, only if background sessions and
+older models were out of scope. [VERIFIABLE][^11]
 
 ### Five-perspective critic pass
 
@@ -711,7 +717,9 @@ I ran this pass myself over the draft. No second model reviewed the packet.
 
 A001 asks that retiring the panel "should be a config file setting though per machine profile for
 ai-harness repo". Section 1 covers it with measured insertion points, and option A matches the
-wording. The backup half of that sentence is leg C's and is not repeated here.
+wording. The backup half of that sentence is leg C's and is not repeated here. The ask is narrowed
+in one place: a per-machine switch reaches terminal and background sessions, never cloud sessions
+(section 1.5). [INFERENCE from section 1.5.]
 
 A001 also asks to "disable the claude task panel / tasks feature entirely". The switch covers the
 four Task tools and `TodoWrite`. Section 2 lists the instruction text, skills and shadow Codex path
@@ -777,6 +785,8 @@ verified, as the blindspots state.
 [^43]: Wallace, S. (2026). [beads-ui research leg C: Beads, the work queue and the task panel](https://github.com/sergeiwallace/beads-ui/blob/main/docs/research/findings/beads-ui-beads-queue-and-panel.md). sergeiwallace/beads-ui, GitHub. Read at main `f68067e`. Verified accessible (HTTP 200, GitHub API) 2026-10-15. (Sections 3 and 4.)
 [^44]: Wallace, S. (2026). [beads-ui research leg B: Claude Code mods, MCP Apps and the shared core](https://github.com/sergeiwallace/beads-ui/blob/main/docs/research/findings/beads-ui-mods-and-shared-core.md). sergeiwallace/beads-ui, GitHub. Read at main `f68067e`. Verified accessible (HTTP 200, GitHub API) 2026-10-15. (Sections 1.2 and 5.)
 [^45]: Anthropic. (2026). [Interactive mode](https://code.claude.com/docs/en/interactive-mode.md). Claude Code Docs. Verified accessible (HTTP 200) 2026-10-15. (Section "Task list": `Ctrl+T`, five visible tasks, `CLAUDE_CODE_TASK_LIST_ID`.)
+[^46]: Anthropic. (2026). [Settings files and precedence](https://code.claude.com/docs/en/settings). Claude Code Docs. Verified accessible (HTTP 200) 2026-10-15. (Which settings files a cloud session reads.)
+[^47]: Wallace, S. (2026). [beads-ui design spike: bd serve request schemas, MCP app-only tool visibility and Task-tool deny rules](https://github.com/sergeiwallace/beads-ui/blob/main/docs/research/findings/beads-ui-spike-bd-serve-and-tool-visibility.md). sergeiwallace/beads-ui, GitHub. Read at main `9a43c80`, merged during this run. Verified accessible (HTTP 200, GitHub API) 2026-10-15. (Section 3 and its hand-offs.)
 
 ## Appendix: Provenance Ledger
 
@@ -805,6 +815,7 @@ means the quote came from WebFetch's model and was not checked against raw bytes
 | 1.5 default models and opt-in routes | https://code.claude.com/docs/en/tools-reference.md ; https://code.claude.com/docs/en/env-vars.md | "are available by default only on Opus 4.7, Sonnet 4.6, Haiku 4.5, and earlier models" / "Set to `1` to get the task-tracking tools on every model." | SUPPORTED | Yes, HTTP 200; checked (tools page), fetch output (env page) |
 | 1.5 no flag opt-in in ai-harness | https://github.com/sergeiwallace/ai-harness/tree/main | Positive control hit: "fields.get("disallowedTools", "")" | SUPPORTED | Yes, HTTP 200 (API tree); checked |
 | 1.5 bare deny rules | https://code.claude.com/docs/en/permissions.md | "A bare tool name like `Bash` removes the tool from Claude's context entirely" | SUPPORTED | Yes, HTTP 200; checked |
+| 1.5 session kinds the switch reaches | https://code.claude.com/docs/en/tools-reference.md ; https://code.claude.com/docs/en/settings ; https://github.com/sergeiwallace/beads-ui/blob/main/docs/research/findings/beads-ui-spike-bd-serve-and-tool-visibility.md | "Claude Code provides the same tools on every model, listed or not." / "not read. Both stay on your machine" | SUPPORTED | Yes, HTTP 200; checked |
 | 1.5 template unchanged; flag gates | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/defaults/settings.template.json ; https://github.com/sergeiwallace/ai-harness/blob/main/docs/research/cross-session-messaging-vs-task-tools-vs-remote-control-growthbook-tension.md | ""DISABLE_GROWTHBOOK": ""," / "families, `DISABLE_GROWTHBOOK=1` now leaves Task/Todo tools off unless" | SUPPORTED | Yes, HTTP 200 (API); checked |
 | 1.6 verbs; plan and doctor today | https://github.com/sergeiwallace/ai-harness/blob/main/docs/procedures/machine-install-contract.md | "\| `doctor` \| never \| 0 healthy, 1 unhealthy \|" | SUPPORTED | Yes, HTTP 200 (API); checked |
 | 1.6 apply report and idempotency | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/settings_merge.py | "{'merged' if changed else 'unchanged'}" | SUPPORTED | Yes, HTTP 200 (API); checked |
@@ -848,4 +859,4 @@ means the quote came from WebFetch's model and was not checked against raw bytes
 
 ## Run History
 
-2026-10-15, Claude Opus 5.5 (`us.anthropic.claude-opus-5-5`), effort high: read ai-harness at `01d5ee82d4` (settings merge, cli, install.sh, registry, contract, 92-file Task-symbol grep plus a path-join grep), the public mods types file, and the three libraries at their release tags; 26 WebFetch calls and about 40 GitHub API reads, with 2 WebFetch failures, both HTTP 404 (a GitHub contents URL with the wrong tag name, retried through the API, and a moved zustand docs path, replaced by its new URL).
+2026-10-15, Claude Opus 5.5 (`us.anthropic.claude-opus-5-5`), effort high: read ai-harness at `01d5ee82d4` (settings merge, cli, install.sh, registry, contract, 92-file Task-symbol grep plus a path-join grep), the public mods types file, and the three libraries at their release tags; after merging `origin/main` (`9a43c80`, which carried the sibling spike), folded in its session-kind findings; 27 WebFetch calls and about 40 GitHub API reads, with 2 WebFetch failures, both HTTP 404 (a GitHub contents URL with the wrong tag name, retried through the API, and a moved zustand docs path, replaced by its new URL).
