@@ -1,0 +1,10 @@
+_commit: v1.18.0-148-g94a638d
+_src_path: https://github.com/sergeiwallace/project-template
+project_description: 'Beads task manager UI: a Claude Code mod for the TUI, an MCP
+    UI app for Claude Desktop and the web, and a local or hostable web app, sharing
+    one core'
+project_name: beads-ui
+project_vision: ''
+tech_stack: typescript
+tmux_tag: bu
+use_jira: false
