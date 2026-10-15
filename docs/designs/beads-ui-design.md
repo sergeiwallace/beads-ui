@@ -289,7 +289,7 @@ interface Session { id: string; machine: string; name: string; state: "idle" | "
 | Board column | A Beads status; columns ordered by category `active`, `wip`, `frozen`, `done`, then by `bd statuses` order | Read from the store, never hard-coded (D-3) |
 | Sprint membership | Label `sprint:<name>` | One active sprint label per issue; filterable with `bd list --label` (D-5) |
 | Sprint dates | A `milestone` issue titled `Sprint <name>` with `due_at` and, in metadata, `sprint.starts_at` | Members link to it with `tracks`; `parent-child` stays for epics (D-5) |
-| Manual rank | `metadata.rank`, a fractional-index string | Off by default; written only when a view enables rank ordering (D-6) |
+| Manual rank | `metadata.rank`, a fractional-index string | Off by default; written only when a view enables rank ordering (D-6). Written as a quoted string, because `bd update --set-metadata rank=0.5` types the value from its spelling and would store a number; `bd update --metadata` merges top-level keys, and the only reserved metadata prefixes are `bd:` and `_` (spike 1) |
 | Human owner of a session's task | `metadata.owner` | `assignee` names the session; `owner` names the person (D-17) |
 | Display id | `metadata.display_id` plus label `id:<display_id>` | Minted on create when the store uses the convention; never changed after publication (D-9) |
 | Estimate | `estimated_minutes` | Native field; shown in minutes or hours |
@@ -330,7 +330,7 @@ The ai-harness switch for the task panel (phase 5) is a per-machine-profile key 
 | ai-harness install | The mod installs from the beads-ui marketplace through `install.sh` on fleet machines; the task-panel switch and backup ship in ai-harness (phase 5) | Install contract: plan, apply, doctor; one plugin per mod; `claude plugin validate --json` allow-list |
 | Claude Code mods API | `ui.render` on `Pane` and `AbovePrompt`; `$.process.run`, `$.store`, `$.state`, `$.clock.every`, `$.ui.open` with `holdToasts`; `Client` for drag in phase 2 | Floor 2.1.299 (multi-file `$` passing); 10 s per hook; 4 MiB per file; 100,000 characters per tree; 10 redraws a second |
 | MCP Apps | `@modelcontextprotocol/ext-apps` SDK, `registerAppTool` and `registerAppResource`, `ui://` resource, `fullscreen` mode, Claude style variables, CSP declared | Desktop: local stdio; claude.ai: internet-reachable server with auth; Claude Code is not a host |
-| Docs in this repo | `docs/research/beads-ui-task-manager-landscape.md` and the packets under `docs/research/findings/` are this design's evidence; `README.md` planned-layout wording is corrected in this PR | None |
+| Docs in this repo | `docs/research/beads-ui-task-manager-landscape.md`, the three research packets and the two design-spike packets under `docs/research/findings/` are this design's evidence; `README.md`'s planned-layout wording was corrected on main in PR #7 | None |
 
 ## Implementation Phases
 
@@ -459,7 +459,8 @@ Each phase carries its scope, deliverables, tasks with EARS acceptance criteria 
   - **T-4.1 Server and resource**
     - [ ] `When Claude Desktop starts the server over stdio, the system shall register beads_list, beads_show, beads_ready, beads_update_status, beads_create and beads_close tools and the ui://beads-ui/board resource with text/html;profile=mcp-app.`
     - [ ] `When the app initializes, it shall declare inline and fullscreen display modes and shall request fullscreen when the board is opened.`
-    - [ ] `If the host does not support MCP Apps, then the tools shall still answer with text results and the server shall not fail.`
+    - [ ] `If the host does not advertise the io.modelcontextprotocol/ui capability, then the server shall register no app-only tool, every tool shall still answer with text results, and the server shall not fail.`
+    - [ ] `When the server is connected to Claude Code, the exit gate shall record whether Claude Code advertised the io.modelcontextprotocol/ui capability and which tools it listed.`
   - **T-4.2 View**
     - [ ] `When the view renders, it shall use the host's style variables for background, text, border and radius and shall render correctly in light and dark mode.`
     - [ ] `When a write tool is called from the app, the app shall confirm the action in its own UI before the call.`
@@ -537,9 +538,12 @@ iOS and Android (shared or separate), macOS, Linux and Windows native apps follo
 
 1. Where should the autonomous task queue service live long term (ai-core, ai-harness, ai-chassis or its own package)? Sergei deferred this in his fourth follow-up. Recorded, not answered; D-11 is designed so either answer works.
 2. Does a `Client` receive clicks and drags inside tmux over SSM with `set -g mouse on`, and does `ui.render` draw in an interactive Bedrock session on this host? Nothing was run live; Phase 1's exit gate measures the pane and Phase 2's measures the drag.
-3. Does Claude Code hide MCP Apps' `visibility: ["app"]` tools from its model? Spike BU-mg2.2.1 is reading the specification and Claude Code's MCP docs; if not stated, the design keeps model-callable write tools confirmable in the app and names no app-only tools.
-4. Does `bd serve`'s `events:watch` emit with the events journal off, and does `POST /v0/beads/issues` accept `metadata` at create? Spike BU-mg2.2.1 is reading the rest of the OpenAPI spec; the MVP does not depend on `bd serve`.
-5. Does a `permissions.deny` bare tool name remove the Task tools in background and cloud sessions? Spike BU-mg2.2.1 is reading the permissions and cloud pages; Phase 5's exit gate includes one headless session check.
+3. **[RESOLVED]** Does Claude Code hide MCP Apps' `visibility: ["app"]` tools from its model?
+   - **Resolution:** by spike (`docs/research/findings/beads-ui-spike-bd-serve-and-tool-visibility.md`): no Claude Code page or changelog entry says what it does with such a tool, and the MCP Apps specification tells a server to check the client's `io.modelcontextprotocol/ui` capability before registering UI tools. The server therefore registers app-only tools only for hosts that advertise the extension and never relies on Claude Code filtering them; whether Claude Code advertises the capability is a live probe in phase 4's exit gate.
+4. **[RESOLVED]** Does `bd serve`'s `events:watch` emit with the events journal off, and does `POST /v0/beads/issues` accept `metadata` at create?
+   - **Resolution:** by spike (same packet, from the v1.3.0 spec read in full): `events:watch` answers `409 events_journal_disabled` while the journal is off, which it is in this store, so a live stream needs `bd events` enabled; create accepts `metadata`, `labels`, `assignee`, `parent_id` and `dependencies` in one transaction, while `:batchCreate` carries no `metadata` and `:batchApply` does. The upstream `main` spec (44 operations) differs from the v1.3.0 and v1.3.1 file (41); the design cites the tag.
+5. **[RESOLVED]** Does a `permissions.deny` bare tool name remove the Task tools in background and cloud sessions?
+   - **Resolution:** by spike (same packet): not stated anywhere for background sessions, and cloud sessions never read `~/.claude/settings.json`, so the per-machine switch cannot reach them by construction. D-21 scopes the retirement to terminal and Desktop sessions, and phase 5's exit gate keeps the headless check.
 6. Which mouse tracking mode does Claude Code enable, and are sub-cell positions reported outside tmux? Phase 2's live check answers it; the board needs only cells.
 7. Do the `mobile` and `vscode` render surfaces in the public types file mean mods will draw there? Vendor roadmap; re-check at each Claude Code release.
 8. Will Claude Code become an MCP Apps host? Vendor roadmap; if yes, the mod narrows to terminal-only drawing and the MCP App view becomes the Desktop surface.
@@ -792,7 +796,7 @@ Criterion 3: the MVP must stay usable for months, and the parts that rest on und
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-fable-5-1[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-4; decision-topic=how surfaces read and write the Beads store; governs=packages:core,bd-node,claude-mod; normalized-proposition=every surface reads and writes Beads through bd --json; applicability=phases:0-4; outcome-id=bd-subprocess; relation=different-question; related-decision-id=BU-mg2.2/D-16; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-Criterion 1: the adapter is a two-way door; swapping its transport to `bd serve` later changes one package. Criterion 2 weighs against (b) now: hooks that do not fire break the fleet's display-id gate. Mitigations for the Con: per-repo boards read small stores directly (124 ms measured); the fleet-wide board in phase 3 reads the queue projection; `bd history --events` is read through Dolt SQL for analytics only (D-16). Revisit when `bd serve` runs hooks or when the first spike shows `:casMetadata` and the event stream are usable.
+Criterion 1: the adapter is a two-way door; swapping its transport to `bd serve` later changes one package. Criterion 2 weighs against (b) now: hooks that do not fire break the fleet's display-id gate. Mitigations for the Con: per-repo boards read small stores directly (124 ms measured); the fleet-wide board in phase 3 reads the queue projection; `bd history --events` is read through Dolt SQL for analytics only (D-16). The first design spike (`docs/research/findings/beads-ui-spike-bd-serve-and-tool-visibility.md`) read the v1.3.0 spec in full and settled what a later `bd serve` route would need: `POST /v0/beads/issues` accepts `metadata`, `labels`, `assignee`, `parent_id` and `dependencies` in one transaction, so a server-side create can carry `metadata.display_id`; `:casMetadata` swaps one top-level key and reports a lost race as `200` with `swapped: false`; and `GET /v0/beads/events:watch` answers `409 events_journal_disabled` while the Beads events journal is off, which it is in this store. Revisit (b) for the web server in phase 3 only if the journal is turned on and hooks parity is no longer needed for minting (D-9 mints in core, so it is not).
 
 ---
 
@@ -1494,7 +1498,7 @@ Behaviour-first at each real entry point, per the fleet's test standard. Mitigat
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-fable-5-1[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-21; decision-topic=mechanism for retiring the Claude Code task panel per machine profile; governs=repo:ai-harness/settings-renderer; normalized-proposition=a per-profile key drops the Task-tools env opt-in and denies the Task tools, with guards on fleet readers; applicability=phase:5; outcome-id=per-profile-switch; relation=different-question; related-decision-id=BU-mg2.2/D-12; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-Criterion 1: per-profile is a two-way door, fleet-wide is not. Confidence is medium because the exact key and insertion points come from the second spike and the background-session behaviour is unverified; both are phase 5 exit-gate checks. Mitigation for the Con: a headless session check is part of the exit gate, and the reader guards make a leftover tool harmless.
+Criterion 1: per-profile is a two-way door, fleet-wide is not. Confidence is medium because the exact key and insertion points come from the second spike. The first spike settled the reach of the switch: cloud sessions never read `~/.claude/settings.json`, so a per-machine deny rendered there cannot reach them, and no document says whether a deny removes the Task tools in a background session or whether `permissions.allow: ["TaskCreate"]` opts a session back in. The switch therefore retires the panel for terminal and Desktop sessions on the profile, which are the sessions the panel is shown in; cloud sessions are out of its reach by construction. Mitigation for the Con: a headless (`claude -p`) session check is part of the exit gate, and the reader guards make a leftover tool harmless.
 
 ---
 
