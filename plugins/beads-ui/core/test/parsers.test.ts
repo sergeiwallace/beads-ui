@@ -1,10 +1,22 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
+// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
+import { describe, expect, test } from "claude-code/testing";
 import { parseBdList, parseBdShow, parseBdStatuses } from "../src/index.ts";
+import BD_LIST from "./fixtures/bd-list.json.ts";
+import BD_SHOW from "./fixtures/bd-show.json.ts";
+import BD_STATUSES from "./fixtures/bd-statuses.json.ts";
 
 // Fixtures are real bd 1.3.1 output captured from this repository's own Beads store.
-const fixture = (name: string) => readFileSync(join(import.meta.dirname, "fixtures", name), "utf8");
+const FIXTURES: Record<string, string> = {
+  "bd-list.json": BD_LIST,
+  "bd-show.json": BD_SHOW,
+  "bd-statuses.json": BD_STATUSES,
+};
+const fixture = (name: string): string => {
+  const text = FIXTURES[name];
+  if (text === undefined) throw new Error(`no fixture ${name}`);
+  return text;
+};
 
 function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: unknown }): T {
   if (!result.ok) throw new Error(`expected ok, got ${JSON.stringify(result.error)}`);
@@ -12,7 +24,7 @@ function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: unknown 
 }
 
 describe("parseBdList", () => {
-  it("should return one Issue per record when given real bd list --json output", () => {
+  test("should return one Issue per record when given real bd list --json output", () => {
     const text = fixture("bd-list.json");
     const raw = JSON.parse(text) as { id: string }[];
 
@@ -21,7 +33,7 @@ describe("parseBdList", () => {
     expect(issues.map((issue) => issue.id)).toEqual(raw.map((record) => record.id));
   });
 
-  it("should map bd field names onto the core model when a record carries them", () => {
+  test("should map bd field names onto the core model when a record carries them", () => {
     const issues = unwrap(parseBdList(fixture("bd-list.json")));
 
     const task = issues.find((issue) => issue.id === "BU-mg2.3.10");
@@ -49,7 +61,7 @@ describe("parseBdList", () => {
     expect(closed?.startedAt).toEqual(expect.any(String));
   });
 
-  it("should return a typed parse error when the output is not JSON", () => {
+  test("should return a typed parse error when the output is not JSON", () => {
     const result = parseBdList("Error: no beads database found\n");
 
     expect(result.ok).toBe(false);
@@ -60,7 +72,7 @@ describe("parseBdList", () => {
     });
   });
 
-  it("should name the field when a record has an out-of-range priority", () => {
+  test("should name the field when a record has an out-of-range priority", () => {
     const records = JSON.parse(fixture("bd-list.json")) as Record<string, unknown>[];
     const first = records[0] as Record<string, unknown>;
     first.priority = 7;
@@ -70,7 +82,7 @@ describe("parseBdList", () => {
     expect(!result.ok && result.error).toMatchObject({ path: "$[0].priority" });
   });
 
-  it("should name the field when a record has no title", () => {
+  test("should name the field when a record has no title", () => {
     const records = JSON.parse(fixture("bd-list.json")) as Record<string, unknown>[];
     delete (records[2] as Record<string, unknown>).title;
 
@@ -79,7 +91,7 @@ describe("parseBdList", () => {
     expect(!result.ok && result.error).toMatchObject({ path: "$[2].title" });
   });
 
-  it("should return a parse error when the output is an object instead of an array", () => {
+  test("should return a parse error when the output is an object instead of an array", () => {
     const result = parseBdList('{"error":"boom"}');
 
     expect(!result.ok && result.error).toMatchObject({ path: "$", message: "expected an array" });
@@ -87,7 +99,7 @@ describe("parseBdList", () => {
 });
 
 describe("parseBdShow", () => {
-  it("should map embedded dependency records when given real bd show --json output", () => {
+  test("should map embedded dependency records when given real bd show --json output", () => {
     const issues = unwrap(parseBdShow(fixture("bd-show.json")));
 
     expect(issues).toHaveLength(1);
@@ -101,7 +113,7 @@ describe("parseBdShow", () => {
     });
   });
 
-  it("should return a parse error naming the dependency when its type is missing", () => {
+  test("should return a parse error naming the dependency when its type is missing", () => {
     const records = JSON.parse(fixture("bd-show.json")) as { dependencies: object[] }[];
     const dep = records[0]?.dependencies[0] as Record<string, unknown>;
     delete dep.dependency_type;
@@ -116,7 +128,7 @@ describe("parseBdShow", () => {
 });
 
 describe("parseBdStatuses", () => {
-  it("should list built-in then custom statuses when given real bd statuses --json output", () => {
+  test("should list built-in then custom statuses when given real bd statuses --json output", () => {
     const statuses = unwrap(parseBdStatuses(fixture("bd-statuses.json")));
 
     expect(statuses).toEqual([
@@ -132,7 +144,7 @@ describe("parseBdStatuses", () => {
     ]);
   });
 
-  it("should return a parse error when a status has an unknown category", () => {
+  test("should return a parse error when a status has an unknown category", () => {
     const root = JSON.parse(fixture("bd-statuses.json")) as {
       custom_statuses: { category: string }[];
     };

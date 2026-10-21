@@ -1,3 +1,5 @@
+// Runners: Vitest only. It reads the fixture files with node:fs, which the mod environment lacks,
+// so it is a *.spec.ts that `claude plugin test` never collects. See CONTRIBUTING.md, Tests.
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";

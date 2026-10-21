@@ -1,4 +1,4 @@
-// Fixture for purity.test.ts: every banned reference sits on a known line.
+// Fixture for purity.spec.ts: every banned reference sits on a known line.
 // A comment naming window, document or setTimeout is not a reference.
 const label = "the document title and the window size";
 export function schedule(fn: () => void): void {

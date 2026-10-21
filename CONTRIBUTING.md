@@ -26,9 +26,14 @@ Run these before you push. The hooks run them too.
 
 ```sh
 npm run lint        # Biome, the core purity gate and the core type check
-npm test            # Vitest
+npm test            # Vitest, then claude plugin test for the mod
 npx tsc --noEmit    # type check of the whole repository
 ```
+
+The mod's gates need Claude Code (`claude`) on your `PATH`: `npm test` runs `claude plugin test`,
+and the pre-commit hooks run `claude plugin validate` on the repository root and on
+`plugins/beads-ui`. When you add a hook or a `$` call to the mod, add it to
+`plugins/beads-ui/validate-allowlist.json` in the same commit; the gate names each difference.
 
 The shared core in `plugins/beads-ui/core` runs inside a Claude Code mod, which has no DOM, no
 Node.js APIs and no timers. Code in that directory must not reference `setTimeout`, `setInterval`,
@@ -50,6 +55,14 @@ again.
 
 Name tests `it("should <action> when <condition>")`, and test behaviour through the real entry
 point rather than one function at a time.
+
+Inside `plugins/beads-ui`, file names choose the runners. A pure core suite is
+`core/test/<name>.test.ts`: it imports `describe`, `test` and `expect` from `claude-code/testing`
+and runs under both `claude plugin test` and Vitest, which maps that import to `vitest`. It uses
+only matchers both kits have, no `node:` import, and reads fixtures from `core/test/fixtures/<name>.json.ts`
+modules, each holding the exact text of its `.json` twin (`fixture-modules.spec.ts` checks it). A
+suite that needs Node.js is `*.spec.ts` and runs under Vitest alone. The mod's own tests,
+`hooks/*.test.ts`, drive the engine through `$` and run under `claude plugin test` alone.
 
 ## Pull requests
 
