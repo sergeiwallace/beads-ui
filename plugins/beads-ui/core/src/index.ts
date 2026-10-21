@@ -63,6 +63,7 @@ export type {
 } from "./mint.ts";
 export {
   DEFAULT_ID_POLICY,
+  FLEET_TASK_ID_RULE,
   ID_POLICIES,
   mintDisplayId,
   parseIdPolicy,

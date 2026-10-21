@@ -185,6 +185,80 @@ describe("planDisplayId", () => {
 
     expect(!result.ok && result.error.kind).toBe("invalid-id");
   });
+
+  // BU-2zw is a top-level issue bd-new minted in this store: `bd show BU-2zw --json` reads
+  // title "npm audit: 10 dev-only advisories under markdownlint-cli2" and display id
+  // BU-npm-audit-10-dev-only-advisories-2zw. Planned as if just created, it must get that id.
+  const withoutOwnId = (id: string) => allIssues().filter((issue) => issue.id !== id);
+
+  test("should copy the hash suffix bd-new copies when a top-level issue is created", () => {
+    const top = byId(mintedIssues, "BU-2zw");
+
+    const result = plan({
+      createdId: top.id,
+      title: top.title,
+      child: false,
+      issues: withoutOwnId(top.id),
+      random: () => {
+        throw new Error("a top-level suffix is copied, never drawn");
+      },
+    });
+
+    expect(result.ok && result.value.kind === "attach" && result.value.displayId).toBe(
+      top.displayId,
+    );
+  });
+
+  test("should draw four letters when a child ordinal has no hash suffix of its own", () => {
+    const child = byId(mintedIssues, "BU-mg2.3.6");
+
+    const result = plan({
+      createdId: child.id,
+      title: child.title,
+      child: true,
+      issues: withoutOwnId(child.id),
+      random: sequence(0, 0.5, 0.999, 0.25),
+    });
+
+    expect(result.ok && result.value.kind === "attach" && result.value.displayId).toBe(
+      "BU-t-1-2-backlog-tab-anzf",
+    );
+  });
+
+  test("should draw four letters when the hash suffix would trip the fleet task-id rule", () => {
+    const result = plan({
+      policy: "fleet-slug",
+      createdId: "KG-0000",
+      title: "fix the band",
+      child: false,
+      issues: [],
+      random: sequence(0, 0, 0, 0),
+    });
+
+    expect(result.ok && result.value.kind === "attach" && result.value.displayId).toBe(
+      "KG-band-aaaa",
+    );
+  });
+
+  test("should copy a suffix with a letter even under a prefix the task-id rule names", () => {
+    const result = plan({
+      policy: "fleet-slug",
+      createdId: "KG-g0000",
+      title: "fix the band",
+      child: false,
+      issues: [],
+    });
+
+    expect(result.ok && result.value.kind === "attach" && result.value.displayId).toBe(
+      "KG-band-g0000",
+    );
+  });
+
+  test("should return an invalid-id error when the suffix is not one bd mints", () => {
+    const result = plan({ createdId: "BU-Mg2_x", child: false });
+
+    expect(!result.ok && result.error.kind).toBe("invalid-id");
+  });
 });
 
 describe("storeUsesDisplayIds and takenDisplayIds", () => {
