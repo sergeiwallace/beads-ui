@@ -19,6 +19,7 @@ describe("undo for a close", () => {
       "in_progress",
       "--if-status",
       "closed",
+      "--json",
     ]);
     expect(undo && undoView(undo, 80)).toEqual({
       line: "BU-npm-audit-2zw is closed; u puts it back to in_progress",

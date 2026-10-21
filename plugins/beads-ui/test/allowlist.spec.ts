@@ -121,6 +121,94 @@ describe("the validate allow-list gate", () => {
     );
   });
 
+  // The helper never writes `$.`, so the `$.` scan cannot see it; only the hooks module's
+  // hand-off is visible.
+  it("should fail naming the hooks module line when it passes $ to a helper with an untyped parameter", () => {
+    const dir = pluginWith((d) => {
+      writeFileSync(
+        join(d, "hooks/helper.ts"),
+        'export async function view(engine) {\n  return engine.ui.open({ id: "other" });\n}\n',
+      );
+      editRegister(d, IMPORT_ANCHOR, `${IMPORT_ANCHOR}\nimport { view } from "./helper.ts";`);
+      editRegister(d, SESSION_START, `${SESSION_START}\n    await view($);`);
+    });
+
+    const result = runGate(dir);
+    const handOff =
+      readFileSync(join(dir, "hooks/register.ts"), "utf8")
+        .split("\n")
+        .indexOf("    await view($);") + 1;
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      `check-plugin-allowlist: hooks/register.ts:${handOff}: $ handed on rather than called, in the hooks module`,
+    );
+  });
+
+  // validate --strict refuses this one itself, before the source scan runs.
+  it("should fail naming the line when the hooks module aliases $ before handing it on", () => {
+    const dir = pluginWith((d) => {
+      writeFileSync(
+        join(d, "hooks/helper.ts"),
+        'export async function view(engine) {\n  return engine.ui.open({ id: "other" });\n}\n',
+      );
+      editRegister(d, IMPORT_ANCHOR, `${IMPORT_ANCHOR}\nimport { view } from "./helper.ts";`);
+      editRegister(
+        d,
+        SESSION_START,
+        `${SESSION_START}\n    const engine = $;\n    await view(engine);`,
+      );
+    });
+
+    const result = runGate(dir);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("`const engine = $;`: $ itself is bound to a name");
+  });
+
+  it("should fail naming the file and line when a helper takes the engine by an aliased type", () => {
+    const dir = pluginWith((d) =>
+      writeFileSync(
+        join(d, "hooks/helper.ts"),
+        'import type { EngineInterface as Engine } from "claude-code";\n\nexport async function view(engine: Engine) {\n  return engine.ui.open({ id: "other" });\n}\n',
+      ),
+    );
+
+    const result = runGate(dir);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "check-plugin-allowlist: hooks/helper.ts:1: the engine type EngineInterface outside the hooks module (./register.ts)",
+    );
+  });
+
+  it("should fail on a namespace or inline engine type and pass a surface type, outside the hooks module", () => {
+    const dir = pluginWith((d) => {
+      mkdirSync(join(d, "lib"));
+      writeFileSync(
+        join(d, "lib/types.ts"),
+        [
+          'import type * as CC from "claude-code";',
+          'import type { ClientSurface } from "claude-code";',
+          "",
+          "export type Engine = CC.EngineInterface;",
+          'export type Start = import("claude-code").Hook<"session.start">;',
+          "export type Surface = ClientSurface;",
+          "",
+        ].join("\n"),
+      );
+    });
+
+    const result = runGate(dir);
+
+    expect(result.status).toBe(1);
+    const lines = result.stdout.split("\n").filter((line) => line.includes("lib/types.ts"));
+    expect(lines).toEqual([
+      "check-plugin-allowlist: lib/types.ts:4: the engine type EngineInterface outside the hooks module (./register.ts)",
+      "check-plugin-allowlist: lib/types.ts:5: the engine type Hook outside the hooks module (./register.ts)",
+    ]);
+  });
+
   it("should fail naming the entry when an allow-listed call is no longer reported", () => {
     const dir = pluginWith((d) => editRegister(d, SESSION_START, "await Promise.resolve();"));
 

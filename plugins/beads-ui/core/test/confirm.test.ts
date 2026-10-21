@@ -75,6 +75,7 @@ describe("the delete confirmation", () => {
       "delete",
       "BU-2zw",
       "--force",
+      "--json",
     ]);
   });
 
@@ -133,13 +134,14 @@ describe("the delete confirmation", () => {
       "BU-mg2.3",
       "--cascade",
       "--force",
+      "--json",
     ]);
   });
 
   test("should run bd close and never bd delete when Close instead is chosen", () => {
     const closing = reduceConfirm(atTypedId(), { type: "close-instead" });
 
-    expect(nextCommand(closing)).toEqual(["bd", "close", "BU-mg2.3"]);
+    expect(nextCommand(closing)).toEqual(["bd", "close", "BU-mg2.3", "--json"]);
     const closed = run(
       closing,
       { type: "close-finished", exitCode: 0, message: "" },
@@ -163,6 +165,7 @@ describe("the delete confirmation", () => {
       "in_progress",
       "--if-status",
       "closed",
+      "--json",
     ]);
     expect([view.closeInstead.enabled, view.delete.enabled]).toEqual([false, false]);
   });
@@ -172,6 +175,7 @@ describe("the delete confirmation", () => {
       "bd",
       "close",
       "BU-2zw",
+      "--json",
     ]);
   });
 

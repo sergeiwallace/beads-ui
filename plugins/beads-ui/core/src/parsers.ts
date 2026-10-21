@@ -132,6 +132,10 @@ function parseIssue(value: unknown, path: string): Issue {
 
   const displayId = metadata.display_id;
   if (typeof displayId === "string" && displayId !== "") issue.displayId = displayId;
+  // The human owner is metadata.owner (D-17). bd's top-level `owner` is the email of whoever
+  // owns the repository, not the person a session's task belongs to, so it is not read.
+  const owner = optionalString(metadata, "owner", `${path}.metadata`);
+  if (owner !== undefined) issue.owner = owner;
 
   const optional: [keyof Issue, string][] = [
     ["description", "description"],
@@ -139,7 +143,6 @@ function parseIssue(value: unknown, path: string): Issue {
     ["acceptanceCriteria", "acceptance_criteria"],
     ["notes", "notes"],
     ["assignee", "assignee"],
-    ["owner", "owner"],
     ["parent", "parent"],
     ["dueAt", "due_at"],
     ["deferUntil", "defer_until"],
@@ -274,7 +277,10 @@ function nonNegativeInteger(obj: JsonObject, key: string): number {
 export function parseBdDeletePreview(text: string): ParseResult<DeletePreview> {
   return run("bd delete", text, (json) => {
     const root = asObject(json, "$");
-    if (typeof root.error === "string" && root.error !== "") {
+    if (root.error !== undefined && root.error !== null) {
+      if (typeof root.error !== "string" || root.error === "") {
+        throw new Invalid("$.error", "expected a non-empty string");
+      }
       throw new Invalid("$.error", root.error);
     }
     const issueIds = asArray(root.issue_ids, "$.issue_ids").map((id, i) => {
@@ -283,9 +289,13 @@ export function parseBdDeletePreview(text: string): ParseResult<DeletePreview> {
       }
       return id;
     });
+    if (issueIds.length === 0) throw new Invalid("$.issue_ids", "expected at least one id");
+    // A missing or non-boolean cascade must not read as false: the cascade decides whether the
+    // confirmation asks for the typed display id.
+    if (typeof root.cascade !== "boolean") throw new Invalid("$.cascade", "expected a boolean");
     return {
       issueIds,
-      cascade: root.cascade === true,
+      cascade: root.cascade,
       wouldDelete: nonNegativeInteger(root, "would_delete"),
       wouldOrphan: nonNegativeInteger(root, "would_orphan"),
       wouldRemoveDependencies: nonNegativeInteger(root, "would_remove_dependencies"),

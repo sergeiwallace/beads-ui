@@ -42,15 +42,16 @@ export function moveArgv(id: string, to: string, shown: string): BdArgv {
     statusArg(to),
     "--if-status",
     statusArg(shown),
+    "--json",
   ];
 }
 
 export function closeArgv(id: string): BdArgv {
-  return ["bd", "close", issueIdArg(id)];
+  return ["bd", "close", issueIdArg(id), "--json"];
 }
 
 export function reopenArgv(id: string): BdArgv {
-  return ["bd", "reopen", issueIdArg(id)];
+  return ["bd", "reopen", issueIdArg(id), "--json"];
 }
 
 export function deletePreviewArgv(id: string): BdArgv {
@@ -68,6 +69,6 @@ export function cascadePreviewArgv(id: string): BdArgv {
 export function deleteArgv(id: string, options: { cascade: boolean }): BdArgv {
   const target = issueIdArg(id);
   return options.cascade
-    ? ["bd", "delete", target, "--cascade", "--force"]
-    : ["bd", "delete", target, "--force"];
+    ? ["bd", "delete", target, "--cascade", "--force", "--json"]
+    : ["bd", "delete", target, "--force", "--json"];
 }
