@@ -116,6 +116,15 @@ repos:
         pass_filenames: false
         always_run: true
 
+      # The mod's gates (beads-ui design, D-15 and T-0.3). Each needs `claude` on PATH
+      # and fails loudly without it.
+      - id: plugin-validate-allowlist
+        name: claude plugin validate --json plugins/beads-ui matches its allow-list
+        entry: node scripts/check-plugin-allowlist.mjs plugins/beads-ui plugins/beads-ui/validate-allowlist.json
+        language: system
+        pass_filenames: false
+        always_run: true
+
       # docs-index-check REMOVED (CORE-55). The generated docs/README.md index had
       # no reader -- nothing in the fleet consumed it -- yet the gate blocked every
       # docs commit until it was regenerated. It also could not be regenerated
