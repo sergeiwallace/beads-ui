@@ -14,7 +14,7 @@
 //   - inside a hooks module, a bare `$` that is neither a parameter nor followed by a member
 //     access, such as `helper($)`. validate --strict already refuses `$` bound to a name
 //     (`const engine = $`) but accepts it passed straight to a call.
-// Test files (*.test.*, *.spec.*, test/ and tests/) are skipped.
+// Test files (*.test.*, *.spec.*, test/ and tests/) and .claude-plugin/ are skipped.
 //
 // A static scan is not a proof. It does not see: a helper whose engine parameter is untyped or
 // typed `any` or `unknown`, when the hooks module hands it the engine under another name than
@@ -31,7 +31,10 @@ const NOTE =
 const VIA = / \(via [\w$.]+\)$/;
 const ENGINE_CALL = /(?<![\w$])\$\.[A-Za-z_]/;
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"]);
-const SKIPPED_DIRS = new Set(["node_modules", ".turbo", "test", "tests"]);
+// .claude-plugin holds the manifest and the mod types Claude Code writes there when it loads the
+// plugin (.claude-plugin/types/, ignored by the repository), whose declarations name every
+// engine type.
+const SKIPPED_DIRS = new Set(["node_modules", ".turbo", ".claude-plugin", "test", "tests"]);
 const TEST_FILE = /\.(test|spec)\.[cm]?[jt]sx?$/;
 // The exported names of the "claude-code" module (mods/types/claude-code.d.ts) whose type is or
 // takes the engine `$`.

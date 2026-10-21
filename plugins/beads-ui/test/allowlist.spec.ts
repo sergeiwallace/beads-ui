@@ -209,6 +209,23 @@ describe("the validate allow-list gate", () => {
     ]);
   });
 
+  // Claude Code writes its mod types into the plugin when it loads it (`claude --plugin-dir`),
+  // and their `claude-code/testing` declarations import the registrar types `On` and `Register`.
+  it("should pass when Claude Code has written its mod types into .claude-plugin/types", () => {
+    const dir = pluginWith((d) => {
+      mkdirSync(join(d, ".claude-plugin/types/claude-code"), { recursive: true });
+      writeFileSync(
+        join(d, ".claude-plugin/types/claude-code/index.d.ts"),
+        "declare module 'claude-code/testing' {\n  import type { On } from 'claude-code';\n  import type { Register } from 'claude-code';\n}\n",
+      );
+    });
+
+    const result = runGate(dir);
+
+    expect(result.stdout).not.toContain(".claude-plugin/types");
+    expect(result.status).toBe(0);
+  });
+
   it("should fail naming the entry when an allow-listed call is no longer reported", () => {
     const dir = pluginWith((d) => editRegister(d, SESSION_START, "await Promise.resolve();"));
 
