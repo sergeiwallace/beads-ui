@@ -424,6 +424,21 @@ describe("quick-add", () => {
     );
   });
 
+  test("should mint under bd-new's slug budget override when the session sets one", async ($, on) => {
+    const { w, ui } = await openPane($, on, {
+      script,
+      env: { HOME: "/home/me", AIH_SLUG_BODY_MAX_CHARS: "12", AIH_SLUG_BODY_MAX_CHARS_CHILD: "8" },
+    });
+
+    await ui.input({ key: "quickadd", text: LINE });
+    await w.clock.settle();
+
+    expect(w.keys()).toContain(
+      "bd update BU-2zw --set-metadata display_id=BU-npm-audit-10-2zw --add-label id:BU-npm-audit-10-2zw",
+    );
+    expect((await ui.find({ key: "notice" }))?.text).toBe("created BU-2zw as BU-npm-audit-10-2zw");
+  });
+
   test("should create the issue without a display id when id_policy is off", async ($, on) => {
     const { w, ui } = await openPane($, on, {
       script,

@@ -52,6 +52,7 @@ import {
   STATUS_CATEGORIES,
   type SwimlaneMode,
   showArgv,
+  slugBudgets,
   sortLabel,
   statusesArgv,
   storeName,
@@ -473,6 +474,9 @@ export class BeadsPane {
       await this.refresh();
       return;
     }
+    const budgetEnv = await this.host
+      ?.slugBudgetEnv()
+      .catch(() => ({ body: undefined, child: undefined }));
     const plan = planDisplayId({
       policy: this.config.config.idPolicy,
       issues: this.board.issues,
@@ -480,6 +484,7 @@ export class BeadsPane {
       title: parsed.value.title,
       child: false,
       random: Math.random,
+      budgets: slugBudgets(budgetEnv ?? {}),
     });
     if (!plan.ok) {
       this.note(`created ${id.value}; no display id: ${plan.error.message}`, "warning");

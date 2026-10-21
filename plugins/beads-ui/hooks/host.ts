@@ -21,6 +21,8 @@ export interface Host {
   readFile: (path: string) => Promise<string>;
   /** `$.env.get` of the two variables that place the user's config directory. */
   configEnv: () => Promise<{ xdgConfigHome: string | undefined; home: string | undefined }>;
+  /** `$.env.get` of bd-new's two slug budget overrides, read when an issue is created. */
+  slugBudgetEnv: () => Promise<{ body: string | undefined; child: string | undefined }>;
   /** `$.ui.invalidate("ui.render")`: the pane, the confirmation and the band draw again. */
   invalidate: () => void;
   /** `$.ui.toast`. */

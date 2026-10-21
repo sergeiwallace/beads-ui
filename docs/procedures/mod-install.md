@@ -88,6 +88,8 @@ Type a line into the `+` field and press Enter. Words become the title; these to
 
 For example, `Fix the band p1 type:bug +ui due:2026-11-02` runs `bd create` with `--title=Fix the band --priority=1 --type=bug --labels=ui --due=2026-11-02`. When the store's issues carry display ids (`metadata.display_id`), the new issue gets one of the same shape, written to `metadata.display_id` and as an `id:<display id>` label.
 
+The readable part of a display id is cut to 32 characters, or 20 for a child issue. The fleet's `bd-new` takes these budgets from `AIH_SLUG_BODY_MAX_CHARS` and `AIH_SLUG_BODY_MAX_CHARS_CHILD`, and the mod reads the same two variables from the session's environment when it creates an issue, so both mint the same id. A value that is not a positive whole number is ignored and the default applies.
+
 ## Filter
 
 Type `key:value` terms into the `/` field and press Enter. Terms combine with AND. The keys are `type`, `label`, `assignee`, `sprint` and `ready` (`ready:true` or `ready:false`, from `bd ready`). A term with any other key shows the accepted keys and leaves the list as it was.

@@ -7,6 +7,7 @@ import {
   parseBdShow,
   parseIdPolicy,
   planDisplayId,
+  slugBudgets,
   slugifyTitle,
   storeUsesDisplayIds,
   takenDisplayIds,
@@ -61,6 +62,52 @@ describe("slugifyTitle", () => {
 
   test("should hard-cut a single word longer than the budget", () => {
     expect(slugifyTitle("a".repeat(40))).toBe("a".repeat(32));
+  });
+});
+
+describe("slug budgets from bd-new's overrides", () => {
+  const TITLE = "npm audit: 10 dev-only advisories under markdownlint-cli2";
+  // What ai-harness scripts/bd_new.py's slugify_title gave for TITLE with
+  // AIH_SLUG_BODY_MAX_CHARS set to each value (read 2026-10-21); a value _env_budget refuses
+  // falls back to 32.
+  const BD_NEW_BODIES: readonly [string, string][] = [
+    ["12", "npm-audit-10"],
+    ["50", "npm-audit-10-dev-only-advisories-under"],
+    [" 40 ", "npm-audit-10-dev-only-advisories-under"],
+    ["1_6", "npm-audit-10-dev"],
+    ["abc", "npm-audit-10-dev-only-advisories"],
+    ["0", "npm-audit-10-dev-only-advisories"],
+    ["-5", "npm-audit-10-dev-only-advisories"],
+    ["", "npm-audit-10-dev-only-advisories"],
+  ];
+
+  for (const [value, body] of BD_NEW_BODIES) {
+    test(`should give the body bd-new gives when AIH_SLUG_BODY_MAX_CHARS is ${JSON.stringify(value)}`, () => {
+      expect(slugifyTitle(TITLE, { budgets: slugBudgets({ body: value }) })).toBe(body);
+    });
+  }
+
+  test("should use the child budget override for a child and bd-new's defaults when neither is set", () => {
+    expect(slugifyTitle(TITLE, { child: true, budgets: slugBudgets({ child: "8" }) })).toBe("npm");
+    expect(slugBudgets({})).toEqual({ body: 32, child: 20 });
+  });
+
+  test("should mint a top-level display id under the body budget override when one is given", () => {
+    const top = byId(mintedIssues, "BU-2zw");
+
+    const result = planDisplayId({
+      policy: "auto",
+      issues: allIssues().filter((issue) => issue.id !== top.id),
+      createdId: top.id,
+      title: top.title,
+      child: false,
+      random: sequence(0.5),
+      budgets: slugBudgets({ body: "12" }),
+    });
+
+    expect(result.ok && result.value.kind === "attach" && result.value.displayId).toBe(
+      "BU-npm-audit-10-2zw",
+    );
   });
 });
 
