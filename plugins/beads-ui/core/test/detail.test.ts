@@ -8,6 +8,7 @@ import {
   openDetail,
   parseBdHistoryEvents,
   parseBdShow,
+  parseFieldEdit,
   reduceDetail,
 } from "../src/index.ts";
 import historyMg22 from "./fixtures/bd-history-BU-mg2.2.json.ts";
@@ -222,5 +223,49 @@ describe("editArgv", () => {
       "invalid-value",
       "invalid-value",
     ]);
+  });
+});
+
+describe("parseFieldEdit", () => {
+  test("should start each edit control from the whole value when the drawn one is cut", () => {
+    const issue = epic();
+    const view = detailView(openDetail(issue, []), { width: 12 });
+    const field = (key: string) => view.fields.find((candidate) => candidate.key === key);
+
+    expect(field("title")?.value).toBe("beads-ui Cl…");
+    expect(field("title")?.raw).toBe(issue.title);
+    expect(field("priority")?.raw).toBe(String(issue.priority));
+    expect(field("id")?.raw).toBeUndefined();
+  });
+
+  test("should read back what each control holds into the edit editArgv takes", () => {
+    expect(unwrap(parseFieldEdit("priority", "P1"))).toEqual({ field: "priority", value: 1 });
+    expect(unwrap(parseFieldEdit("priority", "3"))).toEqual({ field: "priority", value: 3 });
+    expect(unwrap(parseFieldEdit("estimate", "1h 30m"))).toEqual({ field: "estimate", value: 90 });
+    expect(unwrap(parseFieldEdit("estimate", "45"))).toEqual({ field: "estimate", value: 45 });
+    expect(unwrap(parseFieldEdit("labels", "ui, id:BU-x ,"))).toEqual({
+      field: "labels",
+      value: ["ui", "id:BU-x"],
+    });
+    expect(unwrap(parseFieldEdit("title", " Board "))).toEqual({
+      field: "title",
+      value: " Board ",
+    });
+  });
+
+  test("should refuse a priority or estimate it cannot read", () => {
+    for (const [field, text] of [
+      ["priority", "P5"],
+      ["priority", "high"],
+      ["estimate", ""],
+      ["estimate", "soon"],
+    ] as const) {
+      const result = parseFieldEdit(field, text);
+      expect([field, text, !result.ok && result.error.kind]).toEqual([
+        field,
+        text,
+        "invalid-value",
+      ]);
+    }
   });
 });

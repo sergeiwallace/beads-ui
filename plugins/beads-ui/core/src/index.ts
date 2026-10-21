@@ -192,6 +192,7 @@ export {
   EDITABLE_FIELDS,
   editArgv,
   openDetail,
+  parseFieldEdit,
   reduceDetail,
 } from "./views/detail.ts";
 export {

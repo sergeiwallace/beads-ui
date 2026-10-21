@@ -22,8 +22,14 @@ export const DETAIL_EVENT_LIMIT = 10;
 export interface FieldView {
   key: string;
   label: string;
+  /** The value as drawn, cut to the width. */
   value: string;
   editable?: EditableField;
+  /**
+   * For an editable field, the whole value an edit control starts from, in the form
+   * `parseFieldEdit` reads back: never the cut `value`, which would write a shortened title.
+   */
+  raw?: string;
 }
 
 export interface MarkdownView {
@@ -124,9 +130,19 @@ function minutes(value: number): string {
 
 function fieldsOf(issue: Issue): FieldView[] {
   const fields: FieldView[] = [];
-  const add = (key: string, label: string, value: string | undefined, editable?: EditableField) => {
+  const add = (
+    key: string,
+    label: string,
+    value: string | undefined,
+    editable?: EditableField,
+    raw: string | undefined = value,
+  ) => {
     if (value === undefined) return;
-    fields.push(editable === undefined ? { key, label, value } : { key, label, value, editable });
+    fields.push(
+      editable === undefined
+        ? { key, label, value }
+        : { key, label, value, editable, raw: raw ?? value },
+    );
   };
   const sprint = issue.labels.find((label) => label.startsWith("sprint:"));
 
@@ -134,7 +150,7 @@ function fieldsOf(issue: Issue): FieldView[] {
   add("id", "Id", issue.id);
   add("displayId", "Display id", issue.displayId);
   add("status", "Status", issue.status, "status");
-  add("priority", "Priority", priorityBadge(issue.priority), "priority");
+  add("priority", "Priority", priorityBadge(issue.priority), "priority", String(issue.priority));
   add("type", "Type", issue.type, "type");
   add("assignee", "Assignee", issue.assignee ?? "", "assignee");
   add("owner", "Owner", issue.owner);
@@ -147,6 +163,7 @@ function fieldsOf(issue: Issue): FieldView[] {
     "Estimate",
     issue.estimatedMinutes === undefined ? "" : minutes(issue.estimatedMinutes),
     "estimate",
+    issue.estimatedMinutes === undefined ? "" : String(issue.estimatedMinutes),
   );
   add("deferUntil", "Deferred until", issue.deferUntil);
   add("createdAt", "Created", issue.createdAt);
@@ -287,6 +304,44 @@ const unchanged = (field: string): { ok: false; error: EditError } => ({
  * value, so a stale edit exits 13 instead of overwriting. No edit touches `metadata.display_id`
  * or an `id:` label: a published display id is immutable (D-9).
  */
+const DURATION = /^(?:(\d+)\s*h)?\s*(?:(\d+)\s*m?)?$/i;
+
+/**
+ * Reads what an edit control holds back into a FieldEdit: the inverse of each field's `raw`.
+ * Priority takes `1` or `P1`; an estimate takes minutes (`90`) or the drawn form (`1h 30m`);
+ * labels are comma-separated.
+ */
+export function parseFieldEdit(field: EditableField, text: string): Result<FieldEdit, EditError> {
+  switch (field) {
+    case "priority": {
+      const match = /^[pP]?([0-4])$/.exec(text.trim());
+      if (match === null) return invalid("priority takes 0 to 4");
+      return { ok: true, value: { field, value: Number(match[1]) } };
+    }
+    case "estimate": {
+      const match = DURATION.exec(text.trim());
+      if (text.trim() === "" || match === null) {
+        return invalid("an estimate is minutes, such as 90 or 1h 30m");
+      }
+      const value = Number(match[1] ?? 0) * 60 + Number(match[2] ?? 0);
+      return { ok: true, value: { field, value } };
+    }
+    case "labels":
+      return {
+        ok: true,
+        value: {
+          field,
+          value: text
+            .split(",")
+            .map((label) => label.trim())
+            .filter((label) => label !== ""),
+        },
+      };
+    default:
+      return { ok: true, value: { field, value: text } };
+  }
+}
+
 export function editArgv(issue: Issue, edit: FieldEdit): Result<BdArgv, EditError> {
   const id = issueIdArg(issue.id);
   const ok = (...flags: string[]): Result<BdArgv, EditError> => ({
