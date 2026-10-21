@@ -37,6 +37,21 @@ export {
   RESERVED_KEYS,
 } from "./commands.ts";
 export type {
+  BeadsUiConfig,
+  ResolvedConfig,
+  TomlError,
+  TomlTable,
+  TomlValue,
+} from "./config.ts";
+export {
+  CONFIG_FILE_NAME,
+  configCandidates,
+  DEFAULT_CONFIG,
+  MIN_REFRESH_SECONDS,
+  parseToml,
+  resolveConfig,
+} from "./config.ts";
+export type {
   Filter,
   FilterError,
   FilterKey,
