@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { type Issue, moveArgv } from "@beads-ui/core";
+import { createArgv, type Issue, moveArgv } from "@beads-ui/core";
 import { afterEach, describe, expect, it } from "vitest";
 import { BD_INSTALL_PAGE, type BdResult, createBdClient, type StaleWrite } from "../src/index.ts";
 import { type StubBd, type StubReply, stubBd } from "./stub.ts";
@@ -337,5 +337,48 @@ describe("update through a stub bd", () => {
     expect(() => client.update("BU-abc", { addLabels: ["a,b"] })).toThrow(RangeError);
     expect(() => client.update("-x", { title: "t" })).toThrow(RangeError);
     expect(await stub.calls()).toEqual([]);
+  });
+});
+
+describe("create and close through a stub bd", () => {
+  const quickAdd = { title: "Fix the board", priority: 1 as const, labels: ["ui"] };
+
+  it("should run the core's createArgv and return the new hash id when bd create answers", async () => {
+    const [record] = JSON.parse(ISSUE_JSON) as object[];
+    const { stub, client } = await stubbed({ stdout: JSON.stringify(record) });
+    const result = await client.create(quickAdd, { parent: "BU-epic" });
+    expect(result).toEqual({ kind: "ok", value: "BU-abc" });
+    expect(await stub.calls()).toEqual([
+      createArgv(quickAdd, { parent: "BU-epic" }).slice(1).join(" "),
+    ]);
+  });
+
+  it("should return failed with the parse error when bd create prints no id", async () => {
+    const { client } = await stubbed({ stdout: '{"title":"x"}' });
+    const result = await client.create(quickAdd);
+    expect(result.kind).toBe("failed");
+    if (result.kind !== "failed") return;
+    expect([result.parseError?.source, result.parseError?.path]).toEqual(["bd create", "$.id"]);
+  });
+
+  it("should run bd close on the id and return ok when bd exits 0", async () => {
+    const { stub, client } = await stubbed({});
+    expect(await client.close("BU-abc")).toEqual({ kind: "ok", value: undefined });
+    expect(await stub.calls()).toEqual(["close BU-abc"]);
+  });
+
+  it("should return failed with bd's text when bd close refuses", async () => {
+    const { client } = await stubbed({ exitCode: 1, stderr: "BU-abc has open children\n" });
+    expect(await client.close("BU-abc")).toEqual({
+      kind: "failed",
+      exitCode: 1,
+      stderr: "BU-abc has open children\n",
+      message: "bd close exited 1: BU-abc has open children",
+    });
+  });
+
+  it("should return notFound when bd close names the id as not found", async () => {
+    const { client } = await stubbed({ exitCode: 1, stderr: "Issue BU-gone not found\n" });
+    expect((await client.close("BU-gone")).kind).toBe("notFound");
   });
 });

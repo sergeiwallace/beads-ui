@@ -1,12 +1,16 @@
 import {
   type BdArgv,
+  closeArgv,
+  createArgv,
   type Issue,
   listArgv,
   type ParseResult,
+  parseBdCreatedId,
   parseBdList,
   parseBdReady,
   parseBdShow,
   parseBdStatuses,
+  type QuickAdd,
   readyArgv,
   STALE_WRITE_EXIT,
   type Status,
@@ -31,6 +35,10 @@ export interface CallOptions {
 
 export interface UpdateOptions extends CallOptions, UpdateGuard {}
 
+export interface CreateOptions extends CallOptions {
+  parent?: string;
+}
+
 export interface BdClient {
   list(options?: CallOptions): Promise<BdResult<Issue[]>>;
   show(id: string, options?: CallOptions): Promise<BdResult<Issue>>;
@@ -38,6 +46,9 @@ export interface BdClient {
   ready(options?: CallOptions): Promise<BdResult<Issue[]>>;
   /** One bd call; a stale guard returns `stale` and is never retried. */
   update(id: string, fields: UpdateFields, options?: UpdateOptions): Promise<BdResult<void>>;
+  /** Returns the new issue's hash id; display-id minting is a later step over it (D-9). */
+  create(quickAdd: QuickAdd, options?: CreateOptions): Promise<BdResult<string>>;
+  close(id: string, options?: CallOptions): Promise<BdResult<void>>;
 }
 
 type Exited = Extract<RunOutcome, { kind: "exited" }>;
@@ -146,6 +157,18 @@ export function createBdClient(options: BdClientOptions): BdClient {
         if (guarded && out.exitCode === STALE_WRITE_EXIT) {
           return { kind: "stale", id, exitCode: STALE_WRITE_EXIT, stderr: out.stderr };
         }
+        return notFound(id, out) ?? exitFailure(argv, out);
+      });
+    },
+    create(quickAdd, createOptions = {}) {
+      const { parent } = createOptions;
+      const argv = createArgv(quickAdd, parent === undefined ? {} : { parent });
+      return call(argv, createOptions, (out) => parsed(argv, out, parseBdCreatedId));
+    },
+    close(id, callOptions) {
+      const argv = closeArgv(id);
+      return call(argv, callOptions, (out) => {
+        if (out.exitCode === 0) return { kind: "ok", value: undefined };
         return notFound(id, out) ?? exitFailure(argv, out);
       });
     },
