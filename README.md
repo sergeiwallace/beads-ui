@@ -22,7 +22,7 @@ TUI mod (Phase 1).
 The work is tracked in this repo's own Beads store (prefix `BU`). Later sub-epics cover iOS, macOS
 and Linux.
 
-## Layout
+## Repository structure
 
 An npm-workspaces monorepo with one shared core and one package per surface.
 
