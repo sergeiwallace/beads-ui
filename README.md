@@ -56,7 +56,7 @@ npm test
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the rules on the shared core and on secrets.
 
 To load the mod from a checkout, run `claude --plugin-dir plugins/beads-ui`. To install it from
-this repository's marketplace (Claude Code 2.1.275 or later):
+this repository's marketplace (the mod needs Claude Code 2.1.299 or later):
 
 ```text
 /plugin install beads-ui --marketplace sergeiwallace/beads-ui

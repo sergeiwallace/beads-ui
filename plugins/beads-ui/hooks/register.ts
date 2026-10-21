@@ -5,7 +5,7 @@ import { STATUS_CATEGORIES } from "../core/src/index.ts";
 export const PLUGIN_NAME = "beads-ui";
 export const COMMAND_NAME = "beads";
 export const PANE_ID = "beads";
-export const COLUMNS_TEXT = `Columns: ${STATUS_CATEGORIES.join(", ")}`;
+const COLUMNS_TEXT = `Columns: ${STATUS_CATEGORIES.join(", ")}`;
 export const OPEN_FAILED_TEXT = "beads-ui could not open its pane";
 
 const COMMAND_SPEC = {
