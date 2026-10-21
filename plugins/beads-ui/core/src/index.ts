@@ -46,6 +46,26 @@ export {
   submitFilter,
 } from "./filter.ts";
 export type {
+  DisplayIdPlan,
+  DisplayIdPlanInput,
+  IdPolicy,
+  IdPolicyError,
+  MintError,
+  MintInput,
+} from "./mint.ts";
+export {
+  DEFAULT_ID_POLICY,
+  ID_POLICIES,
+  mintDisplayId,
+  parseIdPolicy,
+  planDisplayId,
+  SLUG_SUFFIX_ALPHABET,
+  SLUG_SUFFIX_LENGTH,
+  slugifyTitle,
+  storeUsesDisplayIds,
+  takenDisplayIds,
+} from "./mint.ts";
+export type {
   BdArgv,
   DeletePreview,
   Dependency,
