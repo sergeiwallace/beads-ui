@@ -58,9 +58,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the rules on the shared core and on s
 To load the mod from a checkout, run `claude --plugin-dir plugins/beads-ui`. To install it from
 this repository's marketplace (the mod needs Claude Code 2.1.299 or later):
 
-```text
-/plugin install beads-ui --marketplace sergeiwallace/beads-ui
+```sh
+claude plugin marketplace add sergeiwallace/beads-ui
+claude plugin install beads-ui@beads-ui
 ```
+
+Then run `/beads` (or `/bu`) in a repository with a Beads store.
+[docs/procedures/mod-install.md](docs/procedures/mod-install.md) covers the keys, quick-add,
+configuration and how to report a bug.
 
 ## Open source
 
