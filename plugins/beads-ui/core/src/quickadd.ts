@@ -30,7 +30,8 @@ const PREFIXES: readonly (readonly [string, Slot])[] = [
 const PRIORITY = /^p([0-4])$/;
 const DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-function isCalendarDate(text: string): boolean {
+/** True for a real calendar date written YYYY-MM-DD. */
+export function isCalendarDate(text: string): boolean {
   const match = DATE.exec(text);
   if (match === null) return false;
   const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];

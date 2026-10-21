@@ -132,4 +132,25 @@ export {
   reduceBoard,
   STALE_WRITE_EXIT,
 } from "./views/board.ts";
+export type {
+  DependencyView,
+  DetailEvent,
+  DetailState,
+  DetailView,
+  DetailViewOptions,
+  EditableField,
+  EditError,
+  EventView,
+  FieldEdit,
+  FieldView,
+  MarkdownView,
+} from "./views/detail.ts";
+export {
+  DETAIL_EVENT_LIMIT,
+  detailView,
+  EDITABLE_FIELDS,
+  editArgv,
+  openDetail,
+  reduceDetail,
+} from "./views/detail.ts";
 export { asOf, priorityBadge, truncate } from "./views/text.ts";
