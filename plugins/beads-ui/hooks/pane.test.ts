@@ -249,6 +249,26 @@ describe("the Backlog tab", () => {
     );
   });
 
+  test("should keep exactly the open issues assigned to that person when an assignee filter is entered", async ($, on) => {
+    // The store with two open issues claimed by aih-ec2-3; the fixture's open issues have no assignee.
+    const claimed = new Set(["BU-2zw", "BU-mg2.3.6"]);
+    const assigned = (JSON.parse(list) as Record<string, unknown>[]).map((record) =>
+      claimed.has(String(record.id)) ? { ...record, assignee: "aih-ec2-3" } : record,
+    );
+    const { ui } = await openPane($, on, {
+      script: (key) =>
+        key === "bd list --all --brief --limit 0" ? ok(JSON.stringify(assigned)) : undefined,
+    });
+    await ui.press({ key: "tab:backlog" });
+
+    await ui.input({ key: "filter", text: "assignee:aih-ec2-3" });
+
+    expect((await keysOf(ui, "row:")).map((key) => key.slice(4))).toEqual(
+      sortIssues(issues().filter((issue) => claimed.has(issue.id))).map((issue) => issue.id),
+    );
+    expect((await ui.find({ key: "backlog-count" }))?.text).toContain("2 of 20 open issues");
+  });
+
   test("should show the accepted keys and keep the list when the filter has an unknown key", async ($, on) => {
     const { ui } = await openPane($, on);
     await ui.press({ key: "tab:backlog" });
