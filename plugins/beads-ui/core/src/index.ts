@@ -192,13 +192,16 @@ export type {
   MarkdownView,
 } from "./views/detail.ts";
 export {
+  DESCRIPTION_EDIT_MAX_CHARS,
   DETAIL_EVENT_LIMIT,
   detailView,
   EDITABLE_FIELDS,
   editArgv,
+  fromOneLine,
   openDetail,
   parseFieldEdit,
   reduceDetail,
+  toOneLine,
 } from "./views/detail.ts";
 export {
   asOf,

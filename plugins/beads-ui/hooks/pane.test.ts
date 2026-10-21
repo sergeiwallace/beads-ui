@@ -348,6 +348,48 @@ describe("the Detail tab", () => {
     expect(after.slice(write + 1)).toContain("bd history BU-mg2.3 --events");
   });
 
+  test("should edit a multi-line description through its one-line control and write it back exactly", async ($, on) => {
+    const description =
+      "Board, backlog and detail.\n\n- keyboard Move to\n- C:\\new is not a break\n";
+    const [record] = JSON.parse(show) as Record<string, unknown>[];
+    const { w, ui } = await openPane($, on, {
+      script: (key) =>
+        key === "bd show BU-mg2.3" ? ok(JSON.stringify([{ ...record, description }])) : undefined,
+    });
+    await ui.press({ key: "open:BU-mg2.3" });
+    await w.clock.settle();
+    const control = await ui.find({ key: "edit:description" });
+    const shown = String(control?.props.value);
+    const before = w.keys().length;
+
+    expect(control?.props.label).toBe("Description");
+    expect(shown).toBe(
+      "Board, backlog and detail.\\n\\n- keyboard Move to\\n- C:\\\\new is not a break\\n",
+    );
+    expect((await ui.find({ key: "md:description" }))?.text).toContain("keyboard Move to");
+
+    await ui.input({ key: "edit:description", text: shown });
+    await w.clock.settle();
+    expect(w.runs.slice(before).some((argv) => argv[1] === "update")).toBe(false);
+    expect((await ui.find({ key: "detail-error" }))?.text).toBe("description is unchanged");
+
+    await ui.input({ key: "edit:description", text: `${shown}- inline edit` });
+    await w.clock.settle();
+
+    const runs = w.runs.slice(before);
+    const write = runs.findIndex((argv) => argv[1] === "update");
+    expect(runs[write]).toEqual([
+      "bd",
+      "update",
+      "BU-mg2.3",
+      `--description=${description}- inline edit`,
+      "--json",
+    ]);
+    expect(runs.slice(write + 1).map((argv) => argv.join(" "))).toContain(
+      "bd show BU-mg2.3 --json",
+    );
+  });
+
   test("should show the reason and write nothing when an edit cannot be read", async ($, on) => {
     const { w, ui } = await openPane($, on);
     await ui.press({ key: "open:BU-mg2.3" });

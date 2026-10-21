@@ -2,6 +2,7 @@
 // claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
+  DESCRIPTION_EDIT_MAX_CHARS,
   detailView,
   editArgv,
   type Issue,
@@ -253,6 +254,66 @@ describe("parseFieldEdit", () => {
       field: "title",
       value: " Board ",
     });
+  });
+
+  // A multi-line description with every character the one-line form escapes, including a
+  // backslash before n that is not a line break.
+  const MULTI_LINE =
+    "First line.\n\n- a list item\n- C:\\new\\path and a literal \\n\r\n\tindented\\\\ end\n";
+
+  test("should give back a multi-line description byte for byte when its edit control is submitted unchanged", () => {
+    const issue = { ...epic(), description: MULTI_LINE };
+    const field = detailView(openDetail(issue, []), { width: 40 }).fields.find(
+      (candidate) => candidate.editable === "description",
+    );
+
+    expect(field?.raw?.includes("\n")).toBe(false);
+    const edit = unwrap(parseFieldEdit("description", field?.raw ?? ""));
+    expect(edit).toEqual({ field: "description", value: MULTI_LINE });
+    const argv = editArgv(issue, edit);
+    expect(!argv.ok && argv.error.kind).toBe("no-change");
+  });
+
+  test("should write the line breaks an edited description's escapes stand for", () => {
+    const issue = { ...epic(), description: MULTI_LINE };
+    const raw =
+      detailView(openDetail(issue, []), { width: 40 }).fields.find(
+        (candidate) => candidate.editable === "description",
+      )?.raw ?? "";
+
+    const argv = editArgv(issue, unwrap(parseFieldEdit("description", `${raw}\\nAdded.`)));
+
+    expect(unwrap(argv)).toEqual([
+      "bd",
+      "update",
+      "BU-mg2.3",
+      `--description=${MULTI_LINE}\nAdded.`,
+      "--json",
+    ]);
+  });
+
+  test("should offer a description edit control when the issue has no description yet", () => {
+    const { description: _none, ...issue } = epic();
+    const field = detailView(openDetail(issue, []), { width: 40 }).fields.find(
+      (candidate) => candidate.editable === "description",
+    );
+
+    expect(field?.raw).toBe("");
+    expect(
+      unwrap(editArgv(issue, unwrap(parseFieldEdit("description", "Why it matters.")))),
+    ).toEqual(["bd", "update", "BU-mg2.3", "--description=Why it matters.", "--json"]);
+  });
+
+  test("should say how to edit a description too long for the inline editor instead of cutting it", () => {
+    const issue = { ...epic(), description: "x".repeat(DESCRIPTION_EDIT_MAX_CHARS + 1) };
+    const field = detailView(openDetail(issue, []), { width: 400 }).fields.find(
+      (candidate) => candidate.key === "editDescription",
+    );
+
+    expect(field?.editable).toBeUndefined();
+    expect(field?.value).toBe(
+      `${DESCRIPTION_EDIT_MAX_CHARS + 1} characters, more than the ${DESCRIPTION_EDIT_MAX_CHARS} the inline editor holds; edit it with bd update BU-mg2.3 --description`,
+    );
   });
 
   test("should refuse a priority or estimate it cannot read", () => {

@@ -94,6 +94,12 @@ The readable part of a display id is cut to 32 characters, or 20 for a child iss
 
 Type `key:value` terms into the `Filter` field (Tab to it) and press Enter. Terms combine with AND. The keys are `type`, `label`, `assignee`, `sprint` and `ready` (`ready:true` or `ready:false`, from `bd ready`). A term with any other key shows the accepted keys and leaves the list as it was.
 
+## Edit an issue
+
+The Detail tab shows the issue's fields as controls. Tab to one, change it and press Enter to save: the mod writes that one field with `bd update` and reads the issue again before it redraws. Status and priority are lists; the others are one-line fields.
+
+The description is shown as Markdown and is also edited in the one-line `Description` field. There, a line break is written `\n`, a tab `\t`, a carriage return `\r` and a backslash `\\`; the mod turns them back into those characters when you save, so the text round-trips exactly, and saving it unchanged writes nothing. A backslash before any other character is kept as typed. A description longer than 20,000 characters in that form is not edited inline; the field says so and names the `bd update` command to use.
+
 ## Configuration
 
 The mod reads `beads-ui.toml` each time it refreshes. It uses the first of these that exists:

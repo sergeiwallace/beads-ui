@@ -1107,6 +1107,9 @@ export class BeadsPane {
           key: `edit:${editable}`,
           label: field.label,
           value: raw,
+          ...(editable === "description"
+            ? { placeholder: "one line: \\n is a line break, \\\\ a backslash" }
+            : {}),
           submitLabel: "save",
           onSubmit: (value) => void this.edit(editable, value),
         });
