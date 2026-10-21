@@ -133,6 +133,20 @@ export {
   STALE_WRITE_EXIT,
 } from "./views/board.ts";
 export type {
+  ConfirmEvent,
+  ConfirmPhase,
+  ConfirmState,
+  ConfirmView,
+  DependentView,
+} from "./views/confirm.ts";
+export {
+  confirmView,
+  deleteEnabled,
+  nextCommand,
+  openDeleteConfirm,
+  reduceConfirm,
+} from "./views/confirm.ts";
+export type {
   DependencyView,
   DetailEvent,
   DetailState,
