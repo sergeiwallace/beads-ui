@@ -61,7 +61,7 @@ The pane takes these keys while it has the keyboard (`/beads` gives it the keybo
 | `h` | Show or hide the help panel |
 | Esc | Close the pane |
 
-Every card carries a Move to control: Tab to it, press Enter, pick a status with the arrows and press Enter. The move shows at once and is written with `bd update <id> --status <new> --if-status <shown>`. If another session changed the issue first, bd refuses the write, the card goes back to its column and a line says so.
+Every card carries a Move to control: Tab to it, press Enter to open its list, pick a status with the arrows and press Enter. Esc closes the whole pane, even from an open list. The move shows at once and is written with `bd update <id> --status <new> --if-status <shown>`. If another session changed the issue first, bd refuses the write, the card goes back to its column and a line says so.
 
 In the delete confirmation:
 
@@ -71,7 +71,7 @@ In the delete confirmation:
 | `x` | Delete, once it is enabled |
 | Esc | Cancel |
 
-The confirmation shows `bd delete <id> --dry-run` before anything is written. Delete runs the dry run once more and deletes only if nothing changed. When the issue has dependents, the delete is a cascade, and Delete appears only after you type the issue's display id into the field. After a close, `u` writes the status the issue had back, through the same guarded write as a move.
+The board steps aside while the confirmation is open, so the confirmation gets the keyboard, and comes back when it closes. The confirmation shows `bd delete <id> --dry-run` before anything is written. Delete runs the dry run once more and deletes only if nothing changed. When the issue has dependents, the delete is a cascade, and Delete appears only after you type the issue's display id into the field. After a close, `u` writes the status the issue had back, through the same guarded write as a move.
 
 ## Quick-add
 
