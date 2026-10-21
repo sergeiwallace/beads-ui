@@ -28,6 +28,14 @@ export {
   SWIMLANE_MODES,
   UNASSIGNED_LANE_LABEL,
 } from "./columns.ts";
+export type { Command, CommandScope, KeyBinding } from "./commands.ts";
+export {
+  COMMANDS,
+  commandById,
+  commandForKey,
+  footerHints,
+  RESERVED_KEYS,
+} from "./commands.ts";
 export type {
   Filter,
   FilterError,
@@ -95,3 +103,11 @@ export type { QuickAdd, QuickAddError } from "./quickadd.ts";
 export { createArgv, parseQuickAdd } from "./quickadd.ts";
 export type { SortDirection, SortError, SortKey, SortSpec } from "./sort.ts";
 export { DEFAULT_SORT, parseSort, SORT_KEYS, sortIssues } from "./sort.ts";
+export type { TerminalColor, Token } from "./tokens.ts";
+export {
+  priorityToken,
+  statusToken,
+  TERMINAL_THEME,
+  TOKENS,
+  terminalColor,
+} from "./tokens.ts";
