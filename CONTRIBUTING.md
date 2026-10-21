@@ -56,10 +56,13 @@ again.
 Name tests `it("should <action> when <condition>")`, and test behaviour through the real entry
 point rather than one function at a time.
 
-Inside `plugins/beads-ui`, the two runners split by file name. A `*.test.ts` file is a mod test:
-`claude plugin test` runs it in the mod's own environment, and it imports its kit from
-`claude-code/testing`. A `*.spec.ts` file is a Vitest suite, free to use Node.js. Name a file for
-the runner it needs; the other runner never collects it.
+Inside `plugins/beads-ui`, file names choose the runners. A pure core suite is
+`core/test/<name>.test.ts`: it imports `describe`, `test` and `expect` from `claude-code/testing`
+and runs under both `claude plugin test` and Vitest, which maps that import to `vitest`. It uses
+only matchers both kits have, no `node:` import, and reads fixtures from `core/test/fixtures/<name>.json.ts`
+modules, each holding the exact text of its `.json` twin (`fixture-modules.spec.ts` checks it). A
+suite that needs Node.js is `*.spec.ts` and runs under Vitest alone. The mod's own tests,
+`hooks/*.test.ts`, drive the engine through `$` and run under `claude plugin test` alone.
 
 ## Pull requests
 
