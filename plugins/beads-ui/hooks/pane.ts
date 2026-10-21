@@ -503,10 +503,16 @@ export class BeadsPane {
     this.host?.invalidate();
   }
 
+  /**
+   * Switches tab. The focus ring moves onto the tab's own button, which every tab draws: left on
+   * an element the new tab does not draw (a card's detail button), the ring and the keyboard
+   * would fall back to the prompt.
+   */
   setTab(tab: Tab): void {
     this.tab = tab;
     this.savePrefs();
     this.host?.invalidate();
+    void this.host?.focus(PANE_ID, `tab:${tab}`).catch(() => undefined);
   }
 
   cycleSwimlane(): void {
