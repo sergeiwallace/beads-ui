@@ -277,7 +277,10 @@ function nonNegativeInteger(obj: JsonObject, key: string): number {
 export function parseBdDeletePreview(text: string): ParseResult<DeletePreview> {
   return run("bd delete", text, (json) => {
     const root = asObject(json, "$");
-    if (typeof root.error === "string" && root.error !== "") {
+    if (root.error !== undefined && root.error !== null) {
+      if (typeof root.error !== "string" || root.error === "") {
+        throw new Invalid("$.error", "expected a non-empty string");
+      }
       throw new Invalid("$.error", root.error);
     }
     const issueIds = asArray(root.issue_ids, "$.issue_ids").map((id, i) => {
@@ -286,9 +289,13 @@ export function parseBdDeletePreview(text: string): ParseResult<DeletePreview> {
       }
       return id;
     });
+    if (issueIds.length === 0) throw new Invalid("$.issue_ids", "expected at least one id");
+    // A missing or non-boolean cascade must not read as false: the cascade decides whether the
+    // confirmation asks for the typed display id.
+    if (typeof root.cascade !== "boolean") throw new Invalid("$.cascade", "expected a boolean");
     return {
       issueIds,
-      cascade: root.cascade === true,
+      cascade: root.cascade,
       wouldDelete: nonNegativeInteger(root, "would_delete"),
       wouldOrphan: nonNegativeInteger(root, "would_orphan"),
       wouldRemoveDependencies: nonNegativeInteger(root, "would_remove_dependencies"),
