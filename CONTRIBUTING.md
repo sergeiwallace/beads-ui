@@ -11,7 +11,10 @@ open an issue first so the change can be checked against the design.
 
 ## Setup
 
-You need Node.js 24 or later, npm, and [pre-commit](https://pre-commit.com/).
+You need Node.js 24 or later, npm, [pre-commit](https://pre-commit.com/), and
+[gitleaks](https://github.com/gitleaks/gitleaks#installing) on your `PATH` at the version
+`.pre-commit-config.yaml` pins (8.30.1): `npm test` runs it on a fabricated key in a scratch
+repository to prove the secret scan refuses it, and fails naming the binary when it is missing.
 
 ```sh
 npm ci
