@@ -1,3 +1,11 @@
+export type Result<T, E> = { ok: true; value: T } | { ok: false; error: E };
+
+/** A full bd argument vector, `argv[0]` being `bd`. */
+export type BdArgv = readonly string[];
+
+/** A surface-supplied random draw in [0, 1), so core never reads a global for randomness. */
+export type RandomSource = () => number;
+
 export type StatusCategory = "active" | "wip" | "frozen" | "done";
 
 export const STATUS_CATEGORIES: readonly StatusCategory[] = ["active", "wip", "frozen", "done"];
@@ -13,6 +21,9 @@ export type Priority = 0 | 1 | 2 | 3 | 4;
 export interface Dependency {
   type: string;
   id: string;
+  /** Present when bd show embeds the dependency's own record. */
+  status?: string;
+  title?: string;
 }
 
 export interface Issue {
@@ -41,6 +52,27 @@ export interface Issue {
   leaseExpiresAt?: string;
   heartbeatAt?: string;
   metadata: Record<string, unknown>;
+}
+
+export interface HistoryEvent {
+  id: string;
+  issueId: string;
+  type: string;
+  actor: string;
+  createdAt: string;
+  oldValue?: string;
+  newValue?: string;
+  comment?: string;
+}
+
+export interface DeletePreview {
+  issueIds: string[];
+  cascade: boolean;
+  wouldDelete: number;
+  wouldOrphan: number;
+  wouldRemoveDependencies: number;
+  wouldRemoveEvents: number;
+  wouldRemoveLabels: number;
 }
 
 export interface Sprint {
