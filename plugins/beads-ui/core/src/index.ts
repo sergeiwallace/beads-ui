@@ -111,6 +111,8 @@ export {
   TOKENS,
   terminalColor,
 } from "./tokens.ts";
+export type { BacklogOptions, BacklogRow, BacklogView } from "./views/backlog.ts";
+export { backlogView } from "./views/backlog.ts";
 export type {
   BoardEvent,
   BoardState,

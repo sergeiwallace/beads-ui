@@ -8,7 +8,10 @@ export function truncate(text: string, width: number): string {
   if (!(width >= 1)) return "";
   const chars = [...text.replace(/\s+/g, " ").trim()];
   if (chars.length <= width) return chars.join("");
-  return `${chars.slice(0, Math.floor(width) - 1).join("")}…`;
+  return `${chars
+    .slice(0, Math.floor(width) - 1)
+    .join("")
+    .trimEnd()}…`;
 }
 
 export function priorityBadge(priority: Priority): string {

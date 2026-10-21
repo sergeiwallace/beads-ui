@@ -1,16 +1,21 @@
 import { describe, expect, test } from "claude-code/testing";
 import {
   type BoardState,
+  backlogView,
   boardView,
+  EMPTY_FILTER_STATE,
   INITIAL_BOARD_STATE,
+  parseBdReady,
   parseBdShow,
   parseFilter,
   planMove,
   reduceBoard,
+  submitFilter,
   truncate,
 } from "../src/index.ts";
+import ready from "./fixtures/bd-ready.json.ts";
 import show5 from "./fixtures/bd-show-BU-mg2.3.5.json.ts";
-import { allIssues, storeStatuses, unwrap } from "./helpers.ts";
+import { allIssues, ids, storeStatuses, unwrap } from "./helpers.ts";
 
 const AT = "2026-10-21T01:12:04Z";
 const loaded = (): BoardState =>
@@ -74,7 +79,7 @@ describe("boardView", () => {
     expect(card).toEqual({
       id: "BU-mg2",
       displayId: "BU-epic-beads-u…",
-      title: "EPIC beads-ui: …",
+      title: "EPIC beads-ui:…",
       priority: "P1",
       priorityToken: "priority.p1",
       assignee: "@aih-ec2-3",
@@ -258,5 +263,94 @@ describe("a failed bd list", () => {
       at: AT,
     });
     expect(boardView(recovered, { columnWidth: 20 }).errorLine).toBeUndefined();
+  });
+});
+
+describe("backlogView", () => {
+  const options = (filterText: string) => ({
+    statuses: storeStatuses(),
+    filter: submitFilter(EMPTY_FILTER_STATE, filterText),
+    readyIds: new Set(ids(unwrap(parseBdReady(ready)))),
+    titleWidth: 24,
+  });
+  const rowIds = (text: string) => backlogView(allIssues(), options(text)).rows.map((r) => r.id);
+
+  test("should list open issues by priority then created date when the Backlog tab renders", () => {
+    const view = backlogView(allIssues(), options(""));
+
+    expect(view.total).toBe(20);
+    expect(view.rows.map((row) => row.id)).toEqual([
+      "BU-mg2.3.1",
+      "BU-mg2.3.2",
+      "BU-mg2.3.3",
+      "BU-mg2.3.4",
+      "BU-mg2.3.5",
+      "BU-mg2.3.6",
+      "BU-mg2.3.7",
+      "BU-mg2.3.8",
+      "BU-mg2.3.9",
+      "BU-mg2.3.10",
+      "BU-mg2.4",
+      "BU-mg2.5",
+      "BU-mg2.6",
+      "BU-mg2.7",
+      "BU-mg2.8",
+      "BU-mg2.9",
+      "BU-mg2.10",
+      "BU-mg2.11",
+      "BU-mg2.12",
+      "BU-2zw",
+    ]);
+    expect(view.rows[0]).toEqual({
+      id: "BU-mg2.3.1",
+      displayId: "BU-t-0-1-core-module-gset",
+      priority: "P1",
+      priorityToken: "priority.p1",
+      type: "task",
+      assignee: "",
+      title: "T-0.1: core module and…",
+      created: "2026-10-21",
+    });
+  });
+
+  test("should honour the type, label, assignee and ready predicates when a filter is set", () => {
+    expect(rowIds("type:epic")).toEqual([
+      "BU-mg2.4",
+      "BU-mg2.5",
+      "BU-mg2.8",
+      "BU-mg2.9",
+      "BU-mg2.10",
+      "BU-mg2.11",
+      "BU-mg2.12",
+    ]);
+    expect(rowIds("label:id:BU-t-1-2-backlog-tab-vptb")).toEqual(["BU-mg2.3.6"]);
+    expect(rowIds("assignee:aih-3")).toEqual([]);
+    expect(rowIds("type:bug ready:true")).toEqual(["BU-2zw"]);
+    expect(rowIds("ready:false")).toEqual([]);
+  });
+
+  test("should show the accepted keys and keep the list when the filter has an unknown key", () => {
+    const before = submitFilter(EMPTY_FILTER_STATE, "type:epic");
+    const after = submitFilter(before, "type:epic owner:sergei");
+
+    const view = backlogView(allIssues(), { ...options(""), filter: after });
+
+    expect(view.rows.map((row) => row.id)).toEqual(rowIds("type:epic"));
+    expect(view.filterLine).toBe(
+      'unknown filter key "owner"; accepted keys: type, label, assignee, sprint, ready',
+    );
+  });
+
+  test("should show a filter line when a ready filter has no ready set", () => {
+    const { readyIds: _drop, ...noReady } = options("ready:true");
+
+    const view = backlogView(allIssues(), noReady);
+
+    expect(view.filterLine).toBe("ready: needs the bd ready result");
+    expect(view.rows).toHaveLength(20);
+  });
+
+  test("should fall back to the open status when bd returned no statuses", () => {
+    expect(backlogView(allIssues(), { ...options(""), statuses: [] }).total).toBe(20);
   });
 });
