@@ -354,6 +354,7 @@ export function planDisplayId(input: DisplayIdPlanInput): Result<DisplayIdPlan, 
         `display_id=${displayId}`,
         "--add-label",
         `id:${displayId}`,
+        "--json",
       ],
     },
   };

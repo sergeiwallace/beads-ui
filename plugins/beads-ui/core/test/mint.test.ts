@@ -142,6 +142,7 @@ describe("planDisplayId", () => {
           "display_id=BU-t-1-7-something-new-cegk",
           "--add-label",
           "id:BU-t-1-7-something-new-cegk",
+          "--json",
         ],
       },
     });

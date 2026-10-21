@@ -157,12 +157,12 @@ describe("editArgv", () => {
   test("should write each editable field with bd update in --flag=value form", () => {
     const argv = (edit: Parameters<typeof editArgv>[1]) => unwrap(editArgv(task(), edit)).slice(3);
 
-    expect(argv({ field: "title", value: "Board tab" })).toEqual(["--title=Board tab"]);
-    expect(argv({ field: "description", value: "-x" })).toEqual(["--description=-x"]);
-    expect(argv({ field: "priority", value: 0 })).toEqual(["--priority=0"]);
-    expect(argv({ field: "type", value: "feature" })).toEqual(["--type=feature"]);
-    expect(argv({ field: "due", value: "2026-11-02" })).toEqual(["--due=2026-11-02"]);
-    expect(argv({ field: "estimate", value: 90 })).toEqual(["--estimate=90"]);
+    expect(argv({ field: "title", value: "Board tab" })).toEqual(["--title=Board tab", "--json"]);
+    expect(argv({ field: "description", value: "-x" })).toEqual(["--description=-x", "--json"]);
+    expect(argv({ field: "priority", value: 0 })).toEqual(["--priority=0", "--json"]);
+    expect(argv({ field: "type", value: "feature" })).toEqual(["--type=feature", "--json"]);
+    expect(argv({ field: "due", value: "2026-11-02" })).toEqual(["--due=2026-11-02", "--json"]);
+    expect(argv({ field: "estimate", value: 90 })).toEqual(["--estimate=90", "--json"]);
     expect(unwrap(editArgv(task(), { field: "title", value: "x" })).slice(0, 3)).toEqual([
       "bd",
       "update",
@@ -179,10 +179,12 @@ describe("editArgv", () => {
       "in_progress",
       "--if-status",
       "open",
+      "--json",
     ]);
     expect(unwrap(editArgv(task(), { field: "assignee", value: "aih-ec2-3" })).slice(3)).toEqual([
       "--assignee=aih-ec2-3",
       "--if-assignee=",
+      "--json",
     ]);
   });
 
@@ -191,7 +193,7 @@ describe("editArgv", () => {
 
     expect(
       unwrap(editArgv(issue, { field: "labels", value: [...issue.labels, "ui"] })).slice(3),
-    ).toEqual(["--add-label=ui"]);
+    ).toEqual(["--add-label=ui", "--json"]);
   });
 
   test("should refuse an edit that would add or remove an id label", () => {

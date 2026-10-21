@@ -302,7 +302,8 @@ const unchanged = (field: string): { ok: false; error: EditError } => ({
 /**
  * The `bd update` for one edited field. Status and assignee writes carry bd's guard on the shown
  * value, so a stale edit exits 13 instead of overwriting. No edit touches `metadata.display_id`
- * or an `id:` label: a published display id is immutable (D-9).
+ * or an `id:` label: a published display id is immutable (D-9). Every write carries `--json`
+ * (D-4); the surface reads its outcome from the exit code.
  */
 const DURATION = /^(?:(\d+)\s*h)?\s*(?:(\d+)\s*m?)?$/i;
 
@@ -346,7 +347,7 @@ export function editArgv(issue: Issue, edit: FieldEdit): Result<BdArgv, EditErro
   const id = issueIdArg(issue.id);
   const ok = (...flags: string[]): Result<BdArgv, EditError> => ({
     ok: true,
-    value: ["bd", "update", id, ...flags],
+    value: ["bd", "update", id, ...flags, "--json"],
   });
 
   switch (edit.field) {
