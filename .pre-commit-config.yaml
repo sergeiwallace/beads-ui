@@ -130,6 +130,12 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      - id: plugin-size
+        name: no file under plugins/beads-ui over 1 MB
+        entry: node scripts/check-plugin-size.mjs plugins/beads-ui
+        language: system
+        pass_filenames: false
+        always_run: true
 
       # docs-index-check REMOVED (CORE-55). The generated docs/README.md index had
       # no reader -- nothing in the fleet consumed it -- yet the gate blocked every
