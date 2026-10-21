@@ -646,7 +646,9 @@ export class BeadsPane {
     const first = drawn[0];
     if (first === undefined) return;
     this.focusedId = first.id;
-    await this.host?.focus(PANE_ID, `move:${first.id}`).catch(() => undefined);
+    // The card's detail button, not its Move to: a focused Select reads a letter as type-ahead,
+    // so the next p would pick an option instead of stepping the page. m reaches the Move to.
+    await this.host?.focus(PANE_ID, `open:${first.id}`).catch(() => undefined);
   }
 
   /**
