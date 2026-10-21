@@ -3,9 +3,9 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Issue } from "@beads-ui/core";
+import { type Issue, moveArgv } from "@beads-ui/core";
 import { afterEach, describe, expect, it } from "vitest";
-import { BD_INSTALL_PAGE, type BdResult, createBdClient } from "../src/index.ts";
+import { BD_INSTALL_PAGE, type BdResult, createBdClient, type StaleWrite } from "../src/index.ts";
 import { type StubBd, type StubReply, stubBd } from "./stub.ts";
 
 const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
@@ -255,5 +255,87 @@ describe("show, statuses and ready through a stub bd", () => {
     const { stub, client } = await stubbed({ stdout: ISSUE_JSON });
     expect(okValue(await client.ready()).map((issue) => issue.id)).toEqual(["BU-abc"]);
     expect(await stub.calls()).toEqual(["ready --json --brief --limit 0"]);
+  });
+});
+
+describe("update through a stub bd", () => {
+  const STALE_STDERR = "BU-abc: status is in_progress, not open; nothing written\n";
+
+  it("should return a StaleWrite and call bd once when bd exits 13 on a guarded update", async () => {
+    const { stub, client } = await stubbed({ exitCode: 13, stderr: STALE_STDERR });
+    const result: BdResult<void> = await client.update(
+      "BU-abc",
+      { status: "in_progress" },
+      { ifStatus: "open" },
+    );
+    const stale: StaleWrite | undefined = result.kind === "stale" ? result : undefined;
+    expect(stale).toEqual({ kind: "stale", id: "BU-abc", exitCode: 13, stderr: STALE_STDERR });
+    expect(await stub.calls()).toHaveLength(1);
+  });
+
+  it("should return a StaleWrite when bd exits 13 on an assignee guard", async () => {
+    const { stub, client } = await stubbed({ exitCode: 13 });
+    const result = await client.update("BU-abc", { assignee: "me" }, { ifAssignee: "" });
+    expect(result.kind).toBe("stale");
+    expect(await stub.calls()).toEqual(["update BU-abc --assignee=me --if-assignee="]);
+  });
+
+  it("should write the same argv as the core's moveArgv when the update is a guarded move", async () => {
+    const { stub, client } = await stubbed({});
+    const result = await client.update("BU-abc", { status: "in_progress" }, { ifStatus: "open" });
+    expect(result).toEqual({ kind: "ok", value: undefined });
+    expect(await stub.calls()).toEqual([
+      moveArgv("BU-abc", "in_progress", "open").slice(1).join(" "),
+    ]);
+  });
+
+  it("should pass every field as its bd flag when an update sets them all", async () => {
+    const { stub, client } = await stubbed({});
+    await client.update("BU-abc", {
+      title: "-starts with a dash",
+      description: "two words",
+      priority: 1,
+      type: "bug",
+      due: "2026-11-01",
+      estimatedMinutes: 30,
+      addLabels: ["sprint:s1"],
+      removeLabels: ["old"],
+    });
+    expect(await stub.calls()).toEqual([
+      "update BU-abc --title=-starts with a dash --description=two words --priority=1 --type=bug" +
+        " --due=2026-11-01 --estimate=30 --add-label=sprint:s1 --remove-label=old",
+    ]);
+  });
+
+  it("should return failed with exit code 13 when an unguarded update exits 13", async () => {
+    const { client } = await stubbed({ exitCode: 13, stderr: "odd\n" });
+    const result = await client.update("BU-abc", { title: "New" });
+    expect(result).toMatchObject({ kind: "failed", exitCode: 13, stderr: "odd\n" });
+  });
+
+  it("should return failed with the exit code and stderr when a guarded update exits 1", async () => {
+    const { stub, client } = await stubbed({ exitCode: 1, stderr: "database is locked\n" });
+    const result = await client.update("BU-abc", { status: "closed" }, { ifStatus: "open" });
+    expect(result).toEqual({
+      kind: "failed",
+      exitCode: 1,
+      stderr: "database is locked\n",
+      message: "bd update exited 1: database is locked",
+    });
+    expect(await stub.calls()).toHaveLength(1);
+  });
+
+  it("should return notFound when bd update names the id as not found", async () => {
+    const { client } = await stubbed({ exitCode: 1, stderr: "Issue BU-gone not found\n" });
+    const result = await client.update("BU-gone", { title: "x" }, { ifStatus: "open" });
+    expect(result.kind).toBe("notFound");
+  });
+
+  it("should refuse before running bd when an update has no field or a label holds a comma", async () => {
+    const { stub, client } = await stubbed({});
+    expect(() => client.update("BU-abc", {}, { ifStatus: "open" })).toThrow(RangeError);
+    expect(() => client.update("BU-abc", { addLabels: ["a,b"] })).toThrow(RangeError);
+    expect(() => client.update("-x", { title: "t" })).toThrow(RangeError);
+    expect(await stub.calls()).toEqual([]);
   });
 });

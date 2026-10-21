@@ -8,12 +8,14 @@ import {
   parseBdShow,
   parseBdStatuses,
   readyArgv,
+  STALE_WRITE_EXIT,
   type Status,
   showArgv,
   statusesArgv,
 } from "@beads-ui/core";
 import type { BdResult, Failed, NotFound } from "./result.ts";
 import { commandName, DEFAULT_TIMEOUT_MS, type RunOutcome, runBd } from "./run.ts";
+import { type UpdateFields, type UpdateGuard, updateArgv } from "./update.ts";
 
 export interface BdClientOptions {
   /** The repo root holding the store's `.beads/`; every bd call runs there. */
@@ -27,11 +29,15 @@ export interface CallOptions {
   timeoutMs?: number;
 }
 
+export interface UpdateOptions extends CallOptions, UpdateGuard {}
+
 export interface BdClient {
   list(options?: CallOptions): Promise<BdResult<Issue[]>>;
   show(id: string, options?: CallOptions): Promise<BdResult<Issue>>;
   statuses(options?: CallOptions): Promise<BdResult<Status[]>>;
   ready(options?: CallOptions): Promise<BdResult<Issue[]>>;
+  /** One bd call; a stale guard returns `stale` and is never retried. */
+  update(id: string, fields: UpdateFields, options?: UpdateOptions): Promise<BdResult<void>>;
 }
 
 type Exited = Extract<RunOutcome, { kind: "exited" }>;
@@ -130,6 +136,18 @@ export function createBdClient(options: BdClientOptions): BdClient {
     ready(callOptions) {
       const argv = readyArgv();
       return call(argv, callOptions, (out) => parsed(argv, out, parseBdReady));
+    },
+    update(id, fields, updateOptions = {}) {
+      const guarded =
+        updateOptions.ifStatus !== undefined || updateOptions.ifAssignee !== undefined;
+      const argv = updateArgv(id, fields, updateOptions);
+      return call(argv, updateOptions, (out) => {
+        if (out.exitCode === 0) return { kind: "ok", value: undefined };
+        if (guarded && out.exitCode === STALE_WRITE_EXIT) {
+          return { kind: "stale", id, exitCode: STALE_WRITE_EXIT, stderr: out.stderr };
+        }
+        return notFound(id, out) ?? exitFailure(argv, out);
+      });
     },
   };
 }
