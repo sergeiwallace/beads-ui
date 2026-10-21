@@ -91,6 +91,10 @@ const largeStore = (assignees: number) => {
     assignee: `aih-ec2-${i % assignees}`,
   }));
 };
+// A walk over every page of a 600-card store: about 0.7 s on an idle host, past the kit's default
+// 5,000 ms on a loaded one (measured 2026-10-21), so it gets room that does not depend on load.
+const WALK = { timeoutMs: 30_000 };
+
 const openLarge = ($: Engine, on: On, assignees: number) =>
   openPane($, on, {
     script: (key) =>
@@ -247,31 +251,39 @@ describe("the Board tab", () => {
     return { moves: [...moves].sort(), largest };
   }
 
-  test("should reach a Move to control for every card by paging each column when the store is large", async ($, on) => {
-    const { ui } = await openLarge($, on, 1);
+  test(
+    "should reach a Move to control for every card by paging each column when the store is large",
+    WALK,
+    async ($, on) => {
+      const { ui } = await openLarge($, on, 1);
 
-    expect((await ui.find({ key: "column::open" }))?.text).toBe("open 200");
-    expect((await ui.find({ key: "pager::open" }))?.text).toContain("1-25 of 200");
-    expect((await ui.find({ key: "next::open" }))?.props.label).toBe("+175 more");
+      expect((await ui.find({ key: "column::open" }))?.text).toBe("open 200");
+      expect((await ui.find({ key: "pager::open" }))?.text).toContain("1-25 of 200");
+      expect((await ui.find({ key: "next::open" }))?.props.label).toBe("+175 more");
 
-    const { moves, largest } = await walkBoard(ui);
+      const { moves, largest } = await walkBoard(ui);
 
-    expect(moves).toEqual(everyMove);
-    expect(largest).toBeLessThan(100_000);
-  });
+      expect(moves).toEqual(everyMove);
+      expect(largest).toBeLessThan(100_000);
+    },
+  );
 
-  test("should reach every card's Move to through lane pages when the assignee lanes outgrow one drawing", async ($, on) => {
-    // 200 assignees, three cards each: the most lanes, and so the most column headers, per card.
-    const { ui } = await openLarge($, on, 200);
-    await ui.press({ key: "swimlane" });
+  test(
+    "should reach every card's Move to through lane pages when the assignee lanes outgrow one drawing",
+    WALK,
+    async ($, on) => {
+      // 200 assignees, three cards each: the most lanes, and so the most column headers, per card.
+      const { ui } = await openLarge($, on, 200);
+      await ui.press({ key: "swimlane" });
 
-    expect((await ui.find({ key: "lane-pager" }))?.text).toMatch(/^back\s*lanes 1-\d+ of 201/);
+      expect((await ui.find({ key: "lane-pager" }))?.text).toMatch(/^back\s*lanes 1-\d+ of 201/);
 
-    const { moves, largest } = await walkBoard(ui);
+      const { moves, largest } = await walkBoard(ui);
 
-    expect(moves).toEqual(everyMove);
-    expect(largest).toBeLessThan(100_000);
-  });
+      expect(moves).toEqual(everyMove);
+      expect(largest).toBeLessThan(100_000);
+    },
+  );
 
   // The kit answers the mod's own $.ui.focus inside the mounted drawing without raising it to the
   // test's hooks, so the focus ring itself is checked in the live run. This test shows the card p
@@ -352,29 +364,33 @@ describe("the Backlog tab", () => {
   const openIds = () =>
     sortIssues(issues().filter((issue) => issue.status === "open")).map((issue) => issue.id);
 
-  test("should reach the last open issue by paging the list when the store has more than a page", async ($, on) => {
-    const parsed = parseBdList(JSON.stringify(largeStore(1)));
-    const open = sortIssues(
-      (parsed.ok ? parsed.value : []).filter((issue) => issue.status === "open"),
-    ).map((issue) => `row:${issue.id}`);
-    const { ui } = await openLarge($, on, 1);
-    await ui.press({ key: "tab:backlog" });
-    const seen: string[] = [];
-    let largest = 0;
+  test(
+    "should reach the last open issue by paging the list when the store has more than a page",
+    WALK,
+    async ($, on) => {
+      const parsed = parseBdList(JSON.stringify(largeStore(1)));
+      const open = sortIssues(
+        (parsed.ok ? parsed.value : []).filter((issue) => issue.status === "open"),
+      ).map((issue) => `row:${issue.id}`);
+      const { ui } = await openLarge($, on, 1);
+      await ui.press({ key: "tab:backlog" });
+      const seen: string[] = [];
+      let largest = 0;
 
-    expect((await ui.find({ key: "backlog-count" }))?.text).toContain("200 of 200 open issues");
-    expect((await ui.find({ key: "backlog-pager" }))?.text).toContain("rows 1-60 of 200");
-    for (let page = 0; page < 4; page++) {
-      largest = Math.max(largest, JSON.stringify(await ui.drawn()).length);
-      seen.push(...(await keysOf(ui, "row:")));
-      await ui.press({ key: "backlog-next" });
-    }
+      expect((await ui.find({ key: "backlog-count" }))?.text).toContain("200 of 200 open issues");
+      expect((await ui.find({ key: "backlog-pager" }))?.text).toContain("rows 1-60 of 200");
+      for (let page = 0; page < 4; page++) {
+        largest = Math.max(largest, JSON.stringify(await ui.drawn()).length);
+        seen.push(...(await keysOf(ui, "row:")));
+        await ui.press({ key: "backlog-next" });
+      }
 
-    expect(seen).toEqual(open);
-    expect(seen.at(-1)).toBe(open.at(-1));
-    expect(largest).toBeLessThan(100_000);
-    expect((await ui.find({ key: "backlog-pager" }))?.text).toContain("rows 1-60 of 200");
-  });
+      expect(seen).toEqual(open);
+      expect(seen.at(-1)).toBe(open.at(-1));
+      expect(largest).toBeLessThan(100_000);
+      expect((await ui.find({ key: "backlog-pager" }))?.text).toContain("rows 1-60 of 200");
+    },
+  );
 
   test("should step the list with p and b on the Backlog tab", async ($, on) => {
     const { w, ui } = await openLarge($, on, 1);
