@@ -36,6 +36,7 @@ export const COMMANDS: readonly Command[] = [
     binding: hotkey("s"),
     hint: "s swimlane",
   },
+  { id: "view.sort", label: "Sort", scope: "pane", binding: hotkey("o"), hint: "o sort" },
   {
     id: "view.filter",
     label: "Filter",

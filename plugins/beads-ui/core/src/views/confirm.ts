@@ -1,7 +1,7 @@
 import { cascadePreviewArgv, closeArgv, deleteArgv, deletePreviewArgv } from "../argv.ts";
 import type { BdArgv, DeletePreview, Issue } from "../model.ts";
 import { parseBdDeletePreview } from "../parsers.ts";
-import { truncate } from "./text.ts";
+import { fitBlock, truncate } from "./text.ts";
 import { CLOSED_STATUS, type UndoClose, undoClose } from "./undo.ts";
 
 /**
@@ -248,7 +248,7 @@ export interface ConfirmView {
 export function confirmView(state: ConfirmState, width: number): ConfirmView {
   const view: ConfirmView = {
     heading: truncate(`Delete ${state.confirmToken}? ${state.title}`, width),
-    preview: state.previewText,
+    preview: fitBlock(state.previewText),
     closeInstead: {
       label: "Close instead",
       hotkey: "c",

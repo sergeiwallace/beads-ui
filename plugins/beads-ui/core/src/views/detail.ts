@@ -1,7 +1,7 @@
 import { historyArgv, issueIdArg, showArgv, statusArg } from "../argv.ts";
 import type { BdArgv, HistoryEvent, Issue, Result } from "../model.ts";
 import { isCalendarDate } from "../quickadd.ts";
-import { priorityBadge, truncate } from "./text.ts";
+import { fitBlock, priorityBadge, truncate } from "./text.ts";
 
 /** The fields R-7 makes editable inline. */
 export const EDITABLE_FIELDS = [
@@ -164,7 +164,7 @@ function fieldsOf(issue: Issue): FieldView[] {
 function markdownOf(issue: Issue): MarkdownView[] {
   const blocks: MarkdownView[] = [];
   const add = (key: MarkdownView["key"], label: string, text: string | undefined) => {
-    if (text !== undefined) blocks.push({ key, label, text });
+    if (text !== undefined) blocks.push({ key, label, text: fitBlock(text) });
   };
   add("description", "Description", issue.description);
   add("acceptanceCriteria", "Acceptance criteria", issue.acceptanceCriteria);
