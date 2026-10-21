@@ -51,6 +51,11 @@ again.
 Name tests `it("should <action> when <condition>")`, and test behaviour through the real entry
 point rather than one function at a time.
 
+Inside `plugins/beads-ui`, the two runners split by file name. A `*.test.ts` file is a mod test:
+`claude plugin test` runs it in the mod's own environment, and it imports its kit from
+`claude-code/testing`. A `*.spec.ts` file is a Vitest suite, free to use Node.js. Name a file for
+the runner it needs; the other runner never collects it.
+
 ## Pull requests
 
 Keep each commit to one logical change. Describe what changed and how you checked it. By
