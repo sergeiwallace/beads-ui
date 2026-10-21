@@ -81,6 +81,19 @@ describe("slug budgets from bd-new's overrides", () => {
     ["0", "npm-audit-10-dev-only-advisories"],
     ["-5", "npm-audit-10-dev-only-advisories"],
     ["", "npm-audit-10-dev-only-advisories"],
+    // Unicode digits and whitespace, measured against the same _env_budget and slugify_title
+    // under Python 3.14 (2026-10-21).
+    ["１２", "npm-audit-10"],
+    ["١٢", "npm-audit-10"],
+    ["१२", "npm-audit-10"],
+    ["１_６", "npm-audit-10-dev"],
+    ["+١٦", "npm-audit-10-dev"],
+    ["1٢", "npm-audit-10"],
+    ["\u3000१२\u3000", "npm-audit-10"],
+    ["\u008512", "npm-audit-10"],
+    ["\ufeff12", "npm-audit-10-dev-only-advisories"],
+    ["²", "npm-audit-10-dev-only-advisories"],
+    ["Ⅷ", "npm-audit-10-dev-only-advisories"],
   ];
 
   for (const [value, body] of BD_NEW_BODIES) {

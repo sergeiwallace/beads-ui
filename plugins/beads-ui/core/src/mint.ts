@@ -159,16 +159,36 @@ export const DEFAULT_SLUG_BUDGETS: SlugBudgets = {
   child: SLUG_BODY_MAX_CHARS_CHILD,
 };
 
-// What Python's int() takes from a string: surrounding whitespace, a sign, ASCII digits with
-// single underscores between them.
-const PY_INT = /^\s*([+-]?\d+(?:_\d+)*)\s*$/;
+// What Python's int() takes from a string: surrounding whitespace, a sign, and any Unicode decimal
+// digits (Nd) with single underscores between them. Its whitespace, measured over every code
+// point with Python 3.14 (Unicode 16): JavaScript's \s with U+0085 and without U+FEFF.
+const PY_SPACE =
+  "[\\t\\n\\v\\f\\r \\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]";
+const PY_INT = new RegExp(`^${PY_SPACE}*([+-]?\\p{Nd}+(?:_\\p{Nd}+)*)${PY_SPACE}*$`, "u");
+const DECIMAL_DIGIT = /^\p{Nd}$/u;
+
+/**
+ * A decimal digit's value. Unicode draws every Nd digit from a run of tens that counts up from
+ * zero, so the value is the digit's place in its run, modulo ten.
+ */
+function digitValue(digit: string): number {
+  const code = digit.codePointAt(0) ?? 0;
+  let before = 0;
+  while (code - before > 0 && DECIMAL_DIGIT.test(String.fromCodePoint(code - before - 1))) {
+    before++;
+  }
+  return before % 10;
+}
 
 /** bd-new's `_env_budget`: a positive integer override, else the default. */
 export function envBudget(text: string | undefined, fallback: number): number {
   const match = text === undefined ? null : PY_INT.exec(text);
   if (match?.[1] === undefined) return fallback;
-  const value = Number(match[1].replaceAll("_", ""));
-  return value > 0 ? value : fallback;
+  let value = 0;
+  for (const char of match[1].replaceAll("_", "").replace(/^[+-]/, "")) {
+    value = value * 10 + digitValue(char);
+  }
+  return !match[1].startsWith("-") && value > 0 ? value : fallback;
 }
 
 /** The budgets bd-new would mint under, from the two override variables' values as read. */
