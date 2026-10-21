@@ -18,13 +18,13 @@ research: docs/research/beads-ui-task-manager-landscape.md
 
 ## Founding Ask Coverage
 
-`founding_ask_ref`: {"blob_oid":"f5025e8233d0e9cf98d5247ca1b32fae6055072c","capture_commit":"862bb3185e4261c88bcb97da4fcd576c56f3da02","content_sha256":"2c141587e57f0b478ffe5af64d48d3162949575f0353f15075909b1194423eb3","entry_ids":["A001","A002","A003","A004"],"generation":4,"path":"docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md","previous_ref_sha256":"d54b1990f5a07db79320fd99f0a6c0a0a7a371d2618644fbbc5e3af2249c97ed","repository":"beads-ui","schema_version":1,"task_id":"BU-epic-beads-ui-beads-task-manager-mg2"}
+`founding_ask_ref`: {"blob_oid":"d3fde0e715f5a280374c624fede12b4a387b0d14","capture_commit":"d630f95d50bb5948399a91052bf1ce08c6750dcb","content_sha256":"ed0f188c59d248978b9de3439ccbff9100907055296df928f068ef0b05cca4ed","entry_ids":["A001","A002","A003","A004","A005"],"generation":5,"path":"docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md","previous_ref_sha256":"d7668b63750bbee3253a47d99a0b4106aede21e1952bdce105a15f6a01dde937","repository":"beads-ui","schema_version":1,"task_id":"BU-epic-beads-ui-beads-task-manager-mg2"}
 
-`canonical_root_json`: {"blob_oid":"f5025e8233d0e9cf98d5247ca1b32fae6055072c","capture_commit":"862bb3185e4261c88bcb97da4fcd576c56f3da02","content_sha256":"2c141587e57f0b478ffe5af64d48d3162949575f0353f15075909b1194423eb3","entry_ids":["A001","A002","A003","A004"],"generation":4,"path":"docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md","previous_ref_sha256":"d54b1990f5a07db79320fd99f0a6c0a0a7a371d2618644fbbc5e3af2249c97ed","repository":"beads-ui","schema_version":1,"task_id":"BU-epic-beads-ui-beads-task-manager-mg2"}
+`canonical_root_json`: {"blob_oid":"d3fde0e715f5a280374c624fede12b4a387b0d14","capture_commit":"d630f95d50bb5948399a91052bf1ce08c6750dcb","content_sha256":"ed0f188c59d248978b9de3439ccbff9100907055296df928f068ef0b05cca4ed","entry_ids":["A001","A002","A003","A004","A005"],"generation":5,"path":"docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md","previous_ref_sha256":"d7668b63750bbee3253a47d99a0b4106aede21e1952bdce105a15f6a01dde937","repository":"beads-ui","schema_version":1,"task_id":"BU-epic-beads-ui-beads-task-manager-mg2"}
 
-`founding_ask_ref_sha256`: d7668b63750bbee3253a47d99a0b4106aede21e1952bdce105a15f6a01dde937
+`founding_ask_ref_sha256`: 8079161aeffc2726c849086951f4f52781ecd07c9478b294efc80c4164b8ee05
 
-The raw record is `docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md` in this repository (capture commit `862bb31`, an ancestor of `main`). This index is non-authoritative; the raw FAR governs.
+The raw record is `docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md` in this repository (generation 5, capture commit `d630f95`, kept reachable by the tag `far/BU-epic-beads-ui-beads-task-manager-mg2/g5` because PR #15 was squash-merged). This index is non-authoritative; the raw FAR governs.
 
 | Authoritative raw entry | Coverage and disposition |
 |---|---|
@@ -32,6 +32,7 @@ The raw record is `docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md` in this
 | A002 | FOLLOW-UP, 2026-10-14T23:40:00Z. One repo `beads-ui` for the mod, the MCP UI app and the web app sharing components, with mobile and native desktop later: D-1, D-2 and R-11; sharing is narrowed to logic across three surfaces and React components across two, as the research measured. The alias `bv` and the npm name collide with existing tools: D-7 is escalated to Sergei with a recommendation. Mobile and native desktop: the "Later sub-epics" note. |
 | A003 | FOLLOW-UP, 2026-10-14T23:40:01Z. "mainly the web app, claude web / desktop mcp UI app, and claude code TUI for now": the three surfaces this design covers, phases 1 to 4 and 6; iOS, macOS and Linux deferred to separate agents, in that order. "lmk what you reocmmend": the Executive Summary and the recommendations inside D-7, D-11 and D-12. |
 | A004 | FOLLOW-UP, 2026-10-14T23:40:01Z. Incorporate the autonomous task queue and its dashboard with the queue left where it is: R-14, the Integration table, phase 3's queue adapter and D-11 (escalated, with the recommendation that the web app becomes the queue's unbuilt Phase 2 member app). Where the queue should live is Open Question 1, deferred as the entry asks. |
+| A005 | FOLLOW-UP, 2026-10-21T04:55:47Z. Sergei's review: D-7 option (a), D-11 option (a), and D-12 a new option (d), backups per launch repository with bms-semantic-knowledge-graph sessions going to sw-bms-workspace, recorded in those decisions, Feedback Round 1 and the Approval Log. "now /delegate opus 5.5 /orchestrate /auto-flow the rest as appropriate now": the build run in the Run Ledger (`entry->implement`), Phases 0 and 1 under run `beads-ui-build-2026-10-21-aih-ec2-3`. |
 
 **Status:** Approved by Sergei on 2026-10-21 (Feedback Round 1); Phases 0 and 1 are being built under run `beads-ui-build-2026-10-21-aih-ec2-3`
 
