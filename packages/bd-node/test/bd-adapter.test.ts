@@ -147,6 +147,54 @@ describe("list through a stub bd", () => {
   });
 });
 
+describe("timeouts", () => {
+  // Node reads 0 as no timeout, throws on a negative, fractional or non-finite one, and turns
+  // one past 2^31 - 1 into 1 ms, so each must come back as a typed failure before bd runs.
+  const invalid = [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, 2 ** 31];
+
+  for (const timeoutMs of invalid) {
+    it(`should return failed naming the call's timeoutMs and not run bd when it is ${timeoutMs}`, async () => {
+      const { stub, client } = await stubbed({ stdout: ISSUE_JSON });
+
+      const result = await client.list({ timeoutMs });
+
+      expect(result).toEqual({
+        kind: "failed",
+        exitCode: null,
+        stderr: "",
+        message: `the call's timeoutMs must be a whole number of milliseconds from 1 to 2147483647, got ${timeoutMs}`,
+      });
+      expect(await stub.calls()).toEqual([]);
+    });
+  }
+
+  it("should return failed naming the client's timeoutMs on every call when it is invalid", async () => {
+    const stub = await stubBd({ stdout: ISSUE_JSON });
+    stubs.push(stub);
+    const client = createBdClient({ cwd: stub.dir, env: stub.env, timeoutMs: -5 });
+
+    const results = [await client.list(), await client.close("BU-abc", { timeoutMs: 1_000 })];
+
+    for (const result of results) {
+      expect(result).toEqual({
+        kind: "failed",
+        exitCode: null,
+        stderr: "",
+        message:
+          "the client's timeoutMs must be a whole number of milliseconds from 1 to 2147483647, got -5",
+      });
+    }
+    expect(await stub.calls()).toEqual([]);
+  });
+
+  it("should run bd when the timeout is the largest Node honours", async () => {
+    const { stub, client } = await stubbed({ stdout: ISSUE_JSON });
+
+    expect((await client.list({ timeoutMs: 2_147_483_647 })).kind).toBe("ok");
+    expect(await stub.calls()).toHaveLength(1);
+  });
+});
+
 describe("bd not on PATH", () => {
   it("should fail with a message naming bd and the install page, not a stack trace, when PATH holds no bd", async () => {
     const empty = await mkdtemp(join(tmpdir(), "bd-node-nopath-"));
