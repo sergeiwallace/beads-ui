@@ -147,3 +147,21 @@ body_sha256: 62d4425e3aeec49e0addfb4762ec453bcd2d102d0300f4c9788ff99fccba034d
 also, this beads UI should also incorporate the autonomous task queue system and any dashboard we created for that. we should merge the latter system / features or integrate / combine all that with beads UI. but we'll need to think about where the autonomous task queue system should live. because i could see it being a part of ai-harness / ai-chassis without a UI / TUI mod at all but also be tightly integrated with beads UI apps. maybe a separate repo / package? or we optionally import it from ai-chassis. idk, we can follow up on that later. for now, don't worry about migrating or refactoring or moving to new / different repo. keep it where it is but as a /beads-task and cc task under the beads UI epic for this and ship it. we'll follow-up on this later. i still need to open source ai-chassis anyway.
 ```
 ````
+````text
+entry_id: A005
+kind: FOLLOW-UP
+recorded_at: 2026-10-21T04:55:47Z
+speaker: human
+supersedes:
+body_sha256: 20162e79aa230f9b1b5cf267e6ff60b5a1ec76fa3fa3f72b177bb14dd9a97af6
+
+```text
+D-7: option A. dv was just something i threw out before i went with beads-ui. it wasn't some meaningful decision. there's no muscle memory for bv. we haven't even built this yet.
+
+D-11: option A approved. should have been automatic decision. pretty sure i already said this in so many weres so should have been easily inferred.
+
+D-12: back them up for whichever repo that cc session is launched for. and for bms-semantic-knowledge-graph repo cc sessions, they should should instead go in sw-bms-workspace repo. so i guess a new option D. 
+
+now /delegate opus 5.5 /orchestrate /auto-flow the rest as appropriate now.
+```
+````
