@@ -12,6 +12,23 @@ export {
   statusesArgv,
 } from "./argv.ts";
 export type {
+  Column,
+  ColumnOptions,
+  ColumnsResult,
+  Swimlane,
+  SwimlaneMode,
+  SwimlaneModeError,
+} from "./columns.ts";
+export {
+  buildColumns,
+  buildSwimlanes,
+  NO_EPIC_LANE_LABEL,
+  nextSwimlaneMode,
+  parseSwimlaneMode,
+  SWIMLANE_MODES,
+  UNASSIGNED_LANE_LABEL,
+} from "./columns.ts";
+export type {
   BdArgv,
   DeletePreview,
   Dependency,
