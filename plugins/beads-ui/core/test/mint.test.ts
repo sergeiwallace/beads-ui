@@ -360,6 +360,18 @@ describe("pending display ids", () => {
     });
   });
 
+  test("should keep an id: label another writer left without its metadata, and write over only its own", () => {
+    const { displayId: _none, ...bare } = byId(allIssues(), "BU-2zw");
+    const labelled = (labels: string[]) =>
+      allIssues().map((issue) => (issue.id === "BU-2zw" ? { ...bare, labels } : issue));
+
+    expect(pendingDisplayIdStep(pending, labelled(["ci", "id:BU-other-2zw"]))).toEqual({
+      kind: "kept",
+      existing: "BU-other-2zw",
+    });
+    expect(pendingDisplayIdStep(pending, labelled([`id:${MINTED}`])).kind).toBe("write");
+  });
+
   test("should read back only well-formed entries, once per issue, from what a surface stored", () => {
     expect(
       readPendingDisplayIds([

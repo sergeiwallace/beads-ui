@@ -625,6 +625,16 @@ describe("quick-add", () => {
         record.id === "BU-2zw" ? { ...record, metadata: {}, labels: [] } : record,
       ),
     );
+  // `bd show BU-2zw --json` as the retry re-reads it just before its write, with `change` applied.
+  const SHOW = "bd show BU-2zw";
+  const shownWith = (change: Record<string, unknown>) =>
+    JSON.stringify([
+      {
+        ...(JSON.parse(minted) as Record<string, unknown>[]).find((one) => one.id === "BU-2zw"),
+        ...change,
+      },
+    ]);
+  const UNATTACHED_SHOW = shownWith({ metadata: {}, labels: [] });
 
   test("should keep a failed display id write pending and retry the same id on each refresh until it succeeds", async ($, on) => {
     let made = false;
@@ -639,6 +649,7 @@ describe("quick-add", () => {
           if (!made) return ok(before());
           return attaching === "done" ? ok(list) : ok(unattached());
         }
+        if (key === SHOW) return ok(UNATTACHED_SHOW);
         if (key === ATTACH) {
           if (attaching === "failing") return exit(1, "Error: database is locked");
           attaching = "done";
@@ -683,6 +694,7 @@ describe("quick-add", () => {
       stored: { "pending-display-ids": [{ id: "BU-2zw", displayId: MINTED }] },
       script: (key) => {
         if (key === ATTACH) attached = true;
+        if (key === SHOW) return ok(UNATTACHED_SHOW);
         return key === "bd list --all --brief --limit 0" && !attached
           ? ok(unattached())
           : undefined;
@@ -692,6 +704,45 @@ describe("quick-add", () => {
     expect(w.keys().filter((key) => key.startsWith("bd update"))).toEqual([ATTACH]);
     expect(w.keys().some((key) => key.startsWith("bd create"))).toBe(false);
     expect(await ui.find({ key: "pending-id:BU-2zw" })).toBeUndefined();
+  });
+
+  test("should write nothing and drop the pending id when the re-read just before the write shows another id", async ($, on) => {
+    const OTHER = "BU-written-elsewhere-2zw";
+    const { w, ui } = await openPane($, on, {
+      stored: { "pending-display-ids": [{ id: "BU-2zw", displayId: MINTED }] },
+      script: (key) =>
+        key === "bd list --all --brief --limit 0"
+          ? ok(unattached())
+          : key === SHOW
+            ? ok(shownWith({ metadata: { display_id: OTHER }, labels: [`id:${OTHER}`] }))
+            : undefined,
+    });
+
+    expect(w.keys()).toContain(SHOW);
+    expect(w.keys().some((key) => key.startsWith("bd update"))).toBe(false);
+    expect(await ui.find({ key: "pending-id:BU-2zw" })).toBeUndefined();
+    expect(w.store.get("pending-display-ids")).toEqual([]);
+    expect((await ui.find({ key: "notice" }))?.text).toBe(
+      `BU-2zw already carries ${OTHER}; ${MINTED} was not written`,
+    );
+  });
+
+  test("should write nothing and keep the id pending when the re-read before the write fails", async ($, on) => {
+    const { w, ui } = await openPane($, on, {
+      stored: { "pending-display-ids": [{ id: "BU-2zw", displayId: MINTED }] },
+      script: (key) =>
+        key === "bd list --all --brief --limit 0"
+          ? ok(unattached())
+          : key === SHOW
+            ? exit(1, "Error: database is locked")
+            : undefined,
+    });
+
+    expect(w.keys().some((key) => key.startsWith("bd update"))).toBe(false);
+    expect((await ui.find({ key: "pending-id:BU-2zw" }))?.text).toBe(
+      `BU-2zw has no display id yet (re-reading it failed (exit 1): Error: database is locked); writing ${MINTED} again on the next refresh`,
+    );
+    expect(w.store.get("pending-display-ids")).toEqual([{ id: "BU-2zw", displayId: MINTED }]);
   });
 
   test("should drop a pending display id without writing when the issue already carries another", async ($, on) => {

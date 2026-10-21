@@ -445,8 +445,10 @@ export interface PendingDisplayId {
 
 /**
  * What to do with a pending display id once the store's issues are read: write the same id again,
- * or stop because the issue now carries it, carries another one (a published id never changes,
- * so it is never overwritten), or is no longer in the store. It never mints a second id.
+ * or stop because the issue now carries it, carries another one in its metadata or an `id:` label
+ * (a published id never changes, so it is never overwritten), or is no longer in the store. It
+ * never mints a second id. A surface asks it twice: over the list, then over a `bd show` of that
+ * one issue read just before the write, which runs only when that second answer is still `write`.
  */
 export type PendingDisplayIdStep =
   | { kind: "write"; argv: BdArgv }
@@ -462,6 +464,11 @@ export function pendingDisplayIdStep(
   if (issue === undefined) return { kind: "gone" };
   if (issue.displayId === pending.displayId) return { kind: "written" };
   if (issue.displayId !== undefined) return { kind: "kept", existing: issue.displayId };
+  const labelled = issue.labels
+    .filter((label) => label.startsWith("id:"))
+    .map((label) => label.slice("id:".length))
+    .find((displayId) => displayId !== pending.displayId);
+  if (labelled !== undefined) return { kind: "kept", existing: labelled };
   return { kind: "write", argv: displayIdArgv(pending.id, pending.displayId) };
 }
 

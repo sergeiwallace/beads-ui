@@ -240,13 +240,28 @@ export class BeadsPane {
 
   /**
    * Retries each pending display id against the store as just read: the same id again, never a
-   * second one; an issue that now carries an id, or is gone, drops it (D-9).
+   * second one; an issue that now carries an id, or is gone, drops it (D-9). bd has no
+   * compare-and-set on metadata, so the write runs only when a `bd show` of that one issue, read
+   * just before it, still finds no id; an unreadable show writes nothing and keeps it pending.
    */
   private async retryPendingIds(): Promise<void> {
     const done = new Set<string>();
     let wrote = false;
     for (const pending of [...this.pendingIds]) {
-      const step = pendingDisplayIdStep(pending, this.board.issues);
+      let step = pendingDisplayIdStep(pending, this.board.issues);
+      if (step.kind === "write") {
+        const shown = await this.run(showArgv(pending.id), READ_TIMEOUT_MS);
+        const parsed = shown.ok ? parseBdShow(shown.stdout) : undefined;
+        const issue =
+          parsed?.ok === true ? parsed.value.find((one) => one.id === pending.id) : undefined;
+        if (issue === undefined) {
+          this.pendingErrors[pending.id] = shown.ok
+            ? `re-reading it failed: bd show ${pending.id} returned nothing beads-ui can read`
+            : this.failure("re-reading it", shown);
+          continue;
+        }
+        step = pendingDisplayIdStep(pending, [issue]);
+      }
       if (step.kind === "kept") {
         this.note(
           `${pending.id} already carries ${step.existing}; ${pending.displayId} was not written`,
