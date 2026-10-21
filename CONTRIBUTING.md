@@ -26,9 +26,14 @@ Run these before you push. The hooks run them too.
 
 ```sh
 npm run lint        # Biome, the core purity gate and the core type check
-npm test            # Vitest
+npm test            # Vitest, then claude plugin test for the mod
 npx tsc --noEmit    # type check of the whole repository
 ```
+
+The mod's gates need Claude Code (`claude`) on your `PATH`: `npm test` runs `claude plugin test`,
+and the pre-commit hooks run `claude plugin validate` on the repository root and on
+`plugins/beads-ui`. When you add a hook or a `$` call to the mod, add it to
+`plugins/beads-ui/validate-allowlist.json` in the same commit; the gate names each difference.
 
 The shared core in `plugins/beads-ui/core` runs inside a Claude Code mod, which has no DOM, no
 Node.js APIs and no timers. Code in that directory must not reference `setTimeout`, `setInterval`,

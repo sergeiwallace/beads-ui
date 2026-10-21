@@ -6,6 +6,6 @@
   "scripts": {
     "lint": "node ../../scripts/check-core-purity.mjs core",
     "typecheck": "tsc -p core",
-    "test": "vitest run"
+    "test": "vitest run && claude plugin test ."
   }
 }

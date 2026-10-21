@@ -10,7 +10,7 @@
       "outputs": []
     },
     "test": {
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/check-core-purity.mjs"],
+      "cache": false,
       "outputs": []
     }
   }
