@@ -29,6 +29,23 @@ export {
   UNASSIGNED_LANE_LABEL,
 } from "./columns.ts";
 export type {
+  Filter,
+  FilterError,
+  FilterKey,
+  FilterState,
+  FilterTerm,
+  ReadySetMissing,
+} from "./filter.ts";
+export {
+  applyFilter,
+  describeFilterError,
+  EMPTY_FILTER,
+  EMPTY_FILTER_STATE,
+  FILTER_KEYS,
+  parseFilter,
+  submitFilter,
+} from "./filter.ts";
+export type {
   BdArgv,
   DeletePreview,
   Dependency,
