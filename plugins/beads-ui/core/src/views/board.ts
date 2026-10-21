@@ -1,7 +1,8 @@
 import { moveArgv } from "../argv.ts";
 import { buildColumns, buildSwimlanes, type SwimlaneMode } from "../columns.ts";
 import { applyFilter, type Filter } from "../filter.ts";
-import type { BdArgv, Issue, Result, Status } from "../model.ts";
+import type { BdArgv, Issue, Result, Status, StatusCategory } from "../model.ts";
+import type { SortSpec } from "../sort.ts";
 import { priorityToken, statusToken, type Token } from "../tokens.ts";
 import { asOf, priorityBadge, truncate } from "./text.ts";
 
@@ -173,26 +174,51 @@ export interface CardView {
 
 export interface ColumnHeaderView {
   status: string;
+  /** The status category, which the surface groups columns by (Mockups: one Box per group). */
+  category: StatusCategory;
   label: string;
   count: number;
   token: Token;
   overLimit: boolean;
 }
 
+/** Which page of a list is drawn: `from` to `to` (1-based, inclusive) of `total` items. */
+export interface PageView {
+  /** What the surface keys the page by: a cell's `cellKey`, or `lanes`. */
+  key: string;
+  page: number;
+  pages: number;
+  from: number;
+  to: number;
+  total: number;
+}
+
 export interface LaneView {
   key: string;
   label: string;
-  /** One card list per column, aligned with `columns`. */
+  /** One card list per column, aligned with `columns`: the cell's page that is drawn. */
   cells: CardView[][];
+  /** Each cell's page, aligned with `cells`; `pages` is 1 when the cell fits. */
+  pages: PageView[];
 }
 
 export interface BoardView {
   loading: boolean;
   asOf?: string;
+  /** The columns the drawn lane page shows: every column, unless `columnWindow` says otherwise. */
   columns: ColumnHeaderView[];
+  /** The swimlanes on the drawn lane page. */
   lanes: LaneView[];
-  /** Issues whose status bd did not list. */
+  /** Which swimlanes are drawn; `pages` is 1 when every lane fits. */
+  lanePage: PageView;
+  /**
+   * Set when the drawn page is one lane split by columns, as one card in each of its columns
+   * would pass the budget: `from` to `to` (1-based) of `total` columns. The lane page steps them.
+   */
+  columnWindow?: { from: number; to: number; total: number };
+  /** Issues whose status bd did not list: the drawn page of them. */
   unplaced: CardView[];
+  unplacedPage: PageView;
   errorLine?: string;
   conflictLine?: string;
   filterLine?: string;
@@ -205,6 +231,201 @@ export interface BoardViewOptions {
   softWipLimit?: Readonly<Record<string, number>>;
   filter?: Filter;
   readyIds?: ReadonlySet<string>;
+  sort?: SortSpec;
+  /**
+   * Pages the board so the drawn tree stays within a budget: a mod tree is cut off past 100,000
+   * serialized characters. Without it every card is drawn on one page.
+   */
+  pageLimit?: BoardPageLimit;
+  /** The page each cell shows, by `cellKey`; the first page when absent. */
+  pages?: Readonly<Record<string, number>>;
+  /** The lane page shown; the first when absent. */
+  lanePage?: number;
+  /** The page of unplaced cards shown; the first when absent. */
+  unplacedPage?: number;
+}
+
+/**
+ * The board's drawing budget, in estimated serialized characters. Lanes are grouped into lane
+ * pages that fit `budget` with `minPerCell` cards per cell, and each lane page draws the most
+ * cards per cell page, up to `perCell`, that still fit. A lane that does not fit with one card
+ * per cell is split by columns instead, into windows that do.
+ *
+ * Every card's Move to carries every status, so a card costs `card`, plus `cardText` for each
+ * terminal column of its width, plus `option` and `nameChar` per serialized character of the name
+ * for each status. A header carries its status twice (key and label), a pager three times.
+ */
+export interface BoardPageLimit {
+  perCell: number;
+  /** The cards per cell a lane page keeps room for before it takes another lane. */
+  minPerCell: number;
+  budget: number;
+  /** One card's fixed part: its lines' props, the Move to's own props, the detail button. */
+  card: number;
+  /** Per column of width: the id, title and assignee lines are each cut to the width. */
+  cardText: number;
+  /** One Move to option beside its status name. */
+  option: number;
+  /** Per serialized character of a status name, wherever it is drawn. */
+  nameChar: number;
+  /** A paged cell's back and more controls with the range between them, beside its status. */
+  pager: number;
+  /** One column header, drawn in every lane, beside its status. */
+  header: number;
+  /** A lane's own label and boxes. */
+  lane: number;
+}
+
+/**
+ * The mod's budget, from the drawing measured with `claude plugin test` (2026-10-21): an option
+ * is `{"value":<name>},`, 11 characters beside the quoted name; a card with one option and 90
+ * characters of text lines serialized to 773, so 666 beside them, and 700 leaves room for longer
+ * press handles and the pending mark. The tests at 600 cards (hooks/pane.test.ts), with this
+ * store's nine statuses and with 30 statuses of 40 characters, hold every page under 100,000
+ * with the rest of the pane; the 80,000 leaves room for the header, toolbar and lines.
+ */
+export const BOARD_PAGE_LIMIT: BoardPageLimit = {
+  perCell: 25,
+  minPerCell: 5,
+  budget: 80_000,
+  card: 700,
+  cardText: 3,
+  option: 11,
+  nameChar: 1,
+  pager: 450,
+  header: 150,
+  lane: 200,
+};
+
+/** What each drawn part costs on this board, from its statuses and its column width. */
+interface DrawCosts {
+  card: number;
+  lane: number;
+  /** Per column: its header, and its pager when its cell is paged. */
+  headers: number[];
+  pagers: number[];
+}
+
+/** A string's length as the drawn tree serializes it: JSON's quotes and escapes. */
+const serialized = (text: string): number => JSON.stringify(text).length;
+
+function drawCosts(limit: BoardPageLimit, order: readonly string[], width: number): DrawCosts {
+  const name = (status: string) => limit.nameChar * serialized(status);
+  return {
+    card:
+      limit.card +
+      limit.cardText * width +
+      order.reduce((sum, status) => sum + limit.option + name(status), 0),
+    lane: limit.lane,
+    headers: order.map((status) => limit.header + 2 * name(status)),
+    pagers: order.map((status) => limit.pager + 3 * name(status)),
+  };
+}
+
+/** The key a cell's page goes by: the lane's key and the column's status. */
+export const cellKey = (laneKey: string, status: string): string => `${laneKey}:${status}`;
+
+/** The page `delta` steps from `page`, wrapping from the last page to the first and back. */
+export function stepPage(page: number, pages: number, delta: number): number {
+  if (!(pages >= 1)) return 0;
+  return (((page + delta) % pages) + pages) % pages;
+}
+
+/** The page of `total` items, `size` to a page, that `wanted` names, clamped to the last one. */
+export function pageOf(key: string, total: number, size: number, wanted = 0): PageView {
+  const pages = Math.max(1, Math.ceil(total / Math.max(1, size)));
+  const page = Math.min(Math.max(0, Math.floor(wanted) || 0), pages - 1);
+  const from = total === 0 ? 0 : (page === 0 ? 0 : page * size) + 1;
+  const to = Math.min(total, (page + 1) * size);
+  return { key, page, pages, from, to, total };
+}
+
+/**
+ * The drawing cost of lanes whose cell sizes are `cells`, at `size` cards per cell page, drawing
+ * the columns from `from` up to `to`.
+ */
+function costOf(
+  costs: DrawCosts,
+  cells: readonly number[][],
+  size: number,
+  from: number,
+  to: number,
+): number {
+  let cost = 0;
+  for (const lane of cells) {
+    cost += costs.lane;
+    for (let i = from; i < to; i++) {
+      cost += costs.headers[i] ?? 0;
+      const count = lane[i] ?? 0;
+      if (count === 0) continue;
+      cost += Math.min(count, size) * costs.card + (count > size ? (costs.pagers[i] ?? 0) : 0);
+    }
+  }
+  return cost;
+}
+
+/** One lane page: lanes `start` to `end`, columns `from` to `to` (end-exclusive), `size` a cell. */
+interface Span {
+  start: number;
+  end: number;
+  size: number;
+  from: number;
+  to: number;
+}
+
+/**
+ * Splits the lanes into lane pages and picks each page's cell page size: a lane page takes lanes
+ * while `minPerCell` cards per cell fit the budget (always at least one lane), then the size is
+ * the most cards per cell, up to `perCell`, that fit, and never under one. A lane that passes the
+ * budget alone at one card per cell gets pages of its own instead, each a window of its columns
+ * taken while `minPerCell` cards per cell fit (always at least one column).
+ */
+function planPages(
+  limit: BoardPageLimit | undefined,
+  costs: DrawCosts | undefined,
+  cells: readonly number[][],
+  columns: number,
+  extra: number,
+): Span[] {
+  if (limit === undefined || costs === undefined) {
+    return [{ start: 0, end: cells.length, size: Number.POSITIVE_INFINITY, from: 0, to: columns }];
+  }
+  const budget = limit.budget - extra;
+  const room = Math.max(1, limit.minPerCell);
+  const fits = (lanes: readonly number[][], size: number, from: number, to: number) =>
+    costOf(costs, lanes, size, from, to) <= budget;
+  const sized = (lanes: readonly number[][], from: number, to: number) => {
+    let size = limit.perCell;
+    while (size > 1 && !fits(lanes, size, from, to)) size--;
+    return size;
+  };
+  const spans: Span[] = [];
+  let start = 0;
+  while (start < cells.length || spans.length === 0) {
+    const alone = cells.slice(start, start + 1);
+    if (start < cells.length && columns > 1 && !fits(alone, 1, 0, columns)) {
+      for (let from = 0; from < columns; ) {
+        let to = from + 1;
+        while (to < columns && fits(alone, room, from, to + 1)) to++;
+        spans.push({ start, end: start + 1, size: sized(alone, from, to), from, to });
+        from = to;
+      }
+      start++;
+      continue;
+    }
+    let end = Math.min(cells.length, start + 1);
+    while (end < cells.length && fits(cells.slice(start, end + 1), room, 0, columns)) end++;
+    spans.push({
+      start,
+      end,
+      size: sized(cells.slice(start, end), 0, columns),
+      from: 0,
+      to: columns,
+    });
+    if (end <= start) break;
+    start = end;
+  }
+  return spans;
 }
 
 function errorLine(state: BoardState): string | undefined {
@@ -240,8 +461,10 @@ export function boardView(state: BoardState, options: BoardViewOptions): BoardVi
     else filterLine = filtered.error.message;
   }
 
-  const columnOptions =
-    options.softWipLimit === undefined ? {} : { softWipLimit: options.softWipLimit };
+  const columnOptions = {
+    ...(options.softWipLimit === undefined ? {} : { softWipLimit: options.softWipLimit }),
+    ...(options.sort === undefined ? {} : { sort: options.sort }),
+  };
   const { columns, unplaced } = buildColumns(state.statuses, issues, columnOptions);
   const total = buildColumns(state.statuses, state.issues, columnOptions).columns;
   const order = columns.map((column) => column.status.name);
@@ -261,31 +484,91 @@ export function boardView(state: BoardState, options: BoardViewOptions): BoardVi
     columns.flatMap((column) => column.issues),
     options.swimlane ?? "none",
     state.issues,
-  ).map(
-    (lane): LaneView => ({
-      key: lane.key,
-      label: truncate(lane.label, width * Math.max(1, columns.length)),
-      cells: columns.map((column) =>
-        lane.issues.filter((issue) => issue.status === column.status.name).map(card),
-      ),
-    }),
   );
+  const limit = options.pageLimit;
+  const members = lanes.map((lane) =>
+    columns.map((column) => lane.issues.filter((issue) => issue.status === column.status.name)),
+  );
+  const costs = limit === undefined ? undefined : drawCosts(limit, order, width);
+  const unplacedSize = limit?.perCell ?? Number.POSITIVE_INFINITY;
+  const unplacedPage = pageOf("unplaced", unplaced.length, unplacedSize, options.unplacedPage);
+  const drawnUnplaced = unplaced.slice(
+    unplacedPage.from === 0 ? 0 : unplacedPage.from - 1,
+    unplacedPage.to,
+  );
+  // An unplaced card's Move to also carries its own status, which no column holds.
+  const unplacedCost =
+    limit === undefined || costs === undefined || unplaced.length === 0
+      ? 0
+      : limit.header +
+        drawnUnplaced.reduce(
+          (sum, issue) =>
+            sum + costs.card + limit.option + limit.nameChar * serialized(issue.status),
+          0,
+        ) +
+        (unplacedPage.pages > 1 ? limit.pager : 0);
+  const spans = planPages(
+    limit,
+    costs,
+    members.map((lane) => lane.map((cell) => cell.length)),
+    columns.length,
+    unplacedCost,
+  );
+  const lanePage = Math.min(Math.max(0, Math.floor(options.lanePage ?? 0) || 0), spans.length - 1);
+  const span = spans[lanePage] ?? {
+    start: 0,
+    end: lanes.length,
+    size: unplacedSize,
+    from: 0,
+    to: columns.length,
+  };
+  const shown = columns.slice(span.from, span.to);
+  const laneViews = lanes.slice(span.start, span.end).map((lane, offset): LaneView => {
+    const cells: CardView[][] = [];
+    const pages: PageView[] = [];
+    shown.forEach((column, i) => {
+      const cell = members[span.start + offset]?.[span.from + i] ?? [];
+      const key = cellKey(lane.key, column.status.name);
+      const page = pageOf(key, cell.length, span.size, options.pages?.[key]);
+      pages.push(page);
+      cells.push(cell.slice(page.from === 0 ? 0 : page.from - 1, page.to).map(card));
+    });
+    return {
+      key: lane.key,
+      label: truncate(lane.label, width * Math.max(1, shown.length)),
+      cells,
+      pages,
+    };
+  });
 
   const view: BoardView = {
     loading: !state.loaded,
-    columns: columns.map((column, i): ColumnHeaderView => {
-      const overLimit = total[i]?.overLimit ?? false;
+    columns: shown.map((column, i): ColumnHeaderView => {
+      const overLimit = total[span.from + i]?.overLimit ?? false;
       return {
         status: column.status.name,
+        category: column.status.category,
         label: truncate(`${column.status.name} ${column.count}`, width),
         count: column.count,
         token: overLimit ? "warning" : statusToken(column.status.category),
         overLimit,
       };
     }),
-    lanes,
-    unplaced: unplaced.map(card),
+    lanes: laneViews,
+    lanePage: {
+      key: "lanes",
+      page: lanePage,
+      pages: spans.length,
+      from: lanes.length === 0 ? 0 : span.start + 1,
+      to: span.end,
+      total: lanes.length,
+    },
+    unplaced: drawnUnplaced.map(card),
+    unplacedPage,
   };
+  if (span.from > 0 || span.to < columns.length) {
+    view.columnWindow = { from: span.from + 1, to: span.to, total: columns.length };
+  }
   if (state.loadedAt !== undefined) view.asOf = asOf(state.loadedAt);
   const error = errorLine(state);
   if (error !== undefined) view.errorLine = error;

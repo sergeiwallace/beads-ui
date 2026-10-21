@@ -387,14 +387,12 @@ idle, running, and addressable; it does not self-terminate or have a native idle
 CODEX DELEGATION: Prefer OpenAI Codex (`codex-cli`) via the `cx` wrapper or
 the `/codex` skill for research, implementation, analysis, and cross-family review to conserve
 Claude Code weekly usage; Claude stays architect / orchestrator / final gate. Never metered API
-spend; that ban is about billing, not vendor: `cx` routes to the OAuth subscription on personal
-machines and to the BMS Azure AI Gateway on the sem-kg profiles (`CODEX_AUTH_MODE=azure`, live and
-verified), and both are sanctioned. The ban is scoped by BILLING ROUTE and INVERTS: on an
-employer-API-billed machine (the ACN and BMS profiles) an API key is the deliberate, sanctioned
-mechanism (`AZURE_OPENAI_API_KEY`, never `OPENAI_API_KEY`) and the violation there is falling
-back to `route=oauth`. Codex is available on BMS machines; do not plan around its
-absence there. The one gateway-route exception is the `research` role, which needs OpenAI's hosted
-web search; use `aido research` or the `bms-web-search` MCP for that.
+spend; that ban is about billing, not vendor: `cx` routes each host through the delegation route
+its machine profile names, and every such route is sanctioned. The ban is scoped by billing route
+and can invert: on a host whose profile bills per token, the profile's sanctioned credential is
+the mechanism and falling back to a different route is the violation. Codex is available on every
+profile; do not plan around its absence. Where a route cannot serve the `research` role's hosted
+web search, use the host's web-search tool, per its machine profile.
 Reserve Opus/Sonnet/Haiku Claude Code subagents or teammates for what Codex cannot do:
 live conversational context from this running session, Claude-Code-specific MCP tool access, or
 your own orchestration and final-synthesis role. **The quota check for launching such a Claude subagent,
@@ -814,8 +812,8 @@ an audit-only or research-only one included.]:
     2026-10-21, entry A005) with every decision resolved. Do not re-open a decision. If building
     proves a decision unworkable, investigate, run the Authority test, and escalate what it escalates.
   · IMPLEMENT: `/delegate` each task group to a Claude leaf: persona `engineer` with `model: opus`,
-    effort per `agent-delegation.md` § Task-level reasoning-effort selection. This host is billed per
-    token through Bedrock, so Claude is the delegation default and needs no per-task permission.
+    effort per `agent-delegation.md` § Task-level reasoning-effort selection. This host's machine
+    profile bills Claude per token, so Claude is the delegation default and needs no per-task permission.
     Never implement a PENDING-for-human decision's content yourself; implement only what is
     resolved (`✅ Resolved by <orchestrator>` or a prior human `✅ Approved`).
   · AUDIT IMPLEMENTATION: at each phase's exit gate, run a cross-family audit of the phase diff.
@@ -918,7 +916,7 @@ things (the same four Anthropic's own multi-agent system requires):
    The brief keeps every explicit requirement of the founding ask whole: an AI decision never drops,
    narrows or contradicts an explicit founding-ask requirement, and that includes the brief's own
    author. Never write an escape hatch such as "if X adds nothing, skip it and say why" for a
-   mechanism the ask names; the sem-kg harness brief did, and its worker used it to drop prompt
+   mechanism the ask names; an earlier harness brief did, and its worker used it to drop prompt
    injection (AIH-7m427). Tell the worker that a decision dropping a named requirement comes back
    as an escalation, and that a doc it authors passes `scripts/far_fidelity.py check` before it
    reports done (`decision-framework.md` § Gate 0).

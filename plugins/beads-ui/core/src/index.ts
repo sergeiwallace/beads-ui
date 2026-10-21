@@ -37,6 +37,21 @@ export {
   RESERVED_KEYS,
 } from "./commands.ts";
 export type {
+  BeadsUiConfig,
+  ResolvedConfig,
+  TomlError,
+  TomlTable,
+  TomlValue,
+} from "./config.ts";
+export {
+  CONFIG_FILE_NAME,
+  configCandidates,
+  DEFAULT_CONFIG,
+  MIN_REFRESH_SECONDS,
+  parseToml,
+  resolveConfig,
+} from "./config.ts";
+export type {
   Filter,
   FilterError,
   FilterKey,
@@ -60,15 +75,26 @@ export type {
   IdPolicyError,
   MintError,
   MintInput,
+  PendingDisplayId,
+  PendingDisplayIdStep,
+  SlugBudgets,
 } from "./mint.ts";
 export {
   DEFAULT_ID_POLICY,
+  DEFAULT_SLUG_BUDGETS,
+  displayIdArgv,
+  envBudget,
+  FLEET_TASK_ID_RULE,
   ID_POLICIES,
   mintDisplayId,
   parseIdPolicy,
+  pendingDisplayIdStep,
   planDisplayId,
+  readPendingDisplayIds,
+  SLUG_BUDGET_ENV,
   SLUG_SUFFIX_ALPHABET,
   SLUG_SUFFIX_LENGTH,
+  slugBudgets,
   slugifyTitle,
   storeUsesDisplayIds,
   takenDisplayIds,
@@ -102,7 +128,15 @@ export {
 export type { QuickAdd, QuickAddError } from "./quickadd.ts";
 export { createArgv, parseQuickAdd } from "./quickadd.ts";
 export type { SortDirection, SortError, SortKey, SortSpec } from "./sort.ts";
-export { DEFAULT_SORT, parseSort, SORT_KEYS, sortIssues } from "./sort.ts";
+export {
+  DEFAULT_SORT,
+  nextSort,
+  parseSort,
+  SORT_CYCLE,
+  SORT_KEYS,
+  sortIssues,
+  sortLabel,
+} from "./sort.ts";
 export type { TerminalColor, Token } from "./tokens.ts";
 export {
   priorityToken,
@@ -112,9 +146,12 @@ export {
   terminalColor,
 } from "./tokens.ts";
 export type { BacklogOptions, BacklogRow, BacklogView } from "./views/backlog.ts";
-export { backlogView } from "./views/backlog.ts";
+export { BACKLOG_PAGE_SIZE, backlogView } from "./views/backlog.ts";
+export type { BandCount, BandView } from "./views/band.ts";
+export { bandView } from "./views/band.ts";
 export type {
   BoardEvent,
+  BoardPageLimit,
   BoardState,
   BoardView,
   BoardViewOptions,
@@ -123,14 +160,19 @@ export type {
   LaneView,
   LoadError,
   MoveError,
+  PageView,
   PendingMove,
 } from "./views/board.ts";
 export {
+  BOARD_PAGE_LIMIT,
   boardView,
+  cellKey,
   INITIAL_BOARD_STATE,
+  pageOf,
   planMove,
   reduceBoard,
   STALE_WRITE_EXIT,
+  stepPage,
 } from "./views/board.ts";
 export type {
   ConfirmEvent,
@@ -160,11 +202,25 @@ export type {
   MarkdownView,
 } from "./views/detail.ts";
 export {
+  DESCRIPTION_EDIT_MAX_CHARS,
   DETAIL_EVENT_LIMIT,
   detailView,
   EDITABLE_FIELDS,
   editArgv,
+  fromOneLine,
   openDetail,
+  parseFieldEdit,
   reduceDetail,
+  toOneLine,
 } from "./views/detail.ts";
-export { asOf, priorityBadge, truncate } from "./views/text.ts";
+export {
+  asOf,
+  BLOCK_MAX_CHARS,
+  clockStamp,
+  fitBlock,
+  priorityBadge,
+  storeName,
+  truncate,
+} from "./views/text.ts";
+export type { UndoClose, UndoView } from "./views/undo.ts";
+export { CLOSED_STATUS, undoArgv, undoClose, undoForMove, undoView } from "./views/undo.ts";

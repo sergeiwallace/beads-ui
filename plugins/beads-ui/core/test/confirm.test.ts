@@ -9,6 +9,7 @@ import {
   nextCommand,
   openDeleteConfirm,
   reduceConfirm,
+  undoArgv,
 } from "../src/index.ts";
 import cascadePreview from "./fixtures/bd-delete-cascade-dry-run.json.ts";
 import refusedJson from "./fixtures/bd-delete-dry-run-dependents.json.ts";
@@ -31,6 +32,20 @@ const cascadeLoaded: ConfirmEvent = {
   stdout: cascadePreview,
 };
 const atTypedId = () => run(openFor("BU-mg2.3"), refused, cascadeLoaded);
+const leafRecheck: ConfirmEvent = {
+  type: "recheck-loaded",
+  exitCode: 0,
+  stdout: leafText,
+  stderr: "",
+};
+const cascadeRecheck: ConfirmEvent = {
+  type: "recheck-loaded",
+  exitCode: 0,
+  stdout: cascadePreview,
+  stderr: "",
+};
+const leafReady = () =>
+  run(openFor("BU-2zw"), { type: "preview-loaded", exitCode: 0, stdout: leafText, stderr: "" });
 
 describe("the delete confirmation", () => {
   test("should run bd delete --dry-run first and offer Close instead before any write", () => {
@@ -53,7 +68,9 @@ describe("the delete confirmation", () => {
     expect(view.preview).toBe(leafText);
     expect(view.delete).toEqual({ label: "Delete", hotkey: "x", enabled: true, cascade: false });
     expect(view.input).toBeUndefined();
-    expect(nextCommand(reduceConfirm(ready, { type: "delete" }))).toEqual([
+    const rechecking = reduceConfirm(ready, { type: "delete" });
+    expect(nextCommand(rechecking)).toEqual(["bd", "delete", "BU-2zw", "--dry-run"]);
+    expect(nextCommand(reduceConfirm(rechecking, leafRecheck))).toEqual([
       "bd",
       "delete",
       "BU-2zw",
@@ -102,7 +119,16 @@ describe("the delete confirmation", () => {
 
     const typed = run(state, { type: "typed", text: " BU-beads-ui-claude-code-aeyb " });
     expect(confirmView(typed, 80).input?.matches).toBe(true);
-    expect(nextCommand(reduceConfirm(typed, { type: "delete" }))).toEqual([
+    const rechecking = reduceConfirm(typed, { type: "delete" });
+    expect(nextCommand(rechecking)).toEqual([
+      "bd",
+      "delete",
+      "BU-mg2.3",
+      "--cascade",
+      "--dry-run",
+      "--json",
+    ]);
+    expect(nextCommand(reduceConfirm(rechecking, cascadeRecheck))).toEqual([
       "bd",
       "delete",
       "BU-mg2.3",
@@ -125,7 +151,22 @@ describe("the delete confirmation", () => {
     expect(closed.phase).toBe("closed");
     expect(nextCommand(closed)).toBeUndefined();
     const view = confirmView(closed, 80);
-    expect(view.undo).toEqual(["bd", "reopen", "BU-mg2.3", "--json"]);
+    expect(view.undo).toEqual({
+      id: "BU-mg2.3",
+      label: "BU-beads-ui-claude-code-aeyb",
+      previous: "in_progress",
+      closed: "closed",
+    });
+    expect(view.undo && undoArgv(view.undo)).toEqual([
+      "bd",
+      "update",
+      "BU-mg2.3",
+      "--status",
+      "in_progress",
+      "--if-status",
+      "closed",
+      "--json",
+    ]);
     expect([view.closeInstead.enabled, view.delete.enabled]).toEqual([false, false]);
   });
 
@@ -171,6 +212,7 @@ describe("the delete confirmation", () => {
       atTypedId(),
       { type: "typed", text: "BU-beads-ui-claude-code-aeyb" },
       { type: "delete" },
+      cascadeRecheck,
       { type: "delete-finished", exitCode: 1, message: "lock held" },
     );
 
@@ -178,6 +220,97 @@ describe("the delete confirmation", () => {
       "failed",
       "bd delete failed (exit 1): lock held",
     ]);
+    expect(nextCommand(failed)).toBeUndefined();
+  });
+
+  test("should re-run the dry run before a leaf delete and write only when it still holds", () => {
+    const rechecking = reduceConfirm(leafReady(), { type: "delete" });
+
+    expect(rechecking.phase).toBe("rechecking");
+    expect(confirmView(rechecking, 80).delete.enabled).toBe(false);
+    expect(nextCommand(rechecking)).toEqual(["bd", "delete", "BU-2zw", "--dry-run"]);
+    expect(reduceConfirm(rechecking, leafRecheck).phase).toBe("deleting");
+  });
+
+  test("should go to the typed-id cascade path when the re-check finds a new dependent", () => {
+    const rechecked = run(leafReady(), { type: "delete" }, { ...refused, type: "recheck-loaded" });
+
+    expect(rechecked.phase).toBe("loading-cascade");
+    expect(rechecked.cascadeRequired).toBe(true);
+    expect(confirmView(rechecked, 80).statusLine).toBe(
+      "a dependent was added since the preview; nothing was deleted",
+    );
+    expect(nextCommand(rechecked)).toEqual([
+      "bd",
+      "delete",
+      "BU-2zw",
+      "--cascade",
+      "--dry-run",
+      "--json",
+    ]);
+    const atCascade = run(rechecked, cascadeLoaded, { type: "delete" });
+    expect(atCascade.phase).toBe("needs-typed-id");
+    expect(nextCommand(atCascade)).toBeUndefined();
+  });
+
+  test("should ask for the id again when the cascade's set changed since its preview", () => {
+    const grown = JSON.stringify({ ...JSON.parse(cascadePreview), would_delete: 12 });
+
+    const rechecked = run(
+      atTypedId(),
+      { type: "typed", text: "BU-beads-ui-claude-code-aeyb" },
+      { type: "delete" },
+      { type: "recheck-loaded", exitCode: 0, stdout: grown, stderr: "" },
+    );
+
+    expect([rechecked.phase, rechecked.typed, rechecked.cascade?.wouldDelete]).toEqual([
+      "needs-typed-id",
+      "",
+      12,
+    ]);
+    expect(deleteEnabled(rechecked)).toBe(false);
+    expect(nextCommand(rechecked)).toBeUndefined();
+  });
+
+  // bd's own field names in `bd delete --cascade --dry-run --json`, each changed on its own.
+  const changedFields: readonly [string, unknown][] = [
+    ["issue_ids", ["BU-mg2.3", "BU-mg2.3.5"]],
+    ["cascade", false],
+    ["would_delete", 12],
+    ["would_orphan", 1],
+    ["would_remove_dependencies", 12],
+    ["would_remove_events", 35],
+    ["would_remove_labels", 12],
+  ];
+  for (const [field, value] of changedFields) {
+    test(`should ask for the id again and delete nothing when the cascade's ${field} changed since its preview`, () => {
+      const changed = JSON.stringify({ ...JSON.parse(cascadePreview), [field]: value });
+
+      const rechecked = run(
+        atTypedId(),
+        { type: "typed", text: "BU-beads-ui-claude-code-aeyb" },
+        { type: "delete" },
+        { type: "recheck-loaded", exitCode: 0, stdout: changed, stderr: "" },
+      );
+
+      expect([rechecked.phase, rechecked.typed, rechecked.message]).toEqual([
+        "needs-typed-id",
+        "",
+        "the cascade changed since the preview; nothing was deleted, type the id again",
+      ]);
+      expect(deleteEnabled(rechecked)).toBe(false);
+      expect(nextCommand(rechecked)).toBeUndefined();
+    });
+  }
+
+  test("should refuse the delete when the re-check itself fails", () => {
+    const failed = run(
+      leafReady(),
+      { type: "delete" },
+      { type: "recheck-loaded", exitCode: 1, stdout: "", stderr: "Error: database is locked\n" },
+    );
+
+    expect([failed.phase, failed.message]).toEqual(["preview-failed", "Error: database is locked"]);
     expect(nextCommand(failed)).toBeUndefined();
   });
 

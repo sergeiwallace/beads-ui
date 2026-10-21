@@ -6,7 +6,10 @@ import {
   mintDisplayId,
   parseBdShow,
   parseIdPolicy,
+  pendingDisplayIdStep,
   planDisplayId,
+  readPendingDisplayIds,
+  slugBudgets,
   slugifyTitle,
   storeUsesDisplayIds,
   takenDisplayIds,
@@ -61,6 +64,65 @@ describe("slugifyTitle", () => {
 
   test("should hard-cut a single word longer than the budget", () => {
     expect(slugifyTitle("a".repeat(40))).toBe("a".repeat(32));
+  });
+});
+
+describe("slug budgets from bd-new's overrides", () => {
+  const TITLE = "npm audit: 10 dev-only advisories under markdownlint-cli2";
+  // What ai-harness scripts/bd_new.py's slugify_title gave for TITLE with
+  // AIH_SLUG_BODY_MAX_CHARS set to each value (read 2026-10-21); a value _env_budget refuses
+  // falls back to 32.
+  const BD_NEW_BODIES: readonly [string, string][] = [
+    ["12", "npm-audit-10"],
+    ["50", "npm-audit-10-dev-only-advisories-under"],
+    [" 40 ", "npm-audit-10-dev-only-advisories-under"],
+    ["1_6", "npm-audit-10-dev"],
+    ["abc", "npm-audit-10-dev-only-advisories"],
+    ["0", "npm-audit-10-dev-only-advisories"],
+    ["-5", "npm-audit-10-dev-only-advisories"],
+    ["", "npm-audit-10-dev-only-advisories"],
+    // Unicode digits and whitespace, measured against the same _env_budget and slugify_title
+    // under Python 3.14 (2026-10-21).
+    ["１２", "npm-audit-10"],
+    ["١٢", "npm-audit-10"],
+    ["१२", "npm-audit-10"],
+    ["１_６", "npm-audit-10-dev"],
+    ["+١٦", "npm-audit-10-dev"],
+    ["1٢", "npm-audit-10"],
+    ["\u3000१२\u3000", "npm-audit-10"],
+    ["\u008512", "npm-audit-10"],
+    ["\ufeff12", "npm-audit-10-dev-only-advisories"],
+    ["²", "npm-audit-10-dev-only-advisories"],
+    ["Ⅷ", "npm-audit-10-dev-only-advisories"],
+  ];
+
+  for (const [value, body] of BD_NEW_BODIES) {
+    test(`should give the body bd-new gives when AIH_SLUG_BODY_MAX_CHARS is ${JSON.stringify(value)}`, () => {
+      expect(slugifyTitle(TITLE, { budgets: slugBudgets({ body: value }) })).toBe(body);
+    });
+  }
+
+  test("should use the child budget override for a child and bd-new's defaults when neither is set", () => {
+    expect(slugifyTitle(TITLE, { child: true, budgets: slugBudgets({ child: "8" }) })).toBe("npm");
+    expect(slugBudgets({})).toEqual({ body: 32, child: 20 });
+  });
+
+  test("should mint a top-level display id under the body budget override when one is given", () => {
+    const top = byId(mintedIssues, "BU-2zw");
+
+    const result = planDisplayId({
+      policy: "auto",
+      issues: allIssues().filter((issue) => issue.id !== top.id),
+      createdId: top.id,
+      title: top.title,
+      child: false,
+      random: sequence(0.5),
+      budgets: slugBudgets({ body: "12" }),
+    });
+
+    expect(result.ok && result.value.kind === "attach" && result.value.displayId).toBe(
+      "BU-npm-audit-10-2zw",
+    );
   });
 });
 
@@ -142,6 +204,7 @@ describe("planDisplayId", () => {
           "display_id=BU-t-1-7-something-new-cegk",
           "--add-label",
           "id:BU-t-1-7-something-new-cegk",
+          "--json",
         ],
       },
     });
@@ -184,6 +247,145 @@ describe("planDisplayId", () => {
     const result = plan({ createdId: "mg2" });
 
     expect(!result.ok && result.error.kind).toBe("invalid-id");
+  });
+
+  // BU-2zw is a top-level issue bd-new minted in this store: `bd show BU-2zw --json` reads
+  // title "npm audit: 10 dev-only advisories under markdownlint-cli2" and display id
+  // BU-npm-audit-10-dev-only-advisories-2zw. Planned as if just created, it must get that id.
+  const withoutOwnId = (id: string) => allIssues().filter((issue) => issue.id !== id);
+
+  test("should copy the hash suffix bd-new copies when a top-level issue is created", () => {
+    const top = byId(mintedIssues, "BU-2zw");
+
+    const result = plan({
+      createdId: top.id,
+      title: top.title,
+      child: false,
+      issues: withoutOwnId(top.id),
+      random: () => {
+        throw new Error("a top-level suffix is copied, never drawn");
+      },
+    });
+
+    expect(result.ok && result.value.kind === "attach" && result.value.displayId).toBe(
+      top.displayId,
+    );
+  });
+
+  test("should draw four letters when a child ordinal has no hash suffix of its own", () => {
+    const child = byId(mintedIssues, "BU-mg2.3.6");
+
+    const result = plan({
+      createdId: child.id,
+      title: child.title,
+      child: true,
+      issues: withoutOwnId(child.id),
+      random: sequence(0, 0.5, 0.999, 0.25),
+    });
+
+    expect(result.ok && result.value.kind === "attach" && result.value.displayId).toBe(
+      "BU-t-1-2-backlog-tab-anzf",
+    );
+  });
+
+  test("should draw four letters when the hash suffix would trip the fleet task-id rule", () => {
+    const result = plan({
+      policy: "fleet-slug",
+      createdId: "KG-0000",
+      title: "fix the band",
+      child: false,
+      issues: [],
+      random: sequence(0, 0, 0, 0),
+    });
+
+    expect(result.ok && result.value.kind === "attach" && result.value.displayId).toBe(
+      "KG-band-aaaa",
+    );
+  });
+
+  test("should copy a suffix with a letter even under a prefix the task-id rule names", () => {
+    const result = plan({
+      policy: "fleet-slug",
+      createdId: "KG-g0000",
+      title: "fix the band",
+      child: false,
+      issues: [],
+    });
+
+    expect(result.ok && result.value.kind === "attach" && result.value.displayId).toBe(
+      "KG-band-g0000",
+    );
+  });
+
+  test("should return an invalid-id error when the suffix is not one bd mints", () => {
+    const result = plan({ createdId: "BU-Mg2_x", child: false });
+
+    expect(!result.ok && result.error.kind).toBe("invalid-id");
+  });
+});
+
+describe("pending display ids", () => {
+  const MINTED = "BU-npm-audit-10-dev-only-advisories-2zw";
+  const pending = { id: "BU-2zw", displayId: MINTED };
+  const storeWith = (change: Partial<Issue>) =>
+    allIssues().map((issue) => (issue.id === "BU-2zw" ? { ...issue, ...change } : issue));
+
+  test("should write the same display id again when the issue still has none", () => {
+    const { displayId: _none, ...bare } = byId(allIssues(), "BU-2zw");
+    const issues = allIssues().map((issue) => (issue.id === "BU-2zw" ? bare : issue));
+
+    expect(pendingDisplayIdStep(pending, issues)).toEqual({
+      kind: "write",
+      argv: [
+        "bd",
+        "update",
+        "BU-2zw",
+        "--set-metadata",
+        `display_id=${MINTED}`,
+        "--add-label",
+        `id:${MINTED}`,
+        "--json",
+      ],
+    });
+  });
+
+  test("should stop when the issue carries the id, carries another, or is gone", () => {
+    expect(pendingDisplayIdStep(pending, allIssues())).toEqual({ kind: "written" });
+    expect(pendingDisplayIdStep(pending, storeWith({ displayId: "BU-other-2zw" }))).toEqual({
+      kind: "kept",
+      existing: "BU-other-2zw",
+    });
+    expect(pendingDisplayIdStep({ ...pending, id: "BU-gone" }, allIssues())).toEqual({
+      kind: "gone",
+    });
+  });
+
+  test("should keep an id: label another writer left without its metadata, and write over only its own", () => {
+    const { displayId: _none, ...bare } = byId(allIssues(), "BU-2zw");
+    const labelled = (labels: string[]) =>
+      allIssues().map((issue) => (issue.id === "BU-2zw" ? { ...bare, labels } : issue));
+
+    expect(pendingDisplayIdStep(pending, labelled(["ci", "id:BU-other-2zw"]))).toEqual({
+      kind: "kept",
+      existing: "BU-other-2zw",
+    });
+    expect(pendingDisplayIdStep(pending, labelled([`id:${MINTED}`])).kind).toBe("write");
+  });
+
+  test("should read back only well-formed entries, once per issue, from what a surface stored", () => {
+    expect(
+      readPendingDisplayIds([
+        pending,
+        { id: "BU-2zw", displayId: "BU-second-2zw" },
+        { id: "-BU-x", displayId: "BU-x" },
+        { id: "BU-y", displayId: "has space" },
+        { id: 7, displayId: "BU-z" },
+        "BU-w",
+        null,
+      ]),
+    ).toEqual([pending]);
+    expect(readPendingDisplayIds({ id: "BU-2zw" })).toEqual([]);
+    expect(readPendingDisplayIds(undefined)).toEqual([]);
   });
 });
 

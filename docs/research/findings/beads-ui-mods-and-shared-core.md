@@ -688,7 +688,7 @@ The JavaScript tooling has to plug into that test gate.
 - Whether Claude Code hides MCP Apps' app-only tools from its model is unknown [NO SOURCE].
 - The Claude Code docs index lists "Claude Desktop on Linux (beta)", while the MCPB page names only
   macOS and Windows. Linux is out of scope here, and the page was not read.
-- Social sources were not searched. No `bms-web-search` tool was available, and Bing returned little
+- Social sources were not searched. No host web-search tool was available, and Bing returned little
   for Claude-specific queries. Coverage is vendor docs, GitHub, npm and the two catalogues.
 
 ### Emergent findings

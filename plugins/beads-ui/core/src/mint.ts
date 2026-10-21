@@ -1,8 +1,8 @@
-// Display-id minting (D-9), a port of ai-harness scripts/bd_new.py's slugify_title and
-// mint_display_id. The two implementations must agree; test/mint.test.ts pins this one against
-// ids bd-new minted in this repository's own store. bd-new's per-machine budget overrides
-// (AIH_SLUG_BODY_MAX_CHARS*) are environment reads, which core does not do, so the budgets here
-// are bd-new's defaults.
+// Display-id minting (D-9), a port of ai-harness scripts/bd_new.py's slugify_title,
+// mint_display_id and display_id_from_primary. The two implementations must agree;
+// test/mint.test.ts pins this one against ids bd-new minted in this repository's own store.
+// bd-new's per-machine budget overrides (AIH_SLUG_BODY_MAX_CHARS and _CHILD) are environment
+// reads; core does no reads, so a surface reads the two strings and passes slugBudgets' result.
 import { issueIdArg } from "./argv.ts";
 import type { BdArgv, Issue, RandomSource, Result } from "./model.ts";
 
@@ -10,6 +10,11 @@ export const SLUG_SUFFIX_ALPHABET = "abcdefghjkmnpqrstuvwxyz";
 export const SLUG_SUFFIX_LENGTH = 4;
 export const SLUG_BODY_MAX_CHARS = 32;
 export const SLUG_BODY_MAX_CHARS_CHILD = 20;
+/** The environment variables bd-new reads its slug body budgets from. */
+export const SLUG_BUDGET_ENV = {
+  body: "AIH_SLUG_BODY_MAX_CHARS",
+  child: "AIH_SLUG_BODY_MAX_CHARS_CHILD",
+} as const;
 export const SLUG_MINT_ATTEMPTS = 8;
 export const SLUG_FALLBACK_BODY = "task";
 const SLUG_LEAD_MAX_CHARS = 24;
@@ -143,13 +148,72 @@ function trailingParentheticalStart(text: string): number | undefined {
   return undefined;
 }
 
+/** The slug body budgets in characters: `body` for a top-level issue, `child` under a parent. */
+export interface SlugBudgets {
+  body: number;
+  child: number;
+}
+
+export const DEFAULT_SLUG_BUDGETS: SlugBudgets = {
+  body: SLUG_BODY_MAX_CHARS,
+  child: SLUG_BODY_MAX_CHARS_CHILD,
+};
+
+// What Python's int() takes from a string: surrounding whitespace, a sign, and any Unicode decimal
+// digits (Nd) with single underscores between them. Its whitespace, measured over every code
+// point with Python 3.14 (Unicode 16): JavaScript's \s with U+0085 and without U+FEFF.
+const PY_SPACE =
+  "[\\t\\n\\v\\f\\r \\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]";
+const PY_INT = new RegExp(`^${PY_SPACE}*([+-]?\\p{Nd}+(?:_\\p{Nd}+)*)${PY_SPACE}*$`, "u");
+const DECIMAL_DIGIT = /^\p{Nd}$/u;
+
+/**
+ * A decimal digit's value. Unicode draws every Nd digit from a run of tens that counts up from
+ * zero, so the value is the digit's place in its run, modulo ten.
+ */
+function digitValue(digit: string): number {
+  const code = digit.codePointAt(0) ?? 0;
+  let before = 0;
+  while (code - before > 0 && DECIMAL_DIGIT.test(String.fromCodePoint(code - before - 1))) {
+    before++;
+  }
+  return before % 10;
+}
+
+/** bd-new's `_env_budget`: a positive integer override, else the default. */
+export function envBudget(text: string | undefined, fallback: number): number {
+  const match = text === undefined ? null : PY_INT.exec(text);
+  if (match?.[1] === undefined) return fallback;
+  let value = 0;
+  for (const char of match[1].replaceAll("_", "").replace(/^[+-]/, "")) {
+    value = value * 10 + digitValue(char);
+  }
+  return !match[1].startsWith("-") && value > 0 ? value : fallback;
+}
+
+/** The budgets bd-new would mint under, from the two override variables' values as read. */
+export function slugBudgets(env: {
+  body?: string | undefined;
+  child?: string | undefined;
+}): SlugBudgets {
+  return {
+    body: envBudget(env.body, SLUG_BODY_MAX_CHARS),
+    child: envBudget(env.child, SLUG_BODY_MAX_CHARS_CHILD),
+  };
+}
+
 /**
  * The readable body of a slug display id, from the issue's own title. A short, digit-bearing lead
  * before the first colon is dropped for a top-level issue and kept first for a child; a trailing
- * balanced parenthetical is dropped; the words fill 32 characters (20 for a child) greedily.
- * Never empty: a title with nothing sluggable yields "task".
+ * balanced parenthetical is dropped; the words fill the body budget (32 characters, 20 for a
+ * child, unless `budgets` says otherwise) greedily. Never empty: a title with nothing sluggable
+ * yields "task".
  */
-export function slugifyTitle(title: string, options: { child?: boolean } = {}): string {
+export function slugifyTitle(
+  title: string,
+  options: { child?: boolean; budgets?: SlugBudgets } = {},
+): string {
+  const budgets = options.budgets ?? DEFAULT_SLUG_BUDGETS;
   let ascii = toAscii(title);
 
   const parenthetical = trailingParentheticalStart(ascii);
@@ -175,10 +239,10 @@ export function slugifyTitle(title: string, options: { child?: boolean } = {}): 
   }
 
   let words = descriptionTokens(rest);
-  let budget = SLUG_BODY_MAX_CHARS;
+  let budget = budgets.body;
   if (options.child === true) {
     words = [...tokens(lead), ...words];
-    budget = SLUG_BODY_MAX_CHARS_CHILD;
+    budget = budgets.child;
   }
   return fillSlugBody(words, budget) || SLUG_FALLBACK_BODY;
 }
@@ -195,11 +259,15 @@ export interface MintInput {
   /** Display ids already in use; a candidate found here is re-drawn. */
   taken: ReadonlySet<string>;
   random: RandomSource;
+  budgets?: SlugBudgets;
 }
 
 /** A fresh `PREFIX-<slug>-<4 suffix letters>` not present in `taken`. */
 export function mintDisplayId(input: MintInput): Result<string, MintError> {
-  const body = slugifyTitle(input.title, { child: input.child === true });
+  const body = slugifyTitle(input.title, {
+    child: input.child === true,
+    ...(input.budgets === undefined ? {} : { budgets: input.budgets }),
+  });
   for (let attempt = 0; attempt < SLUG_MINT_ATTEMPTS; attempt++) {
     let suffix = "";
     for (let i = 0; i < SLUG_SUFFIX_LENGTH; i++) {
@@ -273,12 +341,31 @@ export interface DisplayIdPlanInput {
   /** True when the issue was created with a parent; bd-new uses the child budget then. */
   child: boolean;
   random: RandomSource;
+  /** bd-new's slug body budgets; its defaults when not given. */
+  budgets?: SlugBudgets;
 }
+
+/**
+ * The gitleaks `aih-fleet-task-id` rule, ported from ai-harness `.gitleaks.toml` (read
+ * 2026-10-21): a legacy numeric fleet task id. bd-new's `_suffix_would_trip_gate` refuses a
+ * hash suffix whose `PREFIX-<suffix>` matches it, because such an id cannot be written outside
+ * `.beads/`, and mints a random suffix instead.
+ */
+export const FLEET_TASK_ID_RULE =
+  /\b(?:SW|ACN|AG|AI-CLI|CORE|DOJO|AIH|MACOS|MOBILE|AIDO|APT|ART|AURION|HEG|JOB|KC|MNS|EVE|PS|TPL|TP|KG)-[0-9]+\b/;
+
+const HASH_SUFFIX = /^[a-z0-9]+$/;
+const CHILD_ORDINAL_SUFFIX = /^[a-z0-9]+(?:\.[0-9]+)+$/;
 
 /**
  * The step after `bd create`: whether to mint, and the `bd update` that writes
  * `metadata.display_id` and the `id:<display_id>` label, the two-step shape bd-new uses.
  * `off` never touches either; an issue that already carries a display id keeps it.
+ *
+ * The suffix follows bd-new's `display_id_from_primary`: a top-level create's plain base-36
+ * hash suffix is copied (`BU-2zw` gives `BU-<slug>-2zw`); a dotted child ordinal
+ * (`BU-mg2.3.11`) has no suffix of its own, so four letters are drawn, as they are for a hash
+ * suffix that would trip the fleet task-id rule.
  */
 export function planDisplayId(input: DisplayIdPlanInput): Result<DisplayIdPlan, MintError> {
   if (input.policy === "off")
@@ -294,35 +381,110 @@ export function planDisplayId(input: DisplayIdPlanInput): Result<DisplayIdPlan, 
     };
   }
   const dash = input.createdId.lastIndexOf("-");
-  if (dash <= 0 || input.createdId.startsWith("-")) {
+  const prefix = input.createdId.slice(0, dash);
+  const suffix = input.createdId.slice(dash + 1);
+  const copied = HASH_SUFFIX.test(suffix);
+  if (
+    dash <= 0 ||
+    input.createdId.startsWith("-") ||
+    !(copied || CHILD_ORDINAL_SUFFIX.test(suffix))
+  ) {
     return {
       ok: false,
-      error: { kind: "invalid-id", message: `cannot read a prefix from ${input.createdId}` },
+      error: {
+        kind: "invalid-id",
+        message: `${input.createdId} is not a hash id bd mints (PREFIX-<hash> or PREFIX-<hash>.<n>)`,
+      },
     };
   }
-  const minted = mintDisplayId({
-    prefix: input.createdId.slice(0, dash),
-    title: input.title,
-    child: input.child,
-    taken: takenDisplayIds(input.issues),
-    random: input.random,
-  });
-  if (!minted.ok) return minted;
-  const displayId = minted.value;
+  const budgets = input.budgets ?? DEFAULT_SLUG_BUDGETS;
+  let displayId: string;
+  if (copied && !FLEET_TASK_ID_RULE.test(`${prefix}-${suffix}`)) {
+    displayId = `${prefix}-${slugifyTitle(input.title, { child: input.child, budgets })}-${suffix}`;
+  } else {
+    const minted = mintDisplayId({
+      prefix,
+      title: input.title,
+      child: input.child,
+      taken: takenDisplayIds(input.issues),
+      random: input.random,
+      budgets,
+    });
+    if (!minted.ok) return minted;
+    displayId = minted.value;
+  }
   return {
     ok: true,
     value: {
       kind: "attach",
       displayId,
-      argv: [
-        "bd",
-        "update",
-        issueIdArg(input.createdId),
-        "--set-metadata",
-        `display_id=${displayId}`,
-        "--add-label",
-        `id:${displayId}`,
-      ],
+      argv: displayIdArgv(input.createdId, displayId),
     },
   };
+}
+
+/** The `bd update` that writes a minted display id: `metadata.display_id` and the `id:` label. */
+export function displayIdArgv(id: string, displayId: string): BdArgv {
+  return [
+    "bd",
+    "update",
+    issueIdArg(id),
+    "--set-metadata",
+    `display_id=${displayId}`,
+    "--add-label",
+    `id:${displayId}`,
+    "--json",
+  ];
+}
+
+/** A display id minted for a created issue whose write has not succeeded yet. */
+export interface PendingDisplayId {
+  id: string;
+  displayId: string;
+}
+
+/**
+ * What to do with a pending display id once the store's issues are read: write the same id again,
+ * or stop because the issue now carries it, carries another one in its metadata or an `id:` label
+ * (a published id never changes, so it is never overwritten), or is no longer in the store. It
+ * never mints a second id. A surface asks it twice: over the list, then over a `bd show` of that
+ * one issue read just before the write, which runs only when that second answer is still `write`.
+ */
+export type PendingDisplayIdStep =
+  | { kind: "write"; argv: BdArgv }
+  | { kind: "written" }
+  | { kind: "kept"; existing: string }
+  | { kind: "gone" };
+
+export function pendingDisplayIdStep(
+  pending: PendingDisplayId,
+  issues: readonly Issue[],
+): PendingDisplayIdStep {
+  const issue = issues.find((candidate) => candidate.id === pending.id);
+  if (issue === undefined) return { kind: "gone" };
+  if (issue.displayId === pending.displayId) return { kind: "written" };
+  if (issue.displayId !== undefined) return { kind: "kept", existing: issue.displayId };
+  const labelled = issue.labels
+    .filter((label) => label.startsWith("id:"))
+    .map((label) => label.slice("id:".length))
+    .find((displayId) => displayId !== pending.displayId);
+  if (labelled !== undefined) return { kind: "kept", existing: labelled };
+  return { kind: "write", argv: displayIdArgv(pending.id, pending.displayId) };
+}
+
+const ARG = /^[^-\s]\S*$/;
+
+/** The pending display ids as a surface stored them; anything else in the value is dropped. */
+export function readPendingDisplayIds(stored: unknown): PendingDisplayId[] {
+  if (!Array.isArray(stored)) return [];
+  const pending: PendingDisplayId[] = [];
+  for (const entry of stored) {
+    if (typeof entry !== "object" || entry === null) continue;
+    const { id, displayId } = entry as Record<string, unknown>;
+    if (typeof id !== "string" || typeof displayId !== "string") continue;
+    if (!ARG.test(id) || !ARG.test(displayId)) continue;
+    if (pending.some((known) => known.id === id)) continue;
+    pending.push({ id, displayId });
+  }
+  return pending;
 }

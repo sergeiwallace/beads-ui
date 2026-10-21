@@ -817,7 +817,7 @@ index, CHANGELOG) and Dolt's server docs; measured the host read-only (bd, Dolt,
 loopback API, `~/.claude/tasks`). 29 fetches, 4 failed or unusable: 1 HTTP 404 (a guessed
 `steveyegge/beads/tree/main/api` path, never cited), 1 HTTP 301 (followed to its target), 2 Bing
 result pages that returned only craft-bead shops (search engine noise, not a source failure). The
-`bms-web-search` tool was not available to this agent. Four pages were truncated at 100,000
+host web-search tool was not available to this agent. Four pages were truncated at 100,000
 characters and are cited only for the parts read. A five-perspective critic pass (conventional,
 contrarian, historical, adjacent, skeptic) ran over the draft by its author; no second model has
 reviewed it.
