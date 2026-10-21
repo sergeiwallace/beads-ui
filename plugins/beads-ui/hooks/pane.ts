@@ -1413,40 +1413,66 @@ export class BeadsPane {
     const left = wide ? Math.floor(width * 0.45) : width;
     const view = detailView(this.detail, { issues: this.board.issues, width: left - 14 });
     const statuses = this.board.statuses.map((status) => ({ value: status.name }));
+    // A control's own label shares its row with the value, and on a narrow pane a long value
+    // squeezes it and cuts it in two (Claude Code 2.1.306, 53 columns). So the label is drawn
+    // beside the control in a Box that never shrinks, and the control carries none.
+    const labelled = (editable: EditableField, label: string, control: RenderElement) =>
+      Box({
+        key: `edit-row:${editable}`,
+        flexDirection: "row",
+        gap: 1,
+        children: [
+          Box({
+            key: `label:${editable}`,
+            flexShrink: 0,
+            children: [Text({ children: `${label}:` })],
+          }),
+          control,
+        ],
+      });
     const fields = view.fields.map((field) => {
       const raw = field.raw ?? field.value;
       const editable = field.editable;
       if (editable === "status" && statuses.length > 0) {
-        return Select({
-          key: "edit:status",
-          label: "Status",
-          options: statuses.some((option) => option.value === raw)
-            ? statuses
-            : [{ value: raw }, ...statuses],
-          value: raw,
-          onSelect: (value) => void this.edit("status", value),
-        });
+        return labelled(
+          editable,
+          field.label,
+          Select({
+            key: "edit:status",
+            options: statuses.some((option) => option.value === raw)
+              ? statuses
+              : [{ value: raw }, ...statuses],
+            value: raw,
+            onSelect: (value) => void this.edit("status", value),
+          }),
+        );
       }
       if (editable === "priority") {
-        return Select({
-          key: "edit:priority",
-          label: "Priority",
-          options: [0, 1, 2, 3, 4].map((p) => ({ value: String(p), label: `P${p}` })),
-          value: raw,
-          onSelect: (value) => void this.edit("priority", value),
-        });
+        return labelled(
+          editable,
+          field.label,
+          Select({
+            key: "edit:priority",
+            options: [0, 1, 2, 3, 4].map((p) => ({ value: String(p), label: `P${p}` })),
+            value: raw,
+            onSelect: (value) => void this.edit("priority", value),
+          }),
+        );
       }
       if (editable !== undefined) {
-        return Input({
-          key: `edit:${editable}`,
-          label: field.label,
-          value: raw,
-          ...(editable === "description"
-            ? { placeholder: "one line: \\n is a line break, \\\\ a backslash" }
-            : {}),
-          submitLabel: "save",
-          onSubmit: (value) => void this.edit(editable, value),
-        });
+        return labelled(
+          editable,
+          field.label,
+          Input({
+            key: `edit:${editable}`,
+            value: raw,
+            ...(editable === "description"
+              ? { placeholder: "one line: \\n is a line break, \\\\ a backslash" }
+              : {}),
+            submitLabel: "save",
+            onSubmit: (value) => void this.edit(editable, value),
+          }),
+        );
       }
       return Box({
         key: `field:${field.key}`,

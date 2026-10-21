@@ -586,7 +586,7 @@ describe("the Detail tab", () => {
     const shown = String(control?.props.value);
     const before = w.keys().length;
 
-    expect(control?.props.label).toBe("Description");
+    expect((await ui.find({ key: "label:description" }))?.text).toBe("Description:");
     expect(shown).toBe(
       "Board, backlog and detail.\\n\\n- keyboard Move to\\n- C:\\\\new is not a break\\n",
     );
