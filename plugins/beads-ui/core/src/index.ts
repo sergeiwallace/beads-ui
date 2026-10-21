@@ -111,3 +111,23 @@ export {
   TOKENS,
   terminalColor,
 } from "./tokens.ts";
+export type {
+  BoardEvent,
+  BoardState,
+  BoardView,
+  BoardViewOptions,
+  CardView,
+  ColumnHeaderView,
+  LaneView,
+  LoadError,
+  MoveError,
+  PendingMove,
+} from "./views/board.ts";
+export {
+  boardView,
+  INITIAL_BOARD_STATE,
+  planMove,
+  reduceBoard,
+  STALE_WRITE_EXIT,
+} from "./views/board.ts";
+export { asOf, priorityBadge, truncate } from "./views/text.ts";
