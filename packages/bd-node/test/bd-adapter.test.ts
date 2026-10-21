@@ -175,3 +175,85 @@ describe("bd not on PATH", () => {
     expect(result.message).toBe(`the store directory ${missing} does not exist`);
   });
 });
+
+describe("show, statuses and ready against this repository's own store", () => {
+  const client = createBdClient({ cwd: repoRoot, timeoutMs: REAL_BD_TIMEOUT_MS });
+
+  it(
+    "should return the one Issue bd show names when the id exists",
+    async () => {
+      const [first] = okValue(await client.list());
+      if (first === undefined) throw new Error("this repository's store has no issues");
+      const issue = okValue(await client.show(first.id));
+      expect(issue.id).toBe(first.id);
+      expectIssueModel(issue);
+    },
+    REAL_BD_TIMEOUT_MS * 2,
+  );
+
+  it(
+    "should return notFound when bd show is given an id the store does not hold",
+    async () => {
+      const result = await client.show("BU-zzzzzz");
+      expect(result.kind).toBe("notFound");
+      if (result.kind !== "notFound") return;
+      expect(result.id).toBe("BU-zzzzzz");
+    },
+    REAL_BD_TIMEOUT_MS,
+  );
+
+  it(
+    "should return the built-in statuses with their categories when bd statuses --json runs",
+    async () => {
+      const statuses = okValue(await client.statuses());
+      expect(statuses).toContainEqual({ name: "open", category: "active", builtin: true });
+      expect(statuses).toContainEqual({ name: "closed", category: "done", builtin: true });
+    },
+    REAL_BD_TIMEOUT_MS,
+  );
+
+  it(
+    "should return Issues in the list shape when bd ready --json runs",
+    async () => {
+      const issues = okValue(await client.ready());
+      for (const issue of issues) {
+        expectIssueModel(issue);
+        expect(issue.status).not.toBe("closed");
+      }
+    },
+    REAL_BD_TIMEOUT_MS,
+  );
+});
+
+describe("show, statuses and ready through a stub bd", () => {
+  it("should pass the id to bd show and return its one record when bd answers", async () => {
+    const { stub, client } = await stubbed({ stdout: ISSUE_JSON });
+    expect(okValue(await client.show("BU-abc")).id).toBe("BU-abc");
+    expect(await stub.calls()).toEqual(["show BU-abc --json"]);
+  });
+
+  it("should return notFound rather than failed when bd show exits 1 naming the id", async () => {
+    const { client } = await stubbed({ exitCode: 1, stderr: "Issue BU-gone not found\n" });
+    expect(await client.show("BU-gone")).toEqual({
+      kind: "notFound",
+      id: "BU-gone",
+      stderr: "Issue BU-gone not found\n",
+    });
+  });
+
+  it("should return failed with the parse error when bd statuses prints an unknown category", async () => {
+    const { client } = await stubbed({
+      stdout: JSON.stringify({ built_in_statuses: [{ name: "open", category: "nope" }] }),
+    });
+    const result = await client.statuses();
+    expect(result.kind).toBe("failed");
+    if (result.kind !== "failed") return;
+    expect(result.parseError?.source).toBe("bd statuses");
+  });
+
+  it("should run bd ready --json and parse its records when bd answers", async () => {
+    const { stub, client } = await stubbed({ stdout: ISSUE_JSON });
+    expect(okValue(await client.ready()).map((issue) => issue.id)).toEqual(["BU-abc"]);
+    expect(await stub.calls()).toEqual(["ready --json --brief --limit 0"]);
+  });
+});

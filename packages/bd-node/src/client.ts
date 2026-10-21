@@ -1,5 +1,18 @@
-import { type BdArgv, type Issue, listArgv, type ParseResult, parseBdList } from "@beads-ui/core";
-import type { BdResult, Failed } from "./result.ts";
+import {
+  type BdArgv,
+  type Issue,
+  listArgv,
+  type ParseResult,
+  parseBdList,
+  parseBdReady,
+  parseBdShow,
+  parseBdStatuses,
+  readyArgv,
+  type Status,
+  showArgv,
+  statusesArgv,
+} from "@beads-ui/core";
+import type { BdResult, Failed, NotFound } from "./result.ts";
 import { commandName, DEFAULT_TIMEOUT_MS, type RunOutcome, runBd } from "./run.ts";
 
 export interface BdClientOptions {
@@ -16,6 +29,9 @@ export interface CallOptions {
 
 export interface BdClient {
   list(options?: CallOptions): Promise<BdResult<Issue[]>>;
+  show(id: string, options?: CallOptions): Promise<BdResult<Issue>>;
+  statuses(options?: CallOptions): Promise<BdResult<Status[]>>;
+  ready(options?: CallOptions): Promise<BdResult<Issue[]>>;
 }
 
 type Exited = Extract<RunOutcome, { kind: "exited" }>;
@@ -32,6 +48,17 @@ function exitFailure(argv: BdArgv, out: Exited): Failed {
     stderr: out.stderr,
     message: `${commandName(argv)} exited ${out.exitCode}${detail === "" ? "" : `: ${detail}`}`,
   };
+}
+
+// bd 1.3.1 on a missing id: exit 1, `Issue <id> not found` on stderr, and with --json
+// `{"error": "no issues found matching the provided IDs"}` on stdout.
+const NOT_FOUND = /\bnot found\b|no issues? found/i;
+
+function notFound(id: string, out: Exited): NotFound | undefined {
+  if (out.exitCode === 0 || !(NOT_FOUND.test(out.stderr) || NOT_FOUND.test(out.stdout))) {
+    return undefined;
+  }
+  return { kind: "notFound", id, stderr: out.stderr };
 }
 
 function parsed<T>(
@@ -82,6 +109,27 @@ export function createBdClient(options: BdClientOptions): BdClient {
     list(callOptions) {
       const argv = listArgv();
       return call(argv, callOptions, (out) => parsed(argv, out, parseBdList));
+    },
+    show(id, callOptions) {
+      const argv = showArgv(id);
+      return call(argv, callOptions, (out) => {
+        const missing = notFound(id, out);
+        if (missing !== undefined) return missing;
+        const result = parsed(argv, out, parseBdShow);
+        if (result.kind !== "ok") return result;
+        const [issue] = result.value;
+        return issue === undefined
+          ? { kind: "notFound", id, stderr: out.stderr }
+          : { kind: "ok", value: issue };
+      });
+    },
+    statuses(callOptions) {
+      const argv = statusesArgv();
+      return call(argv, callOptions, (out) => parsed(argv, out, parseBdStatuses));
+    },
+    ready(callOptions) {
+      const argv = readyArgv();
+      return call(argv, callOptions, (out) => parsed(argv, out, parseBdReady));
     },
   };
 }
