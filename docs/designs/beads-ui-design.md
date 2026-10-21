@@ -375,23 +375,23 @@ Each phase carries its scope, deliverables, tasks with EARS acceptance criteria 
     - File-name repair (Authority test Gate C, Opus build coordinator, 2026-10-21, from the T-0.3 build). Before: `core/test/purity.test.ts`. `claude plugin test` runs every `*.test.ts` under the plugin in the mod environment, which refuses `vitest`, Node built-ins and JSON imports. Ratified intent: D-2's rule that the core's tests pass under both runners. So a pure core suite is a `*.test.ts` written against `claude-code/testing`, which Vitest also runs through an alias in `plugins/beads-ui/vitest.config.ts`, with its fixtures as `fixtures/*.json.ts` modules; a suite that needs Node, such as the purity suite that spawns the gate, is a Vitest-only `*.spec.ts`. Not changed: the suites, their place under `core/test/`, and `*.test.ts` for the mod's own tests.
 - **Tasks + acceptance criteria:**
   - **T-0.1 Core module and purity gate**
-    - [ ] `When plugins/beads-ui/core is built, the system shall compile under a tsconfig with "lib": ["es2023"] and "types": [] and shall emit no error.`
-    - [ ] `If any source file in plugins/beads-ui/core/src references setTimeout, setInterval, queueMicrotask, requestAnimationFrame, window, document, process or a Node built-in, then the lint gate shall fail naming the file and line.`
+    - [x] `When plugins/beads-ui/core is built, the system shall compile under a tsconfig with "lib": ["es2023"] and "types": [] and shall emit no error.`
+    - [x] `If any source file in plugins/beads-ui/core/src references setTimeout, setInterval, queueMicrotask, requestAnimationFrame, window, document, process or a Node built-in, then the lint gate shall fail naming the file and line.`
       - Wording repair (Authority test Gate C, Opus build coordinator, 2026-10-21). Before: "If any file in plugins/beads-ui/core references". Ratified intent: this phase's own Deliverables put the Vitest suites `plugins/beads-ui/core/test/purity.test.ts` and `parsers.test.ts` inside `core/`, and those suites must import Vitest and Node built-ins to run the gate, so the rule binds the module every surface imports (D-2: "the core is the one module every surface imports"), its `src/`. Not changed: the banned identifiers, the file-and-line failure, and the gate's place in `npm run lint`.
-    - [ ] `When plugins/beads-ui/package.json is read, the system shall find no runtime dependencies.`
-    - [ ] `When claude plugin test runs an import probe, a hooks module importing a core file by relative path and a Client module importing a sibling file shall both load; if either is refused, then the probe shall fail naming the import.`
+    - [x] `When plugins/beads-ui/package.json is read, the system shall find no runtime dependencies.`
+    - [x] `When claude plugin test runs an import probe, a hooks module importing a core file by relative path and a Client module importing a sibling file shall both load; if either is refused, then the probe shall fail naming the import.`
   - **T-0.2 bd-node adapter**
-    - [ ] `When the adapter runs bd list --json against a store, the system shall return Issue objects whose fields match the core's Issue model for every record.`
-    - [ ] `If bd exits 13 on a guarded update, then the adapter shall return a typed StaleWrite result and shall not retry.`
-    - [ ] `If bd is not on PATH, then the adapter shall fail with a message naming the binary and the install page, not a stack trace.`
+    - [x] `When the adapter runs bd list --json against a store, the system shall return Issue objects whose fields match the core's Issue model for every record.`
+    - [x] `If bd exits 13 on a guarded update, then the adapter shall return a typed StaleWrite result and shall not retry.`
+    - [x] `If bd is not on PATH, then the adapter shall fail with a message naming the binary and the install page, not a stack trace.`
   - **T-0.3 Mod plugin and marketplace**
-    - [ ] `When claude plugin validate --json runs on plugins/beads-ui, the system shall list only the hooks and calls in the committed allow-list, every $ call shall sit in the hooks module's own files, and the pre-commit gate shall fail on any difference.`
-    - [ ] `When claude plugin validate . runs on the repository root, the marketplace shall validate and shall list ./plugins/beads-ui.`
-    - [ ] `When claude plugin test runs, the hello pane's render test shall pass on the terminal and desktop surfaces.`
-    - [ ] `If any file in plugins/beads-ui exceeds 1 MB, then the pre-commit gate shall fail naming it.`
+    - [x] `When claude plugin validate --json runs on plugins/beads-ui, the system shall list only the hooks and calls in the committed allow-list, every $ call shall sit in the hooks module's own files, and the pre-commit gate shall fail on any difference.`
+    - [x] `When claude plugin validate . runs on the repository root, the marketplace shall validate and shall list ./plugins/beads-ui.`
+    - [x] `When claude plugin test runs, the hello pane's render test shall pass on the terminal and desktop surfaces.`
+    - [x] `If any file in plugins/beads-ui exceeds 1 MB, then the pre-commit gate shall fail naming it.`
   - **T-0.4 Repository hygiene for a public repo**
-    - [ ] `When a commit is attempted, the gitleaks pre-commit hook shall scan it, and if a secret pattern matches then the commit shall be refused.`
-    - [ ] `When README.md describes the layout, it shall name the shared layers as data access, domain logic, view models, commands and design tokens, and shall not name layout.`
+    - [x] `When a commit is attempted, the gitleaks pre-commit hook shall scan it, and if a secret pattern matches then the commit shall be refused.`
+    - [x] `When README.md describes the layout, it shall name the shared layers as data access, domain logic, view models, commands and design tokens, and shall not name layout.`
 - **Exit gate:** `npm run lint && npm test` green; `claude plugin validate .` and `claude plugin validate --json plugins/beads-ui` match the allow-list; `claude plugin test plugins/beads-ui` green including the import probe; a fresh-context diff review against the ACs above.
 
 ### Phase 1: The MVP, a read-mostly board in the Claude Code mod
@@ -533,8 +533,8 @@ iOS and Android (shared or separate), macOS, Linux and Windows native apps follo
 | # | Phase | Section / Decision | Verified | Notes |
 |---|-------|--------------------|---------|-------|
 | 1 | N/A | **Design Overview filled**: confirm the `## Design Overview` section above is filled in with concrete implementation knowledge, not left as a stub | - [ ] | |
-| 2 | 0 | D-2 package boundaries and the five core rules | - [ ] | |
-| 3 | 0 | D-15 mod packaging and validate allow-list | - [ ] | |
+| 2 | 0 | D-2 package boundaries and the five core rules | - [x] | Verified 2026-10-21 on wt/aih-ec2-3/bu-build at dad9a35 by two fresh-context verifiers and a Codex review: core compiles under es2023 with no ambient types; the purity gate names file and line (code generation and computed imports included); no runtime dependency; pure core suites run under Vitest and `claude plugin test`; `$` calls only in the hooks module. Core sits in the plugin as decided; the T-3.6 review stays open |
+| 3 | 0 | D-15 mod packaging and validate allow-list | - [x] | Verified 2026-10-21 at dad9a35: plugin at `plugins/beads-ui` with no runtime dependencies, root marketplace listing it, `claude plugin validate .` passes, the `validate --strict --json` allow-list gate, the 1 MB gate over tracked and staged files, `claude plugin test` in `npm test` and pre-commit. Codex findings on the gates fixed in PR #20 |
 | 4 | 1 | D-3 MVP scope; D-4 access route; D-9 display-id minting; D-13 delete ladder | - [ ] | |
 | 5 | 2 | D-8 drag in a Client; D-5 sprint convention; D-16 metrics source | - [ ] | |
 | 6 | 3 | D-10 web stack; D-6 rank; D-11 queue relationship; D-17 session identity | - [ ] | |
@@ -614,6 +614,7 @@ The launcher granted integration ownership (land on `main` by PR, self-merge on 
 | `entry->research` | 0 | `research-run` | `explicit` | Sergei's founding ask A001 names the stage: "the fable agent will /delegate /orchestrate /research-doc and then do the /doc --kind design stage"; the launcher's brief repeats it | `session` | `862bb31` |
 | `research->doc` | 1 | `converged` | `rubric` | none open: G1 to G3, G5 and G6 clear; G4 classified (OQ-1 design choice deferred by Sergei; OQ-2, OQ-3, OQ-5, OQ-6 need a live measurement; OQ-4 and OQ-9 handed to the design-stage spikes; OQ-7 and OQ-8 depend on the vendor) | `session` | `842db74` (landed at `f68067e`) |
 | `entry->implement` | 0 | `implement-run` | `explicit` | Sergei approved the design and ruled D-7 (a), D-11 (a) and D-12 (d) in entry A005, closing with "now /delegate opus 5.5 /orchestrate /auto-flow the rest as appropriate now"; the launcher's brief (`docs/prompts/orchestrator/bu-mg2-build-run.md`) names the stages implement and impl-audit for Phases 0 and 1 only. Run `beads-ui-build-2026-10-21-aih-ec2-3`, Opus coordinator, worktree `.worktrees/aih-ec2-3-agents/bu-build` | `session` | `12a870f` |
+| `impl-audit` (Phase 0) | 1 | `converged` | `findings-closed` | Codex review of 12a870f..cad816b (5 major, 2 minor) and of packages/bd-node 155981f..8d3e524 (4 major); every finding fixed in PR #20 or justified (the leaf delete preview stays text because the confirm pane shows it verbatim); a fresh-context verifier passed every Phase 0 AC and every fix at dad9a35 | `session` | `dad9a35` |
 
 <!-- /doc:region name="overview" -->
 
