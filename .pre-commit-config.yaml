@@ -59,7 +59,13 @@ repos:
         args: [--fix]
         exclude: ^(\.claude/|\.githooks/|node_modules/|docs/research/)
 
-
+  # ── Secrets: gitleaks (public repo; T-0.4) ──────────────────────────────
+  # Scans the staged diff and refuses the commit on any secret-pattern match.
+  # The golang hook builds gitleaks itself, so a contributor needs no local install.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
 
   # ── Shell: shellcheck (warning+ only — suppress info/style noise) ───────
   - repo: https://github.com/shellcheck-py/shellcheck-py
@@ -90,6 +96,22 @@ repos:
       - id: validate-claude-settings
         name: validate .claude/settings.json hook script refs exist
         entry: validate-claude-settings
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      # The repo's own gates (beads-ui design, Phase 0): Biome, the core purity
+      # gate and the core type check, then Vitest. Both need `npm ci` first and
+      # fail loudly without it.
+      - id: npm-lint
+        name: npm run lint (Biome, core purity gate, core type check)
+        entry: npm run lint
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: npm-test
+        name: npm test (Vitest)
+        entry: npm test
         language: system
         pass_filenames: false
         always_run: true
