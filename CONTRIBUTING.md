@@ -60,7 +60,8 @@ Inside `plugins/beads-ui`, file names choose the runners. A pure core suite is
 `core/test/<name>.test.ts`: it imports `describe`, `test` and `expect` from `claude-code/testing`
 and runs under both `claude plugin test` and Vitest, which maps that import to `vitest`. It uses
 only matchers both kits have, no `node:` import, and reads fixtures from `core/test/fixtures/<name>.json.ts`
-modules, each holding the exact text of its `.json` twin (`fixture-modules.spec.ts` checks it). A
+modules (`<name>.txt.ts` for bd's plain-text output), each holding the exact text of its `.json` or
+`.txt` twin (`fixture-modules.spec.ts` checks it). A
 suite that needs Node.js is `*.spec.ts` and runs under Vitest alone. The mod's own tests,
 `hooks/*.test.ts`, drive the engine through `$` and run under `claude plugin test` alone.
 
