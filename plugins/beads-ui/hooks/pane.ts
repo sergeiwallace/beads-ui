@@ -1100,7 +1100,7 @@ export class BeadsPane {
     });
   }
 
-  private drawCard(ui: PaneUi, card: CardView, order: string[]): RenderElement {
+  private drawCard(ui: PaneUi, card: CardView): RenderElement {
     const status = this.board.issues.find((issue) => issue.id === card.id)?.status ?? "";
     const { Box, Text, Select, Button } = ui;
     return Box({
@@ -1117,7 +1117,7 @@ export class BeadsPane {
         Select({
           key: `move:${card.id}`,
           label: "Move to",
-          options: [status, ...order.filter((name) => name !== status)].map((value) => ({ value })),
+          options: [status, ...card.moveTargets].map((value) => ({ value })),
           value: status,
           onSelect: (value) => void this.move(card.id, value),
         }),
@@ -1145,7 +1145,6 @@ export class BeadsPane {
         children: [Text({ dimColor: true, children: "reading the store…" })],
       });
     }
-    const order = view.columns.map((column) => column.status);
     const lanes = view.lanes.map((lane) =>
       Box({
         key: `lane:${lane.key === "" ? "-" : lane.key}`,
@@ -1173,7 +1172,7 @@ export class BeadsPane {
                         Text({ bold: true, color: colorOf(column.token), children: column.label }),
                       ],
                     }),
-                    ...cards.map((card) => this.drawCard(ui, card, order)),
+                    ...cards.map((card) => this.drawCard(ui, card)),
                     page === undefined ? undefined : this.drawPager(ui, page),
                   ]);
                 }),
@@ -1191,11 +1190,15 @@ export class BeadsPane {
             flexDirection: "column",
             children: present<RenderNode>([
               Text({ bold: true, children: "Statuses bd statuses did not list" }),
-              ...view.unplaced.map((card) => this.drawCard(ui, card, order)),
+              ...view.unplaced.map((card) => this.drawCard(ui, card)),
               this.drawPager(ui, view.unplacedPage),
             ]),
           });
-    const { lanePage } = view;
+    const { lanePage, columnWindow } = view;
+    const columnsText =
+      columnWindow === undefined
+        ? ""
+        : `, columns ${columnWindow.from}-${columnWindow.to} of ${columnWindow.total}`;
     const lanePager =
       lanePage.pages === 1
         ? undefined
@@ -1212,7 +1215,7 @@ export class BeadsPane {
               }),
               Text({
                 dimColor: true,
-                children: `lanes ${lanePage.from}-${lanePage.to} of ${lanePage.total}`,
+                children: `lanes ${lanePage.from}-${lanePage.to} of ${lanePage.total}${columnsText}`,
               }),
               Button({
                 key: "lanes-next",

@@ -15,6 +15,7 @@ import historyMg23 from "../core/test/fixtures/bd-history-BU-mg2.3.json.ts";
 import list from "../core/test/fixtures/bd-list-all-brief.json.ts";
 import show from "../core/test/fixtures/bd-show.json.ts";
 import minted from "../core/test/fixtures/bd-show-minted.json.ts";
+import statusesFixture from "../core/test/fixtures/bd-statuses.json.ts";
 import { PANE_ID, PLUGIN_NAME } from "./register.ts";
 import {
   BEADS,
@@ -230,6 +231,7 @@ describe("the Board tab", () => {
       largest = Math.max(largest, JSON.stringify(await ui.drawn()).length);
       for (const key of await keysOf(ui, "move:", "Select")) moves.add(key);
     };
+    const firstPage = (await ui.find({ key: "lane-pager" }))?.text;
     for (let lanePage = 0; lanePage < 50; lanePage++) {
       await look();
       for (const pager of await keysOf(ui, "pager:")) {
@@ -246,7 +248,8 @@ describe("the Board tab", () => {
       }
       if ((await ui.find({ key: "lanes-next" })) === undefined) break;
       await ui.press({ key: "lanes-next" });
-      if (/lanes 1-/.test((await ui.find({ key: "lane-pager" }))?.text ?? "")) break;
+      // Back round to the first lane page: every page's range differs, a column window's too.
+      if ((await ui.find({ key: "lane-pager" }))?.text === firstPage) break;
     }
     return { moves: [...moves].sort(), largest };
   }
@@ -277,6 +280,45 @@ describe("the Board tab", () => {
       await ui.press({ key: "swimlane" });
 
       expect((await ui.find({ key: "lane-pager" }))?.text).toMatch(/^back\s*lanes 1-\d+ of 201/);
+
+      const { moves, largest } = await walkBoard(ui);
+
+      expect(moves).toEqual(everyMove);
+      expect(largest).toBeLessThan(100_000);
+    },
+  );
+
+  test(
+    "should reach every card's Move to within the drawing limit when the store has 30 custom statuses of 40 characters",
+    { timeoutMs: 120_000 },
+    async ($, on) => {
+      // bd statuses for this store with 30 custom statuses of 40 characters beside its own, and
+      // the 600 cards spread over all 30: every card's Move to carries 39 statuses.
+      const custom = Array.from({ length: 30 }, (_, i) => ({
+        category: ["active", "wip", "done", "frozen"][i % 4],
+        name: `custom-status-${String(i).padStart(2, "0")}-`.padEnd(40, "x"),
+      }));
+      const store = JSON.parse(statusesFixture) as { custom_statuses: unknown[] };
+      const withCustom = JSON.stringify({
+        ...store,
+        custom_statuses: [...store.custom_statuses, ...custom],
+      });
+      const cards = largeStore(1).map((record, i) => ({
+        ...record,
+        status: custom[i % 30]?.name,
+      }));
+      const { ui } = await openPane($, on, {
+        script: (key) =>
+          key === "bd statuses"
+            ? ok(withCustom)
+            : key === "bd list --all --brief --limit 0"
+              ? ok(JSON.stringify(cards))
+              : undefined,
+      });
+
+      expect((await ui.find({ key: "lane-pager" }))?.text).toMatch(/lanes 1-1 of 1, columns 1-/);
+      const options = (await ui.findAll({ type: "Select" }))[0]?.props.options as unknown[];
+      expect(options).toHaveLength(9 + 30);
 
       const { moves, largest } = await walkBoard(ui);
 
