@@ -2,7 +2,7 @@ import type { Elements, RenderElement, RenderNode, Timer } from "claude-code";
 
 import {
   asOf,
-  BOARD_CARD_LIMIT,
+  BOARD_PAGE_LIMIT,
   type BoardEvent,
   type BoardState,
   type BoardView,
@@ -31,6 +31,7 @@ import {
   nextSort,
   nextSwimlaneMode,
   openDetail,
+  type PageView,
   type PendingDisplayId,
   parseBdCreatedId,
   parseBdHistoryEvents,
@@ -58,6 +59,7 @@ import {
   slugBudgets,
   sortLabel,
   statusesArgv,
+  stepPage,
   storeName,
   submitFilter,
   TERMINAL_THEME,
@@ -165,6 +167,12 @@ export class BeadsPane {
   pendingIds: PendingDisplayId[] = [];
   /** The last failed write of each pending display id, by issue id. */
   private pendingErrors: Record<string, string> = {};
+  /** The page each board cell shows, by core's cellKey. */
+  cellPages: Record<string, number> = {};
+  lanePage = 0;
+  unplacedPage = 0;
+  /** The body width the pane last drew at, for the page steps that run between draws. */
+  private width = WANTED_COLUMNS;
 
   private env: { xdgConfigHome?: string; home?: string } = {};
   /** True while the pane has stepped aside for the delete confirmation. */
@@ -567,8 +575,70 @@ export class BeadsPane {
 
   submitFilter(text: string): void {
     this.filter = submitFilter(this.filter, text);
+    this.resetPages();
     this.savePrefs();
     this.host?.invalidate();
+  }
+
+  /** A new filter, swimlane or sort reorders every list, so each starts again at its first page. */
+  private resetPages(): void {
+    this.cellPages = {};
+    this.lanePage = 0;
+    this.unplacedPage = 0;
+  }
+
+  /** Steps one board cell's page (or the unplaced cards', key `unplaced`), wrapping at the ends. */
+  stepCell(key: string, delta: number): void {
+    const view = this.boardViewAt(this.width);
+    const page =
+      key === view.unplacedPage.key
+        ? view.unplacedPage
+        : view.lanes.flatMap((lane) => lane.pages).find((candidate) => candidate.key === key);
+    if (page === undefined) return;
+    const next = stepPage(page.page, page.pages, delta);
+    if (key === view.unplacedPage.key) this.unplacedPage = next;
+    else this.cellPages = { ...this.cellPages, [key]: next };
+    this.host?.invalidate();
+  }
+
+  /** Steps the lane page, wrapping at the ends. */
+  stepLanes(delta: number): void {
+    const { lanePage } = this.boardViewAt(this.width);
+    this.lanePage = stepPage(lanePage.page, lanePage.pages, delta);
+    this.host?.invalidate();
+  }
+
+  /**
+   * `p` and `b`: the next or previous page of the focused card's cell. The focused card leaves the
+   * drawing, so the focus ring moves onto the new page's first card instead of the prompt.
+   */
+  async stepFocusedPage(delta: number): Promise<void> {
+    const view = this.boardViewAt(this.width);
+    const id = this.focusedId;
+    const cells = [
+      ...view.lanes.flatMap((lane) =>
+        lane.cells.map((cards, i) => ({ cards, page: lane.pages[i] })),
+      ),
+      { cards: view.unplaced, page: view.unplacedPage },
+    ];
+    const cell = cells.find(({ cards }) => cards.some((card) => card.id === id));
+    if (cell?.page === undefined) {
+      this.note("focus a card first: Tab moves between cards", "warning");
+      this.host?.invalidate();
+      return;
+    }
+    this.stepCell(cell.page.key, delta);
+    const after = this.boardViewAt(this.width);
+    const drawn =
+      cell.page.key === after.unplacedPage.key
+        ? after.unplaced
+        : after.lanes.flatMap(
+            (lane) => lane.cells[lane.pages.findIndex((p) => p.key === cell.page?.key)] ?? [],
+          );
+    const first = drawn[0];
+    if (first === undefined) return;
+    this.focusedId = first.id;
+    await this.host?.focus(PANE_ID, `move:${first.id}`).catch(() => undefined);
   }
 
   /**
@@ -585,12 +655,14 @@ export class BeadsPane {
 
   cycleSwimlane(): void {
     this.swimlane = nextSwimlaneMode(this.swimlane);
+    this.resetPages();
     this.savePrefs();
     this.host?.invalidate();
   }
 
   cycleSort(): void {
     this.sort = nextSort(this.sort);
+    this.resetPages();
     this.savePrefs();
     this.host?.invalidate();
   }
@@ -759,31 +831,24 @@ export class BeadsPane {
     if (this.host === undefined) {
       return Box({ children: [Text({ children: "beads-ui starts with the session." })] });
     }
-    const groups = STATUS_CATEGORIES.filter((category) =>
-      this.board.statuses.some((status) => status.category === category),
-    );
-    const gaps = Math.max(0, groups.length - 1);
-    const groupWidth = Math.max(12, Math.floor((width - gaps) / Math.max(1, groups.length)));
-    const view = boardView(this.board, {
-      columnWidth: groupWidth - 1,
-      swimlane: this.swimlane,
-      softWipLimit: this.config.config.softWipLimit,
-      filter: this.filter.filter,
-      sort: this.sort,
-      cardLimit: BOARD_CARD_LIMIT,
-      ...(this.readyIds === undefined ? {} : { readyIds: this.readyIds }),
-    });
+    this.width = width;
+    const { groups, groupWidth } = this.layout(width);
+    const view = this.boardViewAt(width);
     const body =
       this.tab === "board"
         ? this.drawBoard(ui, view, groups, groupWidth)
         : this.tab === "backlog"
           ? this.drawBacklog(ui, width)
           : this.drawDetail(ui, width);
+    const paged =
+      this.tab === "board" &&
+      (view.unplacedPage.pages > 1 ||
+        view.lanes.some((lane) => lane.pages.some((page) => page.pages > 1)));
     return Box({
       flexDirection: "column",
       children: present<RenderNode>([
         this.drawHeader(ui),
-        this.drawToolbar(ui),
+        this.drawToolbar(ui, paged),
         ...this.drawLines(ui, width, view),
         this.help ? this.drawHelp(ui, helpRegion) : undefined,
         this.tab === "detail" ? undefined : this.drawInputs(ui),
@@ -793,6 +858,32 @@ export class BeadsPane {
           children: [Text({ dimColor: true, children: footerHints("card").join(" · ") })],
         }),
       ]),
+    });
+  }
+
+  /** The board's column groups and the width each gets. */
+  private layout(width: number): { groups: string[]; groupWidth: number } {
+    const groups = STATUS_CATEGORIES.filter((category) =>
+      this.board.statuses.some((status) => status.category === category),
+    );
+    const gaps = Math.max(0, groups.length - 1);
+    const groupWidth = Math.max(12, Math.floor((width - gaps) / Math.max(1, groups.length)));
+    return { groups, groupWidth };
+  }
+
+  /** The board as core pages it, at the pages the person stepped to. */
+  private boardViewAt(width: number): BoardView {
+    return boardView(this.board, {
+      columnWidth: this.layout(width).groupWidth - 1,
+      swimlane: this.swimlane,
+      softWipLimit: this.config.config.softWipLimit,
+      filter: this.filter.filter,
+      sort: this.sort,
+      pageLimit: BOARD_PAGE_LIMIT,
+      pages: this.cellPages,
+      lanePage: this.lanePage,
+      unplacedPage: this.unplacedPage,
+      ...(this.readyIds === undefined ? {} : { readyIds: this.readyIds }),
     });
   }
 
@@ -832,7 +923,7 @@ export class BeadsPane {
     });
   }
 
-  private drawToolbar(ui: PaneUi): RenderElement {
+  private drawToolbar(ui: PaneUi, paged: boolean): RenderElement {
     const { Box, Button } = ui;
     const button = (key: string, label: string, hotkey: string, onPress: () => void) =>
       Button({ key, label, hotkey, plain: true, onPress });
@@ -851,6 +942,12 @@ export class BeadsPane {
         this.undo === undefined
           ? undefined
           : button("undo", "Undo close", "u", () => void this.undoClose()),
+        paged
+          ? button("page-next", "Next page", "p", () => void this.stepFocusedPage(1))
+          : undefined,
+        paged
+          ? button("page-back", "Page back", "b", () => void this.stepFocusedPage(-1))
+          : undefined,
         button("help", "Help", "h", () => this.toggleHelp()),
       ]),
     });
@@ -989,7 +1086,7 @@ export class BeadsPane {
     groups: readonly string[],
     groupWidth: number,
   ): RenderElement {
-    const { Box, Text } = ui;
+    const { Box, Text, Button } = ui;
     if (view.loading) {
       return Box({
         key: "board",
@@ -1016,7 +1113,7 @@ export class BeadsPane {
                 children: view.columns.flatMap((column, i) => {
                   if (column.category !== category) return [];
                   const cards = lane.cells[i] ?? [];
-                  const hidden = lane.hidden[i] ?? 0;
+                  const page = lane.pages[i];
                   return present<RenderNode>([
                     Box({
                       key: `column:${lane.key}:${column.status}`,
@@ -1025,9 +1122,7 @@ export class BeadsPane {
                       ],
                     }),
                     ...cards.map((card) => this.drawCard(ui, card, order)),
-                    hidden === 0
-                      ? undefined
-                      : Text({ dimColor: true, children: `+${hidden} more; narrow the filter` }),
+                    page === undefined ? undefined : this.drawPager(ui, page),
                   ]);
                 }),
               }),
@@ -1042,12 +1137,76 @@ export class BeadsPane {
         : Box({
             key: "unplaced",
             flexDirection: "column",
-            children: [
+            children: present<RenderNode>([
               Text({ bold: true, children: "Statuses bd statuses did not list" }),
               ...view.unplaced.map((card) => this.drawCard(ui, card, order)),
+              this.drawPager(ui, view.unplacedPage),
+            ]),
+          });
+    const { lanePage } = view;
+    const lanePager =
+      lanePage.pages === 1
+        ? undefined
+        : Box({
+            key: "lane-pager",
+            flexDirection: "row",
+            columnGap: 1,
+            children: [
+              Button({
+                key: "lanes-back",
+                label: "back",
+                plain: true,
+                onPress: () => this.stepLanes(-1),
+              }),
+              Text({
+                dimColor: true,
+                children: `lanes ${lanePage.from}-${lanePage.to} of ${lanePage.total}`,
+              }),
+              Button({
+                key: "lanes-next",
+                label: "more lanes",
+                hotkey: "l",
+                plain: true,
+                onPress: () => this.stepLanes(1),
+              }),
             ],
           });
-    return Box({ key: "board", flexDirection: "column", children: present([...lanes, unplaced]) });
+    return Box({
+      key: "board",
+      flexDirection: "column",
+      children: present([lanePager, ...lanes, unplaced]),
+    });
+  }
+
+  /**
+   * A paged cell's controls: back, the range drawn, and more. Both wrap round, so both stay drawn
+   * and a press keeps the focus ring on the control it pressed.
+   */
+  private drawPager(ui: PaneUi, page: PageView): RenderElement | undefined {
+    if (page.pages === 1) return undefined;
+    const { Box, Text, Button } = ui;
+    return Box({
+      key: `pager:${page.key}`,
+      flexDirection: "row",
+      flexWrap: "wrap",
+      columnGap: 1,
+      children: [
+        Button({
+          key: `prev:${page.key}`,
+          label: page.page === 0 ? "last page" : "back",
+          plain: true,
+          dimColor: true,
+          onPress: () => this.stepCell(page.key, -1),
+        }),
+        Text({ dimColor: true, children: `${page.from}-${page.to} of ${page.total}` }),
+        Button({
+          key: `next:${page.key}`,
+          label: page.to < page.total ? `+${page.total - page.to} more` : "first page",
+          plain: true,
+          onPress: () => this.stepCell(page.key, 1),
+        }),
+      ],
+    });
   }
 
   private drawBacklog(ui: PaneUi, width: number): RenderElement {

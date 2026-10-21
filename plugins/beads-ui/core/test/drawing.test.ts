@@ -3,7 +3,9 @@
 import { describe, expect, test } from "claude-code/testing";
 import {
   BLOCK_MAX_CHARS,
+  type BoardPageLimit,
   type BoardState,
+  type BoardViewOptions,
   bandView,
   boardView,
   clockStamp,
@@ -15,6 +17,7 @@ import {
   reduceBoard,
   SORT_CYCLE,
   sortLabel,
+  stepPage,
   storeName,
 } from "../src/index.ts";
 import { allIssues, storeStatuses } from "./helpers.ts";
@@ -68,30 +71,100 @@ describe("boardView with a sort and a card budget", () => {
     expect(open()).not.toEqual(byCreated);
   });
 
-  test("should draw at most the per-cell and total budget and count the rest when the store is large", () => {
-    const many = Array.from({ length: 300 }, (_, i) => ({
+  // A budget of 20 cards with every other cost zero, so the arithmetic below is in cards.
+  const LIMIT: BoardPageLimit = {
+    perCell: 12,
+    minPerCell: 1,
+    budget: 20,
+    card: 1,
+    pager: 0,
+    header: 0,
+    lane: 0,
+  };
+  const many = (count: number, assignees = 1) =>
+    Array.from({ length: count }, (_, i) => ({
       ...(allIssues()[0] as Issue),
       id: `BU-x${i}`,
       status: i % 2 === 0 ? "open" : "closed",
+      assignee: `aih-${i % assignees}`,
     }));
 
-    const view = boardView(boardOf(many), {
-      columnWidth: 30,
-      cardLimit: { perCell: 12, total: 20 },
-    });
-    const lane = view.lanes[0];
-    const open = view.columns.findIndex((column) => column.status === "open");
-    const closed = view.columns.findIndex((column) => column.status === "closed");
+  /** Every card id on every lane page and cell page, walking the pages as the surface would. */
+  function walk(issues: Issue[], options: Partial<BoardViewOptions> = {}) {
+    const seen: string[] = [];
+    const base = { columnWidth: 30, pageLimit: LIMIT, ...options };
+    const first = boardView(boardOf(issues), base);
+    let drawnMost = 0;
+    for (let lanePage = 0; lanePage < first.lanePage.pages; lanePage++) {
+      const atLanes = boardView(boardOf(issues), { ...base, lanePage });
+      const cells = atLanes.lanes.flatMap((lane) => lane.pages);
+      const deepest = Math.max(...cells.map((page) => page.pages));
+      for (let step = 0; step < deepest; step++) {
+        const pages = Object.fromEntries(
+          cells.map((page) => [page.key, Math.min(step, page.pages - 1)]),
+        );
+        const view = boardView(boardOf(issues), { ...base, lanePage, pages });
+        const drawn = view.lanes.flatMap((lane) => lane.cells.flat());
+        drawnMost = Math.max(drawnMost, drawn.length);
+        for (const lane of view.lanes) {
+          lane.cells.forEach((cell, i) => {
+            if (step < (lane.pages[i]?.pages ?? 0)) seen.push(...cell.map((card) => card.id));
+          });
+        }
+      }
+    }
+    return { first, seen, drawnMost };
+  }
 
-    expect([lane?.cells[open]?.length, lane?.hidden[open]]).toEqual([12, 138]);
-    expect([lane?.cells[closed]?.length, lane?.hidden[closed]]).toEqual([8, 142]);
-    expect(view.columns[open]?.count).toBe(150);
+  test("should page each cell so every card is reachable and no page passes the budget when the store is large", () => {
+    const issues = many(300);
+
+    const { first, seen, drawnMost } = walk(issues);
+    const open = first.columns.findIndex((column) => column.status === "open");
+    const page = first.lanes[0]?.pages[open];
+
+    expect([...seen].sort()).toEqual(issues.map((issue) => issue.id).sort());
+    expect(seen).toHaveLength(issues.length);
+    expect(page).toEqual({ key: ":open", page: 0, pages: 15, from: 1, to: 10, total: 150 });
+    expect(drawnMost).toBeLessThanOrEqual(LIMIT.budget);
+    expect(first.columns[open]?.count).toBe(150);
   });
 
-  test("should hide nothing when no budget is given", () => {
-    const lane = boardView(boardOf(allIssues()), { columnWidth: 30 }).lanes[0];
+  test("should split the swimlanes into lane pages that fit when one card per cell is over the budget", () => {
+    // 29 assignees, an odd count, so every lane holds both open and closed cards: two cells each.
+    const issues = many(300, 29);
 
-    expect(lane?.hidden.every((count) => count === 0)).toBe(true);
+    const { first, seen, drawnMost } = walk(issues, { swimlane: "assignee" });
+
+    expect(first.lanePage).toEqual({ key: "lanes", page: 0, pages: 3, from: 1, to: 10, total: 30 });
+    expect([...seen].sort()).toEqual(issues.map((issue) => issue.id).sort());
+    expect(drawnMost).toBeLessThanOrEqual(LIMIT.budget);
+  });
+
+  test("should clamp a page past the last one to the last page when the cell shrank", () => {
+    const view = boardView(boardOf(many(300)), {
+      columnWidth: 30,
+      pageLimit: LIMIT,
+      pages: { ":open": 99 },
+    });
+    const open = view.columns.findIndex((column) => column.status === "open");
+
+    expect(view.lanes[0]?.pages[open]).toMatchObject({ page: 14, from: 141, to: 150 });
+    expect(view.lanes[0]?.cells[open]).toHaveLength(10);
+  });
+
+  test("should draw every card on one page when no limit is given", () => {
+    const view = boardView(boardOf(allIssues()), { columnWidth: 30 });
+
+    expect(view.lanes[0]?.pages.every((page) => page.pages === 1)).toBe(true);
+    expect(view.lanes[0]?.cells.flat()).toHaveLength(allIssues().length);
+    expect(view.lanePage.pages).toBe(1);
+  });
+
+  test("should step a page forward and back, wrapping at either end", () => {
+    expect([stepPage(0, 3, 1), stepPage(2, 3, 1), stepPage(0, 3, -1), stepPage(0, 1, 1)]).toEqual([
+      1, 0, 2, 0,
+    ]);
   });
 });
 

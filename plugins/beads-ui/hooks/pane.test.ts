@@ -4,7 +4,6 @@ import { describe, expect, test } from "claude-code/testing";
 
 import {
   asOf,
-  BOARD_CARD_LIMIT,
   clockStamp,
   type Issue,
   parseBdHistoryEvents,
@@ -191,31 +190,127 @@ describe("the Board tab", () => {
     expect((await ui.find({ key: "column::open" }))?.text).toBe("open 20");
   });
 
-  test("should keep the drawing under the mod's 100,000-character tree limit when the store is large", async ($, on) => {
-    // bd's own records, renamed: the first record of `bd list --json --all --brief --limit 0`.
+  // bd's own records, renamed: the first record of `bd list --json --all --brief --limit 0`.
+  const largeStore = (assignees: number) => {
     const [first] = JSON.parse(list) as Record<string, unknown>[];
-    const many = Array.from({ length: 600 }, (_, i) => ({
+    return Array.from({ length: 600 }, (_, i) => ({
       ...first,
       id: `BU-load${i}`,
       title: `issue number ${i} with a title long enough to fill a card`,
       status: ["open", "in_progress", "closed"][i % 3],
       metadata: { display_id: `BU-issue-number-${i}-load` },
       labels: [`id:BU-issue-number-${i}-load`],
-      assignee: "aih-ec2-3",
+      assignee: `aih-ec2-${i % assignees}`,
     }));
-    const { ui } = await openPane($, on, {
+  };
+  const openLarge = ($: Engine, on: On, assignees: number) =>
+    openPane($, on, {
       script: (key) =>
-        key === "bd list --all --brief --limit 0" ? ok(JSON.stringify(many)) : undefined,
+        key === "bd list --all --brief --limit 0"
+          ? ok(JSON.stringify(largeStore(assignees)))
+          : undefined,
     });
+  const everyMove = Array.from({ length: 600 }, (_, i) => `move:BU-load${i}`).sort();
 
-    const size = JSON.stringify(await ui.drawn()).length;
+  /**
+   * Walks the board as a person would: on each lane page, steps every paged cell through all of
+   * its pages with its more control and back round to the first, then takes the next lane page.
+   * Returns every Move to control it met and the largest drawing it saw.
+   */
+  async function walkBoard(ui: Mounted) {
+    const moves = new Set<string>();
+    let largest = 0;
+    const look = async () => {
+      largest = Math.max(largest, JSON.stringify(await ui.drawn()).length);
+      for (const key of await keysOf(ui, "move:", "Select")) moves.add(key);
+    };
+    for (let lanePage = 0; lanePage < 50; lanePage++) {
+      await look();
+      for (const pager of await keysOf(ui, "pager:")) {
+        const cell = pager.slice("pager:".length);
+        const range = /(\d+)-(\d+) of (\d+)/.exec((await ui.find({ key: pager }))?.text ?? "");
+        const [from, to, total] = (range ?? []).slice(1).map(Number);
+        const pages = Math.ceil((total ?? 0) / ((to ?? 0) - (from ?? 0) + 1));
+        for (let step = 1; step < pages; step++) {
+          await ui.press({ key: `next:${cell}` });
+          await look();
+        }
+        await ui.press({ key: `next:${cell}` });
+        expect((await ui.find({ key: pager }))?.text).toContain(`1-${to} of ${total}`);
+      }
+      if ((await ui.find({ key: "lanes-next" })) === undefined) break;
+      await ui.press({ key: "lanes-next" });
+      if (/lanes 1-/.test((await ui.find({ key: "lane-pager" }))?.text ?? "")) break;
+    }
+    return { moves: [...moves].sort(), largest };
+  }
 
-    expect(size).toBeLessThan(100_000);
-    expect(await keysOf(ui, "card:")).toHaveLength(BOARD_CARD_LIMIT.perCell * 3);
+  test("should reach a Move to control for every card by paging each column when the store is large", async ($, on) => {
+    const { ui } = await openLarge($, on, 1);
+
     expect((await ui.find({ key: "column::open" }))?.text).toBe("open 200");
-    expect((await ui.find({ key: "group::active" }))?.text).toContain(
-      `+${200 - BOARD_CARD_LIMIT.perCell} more; narrow the filter`,
+    expect((await ui.find({ key: "pager::open" }))?.text).toContain("1-25 of 200");
+    expect((await ui.find({ key: "next::open" }))?.props.label).toBe("+175 more");
+
+    const { moves, largest } = await walkBoard(ui);
+
+    expect(moves).toEqual(everyMove);
+    expect(largest).toBeLessThan(100_000);
+  });
+
+  test("should reach every card's Move to through lane pages when the assignee lanes outgrow one drawing", async ($, on) => {
+    // 200 assignees, three cards each: the most lanes, and so the most column headers, per card.
+    const { ui } = await openLarge($, on, 200);
+    await ui.press({ key: "swimlane" });
+
+    expect((await ui.find({ key: "lane-pager" }))?.text).toMatch(/^back\s*lanes 1-\d+ of 201/);
+
+    const { moves, largest } = await walkBoard(ui);
+
+    expect(moves).toEqual(everyMove);
+    expect(largest).toBeLessThan(100_000);
+  });
+
+  // The kit answers the mod's own $.ui.focus inside the mounted drawing without raising it to the
+  // test's hooks, so the focus ring itself is checked in the live run. This test shows the card p
+  // and b act on follows onto the page they open: the second p steps the same column again.
+  test("should step the focused card's column with p and b, acting on the new page's card after each step", async ($, on) => {
+    const { w, ui } = await openLarge($, on, 1);
+    await $.ui.focus({
+      component: "Pane",
+      requestId: PANE_ID,
+      plugin: PLUGIN_NAME,
+      element: "move:BU-load0",
+      origin: { kind: "person" },
+    } as never);
+    const pager = async () => (await ui.find({ key: "pager::open" }))?.text ?? "";
+
+    await ui.press({ key: "page-next" });
+    await w.clock.settle();
+    expect(await pager()).toContain("26-50 of 200");
+    expect(await keysOf(ui, "move:", "Select")).not.toContain("move:BU-load0");
+
+    await ui.press({ key: "page-next" });
+    await w.clock.settle();
+    expect(await pager()).toContain("51-75 of 200");
+
+    await ui.press({ key: "page-back" });
+    await ui.press({ key: "page-back" });
+    await w.clock.settle();
+    expect(await pager()).toContain("1-25 of 200");
+    expect(await keysOf(ui, "move:", "Select")).toContain("move:BU-load0");
+    expect(await ui.find({ key: "notice" })).toBeUndefined();
+  });
+
+  test("should name what to do and step nothing when p is pressed with no card focused", async ($, on) => {
+    const { ui } = await openLarge($, on, 1);
+
+    await ui.press({ key: "page-next" });
+
+    expect((await ui.find({ key: "notice" }))?.text).toBe(
+      "focus a card first: Tab moves between cards",
     );
+    expect((await ui.find({ key: "pager::open" }))?.text).toContain("1-25 of 200");
   });
 });
 

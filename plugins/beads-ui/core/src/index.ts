@@ -151,6 +151,7 @@ export type { BandCount, BandView } from "./views/band.ts";
 export { bandView } from "./views/band.ts";
 export type {
   BoardEvent,
+  BoardPageLimit,
   BoardState,
   BoardView,
   BoardViewOptions,
@@ -159,15 +160,19 @@ export type {
   LaneView,
   LoadError,
   MoveError,
+  PageView,
   PendingMove,
 } from "./views/board.ts";
 export {
-  BOARD_CARD_LIMIT,
+  BOARD_PAGE_LIMIT,
   boardView,
+  cellKey,
   INITIAL_BOARD_STATE,
+  pageOf,
   planMove,
   reduceBoard,
   STALE_WRITE_EXIT,
+  stepPage,
 } from "./views/board.ts";
 export type {
   ConfirmEvent,
