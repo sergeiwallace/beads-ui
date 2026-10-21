@@ -54,6 +54,10 @@ export function register(on: On) {
         xdgConfigHome: await $.env.get("XDG_CONFIG_HOME"),
         home: await $.env.get("HOME"),
       }),
+      slugBudgetEnv: async () => ({
+        body: await $.env.get("AIH_SLUG_BODY_MAX_CHARS"),
+        child: await $.env.get("AIH_SLUG_BODY_MAX_CHARS_CHILD"),
+      }),
       invalidate: () => $.ui.invalidate("ui.render"),
       toast: (text) => $.ui.toast(text),
       openPane: (args) => $.ui.open(args),

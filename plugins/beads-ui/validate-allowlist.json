@@ -25,7 +25,12 @@
         "$.ui.resolve",
         "$.ui.toast"
       ],
-      "env reads": ["HOME", "XDG_CONFIG_HOME"],
+      "env reads": [
+        "AIH_SLUG_BODY_MAX_CHARS",
+        "AIH_SLUG_BODY_MAX_CHARS_CHILD",
+        "HOME",
+        "XDG_CONFIG_HOME"
+      ],
       "env writes": [],
       "surface modules": ["client/hello.ts"],
       "gating hook with .catch": [

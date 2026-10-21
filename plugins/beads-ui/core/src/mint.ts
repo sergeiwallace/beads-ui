@@ -1,8 +1,8 @@
 // Display-id minting (D-9), a port of ai-harness scripts/bd_new.py's slugify_title,
 // mint_display_id and display_id_from_primary. The two implementations must agree;
 // test/mint.test.ts pins this one against ids bd-new minted in this repository's own store.
-// bd-new's per-machine budget overrides (AIH_SLUG_BODY_MAX_CHARS*) are environment reads, which
-// core does not do, so the budgets here are bd-new's defaults.
+// bd-new's per-machine budget overrides (AIH_SLUG_BODY_MAX_CHARS and _CHILD) are environment
+// reads; core does no reads, so a surface reads the two strings and passes slugBudgets' result.
 import { issueIdArg } from "./argv.ts";
 import type { BdArgv, Issue, RandomSource, Result } from "./model.ts";
 
@@ -10,6 +10,11 @@ export const SLUG_SUFFIX_ALPHABET = "abcdefghjkmnpqrstuvwxyz";
 export const SLUG_SUFFIX_LENGTH = 4;
 export const SLUG_BODY_MAX_CHARS = 32;
 export const SLUG_BODY_MAX_CHARS_CHILD = 20;
+/** The environment variables bd-new reads its slug body budgets from. */
+export const SLUG_BUDGET_ENV = {
+  body: "AIH_SLUG_BODY_MAX_CHARS",
+  child: "AIH_SLUG_BODY_MAX_CHARS_CHILD",
+} as const;
 export const SLUG_MINT_ATTEMPTS = 8;
 export const SLUG_FALLBACK_BODY = "task";
 const SLUG_LEAD_MAX_CHARS = 24;
@@ -143,13 +148,52 @@ function trailingParentheticalStart(text: string): number | undefined {
   return undefined;
 }
 
+/** The slug body budgets in characters: `body` for a top-level issue, `child` under a parent. */
+export interface SlugBudgets {
+  body: number;
+  child: number;
+}
+
+export const DEFAULT_SLUG_BUDGETS: SlugBudgets = {
+  body: SLUG_BODY_MAX_CHARS,
+  child: SLUG_BODY_MAX_CHARS_CHILD,
+};
+
+// What Python's int() takes from a string: surrounding whitespace, a sign, ASCII digits with
+// single underscores between them.
+const PY_INT = /^\s*([+-]?\d+(?:_\d+)*)\s*$/;
+
+/** bd-new's `_env_budget`: a positive integer override, else the default. */
+export function envBudget(text: string | undefined, fallback: number): number {
+  const match = text === undefined ? null : PY_INT.exec(text);
+  if (match?.[1] === undefined) return fallback;
+  const value = Number(match[1].replaceAll("_", ""));
+  return value > 0 ? value : fallback;
+}
+
+/** The budgets bd-new would mint under, from the two override variables' values as read. */
+export function slugBudgets(env: {
+  body?: string | undefined;
+  child?: string | undefined;
+}): SlugBudgets {
+  return {
+    body: envBudget(env.body, SLUG_BODY_MAX_CHARS),
+    child: envBudget(env.child, SLUG_BODY_MAX_CHARS_CHILD),
+  };
+}
+
 /**
  * The readable body of a slug display id, from the issue's own title. A short, digit-bearing lead
  * before the first colon is dropped for a top-level issue and kept first for a child; a trailing
- * balanced parenthetical is dropped; the words fill 32 characters (20 for a child) greedily.
- * Never empty: a title with nothing sluggable yields "task".
+ * balanced parenthetical is dropped; the words fill the body budget (32 characters, 20 for a
+ * child, unless `budgets` says otherwise) greedily. Never empty: a title with nothing sluggable
+ * yields "task".
  */
-export function slugifyTitle(title: string, options: { child?: boolean } = {}): string {
+export function slugifyTitle(
+  title: string,
+  options: { child?: boolean; budgets?: SlugBudgets } = {},
+): string {
+  const budgets = options.budgets ?? DEFAULT_SLUG_BUDGETS;
   let ascii = toAscii(title);
 
   const parenthetical = trailingParentheticalStart(ascii);
@@ -175,10 +219,10 @@ export function slugifyTitle(title: string, options: { child?: boolean } = {}): 
   }
 
   let words = descriptionTokens(rest);
-  let budget = SLUG_BODY_MAX_CHARS;
+  let budget = budgets.body;
   if (options.child === true) {
     words = [...tokens(lead), ...words];
-    budget = SLUG_BODY_MAX_CHARS_CHILD;
+    budget = budgets.child;
   }
   return fillSlugBody(words, budget) || SLUG_FALLBACK_BODY;
 }
@@ -195,11 +239,15 @@ export interface MintInput {
   /** Display ids already in use; a candidate found here is re-drawn. */
   taken: ReadonlySet<string>;
   random: RandomSource;
+  budgets?: SlugBudgets;
 }
 
 /** A fresh `PREFIX-<slug>-<4 suffix letters>` not present in `taken`. */
 export function mintDisplayId(input: MintInput): Result<string, MintError> {
-  const body = slugifyTitle(input.title, { child: input.child === true });
+  const body = slugifyTitle(input.title, {
+    child: input.child === true,
+    ...(input.budgets === undefined ? {} : { budgets: input.budgets }),
+  });
   for (let attempt = 0; attempt < SLUG_MINT_ATTEMPTS; attempt++) {
     let suffix = "";
     for (let i = 0; i < SLUG_SUFFIX_LENGTH; i++) {
@@ -273,6 +321,8 @@ export interface DisplayIdPlanInput {
   /** True when the issue was created with a parent; bd-new uses the child budget then. */
   child: boolean;
   random: RandomSource;
+  /** bd-new's slug body budgets; its defaults when not given. */
+  budgets?: SlugBudgets;
 }
 
 /**
@@ -327,9 +377,10 @@ export function planDisplayId(input: DisplayIdPlanInput): Result<DisplayIdPlan, 
       },
     };
   }
+  const budgets = input.budgets ?? DEFAULT_SLUG_BUDGETS;
   let displayId: string;
   if (copied && !FLEET_TASK_ID_RULE.test(`${prefix}-${suffix}`)) {
-    displayId = `${prefix}-${slugifyTitle(input.title, { child: input.child })}-${suffix}`;
+    displayId = `${prefix}-${slugifyTitle(input.title, { child: input.child, budgets })}-${suffix}`;
   } else {
     const minted = mintDisplayId({
       prefix,
@@ -337,6 +388,7 @@ export function planDisplayId(input: DisplayIdPlanInput): Result<DisplayIdPlan, 
       child: input.child,
       taken: takenDisplayIds(input.issues),
       random: input.random,
+      budgets,
     });
     if (!minted.ok) return minted;
     displayId = minted.value;
@@ -346,16 +398,66 @@ export function planDisplayId(input: DisplayIdPlanInput): Result<DisplayIdPlan, 
     value: {
       kind: "attach",
       displayId,
-      argv: [
-        "bd",
-        "update",
-        issueIdArg(input.createdId),
-        "--set-metadata",
-        `display_id=${displayId}`,
-        "--add-label",
-        `id:${displayId}`,
-        "--json",
-      ],
+      argv: displayIdArgv(input.createdId, displayId),
     },
   };
+}
+
+/** The `bd update` that writes a minted display id: `metadata.display_id` and the `id:` label. */
+export function displayIdArgv(id: string, displayId: string): BdArgv {
+  return [
+    "bd",
+    "update",
+    issueIdArg(id),
+    "--set-metadata",
+    `display_id=${displayId}`,
+    "--add-label",
+    `id:${displayId}`,
+    "--json",
+  ];
+}
+
+/** A display id minted for a created issue whose write has not succeeded yet. */
+export interface PendingDisplayId {
+  id: string;
+  displayId: string;
+}
+
+/**
+ * What to do with a pending display id once the store's issues are read: write the same id again,
+ * or stop because the issue now carries it, carries another one (a published id never changes,
+ * so it is never overwritten), or is no longer in the store. It never mints a second id.
+ */
+export type PendingDisplayIdStep =
+  | { kind: "write"; argv: BdArgv }
+  | { kind: "written" }
+  | { kind: "kept"; existing: string }
+  | { kind: "gone" };
+
+export function pendingDisplayIdStep(
+  pending: PendingDisplayId,
+  issues: readonly Issue[],
+): PendingDisplayIdStep {
+  const issue = issues.find((candidate) => candidate.id === pending.id);
+  if (issue === undefined) return { kind: "gone" };
+  if (issue.displayId === pending.displayId) return { kind: "written" };
+  if (issue.displayId !== undefined) return { kind: "kept", existing: issue.displayId };
+  return { kind: "write", argv: displayIdArgv(pending.id, pending.displayId) };
+}
+
+const ARG = /^[^-\s]\S*$/;
+
+/** The pending display ids as a surface stored them; anything else in the value is dropped. */
+export function readPendingDisplayIds(stored: unknown): PendingDisplayId[] {
+  if (!Array.isArray(stored)) return [];
+  const pending: PendingDisplayId[] = [];
+  for (const entry of stored) {
+    if (typeof entry !== "object" || entry === null) continue;
+    const { id, displayId } = entry as Record<string, unknown>;
+    if (typeof id !== "string" || typeof displayId !== "string") continue;
+    if (!ARG.test(id) || !ARG.test(displayId)) continue;
+    if (pending.some((known) => known.id === id)) continue;
+    pending.push({ id, displayId });
+  }
+  return pending;
 }

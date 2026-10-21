@@ -2,7 +2,9 @@ import type { Elements, RenderElement, RenderNode, Timer } from "claude-code";
 
 import {
   asOf,
-  BOARD_CARD_LIMIT,
+  BACKLOG_PAGE_SIZE,
+  type BacklogView,
+  BOARD_PAGE_LIMIT,
   type BoardEvent,
   type BoardState,
   type BoardView,
@@ -31,6 +33,8 @@ import {
   nextSort,
   nextSwimlaneMode,
   openDetail,
+  type PageView,
+  type PendingDisplayId,
   parseBdCreatedId,
   parseBdHistoryEvents,
   parseBdList,
@@ -41,9 +45,11 @@ import {
   parseQuickAdd,
   parseSort,
   parseSwimlaneMode,
+  pendingDisplayIdStep,
   planDisplayId,
   planMove,
   type ResolvedConfig,
+  readPendingDisplayIds,
   readyArgv,
   reduceBoard,
   reduceDetail,
@@ -52,8 +58,10 @@ import {
   STATUS_CATEGORIES,
   type SwimlaneMode,
   showArgv,
+  slugBudgets,
   sortLabel,
   statusesArgv,
+  stepPage,
   storeName,
   submitFilter,
   TERMINAL_THEME,
@@ -75,6 +83,11 @@ export const NARROW_TEXT = `beads-ui did not open its pane: it needs a terminal 
 
 /** Where the view preferences live in `$.store`. Issue data is never stored. */
 export const PREFS_KEY = "view";
+/**
+ * Where display ids minted for a created issue wait in `$.store` until their write succeeds, so
+ * a pane reopen or a new session retries the same id instead of leaving the issue without one.
+ */
+export const PENDING_IDS_KEY = "pending-display-ids";
 
 /** The body the pane asks for, docked and inline; the person's own size wins. */
 const WANTED_COLUMNS = 80;
@@ -82,7 +95,6 @@ const WANTED_ROWS = 24;
 
 const READ_TIMEOUT_MS = 8_000;
 const WRITE_TIMEOUT_MS = 15_000;
-const BACKLOG_ROW_LIMIT = 60;
 
 export type Tab = "board" | "backlog" | "detail";
 const TABS: readonly { tab: Tab; label: string; hotkey: string }[] = [
@@ -152,6 +164,17 @@ export class BeadsPane {
   autoOpenPending = false;
   /** The delete confirmation, wired by register.ts. */
   onDelete: ((issue: Issue, issues: readonly Issue[]) => void) | undefined;
+  /** Display ids minted after a create whose write has not succeeded, retried on each refresh. */
+  pendingIds: PendingDisplayId[] = [];
+  /** The last failed write of each pending display id, by issue id. */
+  private pendingErrors: Record<string, string> = {};
+  /** The page each board cell shows, by core's cellKey. */
+  cellPages: Record<string, number> = {};
+  lanePage = 0;
+  unplacedPage = 0;
+  backlogPage = 0;
+  /** The body width the pane last drew at, for the page steps that run between draws. */
+  private width = WANTED_COLUMNS;
 
   private env: { xdgConfigHome?: string; home?: string } = {};
   /** True while the pane has stepped aside for the delete confirmation. */
@@ -177,6 +200,10 @@ export class BeadsPane {
   // ---- view preferences -------------------------------------------------------------------
 
   private async loadPrefs(): Promise<void> {
+    const pending = await this.host?.storeGet(PENDING_IDS_KEY).catch(() => undefined);
+    for (const entry of readPendingDisplayIds(pending)) {
+      if (!this.pendingIds.some((known) => known.id === entry.id)) this.pendingIds.push(entry);
+    }
     const stored = await this.host?.storeGet(PREFS_KEY).catch(() => undefined);
     if (!isRecord(stored)) return;
     const tab = TABS.find((candidate) => candidate.tab === stored.tab)?.tab;
@@ -204,6 +231,44 @@ export class BeadsPane {
       open: this.isOpen,
     };
     void this.host?.storeSet(PREFS_KEY, prefs).catch(() => undefined);
+  }
+
+  private savePending(): void {
+    const pending = this.pendingIds.map(({ id, displayId }) => ({ id, displayId }));
+    void this.host?.storeSet(PENDING_IDS_KEY, pending).catch(() => undefined);
+  }
+
+  /**
+   * Retries each pending display id against the store as just read: the same id again, never a
+   * second one; an issue that now carries an id, or is gone, drops it (D-9).
+   */
+  private async retryPendingIds(): Promise<void> {
+    const done = new Set<string>();
+    let wrote = false;
+    for (const pending of [...this.pendingIds]) {
+      const step = pendingDisplayIdStep(pending, this.board.issues);
+      if (step.kind === "kept") {
+        this.note(
+          `${pending.id} already carries ${step.existing}; ${pending.displayId} was not written`,
+          "warning",
+        );
+      } else if (step.kind === "write") {
+        const ran = await this.run(step.argv, WRITE_TIMEOUT_MS);
+        if (!ran.ok) {
+          this.pendingErrors[pending.id] = this.failure("writing its display id", ran);
+          continue;
+        }
+        wrote = true;
+        this.note(`wrote ${pending.displayId} for ${pending.id}`, "success");
+      }
+      delete this.pendingErrors[pending.id];
+      done.add(pending.id);
+    }
+    if (done.size > 0) {
+      this.pendingIds = this.pendingIds.filter((pending) => !done.has(pending.id));
+      this.savePending();
+    }
+    if (wrote) this.queued = true;
   }
 
   // ---- bd ---------------------------------------------------------------------------------
@@ -287,7 +352,8 @@ export class BeadsPane {
         this.run(listArgv(), READ_TIMEOUT_MS),
         full ? this.run(readyArgv(), READ_TIMEOUT_MS) : Promise.resolve(undefined),
       ]);
-      this.applyReads(statuses, list, await this.stamp());
+      const loaded = this.applyReads(statuses, list, await this.stamp());
+      if (loaded) await this.retryPendingIds();
       if (ready?.ok === true) {
         const parsed = parseBdReady(ready.stdout);
         if (parsed.ok) this.readyIds = new Set(parsed.value.map((issue) => issue.id));
@@ -313,10 +379,11 @@ export class BeadsPane {
     }
   }
 
-  private applyReads(statuses: Ran, list: Ran, at: string): void {
+  /** Applies one read set; true when the store's issues loaded. */
+  private applyReads(statuses: Ran, list: Ran, at: string): boolean {
     if (!list.ok) {
       this.dispatch({ type: "load-failed", exitCode: list.exitCode, message: list.message });
-      return;
+      return false;
     }
     const issues = parseBdList(list.stdout);
     if (!issues.ok) {
@@ -325,7 +392,7 @@ export class BeadsPane {
         exitCode: list.exitCode,
         message: `unreadable output at ${issues.error.path}: ${issues.error.message}`,
       });
-      return;
+      return false;
     }
     const parsedStatuses = statuses.ok ? parseBdStatuses(statuses.stdout) : undefined;
     const known = parsedStatuses?.ok === true ? parsedStatuses.value : this.board.statuses;
@@ -337,9 +404,10 @@ export class BeadsPane {
           ? "bd statuses returned no statuses"
           : this.failure("bd statuses", statuses),
       });
-      return;
+      return false;
     }
     this.dispatch({ type: "load-succeeded", issues: issues.value, statuses: known, at });
+    return true;
   }
 
   // ---- opening and closing ----------------------------------------------------------------
@@ -473,6 +541,9 @@ export class BeadsPane {
       await this.refresh();
       return;
     }
+    const budgetEnv = await this.host
+      ?.slugBudgetEnv()
+      .catch(() => ({ body: undefined, child: undefined }));
     const plan = planDisplayId({
       policy: this.config.config.idPolicy,
       issues: this.board.issues,
@@ -480,17 +551,24 @@ export class BeadsPane {
       title: parsed.value.title,
       child: false,
       random: Math.random,
+      budgets: slugBudgets(budgetEnv ?? {}),
     });
     if (!plan.ok) {
       this.note(`created ${id.value}; no display id: ${plan.error.message}`, "warning");
     } else if (plan.value.kind === "attach") {
       const attached = await this.run(plan.value.argv, WRITE_TIMEOUT_MS);
-      this.note(
-        attached.ok
-          ? `created ${id.value} as ${plan.value.displayId}`
-          : `created ${id.value}; ${this.failure("writing its display id", attached)}`,
-        attached.ok ? "success" : "warning",
-      );
+      if (attached.ok) {
+        this.note(`created ${id.value} as ${plan.value.displayId}`, "success");
+      } else {
+        const failure = this.failure("writing its display id", attached);
+        this.pendingIds = [
+          ...this.pendingIds.filter((pending) => pending.id !== id.value),
+          { id: id.value, displayId: plan.value.displayId },
+        ];
+        this.pendingErrors[id.value] = failure;
+        this.savePending();
+        this.note(`created ${id.value}; ${failure}`, "warning");
+      }
     } else {
       this.note(`created ${id.value}`, "success");
     }
@@ -499,8 +577,78 @@ export class BeadsPane {
 
   submitFilter(text: string): void {
     this.filter = submitFilter(this.filter, text);
+    this.resetPages();
     this.savePrefs();
     this.host?.invalidate();
+  }
+
+  /** A new filter, swimlane or sort reorders every list, so each starts again at its first page. */
+  private resetPages(): void {
+    this.cellPages = {};
+    this.lanePage = 0;
+    this.unplacedPage = 0;
+    this.backlogPage = 0;
+  }
+
+  /** Steps one board cell's page (or the unplaced cards', key `unplaced`), wrapping at the ends. */
+  stepCell(key: string, delta: number): void {
+    const view = this.boardViewAt(this.width);
+    const page =
+      key === view.unplacedPage.key
+        ? view.unplacedPage
+        : view.lanes.flatMap((lane) => lane.pages).find((candidate) => candidate.key === key);
+    if (page === undefined) return;
+    const next = stepPage(page.page, page.pages, delta);
+    if (key === view.unplacedPage.key) this.unplacedPage = next;
+    else this.cellPages = { ...this.cellPages, [key]: next };
+    this.host?.invalidate();
+  }
+
+  /** Steps the lane page, wrapping at the ends. */
+  stepLanes(delta: number): void {
+    const { lanePage } = this.boardViewAt(this.width);
+    this.lanePage = stepPage(lanePage.page, lanePage.pages, delta);
+    this.host?.invalidate();
+  }
+
+  /**
+   * `p` and `b`: on the Board the next or previous page of the focused card's cell, on the
+   * Backlog of the list. The focused card or row leaves the drawing, so the focus ring moves onto
+   * the new page's first one instead of falling back to the prompt.
+   */
+  async stepFocusedPage(delta: number): Promise<void> {
+    if (this.tab === "backlog") {
+      await this.stepBacklog(delta, true);
+      return;
+    }
+    const view = this.boardViewAt(this.width);
+    const id = this.focusedId;
+    const cells = [
+      ...view.lanes.flatMap((lane) =>
+        lane.cells.map((cards, i) => ({ cards, page: lane.pages[i] })),
+      ),
+      { cards: view.unplaced, page: view.unplacedPage },
+    ];
+    const cell = cells.find(({ cards }) => cards.some((card) => card.id === id));
+    if (cell?.page === undefined) {
+      this.note("focus a card first: Tab moves between cards", "warning");
+      this.host?.invalidate();
+      return;
+    }
+    this.stepCell(cell.page.key, delta);
+    const after = this.boardViewAt(this.width);
+    const drawn =
+      cell.page.key === after.unplacedPage.key
+        ? after.unplaced
+        : after.lanes.flatMap(
+            (lane) => lane.cells[lane.pages.findIndex((p) => p.key === cell.page?.key)] ?? [],
+          );
+    const first = drawn[0];
+    if (first === undefined) return;
+    this.focusedId = first.id;
+    // The card's detail button, not its Move to: a focused Select reads a letter as type-ahead,
+    // so the next p would pick an option instead of stepping the page. m reaches the Move to.
+    await this.host?.focus(PANE_ID, `open:${first.id}`).catch(() => undefined);
   }
 
   /**
@@ -517,12 +665,14 @@ export class BeadsPane {
 
   cycleSwimlane(): void {
     this.swimlane = nextSwimlaneMode(this.swimlane);
+    this.resetPages();
     this.savePrefs();
     this.host?.invalidate();
   }
 
   cycleSort(): void {
     this.sort = nextSort(this.sort);
+    this.resetPages();
     this.savePrefs();
     this.host?.invalidate();
   }
@@ -691,31 +841,26 @@ export class BeadsPane {
     if (this.host === undefined) {
       return Box({ children: [Text({ children: "beads-ui starts with the session." })] });
     }
-    const groups = STATUS_CATEGORIES.filter((category) =>
-      this.board.statuses.some((status) => status.category === category),
-    );
-    const gaps = Math.max(0, groups.length - 1);
-    const groupWidth = Math.max(12, Math.floor((width - gaps) / Math.max(1, groups.length)));
-    const view = boardView(this.board, {
-      columnWidth: groupWidth - 1,
-      swimlane: this.swimlane,
-      softWipLimit: this.config.config.softWipLimit,
-      filter: this.filter.filter,
-      sort: this.sort,
-      cardLimit: BOARD_CARD_LIMIT,
-      ...(this.readyIds === undefined ? {} : { readyIds: this.readyIds }),
-    });
+    this.width = width;
+    const { groups, groupWidth } = this.layout(width);
+    const view = this.boardViewAt(width);
     const body =
       this.tab === "board"
         ? this.drawBoard(ui, view, groups, groupWidth)
         : this.tab === "backlog"
           ? this.drawBacklog(ui, width)
           : this.drawDetail(ui, width);
+    const paged =
+      this.tab === "backlog"
+        ? this.backlogViewAt(width).page.pages > 1
+        : this.tab === "board" &&
+          (view.unplacedPage.pages > 1 ||
+            view.lanes.some((lane) => lane.pages.some((page) => page.pages > 1)));
     return Box({
       flexDirection: "column",
       children: present<RenderNode>([
         this.drawHeader(ui),
-        this.drawToolbar(ui),
+        this.drawToolbar(ui, paged),
         ...this.drawLines(ui, width, view),
         this.help ? this.drawHelp(ui, helpRegion) : undefined,
         this.tab === "detail" ? undefined : this.drawInputs(ui),
@@ -725,6 +870,32 @@ export class BeadsPane {
           children: [Text({ dimColor: true, children: footerHints("card").join(" · ") })],
         }),
       ]),
+    });
+  }
+
+  /** The board's column groups and the width each gets. */
+  private layout(width: number): { groups: string[]; groupWidth: number } {
+    const groups = STATUS_CATEGORIES.filter((category) =>
+      this.board.statuses.some((status) => status.category === category),
+    );
+    const gaps = Math.max(0, groups.length - 1);
+    const groupWidth = Math.max(12, Math.floor((width - gaps) / Math.max(1, groups.length)));
+    return { groups, groupWidth };
+  }
+
+  /** The board as core pages it, at the pages the person stepped to. */
+  private boardViewAt(width: number): BoardView {
+    return boardView(this.board, {
+      columnWidth: this.layout(width).groupWidth - 1,
+      swimlane: this.swimlane,
+      softWipLimit: this.config.config.softWipLimit,
+      filter: this.filter.filter,
+      sort: this.sort,
+      pageLimit: BOARD_PAGE_LIMIT,
+      pages: this.cellPages,
+      lanePage: this.lanePage,
+      unplacedPage: this.unplacedPage,
+      ...(this.readyIds === undefined ? {} : { readyIds: this.readyIds }),
     });
   }
 
@@ -764,7 +935,7 @@ export class BeadsPane {
     });
   }
 
-  private drawToolbar(ui: PaneUi): RenderElement {
+  private drawToolbar(ui: PaneUi, paged: boolean): RenderElement {
     const { Box, Button } = ui;
     const button = (key: string, label: string, hotkey: string, onPress: () => void) =>
       Button({ key, label, hotkey, plain: true, onPress });
@@ -783,6 +954,12 @@ export class BeadsPane {
         this.undo === undefined
           ? undefined
           : button("undo", "Undo close", "u", () => void this.undoClose()),
+        paged
+          ? button("page-next", "Next page", "p", () => void this.stepFocusedPage(1))
+          : undefined,
+        paged
+          ? button("page-back", "Page back", "b", () => void this.stepFocusedPage(-1))
+          : undefined,
         button("help", "Help", "h", () => this.toggleHelp()),
       ]),
     });
@@ -803,6 +980,15 @@ export class BeadsPane {
       this.notice === undefined
         ? undefined
         : this.line(ui, "notice", this.notice.text, this.notice.token),
+      ...this.pendingIds.map((pending) => {
+        const error = this.pendingErrors[pending.id];
+        return this.line(
+          ui,
+          `pending-id:${pending.id}`,
+          `${pending.id} has no display id yet${error === undefined ? "" : ` (${error})`}; writing ${pending.displayId} again on the next refresh`,
+          "warning",
+        );
+      }),
       this.undo === undefined
         ? undefined
         : this.line(ui, "undo-line", undoView(this.undo, width).line, "accent"),
@@ -912,7 +1098,7 @@ export class BeadsPane {
     groups: readonly string[],
     groupWidth: number,
   ): RenderElement {
-    const { Box, Text } = ui;
+    const { Box, Text, Button } = ui;
     if (view.loading) {
       return Box({
         key: "board",
@@ -939,7 +1125,7 @@ export class BeadsPane {
                 children: view.columns.flatMap((column, i) => {
                   if (column.category !== category) return [];
                   const cards = lane.cells[i] ?? [];
-                  const hidden = lane.hidden[i] ?? 0;
+                  const page = lane.pages[i];
                   return present<RenderNode>([
                     Box({
                       key: `column:${lane.key}:${column.status}`,
@@ -948,9 +1134,7 @@ export class BeadsPane {
                       ],
                     }),
                     ...cards.map((card) => this.drawCard(ui, card, order)),
-                    hidden === 0
-                      ? undefined
-                      : Text({ dimColor: true, children: `+${hidden} more; narrow the filter` }),
+                    page === undefined ? undefined : this.drawPager(ui, page),
                   ]);
                 }),
               }),
@@ -965,29 +1149,120 @@ export class BeadsPane {
         : Box({
             key: "unplaced",
             flexDirection: "column",
-            children: [
+            children: present<RenderNode>([
               Text({ bold: true, children: "Statuses bd statuses did not list" }),
               ...view.unplaced.map((card) => this.drawCard(ui, card, order)),
+              this.drawPager(ui, view.unplacedPage),
+            ]),
+          });
+    const { lanePage } = view;
+    const lanePager =
+      lanePage.pages === 1
+        ? undefined
+        : Box({
+            key: "lane-pager",
+            flexDirection: "row",
+            columnGap: 1,
+            children: [
+              Button({
+                key: "lanes-back",
+                label: "back",
+                plain: true,
+                onPress: () => this.stepLanes(-1),
+              }),
+              Text({
+                dimColor: true,
+                children: `lanes ${lanePage.from}-${lanePage.to} of ${lanePage.total}`,
+              }),
+              Button({
+                key: "lanes-next",
+                label: "more lanes",
+                hotkey: "l",
+                plain: true,
+                onPress: () => this.stepLanes(1),
+              }),
             ],
           });
-    return Box({ key: "board", flexDirection: "column", children: present([...lanes, unplaced]) });
+    return Box({
+      key: "board",
+      flexDirection: "column",
+      children: present([lanePager, ...lanes, unplaced]),
+    });
+  }
+
+  /**
+   * A paged cell's controls: back, the range drawn, and more. Both wrap round, so both stay drawn
+   * and a press keeps the focus ring on the control it pressed.
+   */
+  private drawPager(ui: PaneUi, page: PageView): RenderElement | undefined {
+    if (page.pages === 1) return undefined;
+    const { Box, Text, Button } = ui;
+    return Box({
+      key: `pager:${page.key}`,
+      flexDirection: "row",
+      flexWrap: "wrap",
+      columnGap: 1,
+      children: [
+        Button({
+          key: `prev:${page.key}`,
+          label: page.page === 0 ? "last page" : "back",
+          plain: true,
+          dimColor: true,
+          onPress: () => this.stepCell(page.key, -1),
+        }),
+        Text({ dimColor: true, children: `${page.from}-${page.to} of ${page.total}` }),
+        Button({
+          key: `next:${page.key}`,
+          label: page.to < page.total ? `+${page.total - page.to} more` : "first page",
+          plain: true,
+          onPress: () => this.stepCell(page.key, 1),
+        }),
+      ],
+    });
+  }
+
+  /** The Backlog's column widths at a body width. */
+  private backlogLayout(width: number): { wide: boolean; idWidth: number; titleWidth: number } {
+    const wide = width >= 90;
+    const idWidth = Math.min(32, Math.max(10, Math.floor(width * (wide ? 0.28 : 0.3))));
+    const fixed = wide ? 3 + idWidth + 8 + 12 + 10 + 8 + 6 : 3 + idWidth + 6 + 3;
+    return { wide, idWidth, titleWidth: Math.max(10, width - fixed) };
+  }
+
+  /** The Backlog as core pages it, at the page the person stepped to. */
+  private backlogViewAt(width: number): BacklogView {
+    const { idWidth, titleWidth } = this.backlogLayout(width);
+    return backlogView(this.board.issues, {
+      statuses: this.board.statuses,
+      filter: this.filter,
+      sort: this.sort,
+      titleWidth,
+      idWidth,
+      pageSize: BACKLOG_PAGE_SIZE,
+      page: this.backlogPage,
+      ...(this.readyIds === undefined ? {} : { readyIds: this.readyIds }),
+    });
+  }
+
+  /**
+   * Steps the Backlog's page, wrapping at the ends. When `refocus`, the focus ring moves onto the
+   * new page's first row, as the row that held it is no longer drawn.
+   */
+  async stepBacklog(delta: number, refocus = false): Promise<void> {
+    const { page } = this.backlogViewAt(this.width);
+    this.backlogPage = stepPage(page.page, page.pages, delta);
+    this.host?.invalidate();
+    const first = this.backlogViewAt(this.width).rows[0];
+    if (!refocus || first === undefined) return;
+    this.focusedId = first.id;
+    await this.host?.focus(PANE_ID, `open:${first.id}`).catch(() => undefined);
   }
 
   private drawBacklog(ui: PaneUi, width: number): RenderElement {
     const { Box, Text, Button } = ui;
-    const wide = width >= 90;
-    const idWidth = Math.min(32, Math.max(10, Math.floor(width * (wide ? 0.28 : 0.3))));
-    const fixed = wide ? 3 + idWidth + 8 + 12 + 10 + 8 + 6 : 3 + idWidth + 6 + 3;
-    const view = backlogView(this.board.issues, {
-      statuses: this.board.statuses,
-      filter: this.filter,
-      sort: this.sort,
-      titleWidth: Math.max(10, width - fixed),
-      idWidth,
-      ...(this.readyIds === undefined ? {} : { readyIds: this.readyIds }),
-    });
-    const shown = view.rows.slice(0, BACKLOG_ROW_LIMIT);
-    const cut = view.rows.length - shown.length;
+    const { wide, idWidth } = this.backlogLayout(width);
+    const view = this.backlogViewAt(width);
+    const { page } = view;
     return Box({
       key: "backlog",
       flexDirection: "column",
@@ -997,11 +1272,11 @@ export class BeadsPane {
           children: [
             Text({
               dimColor: true,
-              children: `${view.rows.length} of ${view.total} open issues, ${sortLabel(this.sort)} order`,
+              children: `${page.total} of ${view.total} open issues, ${sortLabel(this.sort)} order`,
             }),
           ],
         }),
-        ...shown.map((row) =>
+        ...view.rows.map((row) =>
           Box({
             key: `row:${row.id}`,
             flexDirection: "row",
@@ -1037,9 +1312,29 @@ export class BeadsPane {
             ],
           }),
         ),
-        cut === 0
+        page.pages === 1
           ? undefined
-          : Text({ dimColor: true, children: `+${cut} more; narrow the filter` }),
+          : Box({
+              key: "backlog-pager",
+              flexDirection: "row",
+              columnGap: 1,
+              children: [
+                Button({
+                  key: "backlog-back",
+                  label: page.page === 0 ? "last page" : "back",
+                  plain: true,
+                  dimColor: true,
+                  onPress: () => void this.stepBacklog(-1),
+                }),
+                Text({ dimColor: true, children: `rows ${page.from}-${page.to} of ${page.total}` }),
+                Button({
+                  key: "backlog-next",
+                  label: page.to < page.total ? `+${page.total - page.to} more` : "first page",
+                  plain: true,
+                  onPress: () => void this.stepBacklog(1),
+                }),
+              ],
+            }),
       ]),
     });
   }
@@ -1102,6 +1397,9 @@ export class BeadsPane {
           key: `edit:${editable}`,
           label: field.label,
           value: raw,
+          ...(editable === "description"
+            ? { placeholder: "one line: \\n is a line break, \\\\ a backslash" }
+            : {}),
           submitLabel: "save",
           onSubmit: (value) => void this.edit(editable, value),
         });

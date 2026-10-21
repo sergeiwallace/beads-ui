@@ -4,7 +4,6 @@ import { describe, expect, test } from "claude-code/testing";
 
 import {
   asOf,
-  BOARD_CARD_LIMIT,
   clockStamp,
   type Issue,
   parseBdHistoryEvents,
@@ -77,6 +76,28 @@ const keysOf = async (ui: Mounted, prefix: string, type = "Box") =>
   (await ui.findAll({ type }))
     .map((element) => element.key ?? "")
     .filter((key) => key.startsWith(prefix));
+
+// A store of 600 issues, a third each open, in progress and closed, spread over `assignees`:
+// bd's own records, renamed, from the first record of `bd list --json --all --brief --limit 0`.
+const largeStore = (assignees: number) => {
+  const [first] = JSON.parse(list) as Record<string, unknown>[];
+  return Array.from({ length: 600 }, (_, i) => ({
+    ...first,
+    id: `BU-load${i}`,
+    title: `issue number ${i} with a title long enough to fill a card`,
+    status: ["open", "in_progress", "closed"][i % 3],
+    metadata: { display_id: `BU-issue-number-${i}-load` },
+    labels: [`id:BU-issue-number-${i}-load`],
+    assignee: `aih-ec2-${i % assignees}`,
+  }));
+};
+const openLarge = ($: Engine, on: On, assignees: number) =>
+  openPane($, on, {
+    script: (key) =>
+      key === "bd list --all --brief --limit 0"
+        ? ok(JSON.stringify(largeStore(assignees)))
+        : undefined,
+  });
 
 describe("the Board tab", () => {
   for (const surface of SURFACES) {
@@ -191,37 +212,150 @@ describe("the Board tab", () => {
     expect((await ui.find({ key: "column::open" }))?.text).toBe("open 20");
   });
 
-  test("should keep the drawing under the mod's 100,000-character tree limit when the store is large", async ($, on) => {
-    // bd's own records, renamed: the first record of `bd list --json --all --brief --limit 0`.
-    const [first] = JSON.parse(list) as Record<string, unknown>[];
-    const many = Array.from({ length: 600 }, (_, i) => ({
-      ...first,
-      id: `BU-load${i}`,
-      title: `issue number ${i} with a title long enough to fill a card`,
-      status: ["open", "in_progress", "closed"][i % 3],
-      metadata: { display_id: `BU-issue-number-${i}-load` },
-      labels: [`id:BU-issue-number-${i}-load`],
-      assignee: "aih-ec2-3",
-    }));
-    const { ui } = await openPane($, on, {
-      script: (key) =>
-        key === "bd list --all --brief --limit 0" ? ok(JSON.stringify(many)) : undefined,
-    });
+  const everyMove = Array.from({ length: 600 }, (_, i) => `move:BU-load${i}`).sort();
 
-    const size = JSON.stringify(await ui.drawn()).length;
+  /**
+   * Walks the board as a person would: on each lane page, steps every paged cell through all of
+   * its pages with its more control and back round to the first, then takes the next lane page.
+   * Returns every Move to control it met and the largest drawing it saw.
+   */
+  async function walkBoard(ui: Mounted) {
+    const moves = new Set<string>();
+    let largest = 0;
+    const look = async () => {
+      largest = Math.max(largest, JSON.stringify(await ui.drawn()).length);
+      for (const key of await keysOf(ui, "move:", "Select")) moves.add(key);
+    };
+    for (let lanePage = 0; lanePage < 50; lanePage++) {
+      await look();
+      for (const pager of await keysOf(ui, "pager:")) {
+        const cell = pager.slice("pager:".length);
+        const range = /(\d+)-(\d+) of (\d+)/.exec((await ui.find({ key: pager }))?.text ?? "");
+        const [from, to, total] = (range ?? []).slice(1).map(Number);
+        const pages = Math.ceil((total ?? 0) / ((to ?? 0) - (from ?? 0) + 1));
+        for (let step = 1; step < pages; step++) {
+          await ui.press({ key: `next:${cell}` });
+          await look();
+        }
+        await ui.press({ key: `next:${cell}` });
+        expect((await ui.find({ key: pager }))?.text).toContain(`1-${to} of ${total}`);
+      }
+      if ((await ui.find({ key: "lanes-next" })) === undefined) break;
+      await ui.press({ key: "lanes-next" });
+      if (/lanes 1-/.test((await ui.find({ key: "lane-pager" }))?.text ?? "")) break;
+    }
+    return { moves: [...moves].sort(), largest };
+  }
 
-    expect(size).toBeLessThan(100_000);
-    expect(await keysOf(ui, "card:")).toHaveLength(BOARD_CARD_LIMIT.perCell * 3);
+  test("should reach a Move to control for every card by paging each column when the store is large", async ($, on) => {
+    const { ui } = await openLarge($, on, 1);
+
     expect((await ui.find({ key: "column::open" }))?.text).toBe("open 200");
-    expect((await ui.find({ key: "group::active" }))?.text).toContain(
-      `+${200 - BOARD_CARD_LIMIT.perCell} more; narrow the filter`,
+    expect((await ui.find({ key: "pager::open" }))?.text).toContain("1-25 of 200");
+    expect((await ui.find({ key: "next::open" }))?.props.label).toBe("+175 more");
+
+    const { moves, largest } = await walkBoard(ui);
+
+    expect(moves).toEqual(everyMove);
+    expect(largest).toBeLessThan(100_000);
+  });
+
+  test("should reach every card's Move to through lane pages when the assignee lanes outgrow one drawing", async ($, on) => {
+    // 200 assignees, three cards each: the most lanes, and so the most column headers, per card.
+    const { ui } = await openLarge($, on, 200);
+    await ui.press({ key: "swimlane" });
+
+    expect((await ui.find({ key: "lane-pager" }))?.text).toMatch(/^back\s*lanes 1-\d+ of 201/);
+
+    const { moves, largest } = await walkBoard(ui);
+
+    expect(moves).toEqual(everyMove);
+    expect(largest).toBeLessThan(100_000);
+  });
+
+  // The kit answers the mod's own $.ui.focus inside the mounted drawing without raising it to the
+  // test's hooks, so the focus ring itself is checked in the live run. This test shows the card p
+  // and b act on follows onto the page they open: the second p steps the same column again.
+  test("should step the focused card's column with p and b, acting on the new page's card after each step", async ($, on) => {
+    const { w, ui } = await openLarge($, on, 1);
+    await $.ui.focus({
+      component: "Pane",
+      requestId: PANE_ID,
+      plugin: PLUGIN_NAME,
+      element: "move:BU-load0",
+      origin: { kind: "person" },
+    } as never);
+    const pager = async () => (await ui.find({ key: "pager::open" }))?.text ?? "";
+
+    await ui.press({ key: "page-next" });
+    await w.clock.settle();
+    expect(await pager()).toContain("26-50 of 200");
+    expect(await keysOf(ui, "move:", "Select")).not.toContain("move:BU-load0");
+
+    await ui.press({ key: "page-next" });
+    await w.clock.settle();
+    expect(await pager()).toContain("51-75 of 200");
+
+    await ui.press({ key: "page-back" });
+    await ui.press({ key: "page-back" });
+    await w.clock.settle();
+    expect(await pager()).toContain("1-25 of 200");
+    expect(await keysOf(ui, "move:", "Select")).toContain("move:BU-load0");
+    expect(await ui.find({ key: "notice" })).toBeUndefined();
+  });
+
+  test("should name what to do and step nothing when p is pressed with no card focused", async ($, on) => {
+    const { ui } = await openLarge($, on, 1);
+
+    await ui.press({ key: "page-next" });
+
+    expect((await ui.find({ key: "notice" }))?.text).toBe(
+      "focus a card first: Tab moves between cards",
     );
+    expect((await ui.find({ key: "pager::open" }))?.text).toContain("1-25 of 200");
   });
 });
 
 describe("the Backlog tab", () => {
   const openIds = () =>
     sortIssues(issues().filter((issue) => issue.status === "open")).map((issue) => issue.id);
+
+  test("should reach the last open issue by paging the list when the store has more than a page", async ($, on) => {
+    const parsed = parseBdList(JSON.stringify(largeStore(1)));
+    const open = sortIssues(
+      (parsed.ok ? parsed.value : []).filter((issue) => issue.status === "open"),
+    ).map((issue) => `row:${issue.id}`);
+    const { ui } = await openLarge($, on, 1);
+    await ui.press({ key: "tab:backlog" });
+    const seen: string[] = [];
+    let largest = 0;
+
+    expect((await ui.find({ key: "backlog-count" }))?.text).toContain("200 of 200 open issues");
+    expect((await ui.find({ key: "backlog-pager" }))?.text).toContain("rows 1-60 of 200");
+    for (let page = 0; page < 4; page++) {
+      largest = Math.max(largest, JSON.stringify(await ui.drawn()).length);
+      seen.push(...(await keysOf(ui, "row:")));
+      await ui.press({ key: "backlog-next" });
+    }
+
+    expect(seen).toEqual(open);
+    expect(seen.at(-1)).toBe(open.at(-1));
+    expect(largest).toBeLessThan(100_000);
+    expect((await ui.find({ key: "backlog-pager" }))?.text).toContain("rows 1-60 of 200");
+  });
+
+  test("should step the list with p and b on the Backlog tab", async ($, on) => {
+    const { w, ui } = await openLarge($, on, 1);
+    await ui.press({ key: "tab:backlog" });
+
+    await ui.press({ key: "page-back" });
+    await w.clock.settle();
+    expect((await ui.find({ key: "backlog-pager" }))?.text).toContain("rows 181-200 of 200");
+
+    await ui.press({ key: "page-next" });
+    await w.clock.settle();
+    expect((await ui.find({ key: "backlog-pager" }))?.text).toContain("rows 1-60 of 200");
+  });
 
   test("should list open issues by priority then created date when the Backlog tab renders", async ($, on) => {
     const { ui } = await openPane($, on);
@@ -247,6 +381,26 @@ describe("the Backlog tab", () => {
         (issue) => issue.id,
       ),
     );
+  });
+
+  test("should keep exactly the open issues assigned to that person when an assignee filter is entered", async ($, on) => {
+    // The store with two open issues claimed by aih-ec2-3; the fixture's open issues have no assignee.
+    const claimed = new Set(["BU-2zw", "BU-mg2.3.6"]);
+    const assigned = (JSON.parse(list) as Record<string, unknown>[]).map((record) =>
+      claimed.has(String(record.id)) ? { ...record, assignee: "aih-ec2-3" } : record,
+    );
+    const { ui } = await openPane($, on, {
+      script: (key) =>
+        key === "bd list --all --brief --limit 0" ? ok(JSON.stringify(assigned)) : undefined,
+    });
+    await ui.press({ key: "tab:backlog" });
+
+    await ui.input({ key: "filter", text: "assignee:aih-ec2-3" });
+
+    expect((await keysOf(ui, "row:")).map((key) => key.slice(4))).toEqual(
+      sortIssues(issues().filter((issue) => claimed.has(issue.id))).map((issue) => issue.id),
+    );
+    expect((await ui.find({ key: "backlog-count" }))?.text).toContain("2 of 20 open issues");
   });
 
   test("should show the accepted keys and keep the list when the filter has an unknown key", async ($, on) => {
@@ -328,6 +482,48 @@ describe("the Detail tab", () => {
     expect(after.slice(write + 1)).toContain("bd history BU-mg2.3 --events");
   });
 
+  test("should edit a multi-line description through its one-line control and write it back exactly", async ($, on) => {
+    const description =
+      "Board, backlog and detail.\n\n- keyboard Move to\n- C:\\new is not a break\n";
+    const [record] = JSON.parse(show) as Record<string, unknown>[];
+    const { w, ui } = await openPane($, on, {
+      script: (key) =>
+        key === "bd show BU-mg2.3" ? ok(JSON.stringify([{ ...record, description }])) : undefined,
+    });
+    await ui.press({ key: "open:BU-mg2.3" });
+    await w.clock.settle();
+    const control = await ui.find({ key: "edit:description" });
+    const shown = String(control?.props.value);
+    const before = w.keys().length;
+
+    expect(control?.props.label).toBe("Description");
+    expect(shown).toBe(
+      "Board, backlog and detail.\\n\\n- keyboard Move to\\n- C:\\\\new is not a break\\n",
+    );
+    expect((await ui.find({ key: "md:description" }))?.text).toContain("keyboard Move to");
+
+    await ui.input({ key: "edit:description", text: shown });
+    await w.clock.settle();
+    expect(w.runs.slice(before).some((argv) => argv[1] === "update")).toBe(false);
+    expect((await ui.find({ key: "detail-error" }))?.text).toBe("description is unchanged");
+
+    await ui.input({ key: "edit:description", text: `${shown}- inline edit` });
+    await w.clock.settle();
+
+    const runs = w.runs.slice(before);
+    const write = runs.findIndex((argv) => argv[1] === "update");
+    expect(runs[write]).toEqual([
+      "bd",
+      "update",
+      "BU-mg2.3",
+      `--description=${description}- inline edit`,
+      "--json",
+    ]);
+    expect(runs.slice(write + 1).map((argv) => argv.join(" "))).toContain(
+      "bd show BU-mg2.3 --json",
+    );
+  });
+
   test("should show the reason and write nothing when an edit cannot be read", async ($, on) => {
     const { w, ui } = await openPane($, on);
     await ui.press({ key: "open:BU-mg2.3" });
@@ -401,6 +597,112 @@ describe("quick-add", () => {
     ]);
     expect((await ui.find({ key: "notice" }))?.text).toBe(
       "created BU-2zw as BU-npm-audit-10-dev-only-advisories-2zw",
+    );
+  });
+
+  test("should mint under bd-new's slug budget override when the session sets one", async ($, on) => {
+    const { w, ui } = await openPane($, on, {
+      script,
+      env: { HOME: "/home/me", AIH_SLUG_BODY_MAX_CHARS: "12", AIH_SLUG_BODY_MAX_CHARS_CHILD: "8" },
+    });
+
+    await ui.input({ key: "quickadd", text: LINE });
+    await w.clock.settle();
+
+    expect(w.keys()).toContain(
+      "bd update BU-2zw --set-metadata display_id=BU-npm-audit-10-2zw --add-label id:BU-npm-audit-10-2zw",
+    );
+    expect((await ui.find({ key: "notice" }))?.text).toBe("created BU-2zw as BU-npm-audit-10-2zw");
+  });
+
+  // The store once bd create has run and before the display id is written: BU-2zw as bd lists it,
+  // without its metadata.display_id and id: label.
+  const MINTED = "BU-npm-audit-10-dev-only-advisories-2zw";
+  const ATTACH = `bd update BU-2zw --set-metadata display_id=${MINTED} --add-label id:${MINTED}`;
+  const unattached = () =>
+    JSON.stringify(
+      (JSON.parse(list) as Record<string, unknown>[]).map((record) =>
+        record.id === "BU-2zw" ? { ...record, metadata: {}, labels: [] } : record,
+      ),
+    );
+
+  test("should keep a failed display id write pending and retry the same id on each refresh until it succeeds", async ($, on) => {
+    let made = false;
+    let attaching = "failing";
+    const { w, ui } = await openPane($, on, {
+      script: (key) => {
+        if (key.startsWith("bd create ")) {
+          made = true;
+          return ok(created());
+        }
+        if (key === "bd list --all --brief --limit 0") {
+          if (!made) return ok(before());
+          return attaching === "done" ? ok(list) : ok(unattached());
+        }
+        if (key === ATTACH) {
+          if (attaching === "failing") return exit(1, "Error: database is locked");
+          attaching = "done";
+        }
+        return undefined;
+      },
+    });
+
+    await ui.input({ key: "quickadd", text: LINE });
+    await w.clock.settle();
+
+    expect((await ui.find({ key: "notice" }))?.text).toBe(
+      "created BU-2zw; writing its display id failed (exit 1): Error: database is locked",
+    );
+    expect((await ui.find({ key: "pending-id:BU-2zw" }))?.text).toBe(
+      `BU-2zw has no display id yet (writing its display id failed (exit 1): Error: database is locked); writing ${MINTED} again on the next refresh`,
+    );
+    const failedTries = w.keys().filter((key) => key === ATTACH).length;
+    // What a pane reopened in a later session reads back from the plugin store.
+    expect(w.store.get("pending-display-ids")).toEqual([{ id: "BU-2zw", displayId: MINTED }]);
+
+    await w.clock.advance(10_000);
+    expect(w.keys().filter((key) => key === ATTACH).length).toBe(failedTries + 1);
+    expect(await ui.find({ key: "pending-id:BU-2zw" })).toBeDefined();
+
+    attaching = "working";
+    await w.clock.advance(10_000);
+
+    expect(await ui.find({ key: "pending-id:BU-2zw" })).toBeUndefined();
+    expect((await ui.find({ key: "notice" }))?.text).toBe(`wrote ${MINTED} for BU-2zw`);
+    const writes = w.keys().filter((key) => key.startsWith("bd update BU-2zw"));
+    expect(new Set(writes)).toEqual(new Set([ATTACH]));
+    expect(w.store.get("pending-display-ids")).toEqual([]);
+
+    await w.clock.advance(10_000);
+    expect(w.keys().filter((key) => key === ATTACH).length).toBe(failedTries + 2);
+  });
+
+  test("should retry a display id left pending by an earlier session without minting another", async ($, on) => {
+    let attached = false;
+    const { w, ui } = await openPane($, on, {
+      stored: { "pending-display-ids": [{ id: "BU-2zw", displayId: MINTED }] },
+      script: (key) => {
+        if (key === ATTACH) attached = true;
+        return key === "bd list --all --brief --limit 0" && !attached
+          ? ok(unattached())
+          : undefined;
+      },
+    });
+
+    expect(w.keys().filter((key) => key.startsWith("bd update"))).toEqual([ATTACH]);
+    expect(w.keys().some((key) => key.startsWith("bd create"))).toBe(false);
+    expect(await ui.find({ key: "pending-id:BU-2zw" })).toBeUndefined();
+  });
+
+  test("should drop a pending display id without writing when the issue already carries another", async ($, on) => {
+    const { w, ui } = await openPane($, on, {
+      stored: { "pending-display-ids": [{ id: "BU-2zw", displayId: "BU-something-else-2zw" }] },
+    });
+
+    expect(w.keys().some((key) => key.startsWith("bd update"))).toBe(false);
+    expect(await ui.find({ key: "pending-id:BU-2zw" })).toBeUndefined();
+    expect((await ui.find({ key: "notice" }))?.text).toBe(
+      `BU-2zw already carries ${MINTED}; BU-something-else-2zw was not written`,
     );
   });
 

@@ -128,6 +128,33 @@ function minutes(value: number): string {
   return rest === 0 ? `${hours}h` : `${hours}h ${rest}m`;
 }
 
+const ESCAPES: Readonly<Record<string, string>> = { "\\": "\\", n: "\n", r: "\r", t: "\t" };
+const ESCAPED: Readonly<Record<string, string>> = {
+  "\\": "\\\\",
+  "\n": "\\n",
+  "\r": "\\r",
+  "\t": "\\t",
+};
+
+/**
+ * A multi-line text on one line, for a one-line edit control: a line break is `\n` (a carriage
+ * return `\r`, a tab `\t`) and a backslash is `\\`. `fromOneLine` reverses it exactly.
+ */
+export function toOneLine(text: string): string {
+  return text.replace(/[\\\n\r\t]/g, (ch) => ESCAPED[ch] ?? ch);
+}
+
+/** Reads `toOneLine`'s escapes back; a backslash before any other character stays as typed. */
+export function fromOneLine(text: string): string {
+  return text.replace(/\\([\\nrt])/g, (_match, ch: string) => ESCAPES[ch] ?? ch);
+}
+
+/**
+ * The longest description, in its one-line form, the Detail tab edits inline: an edit control
+ * holds the whole text, and a mod tree is cut off past 100,000 serialized characters.
+ */
+export const DESCRIPTION_EDIT_MAX_CHARS = 20_000;
+
 function fieldsOf(issue: Issue): FieldView[] {
   const fields: FieldView[] = [];
   const add = (
@@ -147,6 +174,16 @@ function fieldsOf(issue: Issue): FieldView[] {
   const sprint = issue.labels.find((label) => label.startsWith("sprint:"));
 
   add("title", "Title", issue.title, "title");
+  const description = toOneLine(issue.description ?? "");
+  if (description.length <= DESCRIPTION_EDIT_MAX_CHARS) {
+    add("editDescription", "Description", description, "description");
+  } else {
+    add(
+      "editDescription",
+      "Description",
+      `${description.length} characters, more than the ${DESCRIPTION_EDIT_MAX_CHARS} the inline editor holds; edit it with bd update ${issue.id} --description`,
+    );
+  }
   add("id", "Id", issue.id);
   add("displayId", "Display id", issue.displayId);
   add("status", "Status", issue.status, "status");
@@ -310,7 +347,7 @@ const DURATION = /^(?:(\d+)\s*h)?\s*(?:(\d+)\s*m?)?$/i;
 /**
  * Reads what an edit control holds back into a FieldEdit: the inverse of each field's `raw`.
  * Priority takes `1` or `P1`; an estimate takes minutes (`90`) or the drawn form (`1h 30m`);
- * labels are comma-separated.
+ * labels are comma-separated; a description reads `toOneLine`'s escapes back (`\n` a line break).
  */
 export function parseFieldEdit(field: EditableField, text: string): Result<FieldEdit, EditError> {
   switch (field) {
@@ -338,6 +375,8 @@ export function parseFieldEdit(field: EditableField, text: string): Result<Field
             .filter((label) => label !== ""),
         },
       };
+    case "description":
+      return { ok: true, value: { field, value: fromOneLine(text) } };
     default:
       return { ok: true, value: { field, value: text } };
   }

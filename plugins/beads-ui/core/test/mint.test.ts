@@ -6,7 +6,10 @@ import {
   mintDisplayId,
   parseBdShow,
   parseIdPolicy,
+  pendingDisplayIdStep,
   planDisplayId,
+  readPendingDisplayIds,
+  slugBudgets,
   slugifyTitle,
   storeUsesDisplayIds,
   takenDisplayIds,
@@ -61,6 +64,52 @@ describe("slugifyTitle", () => {
 
   test("should hard-cut a single word longer than the budget", () => {
     expect(slugifyTitle("a".repeat(40))).toBe("a".repeat(32));
+  });
+});
+
+describe("slug budgets from bd-new's overrides", () => {
+  const TITLE = "npm audit: 10 dev-only advisories under markdownlint-cli2";
+  // What ai-harness scripts/bd_new.py's slugify_title gave for TITLE with
+  // AIH_SLUG_BODY_MAX_CHARS set to each value (read 2026-10-21); a value _env_budget refuses
+  // falls back to 32.
+  const BD_NEW_BODIES: readonly [string, string][] = [
+    ["12", "npm-audit-10"],
+    ["50", "npm-audit-10-dev-only-advisories-under"],
+    [" 40 ", "npm-audit-10-dev-only-advisories-under"],
+    ["1_6", "npm-audit-10-dev"],
+    ["abc", "npm-audit-10-dev-only-advisories"],
+    ["0", "npm-audit-10-dev-only-advisories"],
+    ["-5", "npm-audit-10-dev-only-advisories"],
+    ["", "npm-audit-10-dev-only-advisories"],
+  ];
+
+  for (const [value, body] of BD_NEW_BODIES) {
+    test(`should give the body bd-new gives when AIH_SLUG_BODY_MAX_CHARS is ${JSON.stringify(value)}`, () => {
+      expect(slugifyTitle(TITLE, { budgets: slugBudgets({ body: value }) })).toBe(body);
+    });
+  }
+
+  test("should use the child budget override for a child and bd-new's defaults when neither is set", () => {
+    expect(slugifyTitle(TITLE, { child: true, budgets: slugBudgets({ child: "8" }) })).toBe("npm");
+    expect(slugBudgets({})).toEqual({ body: 32, child: 20 });
+  });
+
+  test("should mint a top-level display id under the body budget override when one is given", () => {
+    const top = byId(mintedIssues, "BU-2zw");
+
+    const result = planDisplayId({
+      policy: "auto",
+      issues: allIssues().filter((issue) => issue.id !== top.id),
+      createdId: top.id,
+      title: top.title,
+      child: false,
+      random: sequence(0.5),
+      budgets: slugBudgets({ body: "12" }),
+    });
+
+    expect(result.ok && result.value.kind === "attach" && result.value.displayId).toBe(
+      "BU-npm-audit-10-2zw",
+    );
   });
 });
 
@@ -259,6 +308,59 @@ describe("planDisplayId", () => {
     const result = plan({ createdId: "BU-Mg2_x", child: false });
 
     expect(!result.ok && result.error.kind).toBe("invalid-id");
+  });
+});
+
+describe("pending display ids", () => {
+  const MINTED = "BU-npm-audit-10-dev-only-advisories-2zw";
+  const pending = { id: "BU-2zw", displayId: MINTED };
+  const storeWith = (change: Partial<Issue>) =>
+    allIssues().map((issue) => (issue.id === "BU-2zw" ? { ...issue, ...change } : issue));
+
+  test("should write the same display id again when the issue still has none", () => {
+    const { displayId: _none, ...bare } = byId(allIssues(), "BU-2zw");
+    const issues = allIssues().map((issue) => (issue.id === "BU-2zw" ? bare : issue));
+
+    expect(pendingDisplayIdStep(pending, issues)).toEqual({
+      kind: "write",
+      argv: [
+        "bd",
+        "update",
+        "BU-2zw",
+        "--set-metadata",
+        `display_id=${MINTED}`,
+        "--add-label",
+        `id:${MINTED}`,
+        "--json",
+      ],
+    });
+  });
+
+  test("should stop when the issue carries the id, carries another, or is gone", () => {
+    expect(pendingDisplayIdStep(pending, allIssues())).toEqual({ kind: "written" });
+    expect(pendingDisplayIdStep(pending, storeWith({ displayId: "BU-other-2zw" }))).toEqual({
+      kind: "kept",
+      existing: "BU-other-2zw",
+    });
+    expect(pendingDisplayIdStep({ ...pending, id: "BU-gone" }, allIssues())).toEqual({
+      kind: "gone",
+    });
+  });
+
+  test("should read back only well-formed entries, once per issue, from what a surface stored", () => {
+    expect(
+      readPendingDisplayIds([
+        pending,
+        { id: "BU-2zw", displayId: "BU-second-2zw" },
+        { id: "-BU-x", displayId: "BU-x" },
+        { id: "BU-y", displayId: "has space" },
+        { id: 7, displayId: "BU-z" },
+        "BU-w",
+        null,
+      ]),
+    ).toEqual([pending]);
+    expect(readPendingDisplayIds({ id: "BU-2zw" })).toEqual([]);
+    expect(readPendingDisplayIds(undefined)).toEqual([]);
   });
 });
 

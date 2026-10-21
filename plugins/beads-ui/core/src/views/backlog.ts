@@ -2,6 +2,7 @@ import { applyFilter, describeFilterError, type FilterState } from "../filter.ts
 import type { Issue, Status } from "../model.ts";
 import { DEFAULT_SORT, type SortSpec, sortIssues } from "../sort.ts";
 import { priorityToken, type Token } from "../tokens.ts";
+import { type PageView, pageOf } from "./board.ts";
 import { priorityBadge, truncate } from "./text.ts";
 
 export interface BacklogRow {
@@ -17,12 +18,21 @@ export interface BacklogRow {
 }
 
 export interface BacklogView {
+  /** The rows on the drawn page. */
   rows: BacklogRow[];
+  /** Which rows are drawn of every row the filter kept; `pages` is 1 when they all fit. */
+  page: PageView;
   /** Open issues before the filter. */
   total: number;
   /** The filter's error, such as an unknown key with the accepted keys; the rows are unchanged. */
   filterLine?: string;
 }
+
+/**
+ * The rows one Backlog page draws in the mod, which keeps a large store's drawing under the mods
+ * API's 100,000-character tree limit; the other rows are a page step away.
+ */
+export const BACKLOG_PAGE_SIZE = 60;
 
 export interface BacklogOptions {
   statuses: readonly Status[];
@@ -32,6 +42,10 @@ export interface BacklogOptions {
   /** Width of the title column; the display id is cut to `idWidth`. */
   titleWidth: number;
   idWidth?: number;
+  /** Rows per page; every row on one page when absent. */
+  pageSize?: number;
+  /** The page drawn, clamped to the last; the first when absent. */
+  page?: number;
 }
 
 /**
@@ -54,7 +68,14 @@ export function backlogView(issues: readonly Issue[], options: BacklogOptions): 
   else filterLine = filtered.error.message;
 
   const idWidth = options.idWidth ?? 32;
-  const rows = sortIssues(shown, options.sort ?? DEFAULT_SORT).map(
+  const sorted = sortIssues(shown, options.sort ?? DEFAULT_SORT);
+  const page = pageOf(
+    "backlog",
+    sorted.length,
+    options.pageSize ?? Math.max(1, sorted.length),
+    options.page,
+  );
+  const rows = sorted.slice(page.from === 0 ? 0 : page.from - 1, page.to).map(
     (issue): BacklogRow => ({
       id: issue.id,
       displayId: truncate(issue.displayId ?? issue.id, idWidth),
@@ -66,7 +87,7 @@ export function backlogView(issues: readonly Issue[], options: BacklogOptions): 
       created: issue.createdAt.slice(0, 10),
     }),
   );
-  const view: BacklogView = { rows, total: open.length };
+  const view: BacklogView = { rows, page, total: open.length };
   if (filterLine !== undefined) view.filterLine = filterLine;
   return view;
 }

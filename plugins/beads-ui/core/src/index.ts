@@ -75,16 +75,26 @@ export type {
   IdPolicyError,
   MintError,
   MintInput,
+  PendingDisplayId,
+  PendingDisplayIdStep,
+  SlugBudgets,
 } from "./mint.ts";
 export {
   DEFAULT_ID_POLICY,
+  DEFAULT_SLUG_BUDGETS,
+  displayIdArgv,
+  envBudget,
   FLEET_TASK_ID_RULE,
   ID_POLICIES,
   mintDisplayId,
   parseIdPolicy,
+  pendingDisplayIdStep,
   planDisplayId,
+  readPendingDisplayIds,
+  SLUG_BUDGET_ENV,
   SLUG_SUFFIX_ALPHABET,
   SLUG_SUFFIX_LENGTH,
+  slugBudgets,
   slugifyTitle,
   storeUsesDisplayIds,
   takenDisplayIds,
@@ -136,11 +146,12 @@ export {
   terminalColor,
 } from "./tokens.ts";
 export type { BacklogOptions, BacklogRow, BacklogView } from "./views/backlog.ts";
-export { backlogView } from "./views/backlog.ts";
+export { BACKLOG_PAGE_SIZE, backlogView } from "./views/backlog.ts";
 export type { BandCount, BandView } from "./views/band.ts";
 export { bandView } from "./views/band.ts";
 export type {
   BoardEvent,
+  BoardPageLimit,
   BoardState,
   BoardView,
   BoardViewOptions,
@@ -149,15 +160,19 @@ export type {
   LaneView,
   LoadError,
   MoveError,
+  PageView,
   PendingMove,
 } from "./views/board.ts";
 export {
-  BOARD_CARD_LIMIT,
+  BOARD_PAGE_LIMIT,
   boardView,
+  cellKey,
   INITIAL_BOARD_STATE,
+  pageOf,
   planMove,
   reduceBoard,
   STALE_WRITE_EXIT,
+  stepPage,
 } from "./views/board.ts";
 export type {
   ConfirmEvent,
@@ -187,13 +202,16 @@ export type {
   MarkdownView,
 } from "./views/detail.ts";
 export {
+  DESCRIPTION_EDIT_MAX_CHARS,
   DETAIL_EVENT_LIMIT,
   detailView,
   EDITABLE_FIELDS,
   editArgv,
+  fromOneLine,
   openDetail,
   parseFieldEdit,
   reduceDetail,
+  toOneLine,
 } from "./views/detail.ts";
 export {
   asOf,

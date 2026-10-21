@@ -57,11 +57,15 @@ The pane takes these keys while it has the keyboard (`/beads` gives it the keybo
 | `d` | Open the focused card's detail |
 | `m` | Focus the focused card's Move to |
 | `x` | Delete the focused card, or the issue on the Detail tab |
+| `p`, `b` | Next or previous page: of the focused card's column on the Board, of the list on the Backlog, while it is paged |
+| `l` | Next page of swimlanes, while they take more than one page |
 | `u` | Undo the last close, while its line is shown |
 | `h` | Show or hide the help panel |
 | Esc | Close the pane |
 
 Every card carries a Move to control: Tab to it, press Enter to open its list, pick a status with the arrows and press Enter. Esc closes the whole pane, even from an open list. The move shows at once and is written with `bd update <id> --status <new> --if-status <shown>`. If another session changed the issue first, bd refuses the write, the card goes back to its column and a line says so.
+
+A large board is drawn in pages, because Claude Code cuts off a mod's drawing past 100,000 characters. A column with more cards than fit shows a range such as `1-25 of 200` under its cards, between a `back` control and a `+175 more` control; both wrap round, so `more` on the last page goes back to the first. Tab to either and press Enter, or press `p` or `b` with a card in that column focused, which also moves the focus onto the new page's first card (its `detail` control, so the next `p` steps again; `m` reaches its Move to). When the swimlanes do not fit on one page, a `lanes 1-18 of 201` line above them pages through the lanes the same way, with `l` for the next page. The Backlog lists 60 open issues to a page, with the same `back` and `more` controls under the list and `p` and `b` stepping it. A new filter, swimlane or sort starts every column, and the Backlog, again at its first page.
 
 In the delete confirmation:
 
@@ -75,7 +79,7 @@ The board steps aside while the confirmation is open, so the confirmation gets t
 
 ## Quick-add
 
-Type a line into the `+` field and press Enter. Words become the title; these tokens set fields:
+Type a line into the `New` field (`n` focuses it) and press Enter. Words become the title; these tokens set fields:
 
 | Token | Sets | Example |
 |---|---|---|
@@ -88,9 +92,19 @@ Type a line into the `+` field and press Enter. Words become the title; these to
 
 For example, `Fix the band p1 type:bug +ui due:2026-11-02` runs `bd create` with `--title=Fix the band --priority=1 --type=bug --labels=ui --due=2026-11-02`. When the store's issues carry display ids (`metadata.display_id`), the new issue gets one of the same shape, written to `metadata.display_id` and as an `id:<display id>` label.
 
+The readable part of a display id is cut to 32 characters, or 20 for a child issue. The fleet's `bd-new` takes these budgets from `AIH_SLUG_BODY_MAX_CHARS` and `AIH_SLUG_BODY_MAX_CHARS_CHILD`, and the mod reads the same two variables from the session's environment when it creates an issue, so both mint the same id. A value that is not a positive whole number is ignored and the default applies.
+
+If the issue is created but writing its display id fails, a warning line stays on the pane and the mod writes the same display id again on every refresh until it succeeds, in this session or a later one. It never mints a second id for the issue, and if the issue has meanwhile got a display id some other way, it keeps that one and writes nothing.
+
 ## Filter
 
-Type `key:value` terms into the `/` field and press Enter. Terms combine with AND. The keys are `type`, `label`, `assignee`, `sprint` and `ready` (`ready:true` or `ready:false`, from `bd ready`). A term with any other key shows the accepted keys and leaves the list as it was.
+Type `key:value` terms into the `Filter` field (Tab to it) and press Enter. Terms combine with AND. The keys are `type`, `label`, `assignee`, `sprint` and `ready` (`ready:true` or `ready:false`, from `bd ready`). A term with any other key shows the accepted keys and leaves the list as it was.
+
+## Edit an issue
+
+The Detail tab shows the issue's fields as controls. Tab to one, change it and press Enter to save: the mod writes that one field with `bd update` and reads the issue again before it redraws. Status and priority are lists; the others are one-line fields.
+
+The description is shown as Markdown and is also edited in the one-line `Description` field. There, a line break is written `\n`, a tab `\t`, a carriage return `\r` and a backslash `\\`; the mod turns them back into those characters when you save, so the text round-trips exactly, and saving it unchanged writes nothing. A backslash before any other character is kept as typed. A description longer than 20,000 characters in that form is not edited inline; the field says so and names the `bd update` command to use.
 
 ## Configuration
 
@@ -112,7 +126,7 @@ soft_wip_limit = { in_progress = 5 }   # a column over its limit is drawn in the
 
 A `[stores.<name>]` table whose `path` is the repository applies before `[stores.default]`. A setting the mod cannot use keeps its default, and the pane shows a line naming it. The file's other tables (`[queue]`, `[theme]`, `views.rank`) are for later releases.
 
-The mod keeps only your view choices (the open tab, filter, swimlane, sort and whether the pane was open) in Claude Code's plugin store, under one key, `view`. It never stores issue data.
+The mod keeps your view choices (the open tab, filter, swimlane, sort and whether the pane was open) in Claude Code's plugin store, under the key `view`. It never stores issue data. The one other key, `pending-display-ids`, holds a display id the mod minted for an issue it created but could not write yet: the issue's id and the display id, nothing else.
 
 ## Report a bug
 

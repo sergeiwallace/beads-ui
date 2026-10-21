@@ -49,6 +49,27 @@ export const COMMANDS: readonly Command[] = [
   { id: "card.move", label: "Move to", scope: "card", binding: hotkey("m"), hint: "m move to" },
   { id: "card.delete", label: "Delete", scope: "card", binding: hotkey("x"), hint: "x delete" },
   {
+    id: "page.next",
+    label: "Next page: the focused card's column on the Board, the list on the Backlog",
+    scope: "pane",
+    binding: hotkey("p"),
+    hint: "p next page",
+  },
+  {
+    id: "page.back",
+    label: "Previous page: the focused card's column on the Board, the list on the Backlog",
+    scope: "pane",
+    binding: hotkey("b"),
+    hint: "b page back",
+  },
+  {
+    id: "board.lanes",
+    label: "More swimlanes, when they take more than one page",
+    scope: "pane",
+    binding: hotkey("l"),
+    hint: "l more lanes",
+  },
+  {
     id: "close.undo",
     label: "Undo close",
     scope: "pane",
