@@ -219,8 +219,11 @@ export interface BoardViewOptions {
   cardLimit?: { perCell: number; total: number };
 }
 
-/** The mod's card budget: about 600 serialized characters a card keeps a board under 70,000. */
-export const BOARD_CARD_LIMIT = { perCell: 12, total: 110 } as const;
+/**
+ * The mod's card budget. A drawn card measured about 850 serialized characters with this store's
+ * nine statuses in its Move to (hooks/pane.test.ts), so 80 cards stay near 70,000 of the 100,000.
+ */
+export const BOARD_CARD_LIMIT = { perCell: 25, total: 80 } as const;
 
 function errorLine(state: BoardState): string | undefined {
   const error = state.loadError;
