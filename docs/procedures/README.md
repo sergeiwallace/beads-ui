@@ -17,4 +17,4 @@ Repeatable workflows, operational how-tos, and development processes.
 
 | File | Description |
 |------|-------------|
-| (none yet) | |
+| [mod-install.md](mod-install.md) | Load or install the beads-ui Claude Code mod, its keys, quick-add grammar, configuration defaults and how to report a bug |
