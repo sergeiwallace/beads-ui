@@ -316,6 +316,38 @@ describe("the Board tab", () => {
   });
 });
 
+describe("the focus hint", () => {
+  const HINT = "focus a card first: Tab moves between cards";
+
+  test("should clear the focus hint when a card's detail then opens", async ($, on) => {
+    const { w, ui } = await openPane($, on);
+
+    await ui.press({ key: "detail" });
+    expect((await ui.find({ key: "notice" }))?.text).toBe(HINT);
+
+    await ui.press({ key: "open:BU-mg2.3" });
+    await w.clock.settle();
+
+    expect(await ui.find({ key: "edit:title" })).toBeDefined();
+    expect(await ui.find({ key: "notice" })).toBeUndefined();
+  });
+
+  test("should clear the focus hint when the tab switches to the Backlog or the Board", async ($, on) => {
+    const { ui } = await openPane($, on);
+
+    await ui.press({ key: "delete" });
+    expect((await ui.find({ key: "notice" }))?.text).toBe(HINT);
+    await ui.press({ key: "tab:backlog" });
+    expect(await ui.find({ key: "notice" })).toBeUndefined();
+
+    await ui.press({ key: "tab:detail" });
+    await ui.press({ key: "move" });
+    expect((await ui.find({ key: "notice" }))?.text).toBe(HINT);
+    await ui.press({ key: "tab:board" });
+    expect(await ui.find({ key: "notice" })).toBeUndefined();
+  });
+});
+
 describe("the Backlog tab", () => {
   const openIds = () =>
     sortIssues(issues().filter((issue) => issue.status === "open")).map((issue) => issue.id);

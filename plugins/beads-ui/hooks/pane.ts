@@ -121,7 +121,10 @@ type Ran =
   | { ok: true; exitCode: 0; stdout: string; stderr: string }
   | { ok: false; exitCode: number | null; stdout: string; stderr: string; message: string };
 
-type Notice = { text: string; token: Token };
+/** A `hint` notice names what to do next, so the next action that succeeds clears it. */
+type Notice = { text: string; token: Token; hint?: true };
+
+const FOCUS_HINT = "focus a card first: Tab moves between cards";
 
 const messageOf = (reason: unknown): string =>
   reason instanceof Error ? reason.message : String(reason);
@@ -494,6 +497,15 @@ export class BeadsPane {
     this.notice = { text, token };
   }
 
+  private hint(text: string): void {
+    this.notice = { text, token: "warning", hint: true };
+  }
+
+  /** An action succeeded or the tab changed: a hint it answered no longer applies. */
+  private clearHint(): void {
+    if (this.notice?.hint === true) this.notice = undefined;
+  }
+
   /** A card's Move to: the guarded write, shown at once and rolled back on exit 13 (T-1.1). */
   async move(id: string, to: string): Promise<void> {
     const plan = planMove(this.board, id, to);
@@ -592,6 +604,7 @@ export class BeadsPane {
 
   submitFilter(text: string): void {
     this.filter = submitFilter(this.filter, text);
+    this.clearHint();
     this.resetPages();
     this.savePrefs();
     this.host?.invalidate();
@@ -613,6 +626,7 @@ export class BeadsPane {
         ? view.unplacedPage
         : view.lanes.flatMap((lane) => lane.pages).find((candidate) => candidate.key === key);
     if (page === undefined) return;
+    this.clearHint();
     const next = stepPage(page.page, page.pages, delta);
     if (key === view.unplacedPage.key) this.unplacedPage = next;
     else this.cellPages = { ...this.cellPages, [key]: next };
@@ -623,6 +637,7 @@ export class BeadsPane {
   stepLanes(delta: number): void {
     const { lanePage } = this.boardViewAt(this.width);
     this.lanePage = stepPage(lanePage.page, lanePage.pages, delta);
+    this.clearHint();
     this.host?.invalidate();
   }
 
@@ -646,7 +661,7 @@ export class BeadsPane {
     ];
     const cell = cells.find(({ cards }) => cards.some((card) => card.id === id));
     if (cell?.page === undefined) {
-      this.note("focus a card first: Tab moves between cards", "warning");
+      this.hint(FOCUS_HINT);
       this.host?.invalidate();
       return;
     }
@@ -673,6 +688,7 @@ export class BeadsPane {
    */
   setTab(tab: Tab): void {
     this.tab = tab;
+    this.clearHint();
     this.savePrefs();
     this.host?.invalidate();
     void this.host?.focus(PANE_ID, `tab:${tab}`).catch(() => undefined);
@@ -680,6 +696,7 @@ export class BeadsPane {
 
   cycleSwimlane(): void {
     this.swimlane = nextSwimlaneMode(this.swimlane);
+    this.clearHint();
     this.resetPages();
     this.savePrefs();
     this.host?.invalidate();
@@ -687,6 +704,7 @@ export class BeadsPane {
 
   cycleSort(): void {
     this.sort = nextSort(this.sort);
+    this.clearHint();
     this.resetPages();
     this.savePrefs();
     this.host?.invalidate();
@@ -694,6 +712,7 @@ export class BeadsPane {
 
   toggleHelp(): void {
     this.help = !this.help;
+    this.clearHint();
     this.host?.invalidate();
   }
 
@@ -711,22 +730,26 @@ export class BeadsPane {
   async focusMove(): Promise<void> {
     const id = this.focusedId;
     if (id === undefined) {
-      this.note("focus a card first: Tab moves between cards", "warning");
+      this.hint(FOCUS_HINT);
       this.host?.invalidate();
       return;
     }
+    this.clearHint();
     if (this.tab !== "board") this.setTab("board");
+    this.host?.invalidate();
     await this.host?.focus(PANE_ID, `move:${id}`).catch(() => undefined);
   }
 
   async focusQuickAdd(): Promise<void> {
+    this.clearHint();
     if (this.tab === "detail") this.setTab("board");
+    this.host?.invalidate();
     await this.host?.focus(PANE_ID, "quickadd").catch(() => undefined);
   }
 
   async openDetailFor(id: string | undefined = this.target()): Promise<void> {
     if (id === undefined) {
-      this.note("focus a card first: Tab moves between cards", "warning");
+      this.hint(FOCUS_HINT);
       this.host?.invalidate();
       return;
     }
@@ -775,6 +798,7 @@ export class BeadsPane {
     }
     this.undo = undefined;
     this.detailError = undefined;
+    this.clearHint();
     this.detail = reduceDetail(detail, { type: "edit-submitted", field });
     this.host?.invalidate();
     const ran = await this.run(argv.value, WRITE_TIMEOUT_MS);
@@ -799,11 +823,12 @@ export class BeadsPane {
       this.board.issues.find((candidate) => candidate.id === id) ??
       (this.detail?.issue.id === id ? this.detail?.issue : undefined);
     if (issue === undefined) {
-      this.note("focus a card first: Tab moves between cards", "warning");
+      this.hint(FOCUS_HINT);
       this.host?.invalidate();
       return;
     }
     this.undo = undefined;
+    this.clearHint();
     this.onDelete?.(issue, this.board.issues);
   }
 
@@ -1266,6 +1291,7 @@ export class BeadsPane {
   async stepBacklog(delta: number, refocus = false): Promise<void> {
     const { page } = this.backlogViewAt(this.width);
     this.backlogPage = stepPage(page.page, page.pages, delta);
+    this.clearHint();
     this.host?.invalidate();
     const first = this.backlogViewAt(this.width).rows[0];
     if (!refocus || first === undefined) return;
