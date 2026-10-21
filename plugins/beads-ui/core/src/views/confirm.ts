@@ -1,13 +1,8 @@
-import {
-  cascadePreviewArgv,
-  closeArgv,
-  deleteArgv,
-  deletePreviewArgv,
-  reopenArgv,
-} from "../argv.ts";
+import { cascadePreviewArgv, closeArgv, deleteArgv, deletePreviewArgv } from "../argv.ts";
 import type { BdArgv, DeletePreview, Issue } from "../model.ts";
 import { parseBdDeletePreview } from "../parsers.ts";
 import { truncate } from "./text.ts";
+import { CLOSED_STATUS, type UndoClose, undoClose } from "./undo.ts";
 
 /**
  * The delete ladder (D-13) as a state machine. `previewing` runs `bd delete <id> --dry-run`; a
@@ -40,6 +35,8 @@ export interface DependentView {
 export interface ConfirmState {
   phase: ConfirmPhase;
   issueId: string;
+  /** The status the issue had when the confirmation opened; Close instead's undo restores it. */
+  status: string;
   /** What the confirmation Input must equal: the display id, else the hash id. */
   confirmToken: string;
   title: string;
@@ -97,6 +94,7 @@ export function openDeleteConfirm(issue: Issue, issues: readonly Issue[]): Confi
   return {
     phase: "previewing",
     issueId: issue.id,
+    status: issue.status,
     confirmToken: issue.displayId ?? issue.id,
     title: issue.title,
     previewText: "",
@@ -195,7 +193,7 @@ export function reduceConfirm(state: ConfirmState, event: ConfirmEvent): Confirm
     case "close-finished":
       if (state.phase !== "closing") return state;
       return event.exitCode === 0
-        ? { ...state, phase: "closed", message: `${state.confirmToken} closed; reopen to undo` }
+        ? { ...state, phase: "closed", message: `${state.confirmToken} closed` }
         : {
             ...state,
             phase: "failed",
@@ -243,8 +241,8 @@ export interface ConfirmView {
   closeInstead: { label: string; hotkey: string; enabled: boolean };
   delete: { label: string; hotkey: string; enabled: boolean; cascade: boolean };
   statusLine?: string;
-  /** After Close instead: the reopen that undoes it (D-13). */
-  undo?: BdArgv;
+  /** After Close instead: the guarded write back to the status it had (D-13). */
+  undo?: UndoClose;
 }
 
 export function confirmView(state: ConfirmState, width: number): ConfirmView {
@@ -283,6 +281,14 @@ export function confirmView(state: ConfirmState, width: number): ConfirmView {
     };
   }
   if (state.message !== undefined) view.statusLine = truncate(state.message, width);
-  if (state.phase === "closed") view.undo = reopenArgv(state.issueId);
+  if (state.phase === "closed") {
+    const undo = undoClose({
+      id: state.issueId,
+      label: state.confirmToken,
+      previous: state.status,
+      closed: CLOSED_STATUS,
+    });
+    if (undo !== undefined) view.undo = undo;
+  }
   return view;
 }

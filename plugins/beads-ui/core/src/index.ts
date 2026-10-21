@@ -169,3 +169,5 @@ export {
   reduceDetail,
 } from "./views/detail.ts";
 export { asOf, priorityBadge, truncate } from "./views/text.ts";
+export type { UndoClose, UndoView } from "./views/undo.ts";
+export { CLOSED_STATUS, undoArgv, undoClose, undoForMove, undoView } from "./views/undo.ts";

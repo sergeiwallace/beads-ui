@@ -53,6 +53,7 @@ describe("COMMANDS", () => {
       "card.detail": "d",
       "card.move": "m",
       "card.delete": "x",
+      "close.undo": "u",
       "confirm.close-instead": "c",
       "confirm.delete": "x",
     });

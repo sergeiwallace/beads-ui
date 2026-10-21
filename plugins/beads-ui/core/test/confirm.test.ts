@@ -9,6 +9,7 @@ import {
   nextCommand,
   openDeleteConfirm,
   reduceConfirm,
+  undoArgv,
 } from "../src/index.ts";
 import cascadePreview from "./fixtures/bd-delete-cascade-dry-run.json.ts";
 import refusedJson from "./fixtures/bd-delete-dry-run-dependents.json.ts";
@@ -148,7 +149,21 @@ describe("the delete confirmation", () => {
     expect(closed.phase).toBe("closed");
     expect(nextCommand(closed)).toBeUndefined();
     const view = confirmView(closed, 80);
-    expect(view.undo).toEqual(["bd", "reopen", "BU-mg2.3"]);
+    expect(view.undo).toEqual({
+      id: "BU-mg2.3",
+      label: "BU-beads-ui-claude-code-aeyb",
+      previous: "in_progress",
+      closed: "closed",
+    });
+    expect(view.undo && undoArgv(view.undo)).toEqual([
+      "bd",
+      "update",
+      "BU-mg2.3",
+      "--status",
+      "in_progress",
+      "--if-status",
+      "closed",
+    ]);
     expect([view.closeInstead.enabled, view.delete.enabled]).toEqual([false, false]);
   });
 
