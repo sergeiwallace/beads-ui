@@ -1,6 +1,22 @@
 {
+  "name": "beads-ui-monorepo",
   "private": true,
+  "packageManager": "npm@11.19.0",
+  "workspaces": [
+    "plugins/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "lint": "biome check . && turbo run lint typecheck",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck"
+  },
   "devDependencies": {
-    "markdownlint-cli2": "^0.21.0"
+    "@biomejs/biome": "^2.5.15",
+    "@types/node": "^24.19.2",
+    "markdownlint-cli2": "^0.21.0",
+    "turbo": "^2.11.10",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
   }
 }
