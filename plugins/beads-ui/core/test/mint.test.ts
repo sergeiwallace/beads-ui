@@ -6,7 +6,9 @@ import {
   mintDisplayId,
   parseBdShow,
   parseIdPolicy,
+  pendingDisplayIdStep,
   planDisplayId,
+  readPendingDisplayIds,
   slugBudgets,
   slugifyTitle,
   storeUsesDisplayIds,
@@ -306,6 +308,59 @@ describe("planDisplayId", () => {
     const result = plan({ createdId: "BU-Mg2_x", child: false });
 
     expect(!result.ok && result.error.kind).toBe("invalid-id");
+  });
+});
+
+describe("pending display ids", () => {
+  const MINTED = "BU-npm-audit-10-dev-only-advisories-2zw";
+  const pending = { id: "BU-2zw", displayId: MINTED };
+  const storeWith = (change: Partial<Issue>) =>
+    allIssues().map((issue) => (issue.id === "BU-2zw" ? { ...issue, ...change } : issue));
+
+  test("should write the same display id again when the issue still has none", () => {
+    const { displayId: _none, ...bare } = byId(allIssues(), "BU-2zw");
+    const issues = allIssues().map((issue) => (issue.id === "BU-2zw" ? bare : issue));
+
+    expect(pendingDisplayIdStep(pending, issues)).toEqual({
+      kind: "write",
+      argv: [
+        "bd",
+        "update",
+        "BU-2zw",
+        "--set-metadata",
+        `display_id=${MINTED}`,
+        "--add-label",
+        `id:${MINTED}`,
+        "--json",
+      ],
+    });
+  });
+
+  test("should stop when the issue carries the id, carries another, or is gone", () => {
+    expect(pendingDisplayIdStep(pending, allIssues())).toEqual({ kind: "written" });
+    expect(pendingDisplayIdStep(pending, storeWith({ displayId: "BU-other-2zw" }))).toEqual({
+      kind: "kept",
+      existing: "BU-other-2zw",
+    });
+    expect(pendingDisplayIdStep({ ...pending, id: "BU-gone" }, allIssues())).toEqual({
+      kind: "gone",
+    });
+  });
+
+  test("should read back only well-formed entries, once per issue, from what a surface stored", () => {
+    expect(
+      readPendingDisplayIds([
+        pending,
+        { id: "BU-2zw", displayId: "BU-second-2zw" },
+        { id: "-BU-x", displayId: "BU-x" },
+        { id: "BU-y", displayId: "has space" },
+        { id: 7, displayId: "BU-z" },
+        "BU-w",
+        null,
+      ]),
+    ).toEqual([pending]);
+    expect(readPendingDisplayIds({ id: "BU-2zw" })).toEqual([]);
+    expect(readPendingDisplayIds(undefined)).toEqual([]);
   });
 });
 

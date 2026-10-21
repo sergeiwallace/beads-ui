@@ -90,6 +90,8 @@ For example, `Fix the band p1 type:bug +ui due:2026-11-02` runs `bd create` with
 
 The readable part of a display id is cut to 32 characters, or 20 for a child issue. The fleet's `bd-new` takes these budgets from `AIH_SLUG_BODY_MAX_CHARS` and `AIH_SLUG_BODY_MAX_CHARS_CHILD`, and the mod reads the same two variables from the session's environment when it creates an issue, so both mint the same id. A value that is not a positive whole number is ignored and the default applies.
 
+If the issue is created but writing its display id fails, a warning line stays on the pane and the mod writes the same display id again on every refresh until it succeeds, in this session or a later one. It never mints a second id for the issue, and if the issue has meanwhile got a display id some other way, it keeps that one and writes nothing.
+
 ## Filter
 
 Type `key:value` terms into the `Filter` field (Tab to it) and press Enter. Terms combine with AND. The keys are `type`, `label`, `assignee`, `sprint` and `ready` (`ready:true` or `ready:false`, from `bd ready`). A term with any other key shows the accepted keys and leaves the list as it was.
@@ -120,7 +122,7 @@ soft_wip_limit = { in_progress = 5 }   # a column over its limit is drawn in the
 
 A `[stores.<name>]` table whose `path` is the repository applies before `[stores.default]`. A setting the mod cannot use keeps its default, and the pane shows a line naming it. The file's other tables (`[queue]`, `[theme]`, `views.rank`) are for later releases.
 
-The mod keeps only your view choices (the open tab, filter, swimlane, sort and whether the pane was open) in Claude Code's plugin store, under one key, `view`. It never stores issue data.
+The mod keeps your view choices (the open tab, filter, swimlane, sort and whether the pane was open) in Claude Code's plugin store, under the key `view`. It never stores issue data. The one other key, `pending-display-ids`, holds a display id the mod minted for an issue it created but could not write yet: the issue's id and the display id, nothing else.
 
 ## Report a bug
 

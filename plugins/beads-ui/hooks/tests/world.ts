@@ -78,7 +78,19 @@ export function world(on: On, options: WorldOptions = {}) {
     return { value: { command: e.name } };
   });
   const clock = mock.clock(on, { now: START_MS });
-  mock.store(on, options.stored ?? {});
+  // The plugin store in memory, as mock.store keeps it, but readable by the test: what a pane
+  // reopened in a later session would read back. A value is kept as its JSON, as the engine's is.
+  const store = new Map<string, unknown>(Object.entries(options.stored ?? {}));
+  on("store.get", (_engine, e) => ({ value: store.get(e.key) }));
+  on("store.set", (_engine, e) => {
+    store.set(e.key, JSON.parse(JSON.stringify(e.value)));
+    return { value: undefined };
+  });
+  on("store.delete", (_engine, e) => {
+    store.delete(e.key);
+    return { value: undefined };
+  });
+  on("store.keys", () => ({ value: [...store.keys()] }));
   mock.env(on, options.env ?? { HOME: "/home/me" });
   on("fs.read", (_engine, e) => {
     const text = options.files?.[e.path];
@@ -116,7 +128,7 @@ export function world(on: On, options: WorldOptions = {}) {
   on("ui.render", { component: "AbovePrompt" }, () => ({ type: "Box", children: [] }));
 
   const keys = () => runs.map(keyOf);
-  return { runs, keys, registered, opened, closed, toasts, focused, clock };
+  return { runs, keys, registered, opened, closed, toasts, focused, clock, store };
 }
 
 export const PANE_PROPS: RenderPropsOf["Pane"] = {

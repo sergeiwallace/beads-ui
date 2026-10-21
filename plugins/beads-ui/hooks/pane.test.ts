@@ -481,6 +481,97 @@ describe("quick-add", () => {
     expect((await ui.find({ key: "notice" }))?.text).toBe("created BU-2zw as BU-npm-audit-10-2zw");
   });
 
+  // The store once bd create has run and before the display id is written: BU-2zw as bd lists it,
+  // without its metadata.display_id and id: label.
+  const MINTED = "BU-npm-audit-10-dev-only-advisories-2zw";
+  const ATTACH = `bd update BU-2zw --set-metadata display_id=${MINTED} --add-label id:${MINTED}`;
+  const unattached = () =>
+    JSON.stringify(
+      (JSON.parse(list) as Record<string, unknown>[]).map((record) =>
+        record.id === "BU-2zw" ? { ...record, metadata: {}, labels: [] } : record,
+      ),
+    );
+
+  test("should keep a failed display id write pending and retry the same id on each refresh until it succeeds", async ($, on) => {
+    let made = false;
+    let attaching = "failing";
+    const { w, ui } = await openPane($, on, {
+      script: (key) => {
+        if (key.startsWith("bd create ")) {
+          made = true;
+          return ok(created());
+        }
+        if (key === "bd list --all --brief --limit 0") {
+          if (!made) return ok(before());
+          return attaching === "done" ? ok(list) : ok(unattached());
+        }
+        if (key === ATTACH) {
+          if (attaching === "failing") return exit(1, "Error: database is locked");
+          attaching = "done";
+        }
+        return undefined;
+      },
+    });
+
+    await ui.input({ key: "quickadd", text: LINE });
+    await w.clock.settle();
+
+    expect((await ui.find({ key: "notice" }))?.text).toBe(
+      "created BU-2zw; writing its display id failed (exit 1): Error: database is locked",
+    );
+    expect((await ui.find({ key: "pending-id:BU-2zw" }))?.text).toBe(
+      `BU-2zw has no display id yet (writing its display id failed (exit 1): Error: database is locked); writing ${MINTED} again on the next refresh`,
+    );
+    const failedTries = w.keys().filter((key) => key === ATTACH).length;
+    // What a pane reopened in a later session reads back from the plugin store.
+    expect(w.store.get("pending-display-ids")).toEqual([{ id: "BU-2zw", displayId: MINTED }]);
+
+    await w.clock.advance(10_000);
+    expect(w.keys().filter((key) => key === ATTACH).length).toBe(failedTries + 1);
+    expect(await ui.find({ key: "pending-id:BU-2zw" })).toBeDefined();
+
+    attaching = "working";
+    await w.clock.advance(10_000);
+
+    expect(await ui.find({ key: "pending-id:BU-2zw" })).toBeUndefined();
+    expect((await ui.find({ key: "notice" }))?.text).toBe(`wrote ${MINTED} for BU-2zw`);
+    const writes = w.keys().filter((key) => key.startsWith("bd update BU-2zw"));
+    expect(new Set(writes)).toEqual(new Set([ATTACH]));
+    expect(w.store.get("pending-display-ids")).toEqual([]);
+
+    await w.clock.advance(10_000);
+    expect(w.keys().filter((key) => key === ATTACH).length).toBe(failedTries + 2);
+  });
+
+  test("should retry a display id left pending by an earlier session without minting another", async ($, on) => {
+    let attached = false;
+    const { w, ui } = await openPane($, on, {
+      stored: { "pending-display-ids": [{ id: "BU-2zw", displayId: MINTED }] },
+      script: (key) => {
+        if (key === ATTACH) attached = true;
+        return key === "bd list --all --brief --limit 0" && !attached
+          ? ok(unattached())
+          : undefined;
+      },
+    });
+
+    expect(w.keys().filter((key) => key.startsWith("bd update"))).toEqual([ATTACH]);
+    expect(w.keys().some((key) => key.startsWith("bd create"))).toBe(false);
+    expect(await ui.find({ key: "pending-id:BU-2zw" })).toBeUndefined();
+  });
+
+  test("should drop a pending display id without writing when the issue already carries another", async ($, on) => {
+    const { w, ui } = await openPane($, on, {
+      stored: { "pending-display-ids": [{ id: "BU-2zw", displayId: "BU-something-else-2zw" }] },
+    });
+
+    expect(w.keys().some((key) => key.startsWith("bd update"))).toBe(false);
+    expect(await ui.find({ key: "pending-id:BU-2zw" })).toBeUndefined();
+    expect((await ui.find({ key: "notice" }))?.text).toBe(
+      `BU-2zw already carries ${MINTED}; BU-something-else-2zw was not written`,
+    );
+  });
+
   test("should create the issue without a display id when id_policy is off", async ($, on) => {
     const { w, ui } = await openPane($, on, {
       script,

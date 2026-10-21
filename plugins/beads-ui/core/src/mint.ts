@@ -398,16 +398,66 @@ export function planDisplayId(input: DisplayIdPlanInput): Result<DisplayIdPlan, 
     value: {
       kind: "attach",
       displayId,
-      argv: [
-        "bd",
-        "update",
-        issueIdArg(input.createdId),
-        "--set-metadata",
-        `display_id=${displayId}`,
-        "--add-label",
-        `id:${displayId}`,
-        "--json",
-      ],
+      argv: displayIdArgv(input.createdId, displayId),
     },
   };
+}
+
+/** The `bd update` that writes a minted display id: `metadata.display_id` and the `id:` label. */
+export function displayIdArgv(id: string, displayId: string): BdArgv {
+  return [
+    "bd",
+    "update",
+    issueIdArg(id),
+    "--set-metadata",
+    `display_id=${displayId}`,
+    "--add-label",
+    `id:${displayId}`,
+    "--json",
+  ];
+}
+
+/** A display id minted for a created issue whose write has not succeeded yet. */
+export interface PendingDisplayId {
+  id: string;
+  displayId: string;
+}
+
+/**
+ * What to do with a pending display id once the store's issues are read: write the same id again,
+ * or stop because the issue now carries it, carries another one (a published id never changes,
+ * so it is never overwritten), or is no longer in the store. It never mints a second id.
+ */
+export type PendingDisplayIdStep =
+  | { kind: "write"; argv: BdArgv }
+  | { kind: "written" }
+  | { kind: "kept"; existing: string }
+  | { kind: "gone" };
+
+export function pendingDisplayIdStep(
+  pending: PendingDisplayId,
+  issues: readonly Issue[],
+): PendingDisplayIdStep {
+  const issue = issues.find((candidate) => candidate.id === pending.id);
+  if (issue === undefined) return { kind: "gone" };
+  if (issue.displayId === pending.displayId) return { kind: "written" };
+  if (issue.displayId !== undefined) return { kind: "kept", existing: issue.displayId };
+  return { kind: "write", argv: displayIdArgv(pending.id, pending.displayId) };
+}
+
+const ARG = /^[^-\s]\S*$/;
+
+/** The pending display ids as a surface stored them; anything else in the value is dropped. */
+export function readPendingDisplayIds(stored: unknown): PendingDisplayId[] {
+  if (!Array.isArray(stored)) return [];
+  const pending: PendingDisplayId[] = [];
+  for (const entry of stored) {
+    if (typeof entry !== "object" || entry === null) continue;
+    const { id, displayId } = entry as Record<string, unknown>;
+    if (typeof id !== "string" || typeof displayId !== "string") continue;
+    if (!ARG.test(id) || !ARG.test(displayId)) continue;
+    if (pending.some((known) => known.id === id)) continue;
+    pending.push({ id, displayId });
+  }
+  return pending;
 }

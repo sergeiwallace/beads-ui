@@ -31,6 +31,7 @@ import {
   nextSort,
   nextSwimlaneMode,
   openDetail,
+  type PendingDisplayId,
   parseBdCreatedId,
   parseBdHistoryEvents,
   parseBdList,
@@ -41,9 +42,11 @@ import {
   parseQuickAdd,
   parseSort,
   parseSwimlaneMode,
+  pendingDisplayIdStep,
   planDisplayId,
   planMove,
   type ResolvedConfig,
+  readPendingDisplayIds,
   readyArgv,
   reduceBoard,
   reduceDetail,
@@ -76,6 +79,11 @@ export const NARROW_TEXT = `beads-ui did not open its pane: it needs a terminal 
 
 /** Where the view preferences live in `$.store`. Issue data is never stored. */
 export const PREFS_KEY = "view";
+/**
+ * Where display ids minted for a created issue wait in `$.store` until their write succeeds, so
+ * a pane reopen or a new session retries the same id instead of leaving the issue without one.
+ */
+export const PENDING_IDS_KEY = "pending-display-ids";
 
 /** The body the pane asks for, docked and inline; the person's own size wins. */
 const WANTED_COLUMNS = 80;
@@ -153,6 +161,10 @@ export class BeadsPane {
   autoOpenPending = false;
   /** The delete confirmation, wired by register.ts. */
   onDelete: ((issue: Issue, issues: readonly Issue[]) => void) | undefined;
+  /** Display ids minted after a create whose write has not succeeded, retried on each refresh. */
+  pendingIds: PendingDisplayId[] = [];
+  /** The last failed write of each pending display id, by issue id. */
+  private pendingErrors: Record<string, string> = {};
 
   private env: { xdgConfigHome?: string; home?: string } = {};
   /** True while the pane has stepped aside for the delete confirmation. */
@@ -178,6 +190,10 @@ export class BeadsPane {
   // ---- view preferences -------------------------------------------------------------------
 
   private async loadPrefs(): Promise<void> {
+    const pending = await this.host?.storeGet(PENDING_IDS_KEY).catch(() => undefined);
+    for (const entry of readPendingDisplayIds(pending)) {
+      if (!this.pendingIds.some((known) => known.id === entry.id)) this.pendingIds.push(entry);
+    }
     const stored = await this.host?.storeGet(PREFS_KEY).catch(() => undefined);
     if (!isRecord(stored)) return;
     const tab = TABS.find((candidate) => candidate.tab === stored.tab)?.tab;
@@ -205,6 +221,44 @@ export class BeadsPane {
       open: this.isOpen,
     };
     void this.host?.storeSet(PREFS_KEY, prefs).catch(() => undefined);
+  }
+
+  private savePending(): void {
+    const pending = this.pendingIds.map(({ id, displayId }) => ({ id, displayId }));
+    void this.host?.storeSet(PENDING_IDS_KEY, pending).catch(() => undefined);
+  }
+
+  /**
+   * Retries each pending display id against the store as just read: the same id again, never a
+   * second one; an issue that now carries an id, or is gone, drops it (D-9).
+   */
+  private async retryPendingIds(): Promise<void> {
+    const done = new Set<string>();
+    let wrote = false;
+    for (const pending of [...this.pendingIds]) {
+      const step = pendingDisplayIdStep(pending, this.board.issues);
+      if (step.kind === "kept") {
+        this.note(
+          `${pending.id} already carries ${step.existing}; ${pending.displayId} was not written`,
+          "warning",
+        );
+      } else if (step.kind === "write") {
+        const ran = await this.run(step.argv, WRITE_TIMEOUT_MS);
+        if (!ran.ok) {
+          this.pendingErrors[pending.id] = this.failure("writing its display id", ran);
+          continue;
+        }
+        wrote = true;
+        this.note(`wrote ${pending.displayId} for ${pending.id}`, "success");
+      }
+      delete this.pendingErrors[pending.id];
+      done.add(pending.id);
+    }
+    if (done.size > 0) {
+      this.pendingIds = this.pendingIds.filter((pending) => !done.has(pending.id));
+      this.savePending();
+    }
+    if (wrote) this.queued = true;
   }
 
   // ---- bd ---------------------------------------------------------------------------------
@@ -288,7 +342,8 @@ export class BeadsPane {
         this.run(listArgv(), READ_TIMEOUT_MS),
         full ? this.run(readyArgv(), READ_TIMEOUT_MS) : Promise.resolve(undefined),
       ]);
-      this.applyReads(statuses, list, await this.stamp());
+      const loaded = this.applyReads(statuses, list, await this.stamp());
+      if (loaded) await this.retryPendingIds();
       if (ready?.ok === true) {
         const parsed = parseBdReady(ready.stdout);
         if (parsed.ok) this.readyIds = new Set(parsed.value.map((issue) => issue.id));
@@ -314,10 +369,11 @@ export class BeadsPane {
     }
   }
 
-  private applyReads(statuses: Ran, list: Ran, at: string): void {
+  /** Applies one read set; true when the store's issues loaded. */
+  private applyReads(statuses: Ran, list: Ran, at: string): boolean {
     if (!list.ok) {
       this.dispatch({ type: "load-failed", exitCode: list.exitCode, message: list.message });
-      return;
+      return false;
     }
     const issues = parseBdList(list.stdout);
     if (!issues.ok) {
@@ -326,7 +382,7 @@ export class BeadsPane {
         exitCode: list.exitCode,
         message: `unreadable output at ${issues.error.path}: ${issues.error.message}`,
       });
-      return;
+      return false;
     }
     const parsedStatuses = statuses.ok ? parseBdStatuses(statuses.stdout) : undefined;
     const known = parsedStatuses?.ok === true ? parsedStatuses.value : this.board.statuses;
@@ -338,9 +394,10 @@ export class BeadsPane {
           ? "bd statuses returned no statuses"
           : this.failure("bd statuses", statuses),
       });
-      return;
+      return false;
     }
     this.dispatch({ type: "load-succeeded", issues: issues.value, statuses: known, at });
+    return true;
   }
 
   // ---- opening and closing ----------------------------------------------------------------
@@ -490,12 +547,18 @@ export class BeadsPane {
       this.note(`created ${id.value}; no display id: ${plan.error.message}`, "warning");
     } else if (plan.value.kind === "attach") {
       const attached = await this.run(plan.value.argv, WRITE_TIMEOUT_MS);
-      this.note(
-        attached.ok
-          ? `created ${id.value} as ${plan.value.displayId}`
-          : `created ${id.value}; ${this.failure("writing its display id", attached)}`,
-        attached.ok ? "success" : "warning",
-      );
+      if (attached.ok) {
+        this.note(`created ${id.value} as ${plan.value.displayId}`, "success");
+      } else {
+        const failure = this.failure("writing its display id", attached);
+        this.pendingIds = [
+          ...this.pendingIds.filter((pending) => pending.id !== id.value),
+          { id: id.value, displayId: plan.value.displayId },
+        ];
+        this.pendingErrors[id.value] = failure;
+        this.savePending();
+        this.note(`created ${id.value}; ${failure}`, "warning");
+      }
     } else {
       this.note(`created ${id.value}`, "success");
     }
@@ -808,6 +871,15 @@ export class BeadsPane {
       this.notice === undefined
         ? undefined
         : this.line(ui, "notice", this.notice.text, this.notice.token),
+      ...this.pendingIds.map((pending) => {
+        const error = this.pendingErrors[pending.id];
+        return this.line(
+          ui,
+          `pending-id:${pending.id}`,
+          `${pending.id} has no display id yet${error === undefined ? "" : ` (${error})`}; writing ${pending.displayId} again on the next refresh`,
+          "warning",
+        );
+      }),
       this.undo === undefined
         ? undefined
         : this.line(ui, "undo-line", undoView(this.undo, width).line, "accent"),
