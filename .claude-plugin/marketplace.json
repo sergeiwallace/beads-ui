@@ -1,0 +1,16 @@
+{
+  "name": "beads-ui",
+  "owner": {
+    "name": "Sergei Wallace"
+  },
+  "metadata": {
+    "description": "beads-ui: a Beads task manager for the Claude Code TUI."
+  },
+  "plugins": [
+    {
+      "name": "beads-ui",
+      "source": "./plugins/beads-ui",
+      "description": "A Beads task board for the Claude Code TUI: /beads opens a pane over the current repository's Beads store."
+    }
+  ]
+}

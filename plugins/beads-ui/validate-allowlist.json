@@ -1,0 +1,13 @@
+{
+  "modules": {
+    "./register.ts": {
+      "hooks": ["session.start", "command.run{command=beads}", "ui.render{component=Pane}"],
+      "calls": ["$.command.register", "$.ui.open", "$.ui.resolve"],
+      "env reads": [],
+      "env writes": [],
+      "surface modules": ["client/hello.ts"],
+      "gating hook with .catch": ["command.run{command=beads}"],
+      "gating hook without .catch": []
+    }
+  }
+}

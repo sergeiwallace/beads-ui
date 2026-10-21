@@ -1,3 +1,5 @@
+// Runners: Vitest only. It spawns Node and tsc, which the mod environment lacks, so it is a
+// *.spec.ts that `claude plugin test` never collects. See CONTRIBUTING.md, Tests.
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

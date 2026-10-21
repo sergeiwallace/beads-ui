@@ -37,6 +37,10 @@ layers and not their UI components: each surface draws its own views.
 | `plugins/beads-ui/core/` | The shared core (`src/`) and its tests (`test/`); the DOM packages import it as `@beads-ui/core` |
 | `packages/` | Node and browser packages: the `bd` adapter, the web components and the MCP server, as later phases add them |
 | `scripts/check-core-purity.mjs` | The purity gate `npm run lint` runs on the shared core |
+| `.claude-plugin/marketplace.json` | The marketplace that lists the mod, `./plugins/beads-ui` |
+| `scripts/check-marketplace.mjs` | The pre-commit gate that runs `claude plugin validate .` and checks the marketplace lists the mod |
+| `scripts/check-plugin-size.mjs` | The pre-commit gate that fails naming any file under `plugins/beads-ui` over 1 MB |
+| `scripts/check-plugin-allowlist.mjs` | The pre-commit gate that holds the hooks and `$` calls `claude plugin validate --json` reports to `plugins/beads-ui/validate-allowlist.json`, and every `$` call to the hooks module's own file |
 
 The core sits inside the plugin because an installed plugin cannot reach files above its own
 directory. The design doc records when the core moves to its own package.
@@ -50,6 +54,13 @@ npm test
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the rules on the shared core and on secrets.
+
+To load the mod from a checkout, run `claude --plugin-dir plugins/beads-ui`. To install it from
+this repository's marketplace (the mod needs Claude Code 2.1.299 or later):
+
+```text
+/plugin install beads-ui --marketplace sergeiwallace/beads-ui
+```
 
 ## Open source
 
