@@ -22,11 +22,11 @@ import {
 } from "../src/index.ts";
 import { allIssues, storeStatuses } from "./helpers.ts";
 
-const boardOf = (issues: Issue[]): BoardState =>
+const boardOf = (issues: Issue[], statuses = storeStatuses()): BoardState =>
   reduceBoard(INITIAL_BOARD_STATE, {
     type: "load-succeeded",
     issues,
-    statuses: storeStatuses(),
+    statuses,
     at: "2026-10-21T01:12:04",
   });
 
@@ -77,6 +77,9 @@ describe("boardView with a sort and a card budget", () => {
     minPerCell: 1,
     budget: 20,
     card: 1,
+    cardText: 0,
+    option: 0,
+    nameChar: 0,
     pager: 0,
     header: 0,
     lane: 0,
@@ -90,20 +93,24 @@ describe("boardView with a sort and a card budget", () => {
     }));
 
   /** Every card id on every lane page and cell page, walking the pages as the surface would. */
-  function walk(issues: Issue[], options: Partial<BoardViewOptions> = {}) {
+  function walk(
+    issues: Issue[],
+    options: Partial<BoardViewOptions> = {},
+    statuses = storeStatuses(),
+  ) {
     const seen: string[] = [];
     const base = { columnWidth: 30, pageLimit: LIMIT, ...options };
-    const first = boardView(boardOf(issues), base);
+    const first = boardView(boardOf(issues, statuses), base);
     let drawnMost = 0;
     for (let lanePage = 0; lanePage < first.lanePage.pages; lanePage++) {
-      const atLanes = boardView(boardOf(issues), { ...base, lanePage });
+      const atLanes = boardView(boardOf(issues, statuses), { ...base, lanePage });
       const cells = atLanes.lanes.flatMap((lane) => lane.pages);
       const deepest = Math.max(...cells.map((page) => page.pages));
       for (let step = 0; step < deepest; step++) {
         const pages = Object.fromEntries(
           cells.map((page) => [page.key, Math.min(step, page.pages - 1)]),
         );
-        const view = boardView(boardOf(issues), { ...base, lanePage, pages });
+        const view = boardView(boardOf(issues, statuses), { ...base, lanePage, pages });
         const drawn = view.lanes.flatMap((lane) => lane.cells.flat());
         drawnMost = Math.max(drawnMost, drawn.length);
         for (const lane of view.lanes) {
@@ -139,6 +146,38 @@ describe("boardView with a sort and a card budget", () => {
     expect(first.lanePage).toEqual({ key: "lanes", page: 0, pages: 3, from: 1, to: 10, total: 30 });
     expect([...seen].sort()).toEqual(issues.map((issue) => issue.id).sort());
     expect(drawnMost).toBeLessThanOrEqual(LIMIT.budget);
+  });
+
+  test("should split one lane into column windows that fit when one card per column is over the budget", () => {
+    // 30 custom statuses beside the store's own, two cards each: 30 cards at one per cell.
+    const custom = Array.from({ length: 30 }, (_, i) => ({
+      name: `custom-${i}`,
+      category: "wip" as const,
+      builtin: false,
+    }));
+    const issues = Array.from({ length: 60 }, (_, i) => ({
+      ...(allIssues()[0] as Issue),
+      id: `BU-c${i}`,
+      status: `custom-${i % 30}`,
+    }));
+    const statuses = [...storeStatuses(), ...custom];
+    const everyColumn = boardView(boardOf(issues, statuses), { columnWidth: 30 }).columns.map(
+      (column) => column.status,
+    );
+
+    const { first, seen, drawnMost } = walk(issues, {}, statuses);
+    const windows = Array.from({ length: first.lanePage.pages }, (_, lanePage) =>
+      boardView(boardOf(issues, statuses), { columnWidth: 30, pageLimit: LIMIT, lanePage }),
+    );
+
+    expect(first.columnWindow).toMatchObject({ from: 1, total: everyColumn.length });
+    expect(windows.flatMap((view) => view.columns.map((column) => column.status))).toEqual(
+      everyColumn,
+    );
+    expect([...seen].sort()).toEqual(issues.map((issue) => issue.id).sort());
+    expect(seen).toHaveLength(issues.length);
+    expect(drawnMost).toBeLessThanOrEqual(LIMIT.budget);
+    expect(first.lanes[0]?.cells.flat()[0]?.moveTargets).toHaveLength(everyColumn.length - 1);
   });
 
   test("should clamp a page past the last one to the last page when the cell shrank", () => {

@@ -15,6 +15,7 @@ import historyMg23 from "../core/test/fixtures/bd-history-BU-mg2.3.json.ts";
 import list from "../core/test/fixtures/bd-list-all-brief.json.ts";
 import show from "../core/test/fixtures/bd-show.json.ts";
 import minted from "../core/test/fixtures/bd-show-minted.json.ts";
+import statusesFixture from "../core/test/fixtures/bd-statuses.json.ts";
 import { PANE_ID, PLUGIN_NAME } from "./register.ts";
 import {
   BEADS,
@@ -91,6 +92,10 @@ const largeStore = (assignees: number) => {
     assignee: `aih-ec2-${i % assignees}`,
   }));
 };
+// A walk over every page of a 600-card store: about 0.7 s on an idle host, past the kit's default
+// 5,000 ms on a loaded one (measured 2026-10-21), so it gets room that does not depend on load.
+const WALK = { timeoutMs: 30_000 };
+
 const openLarge = ($: Engine, on: On, assignees: number) =>
   openPane($, on, {
     script: (key) =>
@@ -226,6 +231,7 @@ describe("the Board tab", () => {
       largest = Math.max(largest, JSON.stringify(await ui.drawn()).length);
       for (const key of await keysOf(ui, "move:", "Select")) moves.add(key);
     };
+    const firstPage = (await ui.find({ key: "lane-pager" }))?.text;
     for (let lanePage = 0; lanePage < 50; lanePage++) {
       await look();
       for (const pager of await keysOf(ui, "pager:")) {
@@ -242,36 +248,84 @@ describe("the Board tab", () => {
       }
       if ((await ui.find({ key: "lanes-next" })) === undefined) break;
       await ui.press({ key: "lanes-next" });
-      if (/lanes 1-/.test((await ui.find({ key: "lane-pager" }))?.text ?? "")) break;
+      // Back round to the first lane page: every page's range differs, a column window's too.
+      if ((await ui.find({ key: "lane-pager" }))?.text === firstPage) break;
     }
     return { moves: [...moves].sort(), largest };
   }
 
-  test("should reach a Move to control for every card by paging each column when the store is large", async ($, on) => {
-    const { ui } = await openLarge($, on, 1);
+  test(
+    "should reach a Move to control for every card by paging each column when the store is large",
+    WALK,
+    async ($, on) => {
+      const { ui } = await openLarge($, on, 1);
 
-    expect((await ui.find({ key: "column::open" }))?.text).toBe("open 200");
-    expect((await ui.find({ key: "pager::open" }))?.text).toContain("1-25 of 200");
-    expect((await ui.find({ key: "next::open" }))?.props.label).toBe("+175 more");
+      expect((await ui.find({ key: "column::open" }))?.text).toBe("open 200");
+      expect((await ui.find({ key: "pager::open" }))?.text).toContain("1-25 of 200");
+      expect((await ui.find({ key: "next::open" }))?.props.label).toBe("+175 more");
 
-    const { moves, largest } = await walkBoard(ui);
+      const { moves, largest } = await walkBoard(ui);
 
-    expect(moves).toEqual(everyMove);
-    expect(largest).toBeLessThan(100_000);
-  });
+      expect(moves).toEqual(everyMove);
+      expect(largest).toBeLessThan(100_000);
+    },
+  );
 
-  test("should reach every card's Move to through lane pages when the assignee lanes outgrow one drawing", async ($, on) => {
-    // 200 assignees, three cards each: the most lanes, and so the most column headers, per card.
-    const { ui } = await openLarge($, on, 200);
-    await ui.press({ key: "swimlane" });
+  test(
+    "should reach every card's Move to through lane pages when the assignee lanes outgrow one drawing",
+    WALK,
+    async ($, on) => {
+      // 200 assignees, three cards each: the most lanes, and so the most column headers, per card.
+      const { ui } = await openLarge($, on, 200);
+      await ui.press({ key: "swimlane" });
 
-    expect((await ui.find({ key: "lane-pager" }))?.text).toMatch(/^back\s*lanes 1-\d+ of 201/);
+      expect((await ui.find({ key: "lane-pager" }))?.text).toMatch(/^back\s*lanes 1-\d+ of 201/);
 
-    const { moves, largest } = await walkBoard(ui);
+      const { moves, largest } = await walkBoard(ui);
 
-    expect(moves).toEqual(everyMove);
-    expect(largest).toBeLessThan(100_000);
-  });
+      expect(moves).toEqual(everyMove);
+      expect(largest).toBeLessThan(100_000);
+    },
+  );
+
+  test(
+    "should reach every card's Move to within the drawing limit when the store has 30 custom statuses of 40 characters",
+    { timeoutMs: 120_000 },
+    async ($, on) => {
+      // bd statuses for this store with 30 custom statuses of 40 characters beside its own, and
+      // the 600 cards spread over all 30: every card's Move to carries 39 statuses.
+      const custom = Array.from({ length: 30 }, (_, i) => ({
+        category: ["active", "wip", "done", "frozen"][i % 4],
+        name: `custom-status-${String(i).padStart(2, "0")}-`.padEnd(40, "x"),
+      }));
+      const store = JSON.parse(statusesFixture) as { custom_statuses: unknown[] };
+      const withCustom = JSON.stringify({
+        ...store,
+        custom_statuses: [...store.custom_statuses, ...custom],
+      });
+      const cards = largeStore(1).map((record, i) => ({
+        ...record,
+        status: custom[i % 30]?.name,
+      }));
+      const { ui } = await openPane($, on, {
+        script: (key) =>
+          key === "bd statuses"
+            ? ok(withCustom)
+            : key === "bd list --all --brief --limit 0"
+              ? ok(JSON.stringify(cards))
+              : undefined,
+      });
+
+      expect((await ui.find({ key: "lane-pager" }))?.text).toMatch(/lanes 1-1 of 1, columns 1-/);
+      const options = (await ui.findAll({ type: "Select" }))[0]?.props.options as unknown[];
+      expect(options).toHaveLength(9 + 30);
+
+      const { moves, largest } = await walkBoard(ui);
+
+      expect(moves).toEqual(everyMove);
+      expect(largest).toBeLessThan(100_000);
+    },
+  );
 
   // The kit answers the mod's own $.ui.focus inside the mounted drawing without raising it to the
   // test's hooks, so the focus ring itself is checked in the live run. This test shows the card p
@@ -316,33 +370,69 @@ describe("the Board tab", () => {
   });
 });
 
+describe("the focus hint", () => {
+  const HINT = "focus a card first: Tab moves between cards";
+
+  test("should clear the focus hint when a card's detail then opens", async ($, on) => {
+    const { w, ui } = await openPane($, on);
+
+    await ui.press({ key: "detail" });
+    expect((await ui.find({ key: "notice" }))?.text).toBe(HINT);
+
+    await ui.press({ key: "open:BU-mg2.3" });
+    await w.clock.settle();
+
+    expect(await ui.find({ key: "edit:title" })).toBeDefined();
+    expect(await ui.find({ key: "notice" })).toBeUndefined();
+  });
+
+  test("should clear the focus hint when the tab switches to the Backlog or the Board", async ($, on) => {
+    const { ui } = await openPane($, on);
+
+    await ui.press({ key: "delete" });
+    expect((await ui.find({ key: "notice" }))?.text).toBe(HINT);
+    await ui.press({ key: "tab:backlog" });
+    expect(await ui.find({ key: "notice" })).toBeUndefined();
+
+    await ui.press({ key: "tab:detail" });
+    await ui.press({ key: "move" });
+    expect((await ui.find({ key: "notice" }))?.text).toBe(HINT);
+    await ui.press({ key: "tab:board" });
+    expect(await ui.find({ key: "notice" })).toBeUndefined();
+  });
+});
+
 describe("the Backlog tab", () => {
   const openIds = () =>
     sortIssues(issues().filter((issue) => issue.status === "open")).map((issue) => issue.id);
 
-  test("should reach the last open issue by paging the list when the store has more than a page", async ($, on) => {
-    const parsed = parseBdList(JSON.stringify(largeStore(1)));
-    const open = sortIssues(
-      (parsed.ok ? parsed.value : []).filter((issue) => issue.status === "open"),
-    ).map((issue) => `row:${issue.id}`);
-    const { ui } = await openLarge($, on, 1);
-    await ui.press({ key: "tab:backlog" });
-    const seen: string[] = [];
-    let largest = 0;
+  test(
+    "should reach the last open issue by paging the list when the store has more than a page",
+    WALK,
+    async ($, on) => {
+      const parsed = parseBdList(JSON.stringify(largeStore(1)));
+      const open = sortIssues(
+        (parsed.ok ? parsed.value : []).filter((issue) => issue.status === "open"),
+      ).map((issue) => `row:${issue.id}`);
+      const { ui } = await openLarge($, on, 1);
+      await ui.press({ key: "tab:backlog" });
+      const seen: string[] = [];
+      let largest = 0;
 
-    expect((await ui.find({ key: "backlog-count" }))?.text).toContain("200 of 200 open issues");
-    expect((await ui.find({ key: "backlog-pager" }))?.text).toContain("rows 1-60 of 200");
-    for (let page = 0; page < 4; page++) {
-      largest = Math.max(largest, JSON.stringify(await ui.drawn()).length);
-      seen.push(...(await keysOf(ui, "row:")));
-      await ui.press({ key: "backlog-next" });
-    }
+      expect((await ui.find({ key: "backlog-count" }))?.text).toContain("200 of 200 open issues");
+      expect((await ui.find({ key: "backlog-pager" }))?.text).toContain("rows 1-60 of 200");
+      for (let page = 0; page < 4; page++) {
+        largest = Math.max(largest, JSON.stringify(await ui.drawn()).length);
+        seen.push(...(await keysOf(ui, "row:")));
+        await ui.press({ key: "backlog-next" });
+      }
 
-    expect(seen).toEqual(open);
-    expect(seen.at(-1)).toBe(open.at(-1));
-    expect(largest).toBeLessThan(100_000);
-    expect((await ui.find({ key: "backlog-pager" }))?.text).toContain("rows 1-60 of 200");
-  });
+      expect(seen).toEqual(open);
+      expect(seen.at(-1)).toBe(open.at(-1));
+      expect(largest).toBeLessThan(100_000);
+      expect((await ui.find({ key: "backlog-pager" }))?.text).toContain("rows 1-60 of 200");
+    },
+  );
 
   test("should step the list with p and b on the Backlog tab", async ($, on) => {
     const { w, ui } = await openLarge($, on, 1);
@@ -496,7 +586,7 @@ describe("the Detail tab", () => {
     const shown = String(control?.props.value);
     const before = w.keys().length;
 
-    expect(control?.props.label).toBe("Description");
+    expect((await ui.find({ key: "label:description" }))?.text).toBe("Description:");
     expect(shown).toBe(
       "Board, backlog and detail.\\n\\n- keyboard Move to\\n- C:\\\\new is not a break\\n",
     );
@@ -625,6 +715,16 @@ describe("quick-add", () => {
         record.id === "BU-2zw" ? { ...record, metadata: {}, labels: [] } : record,
       ),
     );
+  // `bd show BU-2zw --json` as the retry re-reads it just before its write, with `change` applied.
+  const SHOW = "bd show BU-2zw";
+  const shownWith = (change: Record<string, unknown>) =>
+    JSON.stringify([
+      {
+        ...(JSON.parse(minted) as Record<string, unknown>[]).find((one) => one.id === "BU-2zw"),
+        ...change,
+      },
+    ]);
+  const UNATTACHED_SHOW = shownWith({ metadata: {}, labels: [] });
 
   test("should keep a failed display id write pending and retry the same id on each refresh until it succeeds", async ($, on) => {
     let made = false;
@@ -639,6 +739,7 @@ describe("quick-add", () => {
           if (!made) return ok(before());
           return attaching === "done" ? ok(list) : ok(unattached());
         }
+        if (key === SHOW) return ok(UNATTACHED_SHOW);
         if (key === ATTACH) {
           if (attaching === "failing") return exit(1, "Error: database is locked");
           attaching = "done";
@@ -683,6 +784,7 @@ describe("quick-add", () => {
       stored: { "pending-display-ids": [{ id: "BU-2zw", displayId: MINTED }] },
       script: (key) => {
         if (key === ATTACH) attached = true;
+        if (key === SHOW) return ok(UNATTACHED_SHOW);
         return key === "bd list --all --brief --limit 0" && !attached
           ? ok(unattached())
           : undefined;
@@ -692,6 +794,45 @@ describe("quick-add", () => {
     expect(w.keys().filter((key) => key.startsWith("bd update"))).toEqual([ATTACH]);
     expect(w.keys().some((key) => key.startsWith("bd create"))).toBe(false);
     expect(await ui.find({ key: "pending-id:BU-2zw" })).toBeUndefined();
+  });
+
+  test("should write nothing and drop the pending id when the re-read just before the write shows another id", async ($, on) => {
+    const OTHER = "BU-written-elsewhere-2zw";
+    const { w, ui } = await openPane($, on, {
+      stored: { "pending-display-ids": [{ id: "BU-2zw", displayId: MINTED }] },
+      script: (key) =>
+        key === "bd list --all --brief --limit 0"
+          ? ok(unattached())
+          : key === SHOW
+            ? ok(shownWith({ metadata: { display_id: OTHER }, labels: [`id:${OTHER}`] }))
+            : undefined,
+    });
+
+    expect(w.keys()).toContain(SHOW);
+    expect(w.keys().some((key) => key.startsWith("bd update"))).toBe(false);
+    expect(await ui.find({ key: "pending-id:BU-2zw" })).toBeUndefined();
+    expect(w.store.get("pending-display-ids")).toEqual([]);
+    expect((await ui.find({ key: "notice" }))?.text).toBe(
+      `BU-2zw already carries ${OTHER}; ${MINTED} was not written`,
+    );
+  });
+
+  test("should write nothing and keep the id pending when the re-read before the write fails", async ($, on) => {
+    const { w, ui } = await openPane($, on, {
+      stored: { "pending-display-ids": [{ id: "BU-2zw", displayId: MINTED }] },
+      script: (key) =>
+        key === "bd list --all --brief --limit 0"
+          ? ok(unattached())
+          : key === SHOW
+            ? exit(1, "Error: database is locked")
+            : undefined,
+    });
+
+    expect(w.keys().some((key) => key.startsWith("bd update"))).toBe(false);
+    expect((await ui.find({ key: "pending-id:BU-2zw" }))?.text).toBe(
+      `BU-2zw has no display id yet (re-reading it failed (exit 1): Error: database is locked); writing ${MINTED} again on the next refresh`,
+    );
+    expect(w.store.get("pending-display-ids")).toEqual([{ id: "BU-2zw", displayId: MINTED }]);
   });
 
   test("should drop a pending display id without writing when the issue already carries another", async ($, on) => {

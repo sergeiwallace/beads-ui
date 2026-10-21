@@ -81,6 +81,19 @@ describe("slug budgets from bd-new's overrides", () => {
     ["0", "npm-audit-10-dev-only-advisories"],
     ["-5", "npm-audit-10-dev-only-advisories"],
     ["", "npm-audit-10-dev-only-advisories"],
+    // Unicode digits and whitespace, measured against the same _env_budget and slugify_title
+    // under Python 3.14 (2026-10-21).
+    ["１２", "npm-audit-10"],
+    ["١٢", "npm-audit-10"],
+    ["१२", "npm-audit-10"],
+    ["１_６", "npm-audit-10-dev"],
+    ["+١٦", "npm-audit-10-dev"],
+    ["1٢", "npm-audit-10"],
+    ["\u3000१२\u3000", "npm-audit-10"],
+    ["\u008512", "npm-audit-10"],
+    ["\ufeff12", "npm-audit-10-dev-only-advisories"],
+    ["²", "npm-audit-10-dev-only-advisories"],
+    ["Ⅷ", "npm-audit-10-dev-only-advisories"],
   ];
 
   for (const [value, body] of BD_NEW_BODIES) {
@@ -345,6 +358,18 @@ describe("pending display ids", () => {
     expect(pendingDisplayIdStep({ ...pending, id: "BU-gone" }, allIssues())).toEqual({
       kind: "gone",
     });
+  });
+
+  test("should keep an id: label another writer left without its metadata, and write over only its own", () => {
+    const { displayId: _none, ...bare } = byId(allIssues(), "BU-2zw");
+    const labelled = (labels: string[]) =>
+      allIssues().map((issue) => (issue.id === "BU-2zw" ? { ...bare, labels } : issue));
+
+    expect(pendingDisplayIdStep(pending, labelled(["ci", "id:BU-other-2zw"]))).toEqual({
+      kind: "kept",
+      existing: "BU-other-2zw",
+    });
+    expect(pendingDisplayIdStep(pending, labelled([`id:${MINTED}`])).kind).toBe("write");
   });
 
   test("should read back only well-formed entries, once per issue, from what a surface stored", () => {

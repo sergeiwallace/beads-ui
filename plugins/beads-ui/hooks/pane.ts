@@ -121,7 +121,10 @@ type Ran =
   | { ok: true; exitCode: 0; stdout: string; stderr: string }
   | { ok: false; exitCode: number | null; stdout: string; stderr: string; message: string };
 
-type Notice = { text: string; token: Token };
+/** A `hint` notice names what to do next, so the next action that succeeds clears it. */
+type Notice = { text: string; token: Token; hint?: true };
+
+const FOCUS_HINT = "focus a card first: Tab moves between cards";
 
 const messageOf = (reason: unknown): string =>
   reason instanceof Error ? reason.message : String(reason);
@@ -240,13 +243,28 @@ export class BeadsPane {
 
   /**
    * Retries each pending display id against the store as just read: the same id again, never a
-   * second one; an issue that now carries an id, or is gone, drops it (D-9).
+   * second one; an issue that now carries an id, or is gone, drops it (D-9). bd has no
+   * compare-and-set on metadata, so the write runs only when a `bd show` of that one issue, read
+   * just before it, still finds no id; an unreadable show writes nothing and keeps it pending.
    */
   private async retryPendingIds(): Promise<void> {
     const done = new Set<string>();
     let wrote = false;
     for (const pending of [...this.pendingIds]) {
-      const step = pendingDisplayIdStep(pending, this.board.issues);
+      let step = pendingDisplayIdStep(pending, this.board.issues);
+      if (step.kind === "write") {
+        const shown = await this.run(showArgv(pending.id), READ_TIMEOUT_MS);
+        const parsed = shown.ok ? parseBdShow(shown.stdout) : undefined;
+        const issue =
+          parsed?.ok === true ? parsed.value.find((one) => one.id === pending.id) : undefined;
+        if (issue === undefined) {
+          this.pendingErrors[pending.id] = shown.ok
+            ? `re-reading it failed: bd show ${pending.id} returned nothing beads-ui can read`
+            : this.failure("re-reading it", shown);
+          continue;
+        }
+        step = pendingDisplayIdStep(pending, [issue]);
+      }
       if (step.kind === "kept") {
         this.note(
           `${pending.id} already carries ${step.existing}; ${pending.displayId} was not written`,
@@ -479,6 +497,15 @@ export class BeadsPane {
     this.notice = { text, token };
   }
 
+  private hint(text: string): void {
+    this.notice = { text, token: "warning", hint: true };
+  }
+
+  /** An action succeeded or the tab changed: a hint it answered no longer applies. */
+  private clearHint(): void {
+    if (this.notice?.hint === true) this.notice = undefined;
+  }
+
   /** A card's Move to: the guarded write, shown at once and rolled back on exit 13 (T-1.1). */
   async move(id: string, to: string): Promise<void> {
     const plan = planMove(this.board, id, to);
@@ -577,6 +604,7 @@ export class BeadsPane {
 
   submitFilter(text: string): void {
     this.filter = submitFilter(this.filter, text);
+    this.clearHint();
     this.resetPages();
     this.savePrefs();
     this.host?.invalidate();
@@ -598,6 +626,7 @@ export class BeadsPane {
         ? view.unplacedPage
         : view.lanes.flatMap((lane) => lane.pages).find((candidate) => candidate.key === key);
     if (page === undefined) return;
+    this.clearHint();
     const next = stepPage(page.page, page.pages, delta);
     if (key === view.unplacedPage.key) this.unplacedPage = next;
     else this.cellPages = { ...this.cellPages, [key]: next };
@@ -608,6 +637,7 @@ export class BeadsPane {
   stepLanes(delta: number): void {
     const { lanePage } = this.boardViewAt(this.width);
     this.lanePage = stepPage(lanePage.page, lanePage.pages, delta);
+    this.clearHint();
     this.host?.invalidate();
   }
 
@@ -631,7 +661,7 @@ export class BeadsPane {
     ];
     const cell = cells.find(({ cards }) => cards.some((card) => card.id === id));
     if (cell?.page === undefined) {
-      this.note("focus a card first: Tab moves between cards", "warning");
+      this.hint(FOCUS_HINT);
       this.host?.invalidate();
       return;
     }
@@ -658,6 +688,7 @@ export class BeadsPane {
    */
   setTab(tab: Tab): void {
     this.tab = tab;
+    this.clearHint();
     this.savePrefs();
     this.host?.invalidate();
     void this.host?.focus(PANE_ID, `tab:${tab}`).catch(() => undefined);
@@ -665,6 +696,7 @@ export class BeadsPane {
 
   cycleSwimlane(): void {
     this.swimlane = nextSwimlaneMode(this.swimlane);
+    this.clearHint();
     this.resetPages();
     this.savePrefs();
     this.host?.invalidate();
@@ -672,6 +704,7 @@ export class BeadsPane {
 
   cycleSort(): void {
     this.sort = nextSort(this.sort);
+    this.clearHint();
     this.resetPages();
     this.savePrefs();
     this.host?.invalidate();
@@ -679,6 +712,7 @@ export class BeadsPane {
 
   toggleHelp(): void {
     this.help = !this.help;
+    this.clearHint();
     this.host?.invalidate();
   }
 
@@ -696,22 +730,26 @@ export class BeadsPane {
   async focusMove(): Promise<void> {
     const id = this.focusedId;
     if (id === undefined) {
-      this.note("focus a card first: Tab moves between cards", "warning");
+      this.hint(FOCUS_HINT);
       this.host?.invalidate();
       return;
     }
+    this.clearHint();
     if (this.tab !== "board") this.setTab("board");
+    this.host?.invalidate();
     await this.host?.focus(PANE_ID, `move:${id}`).catch(() => undefined);
   }
 
   async focusQuickAdd(): Promise<void> {
+    this.clearHint();
     if (this.tab === "detail") this.setTab("board");
+    this.host?.invalidate();
     await this.host?.focus(PANE_ID, "quickadd").catch(() => undefined);
   }
 
   async openDetailFor(id: string | undefined = this.target()): Promise<void> {
     if (id === undefined) {
-      this.note("focus a card first: Tab moves between cards", "warning");
+      this.hint(FOCUS_HINT);
       this.host?.invalidate();
       return;
     }
@@ -760,6 +798,7 @@ export class BeadsPane {
     }
     this.undo = undefined;
     this.detailError = undefined;
+    this.clearHint();
     this.detail = reduceDetail(detail, { type: "edit-submitted", field });
     this.host?.invalidate();
     const ran = await this.run(argv.value, WRITE_TIMEOUT_MS);
@@ -784,11 +823,12 @@ export class BeadsPane {
       this.board.issues.find((candidate) => candidate.id === id) ??
       (this.detail?.issue.id === id ? this.detail?.issue : undefined);
     if (issue === undefined) {
-      this.note("focus a card first: Tab moves between cards", "warning");
+      this.hint(FOCUS_HINT);
       this.host?.invalidate();
       return;
     }
     this.undo = undefined;
+    this.clearHint();
     this.onDelete?.(issue, this.board.issues);
   }
 
@@ -1060,7 +1100,7 @@ export class BeadsPane {
     });
   }
 
-  private drawCard(ui: PaneUi, card: CardView, order: string[]): RenderElement {
+  private drawCard(ui: PaneUi, card: CardView): RenderElement {
     const status = this.board.issues.find((issue) => issue.id === card.id)?.status ?? "";
     const { Box, Text, Select, Button } = ui;
     return Box({
@@ -1077,7 +1117,7 @@ export class BeadsPane {
         Select({
           key: `move:${card.id}`,
           label: "Move to",
-          options: [status, ...order.filter((name) => name !== status)].map((value) => ({ value })),
+          options: [status, ...card.moveTargets].map((value) => ({ value })),
           value: status,
           onSelect: (value) => void this.move(card.id, value),
         }),
@@ -1105,7 +1145,6 @@ export class BeadsPane {
         children: [Text({ dimColor: true, children: "reading the store…" })],
       });
     }
-    const order = view.columns.map((column) => column.status);
     const lanes = view.lanes.map((lane) =>
       Box({
         key: `lane:${lane.key === "" ? "-" : lane.key}`,
@@ -1133,7 +1172,7 @@ export class BeadsPane {
                         Text({ bold: true, color: colorOf(column.token), children: column.label }),
                       ],
                     }),
-                    ...cards.map((card) => this.drawCard(ui, card, order)),
+                    ...cards.map((card) => this.drawCard(ui, card)),
                     page === undefined ? undefined : this.drawPager(ui, page),
                   ]);
                 }),
@@ -1151,11 +1190,15 @@ export class BeadsPane {
             flexDirection: "column",
             children: present<RenderNode>([
               Text({ bold: true, children: "Statuses bd statuses did not list" }),
-              ...view.unplaced.map((card) => this.drawCard(ui, card, order)),
+              ...view.unplaced.map((card) => this.drawCard(ui, card)),
               this.drawPager(ui, view.unplacedPage),
             ]),
           });
-    const { lanePage } = view;
+    const { lanePage, columnWindow } = view;
+    const columnsText =
+      columnWindow === undefined
+        ? ""
+        : `, columns ${columnWindow.from}-${columnWindow.to} of ${columnWindow.total}`;
     const lanePager =
       lanePage.pages === 1
         ? undefined
@@ -1172,7 +1215,7 @@ export class BeadsPane {
               }),
               Text({
                 dimColor: true,
-                children: `lanes ${lanePage.from}-${lanePage.to} of ${lanePage.total}`,
+                children: `lanes ${lanePage.from}-${lanePage.to} of ${lanePage.total}${columnsText}`,
               }),
               Button({
                 key: "lanes-next",
@@ -1251,6 +1294,7 @@ export class BeadsPane {
   async stepBacklog(delta: number, refocus = false): Promise<void> {
     const { page } = this.backlogViewAt(this.width);
     this.backlogPage = stepPage(page.page, page.pages, delta);
+    this.clearHint();
     this.host?.invalidate();
     const first = this.backlogViewAt(this.width).rows[0];
     if (!refocus || first === undefined) return;
@@ -1369,40 +1413,66 @@ export class BeadsPane {
     const left = wide ? Math.floor(width * 0.45) : width;
     const view = detailView(this.detail, { issues: this.board.issues, width: left - 14 });
     const statuses = this.board.statuses.map((status) => ({ value: status.name }));
+    // A control's own label shares its row with the value, and on a narrow pane a long value
+    // squeezes it and cuts it in two (Claude Code 2.1.306, 53 columns). So the label is drawn
+    // beside the control in a Box that never shrinks, and the control carries none.
+    const labelled = (editable: EditableField, label: string, control: RenderElement) =>
+      Box({
+        key: `edit-row:${editable}`,
+        flexDirection: "row",
+        gap: 1,
+        children: [
+          Box({
+            key: `label:${editable}`,
+            flexShrink: 0,
+            children: [Text({ children: `${label}:` })],
+          }),
+          control,
+        ],
+      });
     const fields = view.fields.map((field) => {
       const raw = field.raw ?? field.value;
       const editable = field.editable;
       if (editable === "status" && statuses.length > 0) {
-        return Select({
-          key: "edit:status",
-          label: "Status",
-          options: statuses.some((option) => option.value === raw)
-            ? statuses
-            : [{ value: raw }, ...statuses],
-          value: raw,
-          onSelect: (value) => void this.edit("status", value),
-        });
+        return labelled(
+          editable,
+          field.label,
+          Select({
+            key: "edit:status",
+            options: statuses.some((option) => option.value === raw)
+              ? statuses
+              : [{ value: raw }, ...statuses],
+            value: raw,
+            onSelect: (value) => void this.edit("status", value),
+          }),
+        );
       }
       if (editable === "priority") {
-        return Select({
-          key: "edit:priority",
-          label: "Priority",
-          options: [0, 1, 2, 3, 4].map((p) => ({ value: String(p), label: `P${p}` })),
-          value: raw,
-          onSelect: (value) => void this.edit("priority", value),
-        });
+        return labelled(
+          editable,
+          field.label,
+          Select({
+            key: "edit:priority",
+            options: [0, 1, 2, 3, 4].map((p) => ({ value: String(p), label: `P${p}` })),
+            value: raw,
+            onSelect: (value) => void this.edit("priority", value),
+          }),
+        );
       }
       if (editable !== undefined) {
-        return Input({
-          key: `edit:${editable}`,
-          label: field.label,
-          value: raw,
-          ...(editable === "description"
-            ? { placeholder: "one line: \\n is a line break, \\\\ a backslash" }
-            : {}),
-          submitLabel: "save",
-          onSubmit: (value) => void this.edit(editable, value),
-        });
+        return labelled(
+          editable,
+          field.label,
+          Input({
+            key: `edit:${editable}`,
+            value: raw,
+            ...(editable === "description"
+              ? { placeholder: "one line: \\n is a line break, \\\\ a backslash" }
+              : {}),
+            submitLabel: "save",
+            onSubmit: (value) => void this.edit(editable, value),
+          }),
+        );
       }
       return Box({
         key: `field:${field.key}`,
