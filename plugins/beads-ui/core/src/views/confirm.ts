@@ -128,11 +128,22 @@ function recheckLeaf(state: ConfirmState, event: RecheckEvent): ConfirmState {
   return { ...rest, phase: "preview-failed", previewText: event.stdout, message };
 }
 
+/**
+ * Every field of a cascade preview, so the re-check compares all of them: a preview field added
+ * to DeletePreview and left out here fails the type check.
+ */
+const PREVIEW_FIELDS: Readonly<Record<keyof DeletePreview, (preview: DeletePreview) => string>> = {
+  issueIds: (preview) => preview.issueIds.join("\n"),
+  cascade: (preview) => String(preview.cascade),
+  wouldDelete: (preview) => String(preview.wouldDelete),
+  wouldOrphan: (preview) => String(preview.wouldOrphan),
+  wouldRemoveDependencies: (preview) => String(preview.wouldRemoveDependencies),
+  wouldRemoveEvents: (preview) => String(preview.wouldRemoveEvents),
+  wouldRemoveLabels: (preview) => String(preview.wouldRemoveLabels),
+};
+
 const sameCascade = (a: DeletePreview, b: DeletePreview): boolean =>
-  a.wouldDelete === b.wouldDelete &&
-  a.wouldOrphan === b.wouldOrphan &&
-  a.wouldRemoveDependencies === b.wouldRemoveDependencies &&
-  a.issueIds.join("\n") === b.issueIds.join("\n");
+  Object.values(PREVIEW_FIELDS).every((field) => field(a) === field(b));
 
 function recheckCascade(state: ConfirmState, event: RecheckEvent): ConfirmState {
   const parsed = event.exitCode === 0 ? parseBdDeletePreview(event.stdout) : undefined;

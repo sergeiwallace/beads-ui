@@ -272,6 +272,37 @@ describe("the delete confirmation", () => {
     expect(nextCommand(rechecked)).toBeUndefined();
   });
 
+  // bd's own field names in `bd delete --cascade --dry-run --json`, each changed on its own.
+  const changedFields: readonly [string, unknown][] = [
+    ["issue_ids", ["BU-mg2.3", "BU-mg2.3.5"]],
+    ["cascade", false],
+    ["would_delete", 12],
+    ["would_orphan", 1],
+    ["would_remove_dependencies", 12],
+    ["would_remove_events", 35],
+    ["would_remove_labels", 12],
+  ];
+  for (const [field, value] of changedFields) {
+    test(`should ask for the id again and delete nothing when the cascade's ${field} changed since its preview`, () => {
+      const changed = JSON.stringify({ ...JSON.parse(cascadePreview), [field]: value });
+
+      const rechecked = run(
+        atTypedId(),
+        { type: "typed", text: "BU-beads-ui-claude-code-aeyb" },
+        { type: "delete" },
+        { type: "recheck-loaded", exitCode: 0, stdout: changed, stderr: "" },
+      );
+
+      expect([rechecked.phase, rechecked.typed, rechecked.message]).toEqual([
+        "needs-typed-id",
+        "",
+        "the cascade changed since the preview; nothing was deleted, type the id again",
+      ]);
+      expect(deleteEnabled(rechecked)).toBe(false);
+      expect(nextCommand(rechecked)).toBeUndefined();
+    });
+  }
+
   test("should refuse the delete when the re-check itself fails", () => {
     const failed = run(
       leafReady(),
