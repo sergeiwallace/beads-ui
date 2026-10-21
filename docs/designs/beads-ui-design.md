@@ -2,7 +2,7 @@
 title: beads-ui: a Beads task manager for the Claude Code TUI, an MCP UI app and a web app from one core
 category: design
 tags: [design, beads-ui, task-manager, claude-code-mods, mcp-apps, web-app, shared-core, work-queue]
-status: draft
+status: approved
 source: "claude-fable-5-1-2026-10-15"
 template_version: "design-1.0.0"
 delegation_provenance:
@@ -607,12 +607,12 @@ Every decision below ran through `/decision-framework` in its fresh-authoring co
 | D-4 | Beads access route | (a) `bd --json` subprocess in every surface, `bd serve` later behind loopback or a token; (b) `bd serve` everywhere; (c) Dolt SQL for writes | (a) | | | `bd serve` skips hooks and exposes bulk delete; criterion 1: a subprocess adapter is a two-way door | `✅ Resolved by aih-3 Fable coordinator` |
 | D-5 | Sprint modelling on Beads | (a) `sprint:<name>` label plus a `milestone` issue for dates, members linked by `tracks`; (b) `bd set-state sprint=<name>`; (c) a metadata key | (a) | | | Labels are indexed and filterable; `set-state` mints an event issue per change; criterion 4 weighted pass | `✅ Resolved by aih-3 Fable coordinator` |
 | D-6 | Board order | (a) no manual rank in the MVP, sort by priority then created; (b) `metadata.rank` fractional index from the start; (c) rank as a sidecar file | (a) now, (b) as the phase 3 enhancement | | | Criterion 5: rank is a feature nobody has asked to use yet; a fractional index in metadata stays available with no migration | `✅ Resolved by aih-3 Fable coordinator` |
-| D-7 | The command alias (the npm scope is resolved inside this decision) | (a) alias `bu`, with npm `@sergeiwallace/beads-ui` and command `beads-ui`; (b) keep `bv` and accept the shadow with Beads Viewer; (c) rename the project | (a) | | | The npm scope is self-resolved (no stated requirement, two-way door); the alias `bv` was Sergei's stated choice and is taken by Beads Viewer, so changing it fires Gate C | `⏳ PENDING (human)` for the alias only |
+| D-7 | The command alias (the npm scope is resolved inside this decision) | (a) alias `bu`, with npm `@sergeiwallace/beads-ui` and command `beads-ui`; (b) keep `bv` and accept the shadow with Beads Viewer; (c) rename the project | (a) | (a) | no | The npm scope is self-resolved (no stated requirement, two-way door); the alias `bv` was Sergei's stated choice and is taken by Beads Viewer, so changing it fires Gate C | `✅ Approved by Sergei (human)` |
 | D-8 | Drag in the mod | (a) keyboard "Move to" first, `Client` pointer drag in phase 2 behind fullscreen and tmux mouse mode; (b) `Client` drag in the MVP; (c) no pointer drag | (a) | | | Criterion 3: pointer capture is documented only in the types file and untested live | `✅ Resolved by aih-3 Fable coordinator` |
 | D-9 | Display-id minting | (a) core mints fleet-style ids behind `id_policy = auto`, on when the store already uses them; (b) call `bd-new`; (c) never mint | (a) | | | A create without minting reddens the fleet gate; the convention is fleet-only so a public tool needs the switch; criterion 2 | `✅ Resolved by aih-3 Fable coordinator` |
 | D-10 | Web stack | (a) React 19, Vite, TanStack Query, Table and Virtual, Zustand vanilla, shadcn/ui on Base UI, Pragmatic drag and drop, Recharts, cmdk; (b) Solid plus OpenTUI pattern; (c) lit-html as in mantoni's beads-ui | (a) | | | Research measured maintenance signals; app-portal already uses React 19 and shadcn-derived components; criterion 2 consistency | `✅ Resolved by aih-3 Fable coordinator` |
-| D-11 | Relationship to the work-queue dashboard | (a) the beads-ui web app becomes the queue's unbuilt Phase 2 member app; (b) two separate boards that deep-link; (c) the queue SPA imports beads-ui packages | (a) | | | Gate C: option (a) changes a deliverable of another ratified design; the queue stays where it is under every option | `⏳ PENDING (human)` |
-| D-12 | Task-panel backup destination | (a) a private repo per machine class (ai-harness for personal machines, the employer workspace repo for employer machines); (b) one private archive outside any repo; (c) ai-harness for every machine | (a) | | | Employer session data cannot enter a public repo; medium confidence on a cross-boundary data-classification call, Gate D | `⏳ PENDING (human)` |
+| D-11 | Relationship to the work-queue dashboard | (a) the beads-ui web app becomes the queue's unbuilt Phase 2 member app; (b) two separate boards that deep-link; (c) the queue SPA imports beads-ui packages | (a) | (a) | no | Gate C: option (a) changes a deliverable of another ratified design; the queue stays where it is under every option | `✅ Approved by Sergei (human)` |
+| D-12 | Task-panel backup destination | (a) a private repo per machine class (ai-harness for personal machines, the employer workspace repo for employer machines); (b) one private archive outside any repo; (c) ai-harness for every machine | (a) | (d) | yes | Employer session data cannot enter a public repo; medium confidence on a cross-boundary data-classification call, Gate D | `✅ Approved by Sergei (human)` |
 | D-13 | Delete and close ladder | (a) undo for close, modal with `bd delete --dry-run` for delete, typed id for cascade; (b) modal for everything; (c) undo toast for everything | (a) | | | Sergei asked for a confirmation step; Beads delete is permanent and has no trash; criterion 1 | `✅ Resolved by aih-3 Fable coordinator` |
 | D-14 | MCP server topology | (a) one server package: stdio under Claude Desktop in phase 4, HTTP with auth from the hosted web app in phase 6; (b) remote only; (c) stdio only | (a) | | | Desktop needs local stdio; claude.ai needs an internet-reachable server; criterion 3 phases the costly half | `✅ Resolved by aih-3 Fable coordinator` |
 | D-15 | Mod packaging and install | (a) the plugin at `plugins/beads-ui` is the source of truth with core inside and no runtime dependencies, listed by a root marketplace, with `validate .`, `validate --json` allow-list and `claude plugin test` in the gate; (b) a generated plugin folder built by copying core from `packages/core`; (c) install from a third-party marketplace | (a) | | | No build step, as the fleet's mods design prefers; plugin code cannot import outside its folder; (b) becomes relevant only if D-2's phase 3 review moves the core | `✅ Resolved by aih-3 Fable coordinator` |
@@ -887,7 +887,7 @@ Criterion 5: manual rank is a feature with no present user; sort covers "reorder
 
 <a id="d-7"></a>
 
-#### D-7: The command alias, with the npm scope resolved — `⏳ PENDING (human)` for the alias only
+#### D-7: The command alias, with the npm scope resolved — `✅ Approved by Sergei (human)`
 
 **Context.** Sergei's second follow-up stated "the shorthand alias / beads task / cc session alias will be `bv` / `BV`" and settled the repo name `beads-ui`. The research found both names taken: `beads-ui` is a 755-star MIT Beads web UI on npm whose command is `bdui`, and `bv` is Beads Viewer's Homebrew binary, whose licence rider excludes Anthropic. The GitHub repo name `sergeiwallace/beads-ui` is unaffected. Re-running the Authority test splits the decision. The npm package name was never stated, so publishing under the scope `@sergeiwallace/beads-ui` with the command `beads-ui` is a contained two-way door and is resolved here by the coordinator. The alias is different: `bv` is a requirement Sergei wrote down, and replacing it supplies a different intent, so Gate C fires on the alias and only the alias goes to Sergei.
 
@@ -918,9 +918,9 @@ Criterion 5: manual rank is a feature with no present user; sort covers "reorder
 
 ##### Recommendation
 
-> **Decision:** `PENDING (human)` for the alias — recommended (a) alias `bu`; the npm scope `@sergeiwallace/beads-ui` and the command `beads-ui` are resolved by aih-3 Fable coordinator (2026-10-15); confidence: high
-<!-- decision-record: chosen-option=PENDING; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
-<!-- decision-lineage: decision-id=BU-mg2.2/D-7; decision-topic=the command alias given the bv collision; governs=repo:beads-ui/naming; normalized-proposition=the command alias is bu and the npm name is scoped; applicability=phases:0-6; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+> **Decision:** `✅ Approved by Sergei (human)` (a), 2026-10-21: alias `bu`, npm scope `@sergeiwallace/beads-ui`, command `beads-ui`. Sergei: "`bv` was just something i threw out before i went with beads-ui. it wasn't some meaningful decision."
+<!-- decision-record: chosen-option=a; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
+<!-- decision-lineage: decision-id=BU-mg2.2/D-7; decision-topic=the command alias given the bv collision; governs=repo:beads-ui/naming; normalized-proposition=the command alias is bu and the npm name is scoped; applicability=phases:0-6; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=BU-mg2.2/D-7; approval-actor=Sergei; approval-date=2026-10-21; approval-commit= -->
 
 The coordinator recommends (a). The repo name stays; the npm scope is the only way to publish under the chosen name and is settled here; `bu` avoids shadowing Beads Viewer, whose licence also rules out any code or API reuse, and it matches the store's Beads prefix. The alias alone is escalated: Gate C fires because `bv` is a requirement Sergei stated and the coordinator cannot supply a different one.
 
@@ -1051,7 +1051,7 @@ Criterion 2 (consistency with app-portal and the MCP App examples) and the measu
 
 <a id="d-11"></a>
 
-#### D-11: Relationship to the work-queue dashboard — `⏳ PENDING (human)`
+#### D-11: Relationship to the work-queue dashboard — `✅ Approved by Sergei (human)`
 
 **Context.** Sergei's fourth follow-up asks to incorporate the autonomous task queue and its dashboard with beads-ui while the queue stays where it is. The research found the queue live on this host with a React SPA in ai-core that already has Board, Epics, Review, Sessions, Inbox and Task-detail views, and that its Phase 2 (the dashboard member app) is unbuilt. Gate C fires: option (a) changes a deliverable of another ratified design.
 
@@ -1084,9 +1084,9 @@ Criterion 2 (consistency with app-portal and the MCP App examples) and the measu
 
 ##### Recommendation
 
-> **Decision:** `PENDING (human)` — recommended (a) the beads-ui web app becomes the queue's Phase 2 member app, queue service unchanged
-<!-- decision-record: chosen-option=PENDING; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
-<!-- decision-lineage: decision-id=BU-mg2.2/D-11; decision-topic=whether beads-ui is the work queue's dashboard; governs=apps:web,integration:work-queue; normalized-proposition=the beads-ui web app is the queue's Phase 2 member app and consumes its read models; applicability=phase:3; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+> **Decision:** `✅ Approved by Sergei (human)` (a), 2026-10-21: the beads-ui web app becomes the queue's Phase 2 member app, queue service unchanged. Sergei: "should have been automatic decision", as his fourth follow-up already asked for it.
+<!-- decision-record: chosen-option=a; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
+<!-- decision-lineage: decision-id=BU-mg2.2/D-11; decision-topic=whether beads-ui is the work queue's dashboard; governs=apps:web,integration:work-queue; normalized-proposition=the beads-ui web app is the queue's Phase 2 member app and consumes its read models; applicability=phase:3; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=BU-mg2.2/D-11; approval-actor=Sergei; approval-date=2026-10-21; approval-commit= -->
 
 The coordinator recommends (a), with the queue adapter behind `queue.url` so the public project works without it, and with the queue service untouched. Phase 3 is written so that (b) needs only the removal of the app-portal registration task. Re-running the Authority test: Sergei's fourth follow-up asks to "merge the latter system / features or integrate / combine all that with beads UI", which every option satisfies, and it does not say which of the two boards survives. Choosing (a) supersedes the Phase 2 deliverable (`ai-core web/`) of a design Sergei ratified on 2026-09-15, in another repo, so Gate C fires on the decision itself and it goes to Sergei. The long-term home of the queue service is Open Question 1, deferred by Sergei.
 
@@ -1094,7 +1094,7 @@ The coordinator recommends (a), with the queue adapter behind `queue.url` so the
 
 <a id="d-12"></a>
 
-#### D-12: Task-panel backup destination — `⏳ PENDING (human)`
+#### D-12: Task-panel backup destination — `✅ Approved by Sergei (human)`
 
 **Context.** Sergei asked to back up every panel's data before retiring the panel. On this host the panel holds 625 task files in 86 lists, one of them an employer-workspace session's list. beads-ui is public; ai-harness is private; the employer workspace repo is private and employer-classified.
 
@@ -1123,11 +1123,21 @@ The coordinator recommends (a), with the queue adapter behind `queue.url` so the
 **Cons:**
 - Employer session subjects land in a personal repo.
 
+##### (d) The repository each session was launched for, with bms-semantic-knowledge-graph sessions going to sw-bms-workspace (Sergei, 2026-10-21)
+
+**Pros:**
+- Each list is backed up beside the work it describes, so its classification follows its repository.
+- bms-semantic-knowledge-graph carries no `.beads/` and must never get one, so its sessions' lists land in the employer workspace repo that already holds its Beads work.
+
+**Cons:**
+- The backup script needs each list's launch repository, not only the machine class.
+- A list whose launch repository cannot be resolved needs a stated fallback, decided in Phase 5.
+
 ##### Recommendation
 
-> **Decision:** `PENDING (human)` — recommended (a) a private repo per machine class
-<!-- decision-record: chosen-option=PENDING; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
-<!-- decision-lineage: decision-id=BU-mg2.2/D-12; decision-topic=where the task-panel backups are stored; governs=phase:5/backup; normalized-proposition=panel backups go to a private repository matching the data's classification; applicability=phase:5; outcome-id=; relation=different-question; related-decision-id=BU-mg2.2/D-21; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+> **Decision:** `✅ Approved by Sergei (human)` (d), 2026-10-21, an option Sergei added: back up each session's task list into the repository that session was launched for; bms-semantic-knowledge-graph sessions go to sw-bms-workspace instead.
+<!-- decision-record: chosen-option=d; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
+<!-- decision-lineage: decision-id=BU-mg2.2/D-12; decision-topic=where the task-panel backups are stored; governs=phase:5/backup; normalized-proposition=panel backups go to a private repository matching the data's classification; applicability=phase:5; outcome-id=; relation=different-question; related-decision-id=BU-mg2.2/D-21; supersedes=; approval-log-decision-id=BU-mg2.2/D-12; approval-actor=Sergei; approval-date=2026-10-21; approval-commit= -->
 
 The coordinator recommends (a). Re-running the Authority test: no act is performed here (Gate A clear), no protected text is changed (Gate B clear), and the backup is a requirement Sergei stated (Gate C clear), so the gate that fires is Gate D: a push of employer session subjects into any repository is one-way, it crosses the personal-versus-employer boundary, and the coordinator's confidence is low because the employer repo's own rules on storing session data were not measured and cannot be from this host. It goes to Sergei.
 
@@ -1592,7 +1602,17 @@ Criterion 3: the grammar lives for the product's life, so it is explicit and ver
 
 ## Feedback Rounds
 
-(none yet; Sergei's first review opens Round 1. Prior rounds are frozen byte-for-byte.)
+### Feedback Round 1 (Sergei, 2026-10-21, in chat)
+
+> D-7: option A. dv was just something i threw out before i went with beads-ui. it wasn't some meaningful decision. there's no muscle memory for bv. we haven't even built this yet.
+>
+> D-11: option A approved. should have been automatic decision. pretty sure i already said this in so many weres so should have been easily inferred.
+>
+> D-12: back them up for whichever repo that cc session is launched for. and for bms-semantic-knowledge-graph repo cc sessions, they should should instead go in sw-bms-workspace repo. so i guess a new option D.
+>
+> now /delegate opus 5.5 /orchestrate /auto-flow the rest as appropriate now.
+
+Resolution: D-7 (a), D-11 (a) and D-12 a new option (d) are recorded above. The closing instruction to build the rest is read as approval of the design with these answers (option (a) of the held design-approval item).
 
 <!-- /doc:region name="feedback_rounds" -->
 
@@ -1602,5 +1622,6 @@ Criterion 3: the grammar lives for the product's life, so it is explicit and ver
 
 | Date | Decision | Notes |
 |------|----------|-------|
+| 2026-10-21 | Design approved; D-7 (a), D-11 (a), D-12 (d) | Sergei, Feedback Round 1. D-12 (d) is his added option: per launch repository, bms-semantic-knowledge-graph sessions to sw-bms-workspace. Build proceeds through /delegate opus /orchestrate /auto-flow |
 
 <!-- /doc:region name="approval_log" -->
