@@ -1,0 +1,14 @@
+{
+  "cascade": false,
+  "dry_run": true,
+  "issue_ids": [
+    "BU-2zw"
+  ],
+  "preview": true,
+  "schema_version": 1,
+  "would_delete": 1,
+  "would_orphan": 0,
+  "would_remove_dependencies": 0,
+  "would_remove_events": 3,
+  "would_remove_labels": 1
+}

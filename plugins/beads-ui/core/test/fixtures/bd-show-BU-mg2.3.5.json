@@ -1,0 +1,47 @@
+[
+  {
+    "id": "BU-mg2.3.5",
+    "title": "T-1.1: Board tab with keyboard Move to",
+    "description": "Phase 1 (MVP) task T-1.1 of docs/designs/beads-ui-design.md (approved 2026-10-21). The Board tab of the /beads pane in the Claude Code mod. Founding ask: \"i want to be able to drag and move tasks, reaarrange, reorder, sort, see kanban board\"; the MVP moves cards by keyboard (D-3, D-8), drag is Phase 2.\n\nAcceptance criteria (verbatim from the design):\n- When the pane opens, the system shall render one column per status returned by bd statuses, ordered by category active, wip, frozen, done, each with its issue count.\n- When the user picks a status in a card's Move to control, the system shall run bd update \u003cid\u003e --status \u003cnew\u003e --if-status \u003cshown\u003e, and if bd exits 13 then the system shall restore the card to its shown column, show a conflict line and refresh that issue.\n- While the swimlane selector is set to assignee, the system shall render one row per distinct assignee plus an unassigned row.\n- If bd list fails or times out, then the system shall keep the last rendered board, show an error line with the exit code, and retry on the next refresh.\n\nDone when: the four ACs hold on beads-ui main with tests (core/test/columns, views; hooks/pane.test.ts).\n",
+    "status": "open",
+    "priority": 1,
+    "issue_type": "task",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-21T05:48:40Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-21T05:48:41Z",
+    "metadata": {
+      "display_id": "BU-t-1-1-board-tab-nxdt"
+    },
+    "labels": [
+      "id:BU-t-1-1-board-tab-nxdt"
+    ],
+    "dependencies": [
+      {
+        "id": "BU-mg2.3",
+        "title": "beads-ui Claude Code mod: the task manager inside the Claude Code TUI, with mouse control",
+        "description": "The first surface and the first MVP target: board, backlog, sprint and roadmap views inside the Claude Code TUI as a Claude Code mod, with mouse drag and drop, plus create, update and delete. Scope and phases come from the beads-ui design doc.",
+        "status": "in_progress",
+        "priority": 1,
+        "issue_type": "epic",
+        "owner": "6564880+sergeiwallace@users.noreply.github.com",
+        "created_at": "2026-10-14T23:31:37Z",
+        "created_by": "Sergei Wallace",
+        "updated_at": "2026-10-21T05:48:55Z",
+        "started_at": "2026-10-21T05:48:55Z",
+        "metadata": {
+          "display_id": "BU-beads-ui-claude-code-aeyb"
+        },
+        "labels": [
+          "id:BU-beads-ui-claude-code-aeyb"
+        ],
+        "dependency_type": "parent-child"
+      }
+    ],
+    "parent": "BU-mg2.3",
+    "dependent_count": 0,
+    "dependency_count": 1,
+    "comment_count": 0,
+    "revision": "-6554552060424439547"
+  }
+]

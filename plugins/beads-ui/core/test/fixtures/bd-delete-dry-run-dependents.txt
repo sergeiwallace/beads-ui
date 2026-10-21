@@ -1,0 +1,7 @@
+
+⚠️  DELETE PREVIEW
+
+Issues to delete (1):
+  BU-mg2.3: beads-ui Claude Code mod: the task manager inside the Claude Code TUI, with mouse control
+
+issue BU-mg2.3 has dependents not in deletion set; use --cascade to delete them or --force to orphan them

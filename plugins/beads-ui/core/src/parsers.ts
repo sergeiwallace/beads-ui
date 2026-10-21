@@ -1,5 +1,7 @@
 import {
+  type DeletePreview,
   type Dependency,
+  type HistoryEvent,
   type Issue,
   type Priority,
   STATUS_CATEGORIES,
@@ -9,7 +11,14 @@ import {
 
 export interface ParseError {
   kind: "parse-error";
-  source: "bd list" | "bd show" | "bd statuses";
+  source:
+    | "bd list"
+    | "bd show"
+    | "bd statuses"
+    | "bd ready"
+    | "bd history"
+    | "bd delete"
+    | "bd create";
   path: string;
   message: string;
 }
@@ -79,10 +88,15 @@ function parseDependency(value: unknown, path: string): Dependency {
   if (typeof dep.depends_on_id === "string") {
     return { type: requiredString(dep, "type", path), id: dep.depends_on_id };
   }
-  return {
+  const parsed: Dependency = {
     type: requiredString(dep, "dependency_type", path),
     id: requiredString(dep, "id", path),
   };
+  const status = optionalString(dep, "status", path);
+  if (status !== undefined) parsed.status = status;
+  const title = optionalString(dep, "title", path);
+  if (title !== undefined) parsed.title = title;
+  return parsed;
 }
 
 function parseLabels(value: unknown, path: string): string[] {
@@ -213,4 +227,75 @@ export function parseBdStatuses(text: string): ParseResult<Status[]> {
       ...parseStatusList(root.custom_statuses, "$.custom_statuses", false),
     ];
   });
+}
+
+export function parseBdReady(text: string): ParseResult<Issue[]> {
+  return run("bd ready", text, parseIssues);
+}
+
+function parseEvent(value: unknown, path: string): HistoryEvent {
+  const raw = asObject(value, path);
+  const event: HistoryEvent = {
+    id: requiredString(raw, "id", path),
+    issueId: requiredString(raw, "issue_id", path),
+    type: requiredString(raw, "event_type", path),
+    actor: requiredString(raw, "actor", path),
+    createdAt: requiredString(raw, "created_at", path),
+  };
+  const oldValue = optionalString(raw, "old_value", path);
+  if (oldValue !== undefined) event.oldValue = oldValue;
+  const newValue = optionalString(raw, "new_value", path);
+  if (newValue !== undefined) event.newValue = newValue;
+  const comment = optionalString(raw, "comment", path);
+  if (comment !== undefined) event.comment = comment;
+  return event;
+}
+
+/** Reads `bd history <id> --events --json`. */
+export function parseBdHistoryEvents(text: string): ParseResult<HistoryEvent[]> {
+  return run("bd history", text, (json) =>
+    asArray(json, "$").map((entry, i) => parseEvent(entry, `$[${i}]`)),
+  );
+}
+
+function nonNegativeInteger(obj: JsonObject, key: string): number {
+  const value = obj[key];
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+    throw new Invalid(`$.${key}`, "expected a non-negative integer");
+  }
+  return value;
+}
+
+/**
+ * Reads `bd delete <id> --dry-run --json`, with or without `--cascade`. A preview bd refused,
+ * such as one with dependents outside the deletion set, carries bd's `error` text and no counts;
+ * it parses to a parse error at `$.error` whose message is bd's text.
+ */
+export function parseBdDeletePreview(text: string): ParseResult<DeletePreview> {
+  return run("bd delete", text, (json) => {
+    const root = asObject(json, "$");
+    if (typeof root.error === "string" && root.error !== "") {
+      throw new Invalid("$.error", root.error);
+    }
+    const issueIds = asArray(root.issue_ids, "$.issue_ids").map((id, i) => {
+      if (typeof id !== "string" || id === "") {
+        throw new Invalid(`$.issue_ids[${i}]`, "expected a non-empty string");
+      }
+      return id;
+    });
+    return {
+      issueIds,
+      cascade: root.cascade === true,
+      wouldDelete: nonNegativeInteger(root, "would_delete"),
+      wouldOrphan: nonNegativeInteger(root, "would_orphan"),
+      wouldRemoveDependencies: nonNegativeInteger(root, "would_remove_dependencies"),
+      wouldRemoveEvents: nonNegativeInteger(root, "would_remove_events"),
+      wouldRemoveLabels: nonNegativeInteger(root, "would_remove_labels"),
+    };
+  });
+}
+
+/** Reads the new issue's hash id from `bd create --json`, as bd-new does. */
+export function parseBdCreatedId(text: string): ParseResult<string> {
+  return run("bd create", text, (json) => requiredString(asObject(json, "$"), "id", "$"));
 }

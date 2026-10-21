@@ -1,0 +1,10 @@
+
+⚠️  DELETE PREVIEW
+
+Issue to delete:
+  BU-2zw: npm audit: 10 dev-only advisories under markdownlint-cli2
+
+Would delete: 1 issues
+Would remove: 0 dependencies, 1 labels, 3 events
+
+(Dry-run mode - no changes made)
