@@ -71,5 +71,7 @@ export {
   parseBdShow,
   parseBdStatuses,
 } from "./parsers.ts";
+export type { QuickAdd, QuickAddError } from "./quickadd.ts";
+export { createArgv, parseQuickAdd } from "./quickadd.ts";
 export type { SortDirection, SortError, SortKey, SortSpec } from "./sort.ts";
 export { DEFAULT_SORT, parseSort, SORT_KEYS, sortIssues } from "./sort.ts";
