@@ -277,7 +277,7 @@ describe("update through a stub bd", () => {
     const { stub, client } = await stubbed({ exitCode: 13 });
     const result = await client.update("BU-abc", { assignee: "me" }, { ifAssignee: "" });
     expect(result.kind).toBe("stale");
-    expect(await stub.calls()).toEqual(["update BU-abc --assignee=me --if-assignee="]);
+    expect(await stub.calls()).toEqual(["update BU-abc --assignee=me --if-assignee= --json"]);
   });
 
   it("should write the same argv as the core's moveArgv when the update is a guarded move", async () => {
@@ -303,7 +303,7 @@ describe("update through a stub bd", () => {
     });
     expect(await stub.calls()).toEqual([
       "update BU-abc --title=-starts with a dash --description=two words --priority=1 --type=bug" +
-        " --due=2026-11-01 --estimate=30 --add-label=sprint:s1 --remove-label=old",
+        " --due=2026-11-01 --estimate=30 --add-label=sprint:s1 --remove-label=old --json",
     ]);
   });
 
@@ -364,7 +364,7 @@ describe("create and close through a stub bd", () => {
   it("should run bd close on the id and return ok when bd exits 0", async () => {
     const { stub, client } = await stubbed({});
     expect(await client.close("BU-abc")).toEqual({ kind: "ok", value: undefined });
-    expect(await stub.calls()).toEqual(["close BU-abc"]);
+    expect(await stub.calls()).toEqual(["close BU-abc --json"]);
   });
 
   it("should return failed with bd's text when bd close refuses", async () => {
