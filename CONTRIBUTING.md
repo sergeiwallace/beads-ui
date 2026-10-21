@@ -40,9 +40,11 @@ and the pre-commit hooks run `claude plugin validate` on the repository root and
 
 The shared core in `plugins/beads-ui/core` runs inside a Claude Code mod, which has no DOM, no
 Node.js APIs and no timers. Code in that directory must not reference `setTimeout`, `setInterval`,
-`queueMicrotask`, `requestAnimationFrame`, `window`, `document`, `process` or `console`, and may
-import only relative paths inside the core. `npm run lint` fails naming the file and line when it
-does. Code that needs the time takes a clock function as an argument.
+`queueMicrotask`, `requestAnimationFrame`, `window`, `document`, `process`, `console` or
+`globalThis`, and may import only relative paths inside the core, each as one string literal. It
+must not generate code or reach a global through a string either: no `eval`, no `Function`
+(called or constructed), no `self`, no `.constructor` access and no `import()` of a computed
+specifier. `npm run lint` fails naming the file and line when it does. Code that needs the time takes a clock function as an argument.
 
 The plugin at `plugins/beads-ui` has no runtime dependencies. Development tools go in the root
 `package.json` as dev dependencies.
