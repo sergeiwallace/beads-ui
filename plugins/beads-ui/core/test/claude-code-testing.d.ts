@@ -1,5 +1,6 @@
-// Types for the runner-neutral kit name. Claude Code supplies the module at `claude plugin test`
-// time and vitest.config.ts aliases it to Vitest, so the type check reads Vitest's signatures.
+// For the repository type check (`npx tsc --noEmit`): the core's dual-runner suites import
+// claude-code/testing, which Vitest maps to vitest, so type them against vitest's API.
+// Use only what both kits share: describe, test, expect and their common matchers.
 declare module "claude-code/testing" {
   export { describe, expect, test } from "vitest";
 }

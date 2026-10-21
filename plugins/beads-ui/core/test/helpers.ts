@@ -1,7 +1,7 @@
 import type { Issue, Status } from "../src/index.ts";
 import { parseBdList, parseBdStatuses } from "../src/index.ts";
-import listAllBrief from "./fixtures/bd/list-all-brief.ts";
-import statuses from "./fixtures/bd/statuses.ts";
+import listAllBrief from "./fixtures/bd-list-all-brief.json.ts";
+import statuses from "./fixtures/bd-statuses.json.ts";
 
 export function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: unknown }): T {
   if (!result.ok) throw new Error(`expected ok, got ${JSON.stringify(result.error)}`);

@@ -6,11 +6,11 @@ import {
   parseBdReady,
   parseBdShow,
 } from "../src/index.ts";
-import cascadePreview from "./fixtures/bd/delete-cascade-dry-run-json.ts";
-import refusedPreview from "./fixtures/bd/delete-dry-run-dependents-json.ts";
-import historyMg22 from "./fixtures/bd/history-BU-mg2.2.ts";
-import ready from "./fixtures/bd/ready.ts";
-import show5 from "./fixtures/bd/show-BU-mg2.3.5.ts";
+import cascadePreview from "./fixtures/bd-delete-cascade-dry-run.json.ts";
+import refusedPreview from "./fixtures/bd-delete-dry-run-dependents.json.ts";
+import historyMg22 from "./fixtures/bd-history-BU-mg2.2.json.ts";
+import ready from "./fixtures/bd-ready.json.ts";
+import show5 from "./fixtures/bd-show-BU-mg2.3.5.json.ts";
 import { unwrap } from "./helpers.ts";
 
 function errorOf(result: { ok: boolean; error?: { source: string; path: string } }) {

@@ -1,0 +1,945 @@
+[
+  {
+    "id": "BU-mg2.3.10",
+    "title": "T-1.6: bands and the beads command",
+    "status": "open",
+    "priority": 1,
+    "issue_type": "task",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-21T05:48:48Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-21T05:48:48Z",
+    "metadata": {
+      "display_id": "BU-t-1-6-bands-beads-tqpj"
+    },
+    "labels": [
+      "id:BU-t-1-6-bands-beads-tqpj"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.3.10",
+        "depends_on_id": "BU-mg2.3",
+        "type": "parent-child",
+        "created_at": "2026-10-21T05:48:48Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2.3"
+  },
+  {
+    "id": "BU-mg2.3.9",
+    "title": "T-1.5: delete confirmation flow",
+    "status": "open",
+    "priority": 1,
+    "issue_type": "task",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-21T05:48:46Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-21T05:48:47Z",
+    "metadata": {
+      "display_id": "BU-t-1-5-delete-xmxe"
+    },
+    "labels": [
+      "id:BU-t-1-5-delete-xmxe"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.3.9",
+        "depends_on_id": "BU-mg2.3",
+        "type": "parent-child",
+        "created_at": "2026-10-21T05:48:46Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2.3"
+  },
+  {
+    "id": "BU-mg2.3.8",
+    "title": "T-1.4: quick-add and display-id minting",
+    "status": "open",
+    "priority": 1,
+    "issue_type": "task",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-21T05:48:45Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-21T05:48:45Z",
+    "metadata": {
+      "display_id": "BU-t-1-4-quick-add-fskv"
+    },
+    "labels": [
+      "id:BU-t-1-4-quick-add-fskv"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.3.8",
+        "depends_on_id": "BU-mg2.3",
+        "type": "parent-child",
+        "created_at": "2026-10-21T05:48:45Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2.3"
+  },
+  {
+    "id": "BU-mg2.3.7",
+    "title": "T-1.3: Detail tab and inline edit",
+    "status": "open",
+    "priority": 1,
+    "issue_type": "task",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-21T05:48:43Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-21T05:48:44Z",
+    "metadata": {
+      "display_id": "BU-t-1-3-detail-tab-ymtx"
+    },
+    "labels": [
+      "id:BU-t-1-3-detail-tab-ymtx"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.3.7",
+        "depends_on_id": "BU-mg2.3",
+        "type": "parent-child",
+        "created_at": "2026-10-21T05:48:43Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2.3"
+  },
+  {
+    "id": "BU-mg2.3.6",
+    "title": "T-1.2: Backlog tab with sort and filter",
+    "status": "open",
+    "priority": 1,
+    "issue_type": "task",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-21T05:48:42Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-21T05:48:42Z",
+    "metadata": {
+      "display_id": "BU-t-1-2-backlog-tab-vptb"
+    },
+    "labels": [
+      "id:BU-t-1-2-backlog-tab-vptb"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.3.6",
+        "depends_on_id": "BU-mg2.3",
+        "type": "parent-child",
+        "created_at": "2026-10-21T05:48:42Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2.3"
+  },
+  {
+    "id": "BU-mg2.3.5",
+    "title": "T-1.1: Board tab with keyboard Move to",
+    "status": "open",
+    "priority": 1,
+    "issue_type": "task",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-21T05:48:40Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-21T05:48:41Z",
+    "metadata": {
+      "display_id": "BU-t-1-1-board-tab-nxdt"
+    },
+    "labels": [
+      "id:BU-t-1-1-board-tab-nxdt"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.3.5",
+        "depends_on_id": "BU-mg2.3",
+        "type": "parent-child",
+        "created_at": "2026-10-21T05:48:40Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2.3"
+  },
+  {
+    "id": "BU-mg2.3.4",
+    "title": "T-0.4: repository hygiene for a public repo",
+    "status": "open",
+    "priority": 1,
+    "issue_type": "task",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-21T05:48:39Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-21T05:48:39Z",
+    "metadata": {
+      "display_id": "BU-t-0-4-repository-zach"
+    },
+    "labels": [
+      "id:BU-t-0-4-repository-zach"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.3.4",
+        "depends_on_id": "BU-mg2.3",
+        "type": "parent-child",
+        "created_at": "2026-10-21T05:48:39Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2.3"
+  },
+  {
+    "id": "BU-mg2.3.3",
+    "title": "T-0.3: mod plugin and marketplace",
+    "status": "open",
+    "priority": 1,
+    "issue_type": "task",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-21T05:48:37Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-21T05:48:38Z",
+    "metadata": {
+      "display_id": "BU-t-0-3-mod-plugin-fumv"
+    },
+    "labels": [
+      "id:BU-t-0-3-mod-plugin-fumv"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.3.3",
+        "depends_on_id": "BU-mg2.3",
+        "type": "parent-child",
+        "created_at": "2026-10-21T05:48:37Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2.3"
+  },
+  {
+    "id": "BU-mg2.3.2",
+    "title": "T-0.2: bd-node adapter",
+    "status": "open",
+    "priority": 1,
+    "issue_type": "task",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-21T05:48:36Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-21T05:48:36Z",
+    "metadata": {
+      "display_id": "BU-t-0-2-bd-node-nrrb"
+    },
+    "labels": [
+      "id:BU-t-0-2-bd-node-nrrb"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.3.2",
+        "depends_on_id": "BU-mg2.3",
+        "type": "parent-child",
+        "created_at": "2026-10-21T05:48:36Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2.3"
+  },
+  {
+    "id": "BU-mg2.3.1",
+    "title": "T-0.1: core module and purity gate",
+    "status": "open",
+    "priority": 1,
+    "issue_type": "task",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-21T05:48:13Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-21T05:48:14Z",
+    "metadata": {
+      "display_id": "BU-t-0-1-core-module-gset"
+    },
+    "labels": [
+      "id:BU-t-0-1-core-module-gset"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.3.1",
+        "depends_on_id": "BU-mg2.3",
+        "type": "parent-child",
+        "created_at": "2026-10-21T05:48:13Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2.3"
+  },
+  {
+    "id": "BU-mg2.2.2",
+    "title": "Design spike for beads-ui: the ai-harness per-machine settings renderer and timer-free state cores",
+    "status": "closed",
+    "priority": 1,
+    "issue_type": "spike",
+    "assignee": "aih-3",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-15T01:02:20Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-15T01:49:28Z",
+    "started_at": "2026-10-15T01:02:30Z",
+    "closed_at": "2026-10-15T01:49:28Z",
+    "close_reason": "Packet landed on main at 17bf08c (PR #9): docs/research/findings/beads-ui-spike-harness-switch-and-core-libs.md. Folded into docs/designs/beads-ui-design.md (D-10, D-21, phase 5, open question 9) by the aih-3 Fable coordinator 2026-10-15 01:50Z.",
+    "metadata": {
+      "display_id": "BU-spike-beads-ui-ai-bfks"
+    },
+    "labels": [
+      "id:BU-spike-beads-ui-ai-bfks"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.2.2",
+        "depends_on_id": "BU-mg2.2",
+        "type": "parent-child",
+        "created_at": "2026-10-15T01:02:20Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2.2"
+  },
+  {
+    "id": "BU-mg2.2.1",
+    "title": "Design spike for beads-ui: bd serve request schemas, MCP app-only tool visibility and Task-tool deny rules",
+    "status": "closed",
+    "priority": 1,
+    "issue_type": "spike",
+    "assignee": "aih-3",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-15T01:02:19Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-15T01:35:31Z",
+    "started_at": "2026-10-15T01:02:30Z",
+    "closed_at": "2026-10-15T01:35:31Z",
+    "close_reason": "Packet landed on main at 9a43c80 (PR #8): docs/research/findings/beads-ui-spike-bd-serve-and-tool-visibility.md plus its evidence file. Folded into docs/designs/beads-ui-design.md (D-4, D-9, D-21, open questions 3 to 5) by the aih-3 Fable coordinator 2026-10-15 01:36Z.",
+    "metadata": {
+      "display_id": "BU-spike-beads-ui-bd-dvdg"
+    },
+    "labels": [
+      "id:BU-spike-beads-ui-bd-dvdg"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.2.1",
+        "depends_on_id": "BU-mg2.2",
+        "type": "parent-child",
+        "created_at": "2026-10-15T01:02:19Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2.2"
+  },
+  {
+    "id": "BU-mg2.13",
+    "title": "Publish the open-source repo: copier template config, root README, GitHub metadata, seed push",
+    "status": "closed",
+    "priority": 1,
+    "issue_type": "task",
+    "assignee": "aih-3",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-14T23:55:35Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-15T00:09:10Z",
+    "started_at": "2026-10-14T23:55:51Z",
+    "closed_at": "2026-10-15T00:09:10Z",
+    "close_reason": "Published: beads-ui PR #1 merged c9261f3 (Copier scaffold from project-template, answers _src_path https, tech_stack typescript provisional; root README with public/no-secrets note; .gitignore Node+env). Topics set (10), license MIT, issues on; homepage left empty (no project site yet). gitleaks: no leaks.",
+    "metadata": {
+      "display_id": "BU-publish-open-source-cmyt"
+    },
+    "labels": [
+      "id:BU-publish-open-source-cmyt"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.13",
+        "depends_on_id": "BU-mg2",
+        "type": "parent-child",
+        "created_at": "2026-10-14T23:55:35Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2"
+  },
+  {
+    "id": "BU-mg2.1.3",
+    "title": "Research leg C for beads-ui: Beads data model, the autonomous task queue and the Claude Code task panel",
+    "status": "closed",
+    "priority": 1,
+    "issue_type": "task",
+    "assignee": "aih-3",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-14T23:52:11Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-15T00:29:10Z",
+    "started_at": "2026-10-14T23:53:01Z",
+    "closed_at": "2026-10-15T00:29:10Z",
+    "close_reason": "Packet landed on main at 7e0067f (PR #2): docs/research/findings/beads-ui-beads-queue-and-panel.md plus evidence/beads-ui-beads-queue-and-panel-measurements.md. Collected by the aih-3 Fable coordinator 2026-10-15 00:30Z; synthesized into docs/research/beads-ui-task-manager-landscape.md.",
+    "metadata": {
+      "display_id": "BU-research-leg-c-beads-hrme"
+    },
+    "labels": [
+      "id:BU-research-leg-c-beads-hrme"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.1.3",
+        "depends_on_id": "BU-mg2.1",
+        "type": "parent-child",
+        "created_at": "2026-10-14T23:52:11Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2.1"
+  },
+  {
+    "id": "BU-mg2.1.2",
+    "title": "Research leg B for beads-ui: Claude Code mods, MCP UI apps and the shared core",
+    "status": "closed",
+    "priority": 1,
+    "issue_type": "task",
+    "assignee": "aih-3",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-14T23:52:09Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-15T00:35:56Z",
+    "started_at": "2026-10-14T23:53:01Z",
+    "closed_at": "2026-10-15T00:35:56Z",
+    "close_reason": "Packet landed on main at 4a8891c (PR #3): docs/research/findings/beads-ui-mods-and-shared-core.md. Collected by the aih-3 Fable coordinator 2026-10-15 00:36Z; synthesized into docs/research/beads-ui-task-manager-landscape.md.",
+    "metadata": {
+      "display_id": "BU-research-leg-b-beads-qegu"
+    },
+    "labels": [
+      "id:BU-research-leg-b-beads-qegu"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.1.2",
+        "depends_on_id": "BU-mg2.1",
+        "type": "parent-child",
+        "created_at": "2026-10-14T23:52:09Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2.1"
+  },
+  {
+    "id": "BU-mg2.1.1",
+    "title": "Research leg A for beads-ui: task-manager UX, components and web hosting",
+    "status": "closed",
+    "priority": 1,
+    "issue_type": "task",
+    "assignee": "aih-3",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-14T23:52:08Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-15T00:47:33Z",
+    "started_at": "2026-10-14T23:53:00Z",
+    "closed_at": "2026-10-15T00:47:33Z",
+    "close_reason": "Packet landed on main at 68ea599 (PR #4): docs/research/findings/beads-ui-task-manager-ux.md plus two evidence files. Collected by the aih-3 Fable coordinator 2026-10-15 00:48Z; synthesized into docs/research/beads-ui-task-manager-landscape.md.",
+    "metadata": {
+      "display_id": "BU-research-leg-beads-mruv"
+    },
+    "labels": [
+      "id:BU-research-leg-beads-mruv"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.1.1",
+        "depends_on_id": "BU-mg2.1",
+        "type": "parent-child",
+        "created_at": "2026-10-14T23:52:08Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2.1"
+  },
+  {
+    "id": "BU-mg2.3",
+    "title": "beads-ui Claude Code mod: the task manager inside the Claude Code TUI, with mouse control",
+    "status": "in_progress",
+    "priority": 1,
+    "issue_type": "epic",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-14T23:31:37Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-21T05:48:55Z",
+    "started_at": "2026-10-21T05:48:55Z",
+    "metadata": {
+      "display_id": "BU-beads-ui-claude-code-aeyb"
+    },
+    "labels": [
+      "id:BU-beads-ui-claude-code-aeyb"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.3",
+        "depends_on_id": "BU-mg2",
+        "type": "parent-child",
+        "created_at": "2026-10-14T23:31:37Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2"
+  },
+  {
+    "id": "BU-mg2.2",
+    "title": "Design doc for beads-ui: PRD, acceptance criteria, mockups, decisions and a phased plan starting with an MVP",
+    "status": "closed",
+    "priority": 1,
+    "issue_type": "task",
+    "assignee": "aih-ec2-3",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-14T23:31:35Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-21T04:26:53Z",
+    "started_at": "2026-10-15T01:00:05Z",
+    "closed_at": "2026-10-21T04:26:53Z",
+    "close_reason": "Design approved by Sergei 2026-10-21; decisions recorded in beads-ui #14",
+    "metadata": {
+      "display_id": "BU-doc-beads-ui-prd-fnzx"
+    },
+    "labels": [
+      "id:BU-doc-beads-ui-prd-fnzx"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.2",
+        "depends_on_id": "BU-mg2",
+        "type": "parent-child",
+        "created_at": "2026-10-14T23:31:35Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 7,
+    "parent": "BU-mg2"
+  },
+  {
+    "id": "BU-mg2.1",
+    "title": "Research for beads-ui: task manager UX, the Claude Code mods ecosystem, and one core shared by the TUI mod, MCP UI app and web app",
+    "status": "closed",
+    "priority": 1,
+    "issue_type": "task",
+    "assignee": "aih-3",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-14T23:31:34Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-15T01:00:01Z",
+    "started_at": "2026-10-14T23:32:01Z",
+    "closed_at": "2026-10-15T01:00:01Z",
+    "close_reason": "Research doc landed on main at f68067e (PR #5): docs/research/beads-ui-task-manager-landscape.md, synthesizing the three findings packets under docs/research/findings/ (PRs #2 to #4). Gap review G1 to G6 converged, round 1. The design stage (BU-mg2.2) cites it.",
+    "metadata": {
+      "display_id": "BU-research-beads-ui-jnxr"
+    },
+    "labels": [
+      "id:BU-research-beads-ui-jnxr"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.1",
+        "depends_on_id": "BU-mg2",
+        "type": "parent-child",
+        "created_at": "2026-10-14T23:31:34Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2"
+  },
+  {
+    "id": "BU-mg2",
+    "title": "EPIC beads-ui: Beads task manager for the Claude Code TUI, an MCP UI app and a web app, sharing one core",
+    "status": "in_progress",
+    "priority": 1,
+    "issue_type": "epic",
+    "assignee": "aih-ec2-3",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-14T23:31:32Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-15T23:12:01Z",
+    "started_at": "2026-10-14T23:32:01Z",
+    "metadata": {
+      "display_id": "BU-epic-beads-ui-beads-task-manager-mg2"
+    },
+    "labels": [
+      "id:BU-epic-beads-ui-beads-task-manager-mg2"
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 9
+  },
+  {
+    "id": "BU-mg2.7",
+    "title": "Integrate the autonomous task queue and its dashboard with beads-ui",
+    "status": "open",
+    "priority": 2,
+    "issue_type": "task",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-14T23:31:44Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-14T23:31:45Z",
+    "metadata": {
+      "display_id": "BU-integrate-autonomous-xfud"
+    },
+    "labels": [
+      "id:BU-integrate-autonomous-xfud"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.7",
+        "depends_on_id": "BU-mg2",
+        "type": "parent-child",
+        "created_at": "2026-10-14T23:31:44Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2"
+  },
+  {
+    "id": "BU-mg2.6",
+    "title": "Replace the Claude Code task panel with beads-ui: back up panel data, then disable the panel per machine profile by config",
+    "status": "open",
+    "priority": 2,
+    "issue_type": "task",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-14T23:31:42Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-14T23:31:43Z",
+    "metadata": {
+      "display_id": "BU-replace-claude-code-ydts"
+    },
+    "labels": [
+      "id:BU-replace-claude-code-ydts"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.6",
+        "depends_on_id": "BU-mg2",
+        "type": "parent-child",
+        "created_at": "2026-10-14T23:31:42Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2"
+  },
+  {
+    "id": "BU-mg2.5",
+    "title": "beads-ui web app: local, and hostable from infra-as-config templates with quick starts",
+    "status": "open",
+    "priority": 2,
+    "issue_type": "epic",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-14T23:31:40Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-14T23:31:41Z",
+    "metadata": {
+      "display_id": "BU-beads-ui-web-app-sxdx"
+    },
+    "labels": [
+      "id:BU-beads-ui-web-app-sxdx"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.5",
+        "depends_on_id": "BU-mg2",
+        "type": "parent-child",
+        "created_at": "2026-10-14T23:31:40Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2"
+  },
+  {
+    "id": "BU-mg2.4",
+    "title": "beads-ui MCP UI app for Claude Desktop and Claude web",
+    "status": "open",
+    "priority": 2,
+    "issue_type": "epic",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-14T23:31:38Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-14T23:31:39Z",
+    "metadata": {
+      "display_id": "BU-beads-ui-mcp-ui-app-zcew"
+    },
+    "labels": [
+      "id:BU-beads-ui-mcp-ui-app-zcew"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.4",
+        "depends_on_id": "BU-mg2",
+        "type": "parent-child",
+        "created_at": "2026-10-14T23:31:38Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2"
+  },
+  {
+    "id": "BU-2zw",
+    "title": "npm audit: 10 dev-only advisories under markdownlint-cli2",
+    "status": "open",
+    "priority": 3,
+    "issue_type": "bug",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-21T06:04:41Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-21T06:04:41Z",
+    "metadata": {
+      "display_id": "BU-npm-audit-10-dev-only-advisories-2zw"
+    },
+    "labels": [
+      "id:BU-npm-audit-10-dev-only-advisories-2zw"
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0
+  },
+  {
+    "id": "BU-mg2.12",
+    "title": "beads-ui on Windows",
+    "status": "open",
+    "priority": 3,
+    "issue_type": "epic",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-14T23:31:52Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-14T23:31:53Z",
+    "metadata": {
+      "display_id": "BU-beads-ui-windows-efuk"
+    },
+    "labels": [
+      "id:BU-beads-ui-windows-efuk"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.12",
+        "depends_on_id": "BU-mg2",
+        "type": "parent-child",
+        "created_at": "2026-10-14T23:31:52Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2"
+  },
+  {
+    "id": "BU-mg2.11",
+    "title": "beads-ui on Linux",
+    "status": "open",
+    "priority": 3,
+    "issue_type": "epic",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-14T23:31:50Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-14T23:31:51Z",
+    "metadata": {
+      "display_id": "BU-beads-ui-linux-pbff"
+    },
+    "labels": [
+      "id:BU-beads-ui-linux-pbff"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.11",
+        "depends_on_id": "BU-mg2",
+        "type": "parent-child",
+        "created_at": "2026-10-14T23:31:50Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2"
+  },
+  {
+    "id": "BU-mg2.10",
+    "title": "beads-ui on macOS",
+    "status": "open",
+    "priority": 3,
+    "issue_type": "epic",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-14T23:31:49Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-14T23:31:49Z",
+    "metadata": {
+      "display_id": "BU-beads-ui-macos-xtum"
+    },
+    "labels": [
+      "id:BU-beads-ui-macos-xtum"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.10",
+        "depends_on_id": "BU-mg2",
+        "type": "parent-child",
+        "created_at": "2026-10-14T23:31:49Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2"
+  },
+  {
+    "id": "BU-mg2.9",
+    "title": "beads-ui on Android",
+    "status": "open",
+    "priority": 3,
+    "issue_type": "epic",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-14T23:31:47Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-14T23:31:48Z",
+    "metadata": {
+      "display_id": "BU-beads-ui-android-skfz"
+    },
+    "labels": [
+      "id:BU-beads-ui-android-skfz"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.9",
+        "depends_on_id": "BU-mg2",
+        "type": "parent-child",
+        "created_at": "2026-10-14T23:31:47Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2"
+  },
+  {
+    "id": "BU-mg2.8",
+    "title": "beads-ui on iOS",
+    "status": "open",
+    "priority": 3,
+    "issue_type": "epic",
+    "owner": "6564880+sergeiwallace@users.noreply.github.com",
+    "created_at": "2026-10-14T23:31:46Z",
+    "created_by": "Sergei Wallace",
+    "updated_at": "2026-10-14T23:31:46Z",
+    "metadata": {
+      "display_id": "BU-beads-ui-ios-djvt"
+    },
+    "labels": [
+      "id:BU-beads-ui-ios-djvt"
+    ],
+    "dependencies": [
+      {
+        "issue_id": "BU-mg2.8",
+        "depends_on_id": "BU-mg2",
+        "type": "parent-child",
+        "created_at": "2026-10-14T23:31:46Z",
+        "created_by": "Sergei Wallace",
+        "metadata": "{}"
+      }
+    ],
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "comment_count": 0,
+    "parent": "BU-mg2"
+  }
+]
