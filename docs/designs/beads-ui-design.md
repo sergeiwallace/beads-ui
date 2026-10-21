@@ -118,7 +118,17 @@ The fleet tracks its work in Beads, but the only ways to see that work are the `
 
 ## Design Overview
 
-**Status:** stub; to be filled during and after implementation (dev workflow step 15). The sections below describe the design as decided, not as built.
+**Status:** filled for Phase 0 as built; Phase 1 is in progress. The sections after this one describe the design as decided; this section describes what exists.
+
+### Phase 0 as built
+
+The repository is an npm-workspaces monorepo (`plugins/*`, `packages/*`) with Turborepo running `lint`, `typecheck` and `test`, Biome for lint and format, Vitest for the Node-side suites and TypeScript in strict mode. The root `tsconfig.base.json` maps `@beads-ui/core` to `plugins/beads-ui/core/src`, so a later DOM package imports the core by alias and never by path. All tooling is a root dev dependency; `plugins/beads-ui/package.json` has no `dependencies` key.
+
+The shared core lives at `plugins/beads-ui/core/src`. `model.ts` holds the Data Model's types as written above. `parsers.ts` turns `bd list --json`, `bd show --json` and `bd statuses --json` into those types and returns a typed parse error naming the JSON path instead of throwing, so a surface can keep its last good state when `bd` returns something unexpected. The core compiles under its own `tsconfig.json` with `"lib": ["es2023"]` and `"types": []`.
+
+The purity rule is enforced twice. `scripts/check-core-purity.mjs`, run by `npm run lint`, lexes every source file under `core/` outside `core/test/`, blanks comments and string contents, and fails naming `file:line` for any timer, DOM or Node global (including `console` and `globalThis`) and for any import that leaves the core; the type check under `"types": []` catches what a lexer cannot. `core/test/purity.test.ts` proves the gate fails on a fixture of banned references and passes on the real core. The rule binds `core/src`, not the Vitest suites in `core/test/`, which need Node to run; that scope is recorded as a wording repair on T-0.1.
+
+The repository's public hygiene is a pinned gitleaks pre-commit hook (a commit carrying a fabricated AWS key was refused in a throwaway repository), `CONTRIBUTING.md`, `SECURITY.md` and `CODE_OF_CONDUCT.md`, and pre-commit hooks that run `npm run lint` and `npm test` on every commit. Parser fixtures are real `bd` output from this repository's own Beads store.
 
 ## Product requirements
 
