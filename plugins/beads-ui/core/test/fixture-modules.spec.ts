@@ -4,8 +4,9 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-// Each fixtures/<name>.json.ts or <name>.txt.ts module carries the text of fixtures/<name>, so
-// the suites that run under claude plugin test (no fs there) read the same bytes as Node suites.
+// Each fixtures/<name>.json.ts or <name>.txt.ts module carries the exact text of its
+// fixtures/<name> twin, so the suites that run under claude plugin test (no fs there) read the
+// same bytes as Node suites.
 const dir = join(import.meta.dirname, "fixtures");
 const modules = readdirSync(dir).filter((name) => /\.(json|txt)\.ts$/.test(name));
 
