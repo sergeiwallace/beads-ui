@@ -65,6 +65,11 @@ modules (`<name>.txt.ts` for bd's plain-text output), each holding the exact tex
 suite that needs Node.js is `*.spec.ts` and runs under Vitest alone. The mod's own tests,
 `hooks/*.test.ts`, drive the engine through `$` and run under `claude plugin test` alone.
 
+Suites under `packages/<name>/test/*.test.ts` sit outside the plugin and run under Vitest alone.
+The `bd` adapter's suite, `packages/bd-node/test/bd-adapter.test.ts`, reads this repository's own
+Beads store with `bd list`, `show`, `statuses` and `ready`, so `npm test` needs `bd` on your `PATH`.
+It drives every write through a stub `bd` in a temporary directory and never writes to the store.
+
 ## Pull requests
 
 Keep each commit to one logical change. Describe what changed and how you checked it. By

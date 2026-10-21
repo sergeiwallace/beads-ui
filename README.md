@@ -36,6 +36,7 @@ layers and not their UI components: each surface draws its own views.
 | `plugins/beads-ui/` | The Claude Code mod, with the shared core inside it |
 | `plugins/beads-ui/core/` | The shared core (`src/`) and its tests (`test/`); the DOM packages import it as `@beads-ui/core` |
 | `packages/` | Node and browser packages: the `bd` adapter, the web components and the MCP server, as later phases add them |
+| `packages/bd-node/` | The Node adapter that runs `bd ... --json` for the web and MCP servers and returns the core's types; it needs `bd` on `PATH` |
 | `scripts/check-core-purity.mjs` | The purity gate `npm run lint` runs on the shared core |
 | `.claude-plugin/marketplace.json` | The marketplace that lists the mod, `./plugins/beads-ui` |
 | `scripts/check-marketplace.mjs` | The pre-commit gate that runs `claude plugin validate .` and checks the marketplace lists the mod |
