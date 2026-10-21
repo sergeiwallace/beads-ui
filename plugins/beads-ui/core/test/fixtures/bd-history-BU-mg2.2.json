@@ -1,0 +1,55 @@
+[
+  {
+    "id": "bc4d6413-9fae-5eeb-9237-dd1f34761fae",
+    "issue_id": "BU-mg2.2",
+    "event_type": "closed",
+    "actor": "aih-ec2-3",
+    "old_value": "",
+    "new_value": "Design approved by Sergei 2026-10-21; decisions recorded in beads-ui #14",
+    "created_at": "2026-10-21T04:26:53Z"
+  },
+  {
+    "id": "a6addd64-40bb-59fa-8ded-9367c0ed32ea",
+    "issue_id": "BU-mg2.2",
+    "event_type": "updated",
+    "actor": "aih-ec2-3",
+    "old_value": "{\"id\":\"BU-mg2.2\",\"title\":\"Design doc for beads-ui: PRD, acceptance criteria, mockups, decisions and a phased plan starting with an MVP\",\"description\":\"The /doc --kind design stage of the coordinator's /auto-flow. One main design doc holds everything for beads-ui: PRD specs, acceptance criteria, diagrams, mockups, decisions (through /decision-framework), open questions, and tasks in phases, MVP first. It stops for Sergei's review before any build.\\n\\nDone when the design doc is on beads-ui main and handed to Sergei for review.\",\"status\":\"in_progress\",\"priority\":1,\"issue_type\":\"task\",\"owner\":\"6564880+sergeiwallace@users.noreply.github.com\",\"created_at\":\"2026-10-14T23:31:35Z\",\"created_by\":\"Sergei Wallace\",\"updated_at\":\"2026-10-15T01:00:05Z\",\"started_at\":\"2026-10-15T01:00:05Z\",\"metadata\":{\"display_id\":\"BU-doc-beads-ui-prd-fnzx\"},\"labels\":[\"id:BU-doc-beads-ui-prd-fnzx\"]}",
+    "new_value": "{\"assignee\":\"aih-ec2-3\"}",
+    "created_at": "2026-10-16T03:09:02Z"
+  },
+  {
+    "id": "8a141456-e118-528a-8726-ea24cfd11f9b",
+    "issue_id": "BU-mg2.2",
+    "event_type": "status_changed",
+    "actor": "aih-3",
+    "old_value": "{\"id\":\"BU-mg2.2\",\"title\":\"Design doc for beads-ui: PRD, acceptance criteria, mockups, decisions and a phased plan starting with an MVP\",\"description\":\"The /doc --kind design stage of the coordinator's /auto-flow. One main design doc holds everything for beads-ui: PRD specs, acceptance criteria, diagrams, mockups, decisions (through /decision-framework), open questions, and tasks in phases, MVP first. It stops for Sergei's review before any build.\\n\\nDone when the design doc is on beads-ui main and handed to Sergei for review.\",\"status\":\"open\",\"priority\":1,\"issue_type\":\"task\",\"owner\":\"6564880+sergeiwallace@users.noreply.github.com\",\"created_at\":\"2026-10-14T23:31:35Z\",\"created_by\":\"Sergei Wallace\",\"updated_at\":\"2026-10-14T23:31:36Z\",\"metadata\":{\"display_id\":\"BU-doc-beads-ui-prd-fnzx\"},\"labels\":[\"id:BU-doc-beads-ui-prd-fnzx\"]}",
+    "new_value": "{\"status\":\"in_progress\"}",
+    "created_at": "2026-10-15T01:00:04Z"
+  },
+  {
+    "id": "dcce4e94-d086-5e15-9129-5c326aa11672",
+    "issue_id": "BU-mg2.2",
+    "event_type": "created",
+    "actor": "Sergei Wallace",
+    "old_value": "",
+    "new_value": "",
+    "created_at": "2026-10-14T23:31:35Z"
+  },
+  {
+    "id": "154d012f-6228-57e7-961e-d3149d8d9ed5",
+    "issue_id": "BU-mg2.2",
+    "event_type": "updated",
+    "actor": "Sergei Wallace",
+    "old_value": "{\"id\":\"BU-mg2.2\",\"title\":\"Design doc for beads-ui: PRD, acceptance criteria, mockups, decisions and a phased plan starting with an MVP\",\"description\":\"The /doc --kind design stage of the coordinator's /auto-flow. One main design doc holds everything for beads-ui: PRD specs, acceptance criteria, diagrams, mockups, decisions (through /decision-framework), open questions, and tasks in phases, MVP first. It stops for Sergei's review before any build.\\n\\nDone when the design doc is on beads-ui main and handed to Sergei for review.\",\"status\":\"open\",\"priority\":1,\"issue_type\":\"task\",\"owner\":\"6564880+sergeiwallace@users.noreply.github.com\",\"created_at\":\"2026-10-14T23:31:35Z\",\"created_by\":\"Sergei Wallace\",\"updated_at\":\"2026-10-14T23:31:35Z\"}",
+    "new_value": "{\"metadata\":{\"display_id\":\"BU-doc-beads-ui-prd-fnzx\"}}",
+    "created_at": "2026-10-14T23:31:35Z"
+  },
+  {
+    "id": "03b1da1d-9ece-5f4c-91b6-8ba28abec5f5",
+    "issue_id": "BU-mg2.2",
+    "event_type": "label_added",
+    "actor": "Sergei Wallace",
+    "comment": "Added label: id:BU-doc-beads-ui-prd-fnzx",
+    "created_at": "2026-10-14T23:31:35Z"
+  }
+]

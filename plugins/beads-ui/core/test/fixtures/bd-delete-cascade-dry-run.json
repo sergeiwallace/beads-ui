@@ -1,0 +1,14 @@
+{
+  "cascade": true,
+  "dry_run": true,
+  "issue_ids": [
+    "BU-mg2.3"
+  ],
+  "preview": true,
+  "schema_version": 1,
+  "would_delete": 11,
+  "would_orphan": 0,
+  "would_remove_dependencies": 11,
+  "would_remove_events": 34,
+  "would_remove_labels": 11
+}

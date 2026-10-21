@@ -1,0 +1,10 @@
+{
+  "cascade": false,
+  "dry_run": true,
+  "error": "issue BU-mg2.3 has dependents not in deletion set; use --cascade to delete them or --force to orphan them",
+  "issue_ids": [
+    "BU-mg2.3"
+  ],
+  "preview": true,
+  "schema_version": 1
+}

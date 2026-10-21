@@ -13,25 +13,62 @@ session on a machine.
 
 ## Status
 
-Research and design stage. Nothing is built yet. The research and design docs land in
-[docs/research/](docs/research/) and [docs/designs/](docs/designs/) and wait on the owner's review
-before any build starts. The first build target is the Claude Code TUI mod.
+Phase 0 is being built: the monorepo bootstrap, the DOM-free shared core with its purity gate, and
+the repository's public-repo hygiene. The design in
+[docs/designs/beads-ui-design.md](docs/designs/beads-ui-design.md) is approved, and the research
+behind it is in [docs/research/](docs/research/). The first user-facing target is the Claude Code
+TUI mod (Phase 1).
 
 The work is tracked in this repo's own Beads store (prefix `BU`). Later sub-epics cover iOS, macOS
 and Linux.
 
-## Planned layout
+## Repository structure
 
-A monorepo with one shared core for data access, domain logic, view models, commands and design
-tokens, and one package per surface (TUI mod, MCP UI app, web app). A mod draws to the terminal and
-has no DOM, so the surfaces share logic and design tokens rather than UI components or layout. The
-design doc settles the package boundaries and when the core moves out of the plugin.
+An npm-workspaces monorepo with one shared core and one package per surface.
+
+The shared core holds five layers: data access, domain logic, view models, commands and design
+tokens. It has no runtime dependency and no DOM, Node.js or timer reference, so it runs unchanged
+inside a Claude Code mod, which draws to the terminal and has no DOM. The surfaces share these
+layers and not their UI components: each surface draws its own views.
+
+| Path | What it holds |
+|---|---|
+| `plugins/beads-ui/` | The Claude Code mod, with the shared core inside it |
+| `plugins/beads-ui/core/` | The shared core (`src/`) and its tests (`test/`); the DOM packages import it as `@beads-ui/core` |
+| `packages/` | Node and browser packages: the `bd` adapter, the web components and the MCP server, as later phases add them |
+| `packages/bd-node/` | The Node adapter that runs `bd ... --json` for the web and MCP servers and returns the core's types; it needs `bd` on `PATH` |
+| `scripts/check-core-purity.mjs` | The purity gate `npm run lint` runs on the shared core |
+| `.claude-plugin/marketplace.json` | The marketplace that lists the mod, `./plugins/beads-ui` |
+| `scripts/check-marketplace.mjs` | The pre-commit gate that runs `claude plugin validate .` and checks the marketplace lists the mod |
+| `scripts/check-plugin-size.mjs` | The pre-commit gate that fails naming any file git tracks or stages under `plugins/beads-ui` over 1 MB, with no directory exempt |
+| `scripts/check-plugin-allowlist.mjs` | The pre-commit gate that holds the hooks and `$` calls `claude plugin validate --json` reports to `plugins/beads-ui/validate-allowlist.json`, and every `$` call to the hooks module's own file: outside it no `$.` call and no claude-code engine type, inside it no bare `$` handed to a call |
+
+The core sits inside the plugin because an installed plugin cannot reach files above its own
+directory. The design doc records when the core moves to its own package.
+
+## Development
+
+```sh
+npm ci
+npm run lint
+npm test
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the rules on the shared core and on secrets.
+
+To load the mod from a checkout, run `claude --plugin-dir plugins/beads-ui`. To install it from
+this repository's marketplace (the mod needs Claude Code 2.1.299 or later):
+
+```text
+/plugin install beads-ui --marketplace sergeiwallace/beads-ui
+```
 
 ## Open source
 
 This repository is public and MIT licensed. It holds no secrets, credentials or private data, and
-nothing of that kind may be committed to it. Copy `.env.example` to `.env` for local settings;
-`.env` is gitignored.
+nothing of that kind may be committed to it. A gitleaks pre-commit hook scans every commit and
+refuses one that matches a secret pattern. Copy `.env.example` to `.env` for local settings;
+`.env` is gitignored. Report a vulnerability as [SECURITY.md](SECURITY.md) describes.
 
 ## Repository setup
 

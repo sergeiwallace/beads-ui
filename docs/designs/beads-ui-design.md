@@ -18,13 +18,13 @@ research: docs/research/beads-ui-task-manager-landscape.md
 
 ## Founding Ask Coverage
 
-`founding_ask_ref`: {"blob_oid":"f5025e8233d0e9cf98d5247ca1b32fae6055072c","capture_commit":"862bb3185e4261c88bcb97da4fcd576c56f3da02","content_sha256":"2c141587e57f0b478ffe5af64d48d3162949575f0353f15075909b1194423eb3","entry_ids":["A001","A002","A003","A004"],"generation":4,"path":"docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md","previous_ref_sha256":"d54b1990f5a07db79320fd99f0a6c0a0a7a371d2618644fbbc5e3af2249c97ed","repository":"beads-ui","schema_version":1,"task_id":"BU-epic-beads-ui-beads-task-manager-mg2"}
+`founding_ask_ref`: {"blob_oid":"d3fde0e715f5a280374c624fede12b4a387b0d14","capture_commit":"d630f95d50bb5948399a91052bf1ce08c6750dcb","content_sha256":"ed0f188c59d248978b9de3439ccbff9100907055296df928f068ef0b05cca4ed","entry_ids":["A001","A002","A003","A004","A005"],"generation":5,"path":"docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md","previous_ref_sha256":"d7668b63750bbee3253a47d99a0b4106aede21e1952bdce105a15f6a01dde937","repository":"beads-ui","schema_version":1,"task_id":"BU-epic-beads-ui-beads-task-manager-mg2"}
 
-`canonical_root_json`: {"blob_oid":"f5025e8233d0e9cf98d5247ca1b32fae6055072c","capture_commit":"862bb3185e4261c88bcb97da4fcd576c56f3da02","content_sha256":"2c141587e57f0b478ffe5af64d48d3162949575f0353f15075909b1194423eb3","entry_ids":["A001","A002","A003","A004"],"generation":4,"path":"docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md","previous_ref_sha256":"d54b1990f5a07db79320fd99f0a6c0a0a7a371d2618644fbbc5e3af2249c97ed","repository":"beads-ui","schema_version":1,"task_id":"BU-epic-beads-ui-beads-task-manager-mg2"}
+`canonical_root_json`: {"blob_oid":"d3fde0e715f5a280374c624fede12b4a387b0d14","capture_commit":"d630f95d50bb5948399a91052bf1ce08c6750dcb","content_sha256":"ed0f188c59d248978b9de3439ccbff9100907055296df928f068ef0b05cca4ed","entry_ids":["A001","A002","A003","A004","A005"],"generation":5,"path":"docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md","previous_ref_sha256":"d7668b63750bbee3253a47d99a0b4106aede21e1952bdce105a15f6a01dde937","repository":"beads-ui","schema_version":1,"task_id":"BU-epic-beads-ui-beads-task-manager-mg2"}
 
-`founding_ask_ref_sha256`: d7668b63750bbee3253a47d99a0b4106aede21e1952bdce105a15f6a01dde937
+`founding_ask_ref_sha256`: 8079161aeffc2726c849086951f4f52781ecd07c9478b294efc80c4164b8ee05
 
-The raw record is `docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md` in this repository (capture commit `862bb31`, an ancestor of `main`). This index is non-authoritative; the raw FAR governs.
+The raw record is `docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md` in this repository (generation 5, capture commit `d630f95`, kept reachable by the tag `far/BU-epic-beads-ui-beads-task-manager-mg2/g5` because PR #15 was squash-merged). This index is non-authoritative; the raw FAR governs.
 
 | Authoritative raw entry | Coverage and disposition |
 |---|---|
@@ -32,8 +32,9 @@ The raw record is `docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md` in this
 | A002 | FOLLOW-UP, 2026-10-14T23:40:00Z. One repo `beads-ui` for the mod, the MCP UI app and the web app sharing components, with mobile and native desktop later: D-1, D-2 and R-11; sharing is narrowed to logic across three surfaces and React components across two, as the research measured. The alias `bv` and the npm name collide with existing tools: D-7 is escalated to Sergei with a recommendation. Mobile and native desktop: the "Later sub-epics" note. |
 | A003 | FOLLOW-UP, 2026-10-14T23:40:01Z. "mainly the web app, claude web / desktop mcp UI app, and claude code TUI for now": the three surfaces this design covers, phases 1 to 4 and 6; iOS, macOS and Linux deferred to separate agents, in that order. "lmk what you reocmmend": the Executive Summary and the recommendations inside D-7, D-11 and D-12. |
 | A004 | FOLLOW-UP, 2026-10-14T23:40:01Z. Incorporate the autonomous task queue and its dashboard with the queue left where it is: R-14, the Integration table, phase 3's queue adapter and D-11 (escalated, with the recommendation that the web app becomes the queue's unbuilt Phase 2 member app). Where the queue should live is Open Question 1, deferred as the entry asks. |
+| A005 | FOLLOW-UP, 2026-10-21T04:55:47Z. Sergei's review: D-7 option (a), D-11 option (a), and D-12 a new option (d), backups per launch repository with bms-semantic-knowledge-graph sessions going to sw-bms-workspace, recorded in those decisions, Feedback Round 1 and the Approval Log. "now /delegate opus 5.5 /orchestrate /auto-flow the rest as appropriate now": the build run in the Run Ledger (`entry->implement`), Phases 0 and 1 under run `beads-ui-build-2026-10-21-aih-ec2-3`. |
 
-**Status:** DRAFT, waiting on Sergei's review (BU-mg2.2 stays in progress)
+**Status:** Approved by Sergei on 2026-10-21 (Feedback Round 1); Phases 0 and 1 are being built under run `beads-ui-build-2026-10-21-aih-ec2-3`
 
 **Created:** 2026-10-15
 
@@ -118,7 +119,27 @@ The fleet tracks its work in Beads, but the only ways to see that work are the `
 
 ## Design Overview
 
-**Status:** stub; to be filled during and after implementation (dev workflow step 15). The sections below describe the design as decided, not as built.
+**Status:** filled for Phase 0 as built; Phase 1 is in progress. The sections after this one describe the design as decided; this section describes what exists.
+
+### Phase 0 as built
+
+The repository is an npm-workspaces monorepo (`plugins/*`, `packages/*`) with Turborepo running `lint`, `typecheck` and `test`, Biome for lint and format, Vitest for the Node-side suites and TypeScript in strict mode. The root `tsconfig.base.json` maps `@beads-ui/core` to `plugins/beads-ui/core/src`, so a later DOM package imports the core by alias and never by path. All tooling is a root dev dependency; `plugins/beads-ui/package.json` has no `dependencies` key.
+
+The shared core lives at `plugins/beads-ui/core/src`. `model.ts` holds the Data Model's types as written above. `parsers.ts` turns `bd list --json`, `bd show --json` and `bd statuses --json` into those types and returns a typed parse error naming the JSON path instead of throwing, so a surface can keep its last good state when `bd` returns something unexpected. The human owner comes from `metadata.owner` (D-17), not from Beads' own `owner` field, which names the repository owner. The core compiles under its own `tsconfig.json` with `"lib": ["es2023"]` and `"types": []`.
+
+The purity rule is enforced twice. `scripts/check-core-purity.mjs`, run by `npm run lint`, lexes every source file under `core/` outside `core/test/`, blanks comments and string contents, and fails naming `file:line` for any timer, DOM or Node global (including `console`, `globalThis` and `self`), for code generation (`eval`, `Function`), for an import that leaves the core, and for a dynamic `import()` of anything but a string literal, matching the mod runtime, which refuses code generation; the type check under `"types": []` catches what a lexer cannot. `core/test/purity.test.ts` proves the gate fails on a fixture of banned references and passes on the real core. The rule binds `core/src`, not the Vitest suites in `core/test/`, which need Node to run; that scope is recorded as a wording repair on T-0.1.
+
+`packages/bd-node` is the Node adapter the web app and MCP server will use. `createBdClient({ cwd })` runs `bd` with `execFile` (an argument list, never a shell) in the store's repo root, with a 10-second default timeout and a 64 MiB output bound, and returns a discriminated result (`ok`, `stale`, `notFound`, `timeout`, `failed`) instead of throwing. It offers `list`, `show`, `statuses`, `ready`, a guarded `update` that returns `stale` on exit 13 and never retries, `create` and `close`, all through the core's argv builders and parsers. A missing binary reports that `bd` is not on PATH and names the Beads install page, and a missing directory is told apart from it. Every write asks `bd` for `--json`, and a timeout that is not a positive number of milliseconds is refused as a typed failure. Its tests read this repository's own store, compare every Issue field against the raw record, and use a stub `bd` for every failure path, so `npm test` needs `bd` on PATH.
+
+The mod is a plugin at `plugins/beads-ui`: `.claude-plugin/plugin.json`, `hooks/hooks.json` naming `./register.ts`, and a hooks module that registers `/beads` and draws a hello pane from a core value, plus a `client/` module drawn as a `Client` region. Every `$` call sits in `register.ts`; a helper in another file receives plain closures, never `$`, the pattern the `diff` mod in Claude Code's public mods folder uses. The root `.claude-plugin/marketplace.json` lists `./plugins/beads-ui`. Three pre-commit gates guard the plugin: `scripts/check-plugin-allowlist.mjs` compares what `claude plugin validate --strict --json` reports (hooks, calls, environment reads and writes, surface modules, gating hooks) with the committed `plugins/beads-ui/validate-allowlist.json` and also refuses, outside the declared hooks module, any `$.` call and any import of the engine's types from `claude-code`, and inside it any bare `$` passed as a call argument, because validate does not say which file a call sits in (an `any`-typed parameter is the one hand-off a static scan cannot see); `scripts/check-marketplace.mjs` runs `claude plugin validate .`; and `scripts/check-plugin-size.mjs` fails naming any file git tracks or stages under `plugins/beads-ui` that is over 1 MB, with no directory exempt. `npm test` runs Vitest and then `claude plugin test`, and the import probe in `hooks/imports.test.ts` fails naming the refused import. Claude Code's command spec has no alias field, so a short `/bu` is a second command.
+
+The core's tests follow D-2's rule that they pass under both runners. A pure core suite is a `*.test.ts` written against `claude-code/testing`; `plugins/beads-ui/vitest.config.ts` maps that import to `vitest`, so both runners execute the same file. The mod environment loads only code files, so each fixture such a suite reads is a `fixtures/<name>.json.ts` module kept byte-equal to its `.json` by a check. A suite that needs Node, such as the purity suite, is a Vitest-only `*.spec.ts`, and the mod's own hooks tests are kit-only. The hooks module is not type-checked by `tsc`: Claude Code writes its mod types only through the interactive `/plugin-types` command, into the gitignored `.claude-plugin/types/`, so the gate cannot rely on them; `claude plugin test` and `validate` are the hooks module's checks.
+
+The repository's public hygiene is a pinned gitleaks pre-commit hook, with a test that stages a fabricated AWS key in a throwaway repository and asserts gitleaks refuses it (the test fails, naming the binary, when gitleaks is not installed), a test that the README names the core's five layers, `CONTRIBUTING.md`, `SECURITY.md` and `CODE_OF_CONDUCT.md`, and pre-commit hooks that run `npm run lint` and `npm test` on every commit. Parser fixtures are real `bd` output from this repository's own Beads store.
+
+### Phase 1 as built
+
+The Phase 1 core sits beside the Phase 0 core in `plugins/beads-ui/core/src`, every module pure and runner-neutral. `argv.ts` builds every `bd` call as an argument list, puts free text in `--flag=value` form and refuses an id or status that starts with `-`; `parsers.ts` adds `bd ready`, `bd history --events`, `bd create` and the delete previews. `columns.ts` builds one column per status in category order with counts and soft WIP flags, and swimlanes by none, assignee (with an unassigned lane) or epic. `sort.ts` sorts stably, priority then created by default, with blanks last. `filter.ts` parses `type:`, `label:`, `assignee:`, `sprint:` and `ready:` terms and, on an unknown key, keeps the previous filter and reports the accepted keys. `quickadd.ts` parses the D-23 grammar into `bd create` flags. `mint.ts` ports bd-new's slug rule (stopwords, lead verbs, the digit-bearing lead, the 32- and 20-character budgets) and mints under `id_policy` `auto` or `fleet-slug` the id bd-new would give the issue (see the T-1.4 wording repair). `commands.ts` lists every MVP action with its key (`m` is Move to on the focused card), and `tokens.ts` holds the semantic tokens with their terminal theme map. The view models in `views/` are reducers and pure views: the Board applies a move optimistically and restores the card on exit 13 with a conflict and a refresh, and keeps the last good board on a failed load; the Backlog lists issues in the `active` category; the Detail builds one guarded `bd update` per edited field and re-reads the issue; the delete confirmation is a state machine from the dry-run preview through a typed display id for a cascade, with Close instead reachable before any write and never running `bd delete`.
 
 ## Product requirements
 
@@ -350,25 +371,27 @@ Each phase carries its scope, deliverables, tasks with EARS acceptance criteria 
 - **Deliverables:**
   - Files created: root `package.json` with `workspaces`, `package-lock.json`, `turbo.json`, `biome.json`, `tsconfig.base.json` (path alias `@beads-ui/core` to `plugins/beads-ui/core/src`), `plugins/beads-ui/` (`.claude-plugin/plugin.json`, `hooks/hooks.json`, `hooks/register.ts`, `core/`), `packages/bd-node/`, `.claude-plugin/marketplace.json` listing `./plugins/beads-ui`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`. `.github/` is out of scope (CI is the local pre-commit and pre-push gates per the fleet's retired-Actions rule).
   - Files modified: `README.md`, `.gitignore` (ignore `.claude-plugin/types/` and a generated `tsconfig.json` inside the plugin), `.pre-commit-config.yaml` (add `npm run lint`, `npm test`, `claude plugin validate --json` allow-list diff).
-  - Tests added: `plugins/beads-ui/core/test/purity.test.ts`, `plugins/beads-ui/core/test/parsers.test.ts`, `packages/bd-node/test/bd-adapter.test.ts`, `plugins/beads-ui/hooks/*.test.ts`.
+  - Tests added: `plugins/beads-ui/core/test/purity.spec.ts`, `plugins/beads-ui/core/test/parsers.test.ts`, `packages/bd-node/test/bd-adapter.test.ts`, `plugins/beads-ui/hooks/*.test.ts`.
+    - File-name repair (Authority test Gate C, Opus build coordinator, 2026-10-21, from the T-0.3 build). Before: `core/test/purity.test.ts`. `claude plugin test` runs every `*.test.ts` under the plugin in the mod environment, which refuses `vitest`, Node built-ins and JSON imports. Ratified intent: D-2's rule that the core's tests pass under both runners. So a pure core suite is a `*.test.ts` written against `claude-code/testing`, which Vitest also runs through an alias in `plugins/beads-ui/vitest.config.ts`, with its fixtures as `fixtures/*.json.ts` modules; a suite that needs Node, such as the purity suite that spawns the gate, is a Vitest-only `*.spec.ts`. Not changed: the suites, their place under `core/test/`, and `*.test.ts` for the mod's own tests.
 - **Tasks + acceptance criteria:**
   - **T-0.1 Core module and purity gate**
-    - [ ] `When plugins/beads-ui/core is built, the system shall compile under a tsconfig with "lib": ["es2023"] and "types": [] and shall emit no error.`
-    - [ ] `If any file in plugins/beads-ui/core references setTimeout, setInterval, queueMicrotask, requestAnimationFrame, window, document, process or a Node built-in, then the lint gate shall fail naming the file and line.`
-    - [ ] `When plugins/beads-ui/package.json is read, the system shall find no runtime dependencies.`
-    - [ ] `When claude plugin test runs an import probe, a hooks module importing a core file by relative path and a Client module importing a sibling file shall both load; if either is refused, then the probe shall fail naming the import.`
+    - [x] `When plugins/beads-ui/core is built, the system shall compile under a tsconfig with "lib": ["es2023"] and "types": [] and shall emit no error.`
+    - [x] `If any source file in plugins/beads-ui/core/src references setTimeout, setInterval, queueMicrotask, requestAnimationFrame, window, document, process or a Node built-in, then the lint gate shall fail naming the file and line.`
+      - Wording repair (Authority test Gate C, Opus build coordinator, 2026-10-21). Before: "If any file in plugins/beads-ui/core references". Ratified intent: this phase's own Deliverables put the Vitest suites `plugins/beads-ui/core/test/purity.test.ts` and `parsers.test.ts` inside `core/`, and those suites must import Vitest and Node built-ins to run the gate, so the rule binds the module every surface imports (D-2: "the core is the one module every surface imports"), its `src/`. Not changed: the banned identifiers, the file-and-line failure, and the gate's place in `npm run lint`.
+    - [x] `When plugins/beads-ui/package.json is read, the system shall find no runtime dependencies.`
+    - [x] `When claude plugin test runs an import probe, a hooks module importing a core file by relative path and a Client module importing a sibling file shall both load; if either is refused, then the probe shall fail naming the import.`
   - **T-0.2 bd-node adapter**
-    - [ ] `When the adapter runs bd list --json against a store, the system shall return Issue objects whose fields match the core's Issue model for every record.`
-    - [ ] `If bd exits 13 on a guarded update, then the adapter shall return a typed StaleWrite result and shall not retry.`
-    - [ ] `If bd is not on PATH, then the adapter shall fail with a message naming the binary and the install page, not a stack trace.`
+    - [x] `When the adapter runs bd list --json against a store, the system shall return Issue objects whose fields match the core's Issue model for every record.`
+    - [x] `If bd exits 13 on a guarded update, then the adapter shall return a typed StaleWrite result and shall not retry.`
+    - [x] `If bd is not on PATH, then the adapter shall fail with a message naming the binary and the install page, not a stack trace.`
   - **T-0.3 Mod plugin and marketplace**
-    - [ ] `When claude plugin validate --json runs on plugins/beads-ui, the system shall list only the hooks and calls in the committed allow-list, every $ call shall sit in the hooks module's own files, and the pre-commit gate shall fail on any difference.`
-    - [ ] `When claude plugin validate . runs on the repository root, the marketplace shall validate and shall list ./plugins/beads-ui.`
-    - [ ] `When claude plugin test runs, the hello pane's render test shall pass on the terminal and desktop surfaces.`
-    - [ ] `If any file in plugins/beads-ui exceeds 1 MB, then the pre-commit gate shall fail naming it.`
+    - [x] `When claude plugin validate --json runs on plugins/beads-ui, the system shall list only the hooks and calls in the committed allow-list, every $ call shall sit in the hooks module's own files, and the pre-commit gate shall fail on any difference.`
+    - [x] `When claude plugin validate . runs on the repository root, the marketplace shall validate and shall list ./plugins/beads-ui.`
+    - [x] `When claude plugin test runs, the hello pane's render test shall pass on the terminal and desktop surfaces.`
+    - [x] `If any file in plugins/beads-ui exceeds 1 MB, then the pre-commit gate shall fail naming it.`
   - **T-0.4 Repository hygiene for a public repo**
-    - [ ] `When a commit is attempted, the gitleaks pre-commit hook shall scan it, and if a secret pattern matches then the commit shall be refused.`
-    - [ ] `When README.md describes the layout, it shall name the shared layers as data access, domain logic, view models, commands and design tokens, and shall not name layout.`
+    - [x] `When a commit is attempted, the gitleaks pre-commit hook shall scan it, and if a secret pattern matches then the commit shall be refused.`
+    - [x] `When README.md describes the layout, it shall name the shared layers as data access, domain logic, view models, commands and design tokens, and shall not name layout.`
 - **Exit gate:** `npm run lint && npm test` green; `claude plugin validate .` and `claude plugin validate --json plugins/beads-ui` match the allow-list; `claude plugin test plugins/beads-ui` green including the import probe; a fresh-context diff review against the ACs above.
 
 ### Phase 1: The MVP, a read-mostly board in the Claude Code mod
@@ -391,7 +414,8 @@ Each phase carries its scope, deliverables, tasks with EARS acceptance criteria 
     - [ ] `When a field is edited and submitted, the system shall write it with bd update and shall re-read the issue before redrawing.`
   - **T-1.4 Quick-add**
     - [ ] `When the user submits a quick-add line, the system shall parse title, p0 to p4, type:, @assignee, +label, due: and sprint: tokens and shall create the issue with the matching bd create flags.`
-    - [ ] `While the store's existing issues carry metadata.display_id and id_policy is auto or fleet-slug, when an issue is created the system shall mint a display id of the form PREFIX-<title-slug>-<4 random lowercase alphanumerics> and shall write metadata.display_id and the id:<display_id> label.`
+    - [ ] `While the store's existing issues carry metadata.display_id and id_policy is auto or fleet-slug, when an issue is created the system shall mint a display id of the form bd-new mints, PREFIX-<title-slug>-<suffix>, where the suffix is the new issue's hash-primary suffix for a top-level issue and 4 random letters from bd-new's alphabet for a child issue or a suffix the fleet's task-id rule would refuse, and shall write metadata.display_id and the id:<display_id> label.`
+      - Wording repair (Authority test Gate C, Opus build coordinator, 2026-10-21). Before: "of the form PREFIX-<title-slug>-<4 random lowercase alphanumerics>". Ratified intent: D-9's Con and its mitigation, "Two implementations of the slug rule (core and `bd_new.py`) that must agree" and "the two implementations are pinned to the same rule", and the Conventions table's "Minted on create when the store uses the convention". bd-new's `display_id_from_primary` copies the hash-primary suffix for a top-level create and draws 4 letters only for a child or a gate-tripping suffix, so the old wording described a shape bd-new does not mint for top-level issues. Not changed: the slug body, the policy switch, the metadata field and the `id:` label.
     - [ ] `If id_policy is off, then the system shall create the issue without touching metadata.display_id or labels.`
   - **T-1.5 Delete confirmation**
     - [ ] `When the user chooses delete, the system shall open a focused pane showing bd delete <id> --dry-run output and a Close instead action before any destructive write.`
@@ -509,8 +533,8 @@ iOS and Android (shared or separate), macOS, Linux and Windows native apps follo
 | # | Phase | Section / Decision | Verified | Notes |
 |---|-------|--------------------|---------|-------|
 | 1 | N/A | **Design Overview filled**: confirm the `## Design Overview` section above is filled in with concrete implementation knowledge, not left as a stub | - [ ] | |
-| 2 | 0 | D-2 package boundaries and the five core rules | - [ ] | |
-| 3 | 0 | D-15 mod packaging and validate allow-list | - [ ] | |
+| 2 | 0 | D-2 package boundaries and the five core rules | - [x] | Verified 2026-10-21 on wt/aih-ec2-3/bu-build at dad9a35 by two fresh-context verifiers and a Codex review: core compiles under es2023 with no ambient types; the purity gate names file and line (code generation and computed imports included); no runtime dependency; pure core suites run under Vitest and `claude plugin test`; `$` calls only in the hooks module. Core sits in the plugin as decided; the T-3.6 review stays open |
+| 3 | 0 | D-15 mod packaging and validate allow-list | - [x] | Verified 2026-10-21 at dad9a35: plugin at `plugins/beads-ui` with no runtime dependencies, root marketplace listing it, `claude plugin validate .` passes, the `validate --strict --json` allow-list gate, the 1 MB gate over tracked and staged files, `claude plugin test` in `npm test` and pre-commit. Codex findings on the gates fixed in PR #20 |
 | 4 | 1 | D-3 MVP scope; D-4 access route; D-9 display-id minting; D-13 delete ladder | - [ ] | |
 | 5 | 2 | D-8 drag in a Client; D-5 sprint convention; D-16 metrics source | - [ ] | |
 | 6 | 3 | D-10 web stack; D-6 rank; D-11 queue relationship; D-17 session identity | - [ ] | |
@@ -579,6 +603,7 @@ This design doc hosts the `/auto-flow` Run Ledger for the beads-ui epic's resear
 | Run ID | Contract | Decision classes | Push |
 |---|---|---|---|
 | `beads-ui-auto-flow-2026-10-14-aih-3` | `auto-flow/AIH-701#d-7` | `["adn:in-scope"]` | `true` |
+| `beads-ui-build-2026-10-21-aih-ec2-3` | `auto-flow/AIH-701#d-7` | `["adn:in-scope"]` | `true` |
 
 The launcher granted integration ownership (land on `main` by PR, self-merge on green, sync, reap), so `push` is `true`. `adn:in-scope` records that design decisions are resolved through `/decision-framework` by default; what the Authority test escalates goes to the launcher for Sergei.
 
@@ -588,6 +613,8 @@ The launcher granted integration ownership (land on `main` by PR, self-merge on 
 |---|---:|---|---|---|---|---|
 | `entry->research` | 0 | `research-run` | `explicit` | Sergei's founding ask A001 names the stage: "the fable agent will /delegate /orchestrate /research-doc and then do the /doc --kind design stage"; the launcher's brief repeats it | `session` | `862bb31` |
 | `research->doc` | 1 | `converged` | `rubric` | none open: G1 to G3, G5 and G6 clear; G4 classified (OQ-1 design choice deferred by Sergei; OQ-2, OQ-3, OQ-5, OQ-6 need a live measurement; OQ-4 and OQ-9 handed to the design-stage spikes; OQ-7 and OQ-8 depend on the vendor) | `session` | `842db74` (landed at `f68067e`) |
+| `entry->implement` | 0 | `implement-run` | `explicit` | Sergei approved the design and ruled D-7 (a), D-11 (a) and D-12 (d) in entry A005, closing with "now /delegate opus 5.5 /orchestrate /auto-flow the rest as appropriate now"; the launcher's brief (`docs/prompts/orchestrator/bu-mg2-build-run.md`) names the stages implement and impl-audit for Phases 0 and 1 only. Run `beads-ui-build-2026-10-21-aih-ec2-3`, Opus coordinator, worktree `.worktrees/aih-ec2-3-agents/bu-build` | `session` | `12a870f` |
+| `impl-audit` (Phase 0) | 1 | `converged` | `findings-closed` | Codex review of 12a870f..cad816b (5 major, 2 minor) and of packages/bd-node 155981f..8d3e524 (4 major); every finding fixed in PR #20 or justified (the leaf delete preview stays text because the confirm pane shows it verbatim); a fresh-context verifier passed every Phase 0 AC and every fix at dad9a35 | `session` | `dad9a35` |
 
 <!-- /doc:region name="overview" -->
 
