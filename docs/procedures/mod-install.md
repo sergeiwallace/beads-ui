@@ -75,7 +75,7 @@ The board steps aside while the confirmation is open, so the confirmation gets t
 
 ## Quick-add
 
-Type a line into the `+` field and press Enter. Words become the title; these tokens set fields:
+Type a line into the `New` field (`n` focuses it) and press Enter. Words become the title; these tokens set fields:
 
 | Token | Sets | Example |
 |---|---|---|
@@ -92,7 +92,7 @@ The readable part of a display id is cut to 32 characters, or 20 for a child iss
 
 ## Filter
 
-Type `key:value` terms into the `/` field and press Enter. Terms combine with AND. The keys are `type`, `label`, `assignee`, `sprint` and `ready` (`ready:true` or `ready:false`, from `bd ready`). A term with any other key shows the accepted keys and leaves the list as it was.
+Type `key:value` terms into the `Filter` field (Tab to it) and press Enter. Terms combine with AND. The keys are `type`, `label`, `assignee`, `sprint` and `ready` (`ready:true` or `ready:false`, from `bd ready`). A term with any other key shows the accepted keys and leaves the list as it was.
 
 ## Configuration
 
