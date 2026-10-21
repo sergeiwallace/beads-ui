@@ -76,6 +76,10 @@ export const NARROW_TEXT = `beads-ui did not open its pane: it needs a terminal 
 /** Where the view preferences live in `$.store`. Issue data is never stored. */
 export const PREFS_KEY = "view";
 
+/** The body the pane asks for, docked and inline; the person's own size wins. */
+const WANTED_COLUMNS = 80;
+const WANTED_ROWS = 24;
+
 const READ_TIMEOUT_MS = 8_000;
 const WRITE_TIMEOUT_MS = 15_000;
 const BACKLOG_ROW_LIMIT = 60;
@@ -150,6 +154,8 @@ export class BeadsPane {
   onDelete: ((issue: Issue, issues: readonly Issue[]) => void) | undefined;
 
   private env: { xdgConfigHome?: string; home?: string } = {};
+  /** True while the pane has stepped aside for the delete confirmation. */
+  private suspended = false;
   private refreshing = false;
   private queued = false;
   private timer: Timer | undefined;
@@ -358,6 +364,8 @@ export class BeadsPane {
       id: PANE_ID,
       title: PANE_TITLE,
       closeOnEscape: true,
+      columns: WANTED_COLUMNS,
+      rows: WANTED_ROWS,
       ...(asked ? { focus: true as const } : {}),
     });
     if (!asked && isRecord(opened) && opened.isPlaced === false) {
@@ -628,11 +636,30 @@ export class BeadsPane {
     this.onDelete?.(issue, this.board.issues);
   }
 
+  /**
+   * Steps aside for the delete confirmation. Claude Code gives an opening pane the keyboard only
+   * while the prompt holds it, so the confirmation opens focused only once this pane has closed.
+   */
+  async suspend(): Promise<void> {
+    if (!this.isOpen) return;
+    this.suspended = true;
+    this.isOpen = false;
+    await this.host?.closePane(PANE_ID).catch(() => undefined);
+  }
+
+  /** Comes back after the confirmation, focused, as the person's press asked. */
+  async resume(): Promise<void> {
+    if (!this.suspended) return;
+    this.suspended = false;
+    await this.open(true).catch(() => undefined);
+  }
+
   /** The confirmation finished: a Close instead leaves its undo here, then the board reloads. */
   afterConfirm(text: string, undo: UndoClose | undefined): void {
     this.note(text, "success");
     this.undo = undo;
-    void this.refresh();
+    if (this.suspended) void this.resume();
+    else void this.refresh();
   }
 
   async undoClose(): Promise<void> {
@@ -716,10 +743,16 @@ export class BeadsPane {
             onPress: () => this.setTab(tab),
           }),
         ),
-        Text({ bold: true, children: storeName(this.host?.cwd ?? "") }),
         Text({
-          dimColor: true,
-          children: this.board.loadedAt === undefined ? "loading…" : asOf(this.board.loadedAt),
+          wrap: "truncate-end",
+          children: [
+            Text({ bold: true, children: truncate(storeName(this.host?.cwd ?? ""), 24) }),
+            "  ",
+            Text({
+              dimColor: true,
+              children: this.board.loadedAt === undefined ? "loading…" : asOf(this.board.loadedAt),
+            }),
+          ],
         }),
       ],
     });
@@ -778,16 +811,16 @@ export class BeadsPane {
       children: [
         Input({
           key: "filter",
-          label: "/ ",
-          placeholder: `filter: ${FILTER_KEYS.map((key) => `${key}:`).join(" ")}`,
+          label: "Filter",
+          placeholder: FILTER_KEYS.map((key) => `${key}:`).join(" "),
           value: this.filter.text,
           submitLabel: "filter",
           onSubmit: (value) => this.submitFilter(value),
         }),
         Input({
           key: "quickadd",
-          label: "+ ",
-          placeholder: "new: title p0-p4 type:task @assignee +label due:YYYY-MM-DD sprint:name",
+          label: "New",
+          placeholder: "title p0-p4 type:task @assignee +label due:YYYY-MM-DD sprint:name",
           value: this.quickAddText,
           submitLabel: "create",
           onSubmit: (value) => void this.quickAdd(value),
@@ -798,7 +831,18 @@ export class BeadsPane {
 
   private drawHelp(ui: PaneUi, helpRegion: RenderElement | undefined): RenderElement {
     const { Box, Text } = ui;
-    const keys = COMMANDS.map((command) => `${command.hint}: ${command.label}`);
+    const keys = COMMANDS.map((command) => {
+      const { binding } = command;
+      const key =
+        binding.kind === "hotkey" ? binding.key : binding.kind === "input" ? binding.hint : "Esc";
+      const scope =
+        command.scope === "card"
+          ? " (focused card)"
+          : command.scope === "confirm"
+            ? " (delete confirmation)"
+            : "";
+      return `${key}: ${command.label}${scope}`;
+    });
     return Box({
       key: "help",
       flexDirection: "column",
@@ -925,8 +969,9 @@ export class BeadsPane {
 
   private drawBacklog(ui: PaneUi, width: number): RenderElement {
     const { Box, Text, Button } = ui;
-    const idWidth = Math.min(32, Math.max(10, Math.floor(width * 0.28)));
-    const fixed = 3 + idWidth + 8 + 12 + 10 + 8 + 6;
+    const wide = width >= 90;
+    const idWidth = Math.min(32, Math.max(10, Math.floor(width * (wide ? 0.28 : 0.3))));
+    const fixed = wide ? 3 + idWidth + 8 + 12 + 10 + 8 + 6 : 3 + idWidth + 6 + 3;
     const view = backlogView(this.board.issues, {
       statuses: this.board.statuses,
       filter: this.filter,
@@ -959,12 +1004,23 @@ export class BeadsPane {
               Text({ color: colorOf(row.priorityToken), children: row.priority }),
               Box({
                 width: idWidth,
-                children: [Text({ dimColor: true, children: row.displayId })],
+                children: [Text({ dimColor: true, wrap: "truncate-end", children: row.displayId })],
               }),
-              Box({ width: 8, children: [Text({ children: truncate(row.type, 8) })] }),
-              Box({ flexGrow: 1, children: [Text({ children: row.title })] }),
-              Text({ children: truncate(row.assignee === "" ? "" : `@${row.assignee}`, 12) }),
-              Text({ dimColor: true, children: row.created }),
+              ...(wide
+                ? [Box({ width: 8, children: [Text({ children: truncate(row.type, 8) })] })]
+                : []),
+              Box({
+                flexGrow: 1,
+                children: [Text({ wrap: "truncate-end", children: row.title })],
+              }),
+              ...(wide
+                ? [
+                    Text({
+                      children: truncate(row.assignee === "" ? "" : `@${row.assignee}`, 12),
+                    }),
+                    Text({ dimColor: true, children: row.created }),
+                  ]
+                : []),
               Button({
                 key: `open:${row.id}`,
                 label: "detail",
@@ -1008,7 +1064,8 @@ export class BeadsPane {
         children: present([errorLine ?? Text({ dimColor: true, children: `reading ${id}…` })]),
       });
     }
-    const left = Math.max(30, Math.floor(width * 0.45));
+    const wide = width >= 90;
+    const left = wide ? Math.floor(width * 0.45) : width;
     const view = detailView(this.detail, { issues: this.board.issues, width: left - 14 });
     const statuses = this.board.statuses.map((status) => ({ value: status.name }));
     const fields = view.fields.map((field) => {
@@ -1037,7 +1094,7 @@ export class BeadsPane {
       if (editable !== undefined) {
         return Input({
           key: `edit:${editable}`,
-          label: `${field.label}: `,
+          label: field.label,
           value: raw,
           submitLabel: "save",
           onSubmit: (value) => void this.edit(editable, value),
@@ -1061,8 +1118,8 @@ export class BeadsPane {
           : this.line(ui, "detail-save-error", view.errorLine, "error"),
         errorLine,
         Box({
-          flexDirection: "row",
-          gap: 2,
+          flexDirection: wide ? "row" : "column",
+          gap: wide ? 2 : 1,
           children: [
             Box({ key: "detail-fields", flexDirection: "column", width: left, children: fields }),
             Box({

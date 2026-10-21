@@ -2,6 +2,7 @@ import type { On } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect, test } from "claude-code/testing";
 
+import { asOf, clockStamp } from "../core/src/index.ts";
 import { NARROW_TEXT } from "./pane.ts";
 import { PANE_ID, PLUGIN_NAME } from "./register.ts";
 import {
@@ -9,12 +10,14 @@ import {
   BEADS,
   CWD,
   SESSION,
+  START_MS,
   VIEWPORT,
   type WorldOptions,
   world,
 } from "./tests/world.ts";
 
 const LIST = "bd list --all --brief --limit 0";
+const STAMP = asOf(clockStamp(START_MS, new Date(START_MS).getTimezoneOffset()));
 
 const band = ($: Engine, columns = 120, hasSurvey = false) =>
   $.ui.mount({
@@ -39,10 +42,9 @@ describe("the band above the prompt", () => {
     const ui = await band($);
 
     expect(w.registered).toEqual(["beads", "bu"]);
-    expect((await ui.find({ key: "band:open" }))?.text).toBe("20 open");
-    expect((await ui.find({ key: "band:in_progress" }))?.text).toBe("2 in progress");
-    expect((await ui.find({ key: "band:blocked" }))?.text).toBe("0 blocked");
-    expect((await ui.find({ key: "beads-band" }))?.text).toContain("beads beads-ui");
+    expect((await ui.find({ key: "beads-band" }))?.text).toBe(
+      `beads beads-ui  20 open  2 in progress  0 blocked  ${STAMP}`,
+    );
   });
 
   test("should refresh at most every 10 seconds when the pane is closed", async ($, on) => {

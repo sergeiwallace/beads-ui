@@ -21,21 +21,21 @@ export function drawBand(ui: BandUi, pane: BeadsPane, width: number): RenderElem
     width,
   });
   const { Box, Text } = ui;
+  // One line, cut at the band's edge: the counts never wrap under the store name.
   return Box({
     key: "beads-band",
-    flexDirection: "row",
-    gap: 2,
     children: [
-      Text({ bold: true, children: view.title }),
-      ...view.counts.map((count) =>
-        Box({
-          key: `band:${count.status}`,
-          children: [
+      Text({
+        wrap: "truncate-end",
+        children: [
+          Text({ bold: true, children: view.title }),
+          ...view.counts.flatMap((count) => [
+            "  ",
             Text({ color: colorOf(count.token), children: `${count.count} ${count.label}` }),
-          ],
-        }),
-      ),
-      ...(view.asOf === undefined ? [] : [Text({ dimColor: true, children: view.asOf })]),
+          ]),
+          ...(view.asOf === undefined ? [] : ["  ", Text({ dimColor: true, children: view.asOf })]),
+        ],
+      }),
     ],
   });
 }

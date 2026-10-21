@@ -83,6 +83,8 @@ describe("the delete confirmation", () => {
         closeOnEscape: true,
         holdToasts: true,
       });
+      // The board steps aside first: an opening pane gets the keyboard only from the prompt.
+      expect(w.closed).toEqual([PANE_ID]);
       expect(since()[0]).toBe("bd delete BU-2zw --dry-run");
       expect(forced(since())).toEqual([]);
       expect((await confirm.find({ type: "Code" }))?.props.source).toBe(leafText);
@@ -128,7 +130,12 @@ describe("the delete confirmation", () => {
     expect(
       since().filter((key) => key.startsWith("bd delete") && !key.includes("--dry-run")),
     ).toEqual([]);
-    expect(w.closed).toContain(CONFIRM_ID);
+    expect(w.closed).toEqual([PANE_ID, CONFIRM_ID]);
+    expect(w.opened.map((open) => [open.id, open.focus])).toEqual([
+      [PANE_ID, true],
+      [CONFIRM_ID, true],
+      [PANE_ID, true],
+    ]);
     expect((await pane.find({ key: "notice" }))?.text).toBe("BU-beads-ui-claude-code-aeyb closed");
   });
 

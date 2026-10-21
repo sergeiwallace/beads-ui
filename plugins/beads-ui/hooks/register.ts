@@ -29,9 +29,15 @@ const COMMAND_SPECS = [
  */
 export function register(on: On) {
   const pane = new BeadsPane();
-  const confirm = new DeleteConfirm((text, undo) => pane.afterConfirm(text, undo));
+  const confirm = new DeleteConfirm(
+    (text, undo) => pane.afterConfirm(text, undo),
+    () => void pane.resume(),
+  );
   pane.onDelete = (issue, issues) => {
-    void confirm.open(issue, issues).catch(() => undefined);
+    void pane
+      .suspend()
+      .then(() => confirm.open(issue, issues))
+      .catch(() => undefined);
   };
 
   on("session.start", async ($, e, next) => {

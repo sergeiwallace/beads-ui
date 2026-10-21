@@ -53,7 +53,10 @@ export class DeleteConfirm {
   /** Moves on every phase change, so an answer for a phase already left is dropped. */
   private epoch = 0;
 
-  constructor(private readonly finished: (text: string, undo: UndoClose | undefined) => void) {}
+  constructor(
+    private readonly finished: (text: string, undo: UndoClose | undefined) => void,
+    private readonly dismissed: () => void,
+  ) {}
 
   async open(issue: Issue, issues: readonly Issue[]): Promise<void> {
     const host = this.host;
@@ -74,7 +77,9 @@ export class DeleteConfirm {
   /** The person closed the pane (Esc, the close mark) before a write: nothing more runs. */
   cancelled(): void {
     const phase = this.state?.phase;
-    if (phase !== "closing" && phase !== "deleting") this.state = undefined;
+    if (phase === "closing" || phase === "deleting") return;
+    this.state = undefined;
+    this.dismissed();
   }
 
   dispatch(event: ConfirmEvent): void {
@@ -151,7 +156,7 @@ export class DeleteConfirm {
             ? undefined
             : Input({
                 key: "typed-id",
-                label: "Type the id: ",
+                label: "Type the id",
                 placeholder: view.input.placeholder,
                 value: view.input.value,
                 submitLabel: "confirm",
