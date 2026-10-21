@@ -12,8 +12,11 @@ import { truncate } from "./text.ts";
 /**
  * The delete ladder (D-13) as a state machine. `previewing` runs `bd delete <id> --dry-run`; a
  * clean preview is `ready`; a preview bd refused for dependents outside the set loads the cascade
- * preview and then needs the display id typed before Delete runs with `--cascade`. Close instead
- * is open from every phase before a write, and runs `bd close`, never `bd delete`.
+ * preview and then needs the display id typed before Delete runs with `--cascade`. Delete then
+ * re-runs the same preview (`rechecking`) and writes only while it still holds: a leaf that gained
+ * a dependent goes to the typed-id cascade path, and a cascade whose set changed asks for the id
+ * again over the new preview. Close instead is open from every phase before a write, and runs
+ * `bd close`, never `bd delete`.
  */
 export type ConfirmPhase =
   | "previewing"
@@ -21,6 +24,7 @@ export type ConfirmPhase =
   | "ready"
   | "needs-typed-id"
   | "preview-failed"
+  | "rechecking"
   | "closing"
   | "closed"
   | "deleting"
@@ -52,6 +56,7 @@ export interface ConfirmState {
 export type ConfirmEvent =
   | { type: "preview-loaded"; exitCode: number; stdout: string; stderr: string }
   | { type: "cascade-preview-loaded"; exitCode: number; stdout: string }
+  | { type: "recheck-loaded"; exitCode: number; stdout: string; stderr: string }
   | { type: "typed"; text: string }
   | { type: "close-instead" }
   | { type: "delete" }
@@ -65,6 +70,7 @@ const BEFORE_WRITE: readonly ConfirmPhase[] = [
   "ready",
   "needs-typed-id",
   "preview-failed",
+  "rechecking",
 ];
 
 function dependentsOf(id: string, issues: readonly Issue[]): DependentView[] {
@@ -105,6 +111,53 @@ export function deleteEnabled(state: ConfirmState): boolean {
   return state.phase === "needs-typed-id" && state.typed.trim() === state.confirmToken;
 }
 
+type RecheckEvent = Extract<ConfirmEvent, { type: "recheck-loaded" }>;
+
+function recheckLeaf(state: ConfirmState, event: RecheckEvent): ConfirmState {
+  const { message: _cleared, ...rest } = state;
+  if (event.exitCode === 0) return { ...rest, phase: "deleting", previewText: event.stdout };
+  if (`${event.stdout}\n${event.stderr}`.includes(DEPENDENTS_REFUSAL)) {
+    return {
+      ...rest,
+      phase: "loading-cascade",
+      previewText: event.stdout,
+      cascadeRequired: true,
+      typed: "",
+      message: "a dependent was added since the preview; nothing was deleted",
+    };
+  }
+  const message = event.stderr.trim() || `bd delete --dry-run failed (exit ${event.exitCode})`;
+  return { ...rest, phase: "preview-failed", previewText: event.stdout, message };
+}
+
+const sameCascade = (a: DeletePreview, b: DeletePreview): boolean =>
+  a.wouldDelete === b.wouldDelete &&
+  a.wouldOrphan === b.wouldOrphan &&
+  a.wouldRemoveDependencies === b.wouldRemoveDependencies &&
+  a.issueIds.join("\n") === b.issueIds.join("\n");
+
+function recheckCascade(state: ConfirmState, event: RecheckEvent): ConfirmState {
+  const parsed = event.exitCode === 0 ? parseBdDeletePreview(event.stdout) : undefined;
+  if (parsed?.ok !== true) {
+    const message =
+      parsed?.ok === false
+        ? parsed.error.message
+        : `bd delete --cascade --dry-run failed (exit ${event.exitCode})`;
+    return { ...state, phase: "preview-failed", message };
+  }
+  if (state.cascade !== undefined && sameCascade(state.cascade, parsed.value)) {
+    const { message: _cleared, ...rest } = state;
+    return { ...rest, phase: "deleting" };
+  }
+  return {
+    ...state,
+    phase: "needs-typed-id",
+    cascade: parsed.value,
+    typed: "",
+    message: "the cascade changed since the preview; nothing was deleted, type the id again",
+  };
+}
+
 export function reduceConfirm(state: ConfirmState, event: ConfirmEvent): ConfirmState {
   switch (event.type) {
     case "preview-loaded": {
@@ -127,6 +180,9 @@ export function reduceConfirm(state: ConfirmState, event: ConfirmEvent): Confirm
           : `bd delete --cascade --dry-run failed (exit ${event.exitCode})`;
       return { ...state, phase: "preview-failed", message };
     }
+    case "recheck-loaded":
+      if (state.phase !== "rechecking") return state;
+      return state.cascadeRequired ? recheckCascade(state, event) : recheckLeaf(state, event);
     case "typed":
       if (state.phase !== "needs-typed-id") return state;
       return { ...state, typed: event.text };
@@ -135,7 +191,7 @@ export function reduceConfirm(state: ConfirmState, event: ConfirmEvent): Confirm
       return { ...state, phase: "closing" };
     case "delete":
       if (!deleteEnabled(state)) return state;
-      return { ...state, phase: "deleting" };
+      return { ...state, phase: "rechecking" };
     case "close-finished":
       if (state.phase !== "closing") return state;
       return event.exitCode === 0
@@ -164,6 +220,10 @@ export function nextCommand(state: ConfirmState): BdArgv | undefined {
       return deletePreviewArgv(state.issueId);
     case "loading-cascade":
       return cascadePreviewArgv(state.issueId);
+    case "rechecking":
+      return state.cascadeRequired
+        ? cascadePreviewArgv(state.issueId)
+        : deletePreviewArgv(state.issueId);
     case "closing":
       return closeArgv(state.issueId);
     case "deleting":
