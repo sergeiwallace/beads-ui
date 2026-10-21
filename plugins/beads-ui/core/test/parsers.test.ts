@@ -61,6 +61,30 @@ describe("parseBdList", () => {
     expect(closed?.startedAt).toEqual(expect.any(String));
   });
 
+  test("should read the human owner from metadata.owner and not from bd's owner field", () => {
+    const records = JSON.parse(fixture("bd-list.json")) as Record<string, unknown>[];
+    const first = records[0] as Record<string, unknown>;
+    const second = records[1] as Record<string, unknown>;
+    expect(typeof first.owner).toBe("string");
+    expect(typeof second.owner).toBe("string");
+    first.metadata = { ...(first.metadata as object), owner: "Sergei Wallace" };
+
+    const [withOwner, withoutOwner] = unwrap(parseBdList(JSON.stringify(records)));
+
+    expect(withOwner?.owner).toBe("Sergei Wallace");
+    expect(withoutOwner?.owner).toBeUndefined();
+  });
+
+  test("should name metadata.owner when it is not a string", () => {
+    const records = JSON.parse(fixture("bd-list.json")) as Record<string, unknown>[];
+    const first = records[0] as Record<string, unknown>;
+    first.metadata = { ...(first.metadata as object), owner: 42 };
+
+    const result = parseBdList(JSON.stringify(records));
+
+    expect(!result.ok && result.error).toMatchObject({ path: "$[0].metadata.owner" });
+  });
+
   test("should return a typed parse error when the output is not JSON", () => {
     const result = parseBdList("Error: no beads database found\n");
 

@@ -132,6 +132,10 @@ function parseIssue(value: unknown, path: string): Issue {
 
   const displayId = metadata.display_id;
   if (typeof displayId === "string" && displayId !== "") issue.displayId = displayId;
+  // The human owner is metadata.owner (D-17). bd's top-level `owner` is the email of whoever
+  // owns the repository, not the person a session's task belongs to, so it is not read.
+  const owner = optionalString(metadata, "owner", `${path}.metadata`);
+  if (owner !== undefined) issue.owner = owner;
 
   const optional: [keyof Issue, string][] = [
     ["description", "description"],
@@ -139,7 +143,6 @@ function parseIssue(value: unknown, path: string): Issue {
     ["acceptanceCriteria", "acceptance_criteria"],
     ["notes", "notes"],
     ["assignee", "assignee"],
-    ["owner", "owner"],
     ["parent", "parent"],
     ["dueAt", "due_at"],
     ["deferUntil", "defer_until"],
