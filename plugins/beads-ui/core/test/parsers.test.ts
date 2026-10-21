@@ -1,12 +1,12 @@
+// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
+// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import { parseBdList, parseBdShow, parseBdStatuses } from "../src/index.ts";
 import BD_LIST from "./fixtures/bd-list.json.ts";
 import BD_SHOW from "./fixtures/bd-show.json.ts";
 import BD_STATUSES from "./fixtures/bd-statuses.json.ts";
 
-// Runs under both runners: `claude plugin test` in the mod environment, and Vitest, which
-// maps claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). Fixtures are real
-// bd 1.3.1 output captured from this repository's own Beads store.
+// Fixtures are real bd 1.3.1 output captured from this repository's own Beads store.
 const FIXTURES: Record<string, string> = {
   "bd-list.json": BD_LIST,
   "bd-show.json": BD_SHOW,
