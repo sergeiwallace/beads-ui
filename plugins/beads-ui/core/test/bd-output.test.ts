@@ -106,6 +106,29 @@ describe("parseBdDeletePreview", () => {
     });
   });
 
+  // A malformed preview must never parse, so a missing or non-boolean cascade cannot read as a
+  // plain delete and skip the typed-id confirmation.
+  const malformed: [string, Record<string, unknown>, string][] = [
+    ["cascade is missing", { cascade: undefined }, "$.cascade"],
+    ["cascade is a string", { cascade: "true" }, "$.cascade"],
+    ["cascade is null", { cascade: null }, "$.cascade"],
+    ["issue_ids is empty", { issue_ids: [] }, "$.issue_ids"],
+    ["issue_ids holds a number", { issue_ids: [7] }, "$.issue_ids[0]"],
+    ["would_delete is missing", { would_delete: undefined }, "$.would_delete"],
+    ["would_orphan is negative", { would_orphan: -1 }, "$.would_orphan"],
+    ["error is not a string", { error: { code: 1 } }, "$.error"],
+    ["error is empty", { error: "" }, "$.error"],
+  ];
+  for (const [name, change, path] of malformed) {
+    test(`should return a parse error at the field when ${name}`, () => {
+      const root = { ...(JSON.parse(cascadePreview) as Record<string, unknown>), ...change };
+
+      const result = parseBdDeletePreview(JSON.stringify(root));
+
+      expect(errorOf(result)).toMatchObject({ source: "bd delete", path });
+    });
+  }
+
   test("should return bd's refusal text when the dry run found dependents outside the set", () => {
     const result = parseBdDeletePreview(refusedPreview);
 

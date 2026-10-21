@@ -46,5 +46,5 @@ export function updateArgv(id: string, fields: UpdateFields, guard: UpdateGuard 
   if (flags.length === 0) throw new RangeError("bd update needs at least one field to write");
   if (guard.ifStatus !== undefined) flags.push("--if-status", statusArg(guard.ifStatus));
   if (guard.ifAssignee !== undefined) flags.push(`--if-assignee=${guard.ifAssignee}`);
-  return ["bd", "update", issueIdArg(id), ...flags];
+  return ["bd", "update", issueIdArg(id), ...flags, "--json"];
 }

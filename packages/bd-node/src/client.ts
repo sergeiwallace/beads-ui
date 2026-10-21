@@ -96,6 +96,22 @@ function parsed<T>(
   };
 }
 
+// Node's timer ceiling. execFile reads 0 as no timeout, throws on a negative, fractional or
+// non-finite value, and turns one above this into 1 ms.
+const MAX_TIMEOUT_MS = 2_147_483_647;
+
+function invalidTimeout(owner: string, value: number | undefined): Failed | undefined {
+  if (value === undefined || (Number.isInteger(value) && value > 0 && value <= MAX_TIMEOUT_MS)) {
+    return undefined;
+  }
+  return {
+    kind: "failed",
+    exitCode: null,
+    stderr: "",
+    message: `${owner} timeoutMs must be a whole number of milliseconds from 1 to ${MAX_TIMEOUT_MS}, got ${value}`,
+  };
+}
+
 export function createBdClient(options: BdClientOptions): BdClient {
   const defaultTimeout = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
@@ -104,6 +120,10 @@ export function createBdClient(options: BdClientOptions): BdClient {
     callOptions: CallOptions | undefined,
     onExit: (out: Exited) => BdResult<T>,
   ): Promise<BdResult<T>> {
+    const invalid =
+      invalidTimeout("the client's", options.timeoutMs) ??
+      invalidTimeout("the call's", callOptions?.timeoutMs);
+    if (invalid !== undefined) return invalid;
     const timeoutMs = callOptions?.timeoutMs ?? defaultTimeout;
     const run = { cwd: options.cwd, timeoutMs, ...(options.env && { env: options.env }) };
     const outcome = await runBd(argv, run);

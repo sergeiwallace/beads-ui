@@ -61,7 +61,9 @@ repos:
 
   # ── Secrets: gitleaks (public repo; T-0.4) ──────────────────────────────
   # Scans the staged diff and refuses the commit on any secret-pattern match.
-  # The golang hook builds gitleaks itself, so a contributor needs no local install.
+  # The golang hook builds gitleaks itself. plugins/beads-ui/test/hygiene.spec.ts (npm test)
+  # runs the gitleaks on PATH against a staged fabricated key and checks it is this rev, so a
+  # contributor installs it too (CONTRIBUTING.md, Setup).
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.30.1
     hooks:
@@ -131,7 +133,7 @@ repos:
         pass_filenames: false
         always_run: true
       - id: plugin-size
-        name: no file under plugins/beads-ui over 1 MB
+        name: no tracked or staged file under plugins/beads-ui over 1 MB
         entry: node scripts/check-plugin-size.mjs plugins/beads-ui
         language: system
         pass_filenames: false

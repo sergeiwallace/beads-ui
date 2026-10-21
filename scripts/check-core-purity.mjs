@@ -4,11 +4,21 @@
 // Prints "<file>:<line>: <identifier>" for every banned reference and exits 1;
 // exits 2 when the directory is missing or holds no source file to scan.
 // The core's test/ directory is harness code run by Node and Vitest, so it is not scanned.
+//
+// Code generation and computed imports are refused too, because each one builds a reference
+// from a string the lexer cannot read: `eval`, any `Function` reference (so `Function(...)` and
+// `new Function(...)`), `self`, a `.constructor` or `["constructor"]` access (the route from any
+// function to its Function constructor), and a dynamic `import(` whose argument is not a single
+// string literal. `globalThis` is refused outright, so a computed key on it fails as well.
+// Claude Code's mod environment refuses `eval` and `new Function` at run time; this matches it.
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const BANNED_GLOBALS = [
+  "eval",
+  "Function",
+  "self",
   "setTimeout",
   "setInterval",
   "setImmediate",
@@ -71,7 +81,7 @@ function lex(text) {
       }
     }
     i++;
-    strings.push({ start, value });
+    strings.push({ start, end: i, value });
     blank(start + 1, Math.min(i - 1, text.length));
   };
   const readTemplate = () => {
@@ -139,7 +149,29 @@ function scanFile(file, coreRoot) {
   for (const match of code.matchAll(pattern)) {
     hits.push({ line: lineOf(text, match.index), identifier: match[1] });
   }
+  for (const match of code.matchAll(/\.\s*constructor(?![\w$])/g)) {
+    hits.push({ line: lineOf(text, match.index), identifier: ".constructor" });
+  }
+  const stringAt = new Map(strings.map((s) => [s.start, s]));
+  const skipSpace = (from) => {
+    let k = from;
+    while (k < code.length && /\s/.test(code[k])) k++;
+    return k;
+  };
+  for (const match of code.matchAll(/(?<![\w$.])import\s*\(/g)) {
+    const literal = stringAt.get(skipSpace(match.index + match[0].length));
+    const next = literal === undefined ? "" : code[skipSpace(literal.end)];
+    if (next !== ")" && next !== ",") {
+      hits.push({
+        line: lineOf(text, match.index),
+        identifier: "import() of a computed specifier",
+      });
+    }
+  }
   for (const { start, value } of strings) {
+    if (value === "constructor" && /\[\s*$/.test(code.slice(Math.max(0, start - 40), start))) {
+      hits.push({ line: lineOf(text, start), identifier: '["constructor"]' });
+    }
     const before = code.slice(Math.max(0, start - 40), start);
     if (!/(\bfrom|\bimport|\bimport\s*\(|\brequire\s*\(|\bexport\s*\*)\s*$/.test(before)) continue;
     const relativePath = value.startsWith("./") || value.startsWith("../");

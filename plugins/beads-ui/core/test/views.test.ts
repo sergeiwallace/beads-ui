@@ -142,6 +142,7 @@ describe("planMove and reduceBoard", () => {
       "in_progress",
       "--if-status",
       "open",
+      "--json",
     ]);
     expect(plan.event).toEqual({ type: "move-requested", id: "BU-mg2.3.5", to: "in_progress" });
   });

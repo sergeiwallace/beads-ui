@@ -56,6 +56,24 @@ describe("the core purity gate", () => {
     ]);
   });
 
+  it("should fail naming each file and line when the core builds code or an import from a string", () => {
+    const result = run("node", [gate, join(coreDir, "test/fixtures/codegen")]);
+
+    expect(result.status).toBe(1);
+    const file = "plugins/beads-ui/core/test/fixtures/codegen/src/escapes.ts";
+    expect(result.stdout.trim().split("\n")).toEqual([
+      `${file}:3: import() of a computed specifier`,
+      `${file}:4: import() of a computed specifier`,
+      `${file}:5: eval`,
+      `${file}:6: Function`,
+      `${file}:7: Function`,
+      `${file}:8: self`,
+      `${file}:9: globalThis`,
+      `${file}:10: .constructor`,
+      `${file}:11: ["constructor"]`,
+    ]);
+  });
+
   it("should fail when a core file is added that uses a timer", () => {
     const dir = scratchDir();
     writeFileSync(join(dir, "clock.ts"), "export const tick = () => 1;\n\nsetTimeout(tick, 5);\n");

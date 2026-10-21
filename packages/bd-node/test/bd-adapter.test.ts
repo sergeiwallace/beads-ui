@@ -72,6 +72,111 @@ function expectIssueModel(issue: Issue): void {
   expect(Array.isArray(issue.metadata)).toBe(false);
 }
 
+// The Issue the design's Data Model says a raw bd record maps to, written from the design's
+// field names and conventions rather than from the parser: optional text fields are absent when
+// bd sends none or "", the display id and the human owner come from metadata (D-9, D-17), and a
+// list record's dependency is { type, depends_on_id }.
+const OPTIONAL_TEXT: [keyof Issue, string][] = [
+  ["description", "description"],
+  ["design", "design"],
+  ["acceptanceCriteria", "acceptance_criteria"],
+  ["notes", "notes"],
+  ["assignee", "assignee"],
+  ["parent", "parent"],
+  ["dueAt", "due_at"],
+  ["deferUntil", "defer_until"],
+  ["startedAt", "started_at"],
+  ["closedAt", "closed_at"],
+  ["leaseExpiresAt", "lease_expires_at"],
+  ["heartbeatAt", "heartbeat_at"],
+];
+
+function expectedIssue(record: Record<string, unknown>): Record<string, unknown> {
+  const metadata = (record.metadata ?? {}) as Record<string, unknown>;
+  const dependencies = (record.dependencies ?? []) as Record<string, unknown>[];
+  const expected: Record<string, unknown> = {
+    id: record.id,
+    title: record.title,
+    status: record.status,
+    priority: record.priority,
+    type: record.issue_type,
+    labels: record.labels ?? [],
+    dependencies: dependencies.map((dep) => ({ type: dep.type, id: dep.depends_on_id })),
+    createdAt: record.created_at,
+    updatedAt: record.updated_at,
+    metadata,
+  };
+  const text = (value: unknown) => (typeof value === "string" && value !== "" ? value : undefined);
+  if (text(metadata.display_id)) expected.displayId = metadata.display_id;
+  if (text(metadata.owner)) expected.owner = metadata.owner;
+  for (const [field, key] of OPTIONAL_TEXT) if (text(record[key])) expected[field] = record[key];
+  if (typeof record.estimated_minutes === "number") {
+    expected.estimatedMinutes = record.estimated_minutes;
+  }
+  return expected;
+}
+
+// Every field of the design's Issue type, so a record can be shown to exercise each mapping.
+const ISSUE_FIELDS = [
+  "id",
+  "displayId",
+  "title",
+  "description",
+  "design",
+  "acceptanceCriteria",
+  "notes",
+  "status",
+  "priority",
+  "type",
+  "assignee",
+  "owner",
+  "labels",
+  "parent",
+  "dependencies",
+  "estimatedMinutes",
+  "dueAt",
+  "deferUntil",
+  "createdAt",
+  "updatedAt",
+  "startedAt",
+  "closedAt",
+  "leaseExpiresAt",
+  "heartbeatAt",
+  "metadata",
+];
+
+// A bd list record with every field the Issue type reads set, each to a distinct value. The
+// top-level owner is bd's repository owner email, which must not become Issue.owner.
+const FULL_RECORD = {
+  id: "BU-full",
+  title: "Every field",
+  description: "the description",
+  design: "the design",
+  acceptance_criteria: "the criteria",
+  notes: "the notes",
+  status: "in_progress",
+  priority: 1,
+  issue_type: "feature",
+  assignee: "aih-ec2-3",
+  owner: "repo-owner@example.com",
+  labels: ["id:every-field-x1", "sprint:s1"],
+  parent: "BU-epic",
+  dependencies: [
+    { issue_id: "BU-full", depends_on_id: "BU-epic", type: "parent-child" },
+    { issue_id: "BU-full", depends_on_id: "BU-other", type: "blocks" },
+  ],
+  estimated_minutes: 90,
+  due_at: "2026-11-02T00:00:00Z",
+  defer_until: "2026-10-25T00:00:00Z",
+  created_at: "2026-10-01T00:00:00Z",
+  updated_at: "2026-10-21T00:00:00Z",
+  started_at: "2026-10-02T00:00:00Z",
+  closed_at: "2026-10-20T00:00:00Z",
+  lease_expires_at: "2026-10-21T01:00:00Z",
+  heartbeat_at: "2026-10-21T00:30:00Z",
+  metadata: { display_id: "every-field-x1", owner: "Sergei Wallace", rank: "0.5" },
+};
+
 describe("list against this repository's own store", () => {
   it(
     "should return an Issue matching the core model for every record when bd list --json runs",
@@ -94,17 +199,21 @@ describe("list against this repository's own store", () => {
         const issue = byId.get(String(record.id));
         expect(issue, `bd list returned ${String(record.id)}`).toBeDefined();
         if (issue === undefined) continue;
-        expect(issue.updatedAt).toBe(record.updated_at);
-        expect(issue.title).toBe(record.title);
-        expect(issue.status).toBe(record.status);
-        expect(issue.priority).toBe(record.priority);
-        expect(issue.type).toBe(record.issue_type);
-        expect(issue.labels).toEqual(record.labels ?? []);
-        expect(issue.createdAt).toBe(record.created_at);
+        expect(issue, `${String(record.id)} against its raw record`).toEqual(expectedIssue(record));
       }
     },
     REAL_BD_TIMEOUT_MS * 3 + 10_000,
   );
+
+  it("should map every Issue field when a record sets each one", async () => {
+    expect(Object.keys(expectedIssue(FULL_RECORD)).sort()).toEqual([...ISSUE_FIELDS].sort());
+    const { client } = await stubbed({ stdout: JSON.stringify([FULL_RECORD]) });
+
+    const [issue] = okValue(await client.list());
+
+    expect(issue).toEqual(expectedIssue(FULL_RECORD));
+    expect(issue?.owner).toBe("Sergei Wallace");
+  });
 });
 
 describe("list through a stub bd", () => {
@@ -143,6 +252,54 @@ describe("list through a stub bd", () => {
     const result = await client.list({ timeoutMs: 200 });
     expect(result).toEqual({ kind: "timeout", command: "bd list", timeoutMs: 200 });
     expect(Date.now() - started).toBeLessThan(5_000);
+    expect(await stub.calls()).toHaveLength(1);
+  });
+});
+
+describe("timeouts", () => {
+  // Node reads 0 as no timeout, throws on a negative, fractional or non-finite one, and turns
+  // one past 2^31 - 1 into 1 ms, so each must come back as a typed failure before bd runs.
+  const invalid = [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, 2 ** 31];
+
+  for (const timeoutMs of invalid) {
+    it(`should return failed naming the call's timeoutMs and not run bd when it is ${timeoutMs}`, async () => {
+      const { stub, client } = await stubbed({ stdout: ISSUE_JSON });
+
+      const result = await client.list({ timeoutMs });
+
+      expect(result).toEqual({
+        kind: "failed",
+        exitCode: null,
+        stderr: "",
+        message: `the call's timeoutMs must be a whole number of milliseconds from 1 to 2147483647, got ${timeoutMs}`,
+      });
+      expect(await stub.calls()).toEqual([]);
+    });
+  }
+
+  it("should return failed naming the client's timeoutMs on every call when it is invalid", async () => {
+    const stub = await stubBd({ stdout: ISSUE_JSON });
+    stubs.push(stub);
+    const client = createBdClient({ cwd: stub.dir, env: stub.env, timeoutMs: -5 });
+
+    const results = [await client.list(), await client.close("BU-abc", { timeoutMs: 1_000 })];
+
+    for (const result of results) {
+      expect(result).toEqual({
+        kind: "failed",
+        exitCode: null,
+        stderr: "",
+        message:
+          "the client's timeoutMs must be a whole number of milliseconds from 1 to 2147483647, got -5",
+      });
+    }
+    expect(await stub.calls()).toEqual([]);
+  });
+
+  it("should run bd when the timeout is the largest Node honours", async () => {
+    const { stub, client } = await stubbed({ stdout: ISSUE_JSON });
+
+    expect((await client.list({ timeoutMs: 2_147_483_647 })).kind).toBe("ok");
     expect(await stub.calls()).toHaveLength(1);
   });
 });
@@ -277,7 +434,7 @@ describe("update through a stub bd", () => {
     const { stub, client } = await stubbed({ exitCode: 13 });
     const result = await client.update("BU-abc", { assignee: "me" }, { ifAssignee: "" });
     expect(result.kind).toBe("stale");
-    expect(await stub.calls()).toEqual(["update BU-abc --assignee=me --if-assignee="]);
+    expect(await stub.calls()).toEqual(["update BU-abc --assignee=me --if-assignee= --json"]);
   });
 
   it("should write the same argv as the core's moveArgv when the update is a guarded move", async () => {
@@ -303,7 +460,7 @@ describe("update through a stub bd", () => {
     });
     expect(await stub.calls()).toEqual([
       "update BU-abc --title=-starts with a dash --description=two words --priority=1 --type=bug" +
-        " --due=2026-11-01 --estimate=30 --add-label=sprint:s1 --remove-label=old",
+        " --due=2026-11-01 --estimate=30 --add-label=sprint:s1 --remove-label=old --json",
     ]);
   });
 
@@ -364,7 +521,7 @@ describe("create and close through a stub bd", () => {
   it("should run bd close on the id and return ok when bd exits 0", async () => {
     const { stub, client } = await stubbed({});
     expect(await client.close("BU-abc")).toEqual({ kind: "ok", value: undefined });
-    expect(await stub.calls()).toEqual(["close BU-abc"]);
+    expect(await stub.calls()).toEqual(["close BU-abc --json"]);
   });
 
   it("should return failed with bd's text when bd close refuses", async () => {

@@ -39,7 +39,20 @@ describe("bd argv builders", () => {
       "in_progress",
       "--if-status",
       "open",
+      "--json",
     ]);
+  });
+
+  test("should ask bd for JSON on every write, as D-4 requires for reads and writes", () => {
+    const writes = [
+      moveArgv("BU-2zw", "in_progress", "open"),
+      closeArgv("BU-2zw"),
+      reopenArgv("BU-2zw"),
+      deleteArgv("BU-2zw", { cascade: false }),
+      deleteArgv("BU-2zw", { cascade: true }),
+    ];
+
+    for (const argv of writes) expect(argv).toContain("--json");
   });
 
   test("should build the delete ladder's commands when given an issue id", () => {
@@ -52,16 +65,23 @@ describe("bd argv builders", () => {
       "--dry-run",
       "--json",
     ]);
-    expect(deleteArgv("BU-2zw", { cascade: false })).toEqual(["bd", "delete", "BU-2zw", "--force"]);
+    expect(deleteArgv("BU-2zw", { cascade: false })).toEqual([
+      "bd",
+      "delete",
+      "BU-2zw",
+      "--force",
+      "--json",
+    ]);
     expect(deleteArgv("BU-mg2.3", { cascade: true })).toEqual([
       "bd",
       "delete",
       "BU-mg2.3",
       "--cascade",
       "--force",
+      "--json",
     ]);
-    expect(closeArgv("BU-2zw")).toEqual(["bd", "close", "BU-2zw"]);
-    expect(reopenArgv("BU-2zw")).toEqual(["bd", "reopen", "BU-2zw"]);
+    expect(closeArgv("BU-2zw")).toEqual(["bd", "close", "BU-2zw", "--json"]);
+    expect(reopenArgv("BU-2zw")).toEqual(["bd", "reopen", "BU-2zw", "--json"]);
   });
 
   test("should refuse an id or status that bd would read as a flag or split", () => {

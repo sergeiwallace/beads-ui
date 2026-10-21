@@ -40,8 +40,8 @@ layers and not their UI components: each surface draws its own views.
 | `scripts/check-core-purity.mjs` | The purity gate `npm run lint` runs on the shared core |
 | `.claude-plugin/marketplace.json` | The marketplace that lists the mod, `./plugins/beads-ui` |
 | `scripts/check-marketplace.mjs` | The pre-commit gate that runs `claude plugin validate .` and checks the marketplace lists the mod |
-| `scripts/check-plugin-size.mjs` | The pre-commit gate that fails naming any file under `plugins/beads-ui` over 1 MB |
-| `scripts/check-plugin-allowlist.mjs` | The pre-commit gate that holds the hooks and `$` calls `claude plugin validate --json` reports to `plugins/beads-ui/validate-allowlist.json`, and every `$` call to the hooks module's own file |
+| `scripts/check-plugin-size.mjs` | The pre-commit gate that fails naming any file git tracks or stages under `plugins/beads-ui` over 1 MB, with no directory exempt |
+| `scripts/check-plugin-allowlist.mjs` | The pre-commit gate that holds the hooks and `$` calls `claude plugin validate --json` reports to `plugins/beads-ui/validate-allowlist.json`, and every `$` call to the hooks module's own file: outside it no `$.` call and no claude-code engine type, inside it no bare `$` handed to a call |
 
 The core sits inside the plugin because an installed plugin cannot reach files above its own
 directory. The design doc records when the core moves to its own package.
