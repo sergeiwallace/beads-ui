@@ -124,6 +124,12 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      - id: marketplace-validate
+        name: claude plugin validate . (the marketplace lists ./plugins/beads-ui)
+        entry: node scripts/check-marketplace.mjs . ./plugins/beads-ui
+        language: system
+        pass_filenames: false
+        always_run: true
 
       # docs-index-check REMOVED (CORE-55). The generated docs/README.md index had
       # no reader -- nothing in the fleet consumed it -- yet the gate blocked every
