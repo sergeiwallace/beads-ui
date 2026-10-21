@@ -357,4 +357,14 @@ describe("backlogView", () => {
   test("should fall back to the open status when bd returned no statuses", () => {
     expect(backlogView(allIssues(), { ...options(""), statuses: [] }).total).toBe(20);
   });
+
+  test("should reach every open issue page by page, in sort order, when a page size is given", () => {
+    const all = backlogView(allIssues(), options("")).rows.map((row) => row.id);
+    const at = (page: number) => backlogView(allIssues(), { ...options(""), pageSize: 6, page });
+
+    expect(at(0).page).toEqual({ key: "backlog", page: 0, pages: 4, from: 1, to: 6, total: 20 });
+    expect([0, 1, 2, 3].flatMap((page) => at(page).rows.map((row) => row.id))).toEqual(all);
+    expect(at(3).rows.map((row) => row.id)).toEqual(all.slice(18));
+    expect(at(9).page).toMatchObject({ page: 3, from: 19, to: 20 });
+  });
 });

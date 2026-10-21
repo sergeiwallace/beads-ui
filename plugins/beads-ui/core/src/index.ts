@@ -146,7 +146,7 @@ export {
   terminalColor,
 } from "./tokens.ts";
 export type { BacklogOptions, BacklogRow, BacklogView } from "./views/backlog.ts";
-export { backlogView } from "./views/backlog.ts";
+export { BACKLOG_PAGE_SIZE, backlogView } from "./views/backlog.ts";
 export type { BandCount, BandView } from "./views/band.ts";
 export { bandView } from "./views/band.ts";
 export type {

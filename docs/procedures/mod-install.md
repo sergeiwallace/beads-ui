@@ -57,7 +57,7 @@ The pane takes these keys while it has the keyboard (`/beads` gives it the keybo
 | `d` | Open the focused card's detail |
 | `m` | Focus the focused card's Move to |
 | `x` | Delete the focused card, or the issue on the Detail tab |
-| `p`, `b` | Next or previous page of the focused card's column, while the board is paged |
+| `p`, `b` | Next or previous page: of the focused card's column on the Board, of the list on the Backlog, while it is paged |
 | `l` | Next page of swimlanes, while they take more than one page |
 | `u` | Undo the last close, while its line is shown |
 | `h` | Show or hide the help panel |
@@ -65,7 +65,7 @@ The pane takes these keys while it has the keyboard (`/beads` gives it the keybo
 
 Every card carries a Move to control: Tab to it, press Enter to open its list, pick a status with the arrows and press Enter. Esc closes the whole pane, even from an open list. The move shows at once and is written with `bd update <id> --status <new> --if-status <shown>`. If another session changed the issue first, bd refuses the write, the card goes back to its column and a line says so.
 
-A large board is drawn in pages, because Claude Code cuts off a mod's drawing past 100,000 characters. A column with more cards than fit shows a range such as `1-25 of 200` under its cards, between a `back` control and a `+175 more` control; both wrap round, so `more` on the last page goes back to the first. Tab to either and press Enter, or press `p` or `b` with a card in that column focused, which also moves the focus onto the new page's first card. When the swimlanes do not fit on one page, a `lanes 1-18 of 201` line above them pages through the lanes the same way, with `l` for the next page. A new filter, swimlane or sort starts every column again at its first page.
+A large board is drawn in pages, because Claude Code cuts off a mod's drawing past 100,000 characters. A column with more cards than fit shows a range such as `1-25 of 200` under its cards, between a `back` control and a `+175 more` control; both wrap round, so `more` on the last page goes back to the first. Tab to either and press Enter, or press `p` or `b` with a card in that column focused, which also moves the focus onto the new page's first card. When the swimlanes do not fit on one page, a `lanes 1-18 of 201` line above them pages through the lanes the same way, with `l` for the next page. The Backlog lists 60 open issues to a page, with the same `back` and `more` controls under the list and `p` and `b` stepping it. A new filter, swimlane or sort starts every column, and the Backlog, again at its first page.
 
 In the delete confirmation:
 

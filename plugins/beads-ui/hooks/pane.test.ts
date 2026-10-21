@@ -77,6 +77,28 @@ const keysOf = async (ui: Mounted, prefix: string, type = "Box") =>
     .map((element) => element.key ?? "")
     .filter((key) => key.startsWith(prefix));
 
+// A store of 600 issues, a third each open, in progress and closed, spread over `assignees`:
+// bd's own records, renamed, from the first record of `bd list --json --all --brief --limit 0`.
+const largeStore = (assignees: number) => {
+  const [first] = JSON.parse(list) as Record<string, unknown>[];
+  return Array.from({ length: 600 }, (_, i) => ({
+    ...first,
+    id: `BU-load${i}`,
+    title: `issue number ${i} with a title long enough to fill a card`,
+    status: ["open", "in_progress", "closed"][i % 3],
+    metadata: { display_id: `BU-issue-number-${i}-load` },
+    labels: [`id:BU-issue-number-${i}-load`],
+    assignee: `aih-ec2-${i % assignees}`,
+  }));
+};
+const openLarge = ($: Engine, on: On, assignees: number) =>
+  openPane($, on, {
+    script: (key) =>
+      key === "bd list --all --brief --limit 0"
+        ? ok(JSON.stringify(largeStore(assignees)))
+        : undefined,
+  });
+
 describe("the Board tab", () => {
   for (const surface of SURFACES) {
     test(`should render one column per bd status in category order with its count when the pane opens on ${surface}`, async ($, on) => {
@@ -190,26 +212,6 @@ describe("the Board tab", () => {
     expect((await ui.find({ key: "column::open" }))?.text).toBe("open 20");
   });
 
-  // bd's own records, renamed: the first record of `bd list --json --all --brief --limit 0`.
-  const largeStore = (assignees: number) => {
-    const [first] = JSON.parse(list) as Record<string, unknown>[];
-    return Array.from({ length: 600 }, (_, i) => ({
-      ...first,
-      id: `BU-load${i}`,
-      title: `issue number ${i} with a title long enough to fill a card`,
-      status: ["open", "in_progress", "closed"][i % 3],
-      metadata: { display_id: `BU-issue-number-${i}-load` },
-      labels: [`id:BU-issue-number-${i}-load`],
-      assignee: `aih-ec2-${i % assignees}`,
-    }));
-  };
-  const openLarge = ($: Engine, on: On, assignees: number) =>
-    openPane($, on, {
-      script: (key) =>
-        key === "bd list --all --brief --limit 0"
-          ? ok(JSON.stringify(largeStore(assignees)))
-          : undefined,
-    });
   const everyMove = Array.from({ length: 600 }, (_, i) => `move:BU-load${i}`).sort();
 
   /**
@@ -317,6 +319,43 @@ describe("the Board tab", () => {
 describe("the Backlog tab", () => {
   const openIds = () =>
     sortIssues(issues().filter((issue) => issue.status === "open")).map((issue) => issue.id);
+
+  test("should reach the last open issue by paging the list when the store has more than a page", async ($, on) => {
+    const parsed = parseBdList(JSON.stringify(largeStore(1)));
+    const open = sortIssues(
+      (parsed.ok ? parsed.value : []).filter((issue) => issue.status === "open"),
+    ).map((issue) => `row:${issue.id}`);
+    const { ui } = await openLarge($, on, 1);
+    await ui.press({ key: "tab:backlog" });
+    const seen: string[] = [];
+    let largest = 0;
+
+    expect((await ui.find({ key: "backlog-count" }))?.text).toContain("200 of 200 open issues");
+    expect((await ui.find({ key: "backlog-pager" }))?.text).toContain("rows 1-60 of 200");
+    for (let page = 0; page < 4; page++) {
+      largest = Math.max(largest, JSON.stringify(await ui.drawn()).length);
+      seen.push(...(await keysOf(ui, "row:")));
+      await ui.press({ key: "backlog-next" });
+    }
+
+    expect(seen).toEqual(open);
+    expect(seen.at(-1)).toBe(open.at(-1));
+    expect(largest).toBeLessThan(100_000);
+    expect((await ui.find({ key: "backlog-pager" }))?.text).toContain("rows 1-60 of 200");
+  });
+
+  test("should step the list with p and b on the Backlog tab", async ($, on) => {
+    const { w, ui } = await openLarge($, on, 1);
+    await ui.press({ key: "tab:backlog" });
+
+    await ui.press({ key: "page-back" });
+    await w.clock.settle();
+    expect((await ui.find({ key: "backlog-pager" }))?.text).toContain("rows 181-200 of 200");
+
+    await ui.press({ key: "page-next" });
+    await w.clock.settle();
+    expect((await ui.find({ key: "backlog-pager" }))?.text).toContain("rows 1-60 of 200");
+  });
 
   test("should list open issues by priority then created date when the Backlog tab renders", async ($, on) => {
     const { ui } = await openPane($, on);

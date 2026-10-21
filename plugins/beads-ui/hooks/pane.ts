@@ -2,6 +2,8 @@ import type { Elements, RenderElement, RenderNode, Timer } from "claude-code";
 
 import {
   asOf,
+  BACKLOG_PAGE_SIZE,
+  type BacklogView,
   BOARD_PAGE_LIMIT,
   type BoardEvent,
   type BoardState,
@@ -93,7 +95,6 @@ const WANTED_ROWS = 24;
 
 const READ_TIMEOUT_MS = 8_000;
 const WRITE_TIMEOUT_MS = 15_000;
-const BACKLOG_ROW_LIMIT = 60;
 
 export type Tab = "board" | "backlog" | "detail";
 const TABS: readonly { tab: Tab; label: string; hotkey: string }[] = [
@@ -171,6 +172,7 @@ export class BeadsPane {
   cellPages: Record<string, number> = {};
   lanePage = 0;
   unplacedPage = 0;
+  backlogPage = 0;
   /** The body width the pane last drew at, for the page steps that run between draws. */
   private width = WANTED_COLUMNS;
 
@@ -585,6 +587,7 @@ export class BeadsPane {
     this.cellPages = {};
     this.lanePage = 0;
     this.unplacedPage = 0;
+    this.backlogPage = 0;
   }
 
   /** Steps one board cell's page (or the unplaced cards', key `unplaced`), wrapping at the ends. */
@@ -609,10 +612,15 @@ export class BeadsPane {
   }
 
   /**
-   * `p` and `b`: the next or previous page of the focused card's cell. The focused card leaves the
-   * drawing, so the focus ring moves onto the new page's first card instead of the prompt.
+   * `p` and `b`: on the Board the next or previous page of the focused card's cell, on the
+   * Backlog of the list. The focused card or row leaves the drawing, so the focus ring moves onto
+   * the new page's first one instead of falling back to the prompt.
    */
   async stepFocusedPage(delta: number): Promise<void> {
+    if (this.tab === "backlog") {
+      await this.stepBacklog(delta, true);
+      return;
+    }
     const view = this.boardViewAt(this.width);
     const id = this.focusedId;
     const cells = [
@@ -841,9 +849,11 @@ export class BeadsPane {
           ? this.drawBacklog(ui, width)
           : this.drawDetail(ui, width);
     const paged =
-      this.tab === "board" &&
-      (view.unplacedPage.pages > 1 ||
-        view.lanes.some((lane) => lane.pages.some((page) => page.pages > 1)));
+      this.tab === "backlog"
+        ? this.backlogViewAt(width).page.pages > 1
+        : this.tab === "board" &&
+          (view.unplacedPage.pages > 1 ||
+            view.lanes.some((lane) => lane.pages.some((page) => page.pages > 1)));
     return Box({
       flexDirection: "column",
       children: present<RenderNode>([
@@ -1209,21 +1219,48 @@ export class BeadsPane {
     });
   }
 
-  private drawBacklog(ui: PaneUi, width: number): RenderElement {
-    const { Box, Text, Button } = ui;
+  /** The Backlog's column widths at a body width. */
+  private backlogLayout(width: number): { wide: boolean; idWidth: number; titleWidth: number } {
     const wide = width >= 90;
     const idWidth = Math.min(32, Math.max(10, Math.floor(width * (wide ? 0.28 : 0.3))));
     const fixed = wide ? 3 + idWidth + 8 + 12 + 10 + 8 + 6 : 3 + idWidth + 6 + 3;
-    const view = backlogView(this.board.issues, {
+    return { wide, idWidth, titleWidth: Math.max(10, width - fixed) };
+  }
+
+  /** The Backlog as core pages it, at the page the person stepped to. */
+  private backlogViewAt(width: number): BacklogView {
+    const { idWidth, titleWidth } = this.backlogLayout(width);
+    return backlogView(this.board.issues, {
       statuses: this.board.statuses,
       filter: this.filter,
       sort: this.sort,
-      titleWidth: Math.max(10, width - fixed),
+      titleWidth,
       idWidth,
+      pageSize: BACKLOG_PAGE_SIZE,
+      page: this.backlogPage,
       ...(this.readyIds === undefined ? {} : { readyIds: this.readyIds }),
     });
-    const shown = view.rows.slice(0, BACKLOG_ROW_LIMIT);
-    const cut = view.rows.length - shown.length;
+  }
+
+  /**
+   * Steps the Backlog's page, wrapping at the ends. When `refocus`, the focus ring moves onto the
+   * new page's first row, as the row that held it is no longer drawn.
+   */
+  async stepBacklog(delta: number, refocus = false): Promise<void> {
+    const { page } = this.backlogViewAt(this.width);
+    this.backlogPage = stepPage(page.page, page.pages, delta);
+    this.host?.invalidate();
+    const first = this.backlogViewAt(this.width).rows[0];
+    if (!refocus || first === undefined) return;
+    this.focusedId = first.id;
+    await this.host?.focus(PANE_ID, `open:${first.id}`).catch(() => undefined);
+  }
+
+  private drawBacklog(ui: PaneUi, width: number): RenderElement {
+    const { Box, Text, Button } = ui;
+    const { wide, idWidth } = this.backlogLayout(width);
+    const view = this.backlogViewAt(width);
+    const { page } = view;
     return Box({
       key: "backlog",
       flexDirection: "column",
@@ -1233,11 +1270,11 @@ export class BeadsPane {
           children: [
             Text({
               dimColor: true,
-              children: `${view.rows.length} of ${view.total} open issues, ${sortLabel(this.sort)} order`,
+              children: `${page.total} of ${view.total} open issues, ${sortLabel(this.sort)} order`,
             }),
           ],
         }),
-        ...shown.map((row) =>
+        ...view.rows.map((row) =>
           Box({
             key: `row:${row.id}`,
             flexDirection: "row",
@@ -1273,9 +1310,29 @@ export class BeadsPane {
             ],
           }),
         ),
-        cut === 0
+        page.pages === 1
           ? undefined
-          : Text({ dimColor: true, children: `+${cut} more; narrow the filter` }),
+          : Box({
+              key: "backlog-pager",
+              flexDirection: "row",
+              columnGap: 1,
+              children: [
+                Button({
+                  key: "backlog-back",
+                  label: page.page === 0 ? "last page" : "back",
+                  plain: true,
+                  dimColor: true,
+                  onPress: () => void this.stepBacklog(-1),
+                }),
+                Text({ dimColor: true, children: `rows ${page.from}-${page.to} of ${page.total}` }),
+                Button({
+                  key: "backlog-next",
+                  label: page.to < page.total ? `+${page.total - page.to} more` : "first page",
+                  plain: true,
+                  onPress: () => void this.stepBacklog(1),
+                }),
+              ],
+            }),
       ]),
     });
   }
