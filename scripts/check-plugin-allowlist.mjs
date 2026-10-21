@@ -4,10 +4,23 @@
 // Runs `claude plugin validate --strict --json <plugin-dir>` and compares every
 // "<module> <kind>: <values>" note it reports (hooks, calls, env reads, env writes,
 // surface modules, gating hooks) with the allow-list, printing one line per difference.
-// Then it fails naming the file and line of any `$.` outside the hooks modules that
-// hooks/hooks.json names: validate files every call under the module that reached it,
-// even one made in a helper the module handed `on` or `$` to, so the report alone cannot
-// show where a call sits. Test files (*.test.*, *.spec.*, test/ and tests/) are skipped.
+// Then it scans the sources, because validate files every call under the module that reached
+// it, even one made in a helper the module handed `on` or `$` to, so the report alone cannot
+// show where a call sits. It fails naming the file and line of:
+//   - any `$.` outside the hooks modules that hooks/hooks.json names;
+//   - outside those modules, any reference to a claude-code type that carries the engine
+//     (ENGINE_TYPES: the engine interface, the registrar and the hook signatures), by a named
+//     import (aliased or not), a re-export, a namespace member or an inline `import("claude-code")`;
+//   - inside a hooks module, a bare `$` that is neither a parameter nor followed by a member
+//     access, such as `helper($)`. validate --strict already refuses `$` bound to a name
+//     (`const engine = $`) but accepts it passed straight to a call.
+// Test files (*.test.*, *.spec.*, test/ and tests/) are skipped.
+//
+// A static scan is not a proof. It does not see: a helper whose engine parameter is untyped or
+// typed `any` or `unknown`, when the hooks module hands it the engine under another name than
+// `$` (a hook may name its first parameter anything); a noun handed out, such as `helper($.ui)`;
+// an engine type rebuilt structurally or derived from a hooks module's export
+// (`Parameters<typeof register>`). `claude plugin test` and review cover those.
 // Exits 1 on any difference or validation error, 2 when validate cannot run.
 import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
@@ -20,6 +33,33 @@ const ENGINE_CALL = /(?<![\w$])\$\.[A-Za-z_]/;
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"]);
 const SKIPPED_DIRS = new Set(["node_modules", ".turbo", "test", "tests"]);
 const TEST_FILE = /\.(test|spec)\.[cm]?[jt]sx?$/;
+// The exported names of the "claude-code" module (mods/types/claude-code.d.ts) whose type is or
+// takes the engine `$`.
+const ENGINE_TYPES = new Set([
+  "AnyEventHook",
+  "CatchHandler",
+  "CoreEngineInterface",
+  "EngineCreateResult",
+  "EngineInterface",
+  "EngineInterfaceBuilt",
+  "Events",
+  "GlobHook",
+  "Hook",
+  "HookFor",
+  "HookOf",
+  "HooksModule",
+  "MatchedHook",
+  "MatchedStreamHook",
+  "On",
+  "Register",
+  "Registration",
+  "StreamHook",
+]);
+const FROM_CLAUDE_CODE =
+  /\b(?:import|export)\s+(?:type\s+)?([^;'"`]*?)\s*from\s*(["'])claude-code\2/g;
+const INLINE_IMPORT = /\bimport\s*\(\s*(["'])claude-code\1\s*\)\s*\.\s*([\w$]+)/g;
+const BARE_ENGINE = /(?<![\w$.])\$(?![\w$])/g;
+const PARAMETER_LIST_OPENER = /(?:\bfunction\s*[\w$]*|\basync)\s*$/;
 
 function splitTopLevel(values) {
   const parts = [];
@@ -151,23 +191,109 @@ function sourceFiles(dir) {
   return files;
 }
 
-function callsOutsideModules(pluginDir) {
+const lineAt = (text, offset) => text.slice(0, offset).split("\n").length;
+
+// Each engine type the file names from "claude-code", as [offset, name].
+function engineTypeReferences(source, code) {
+  const found = [];
+  const inCode = (offset) => code[offset] !== " ";
+  for (const match of source.matchAll(FROM_CLAUDE_CODE)) {
+    if (!inCode(match.index)) continue;
+    const clause = match[1];
+    const clauseAt = match.index + match[0].indexOf(clause);
+    const braces = /\{([^}]*)\}/.exec(clause);
+    if (braces) {
+      let cursor = clauseAt + braces.index + 1;
+      for (const item of braces[1].split(",")) {
+        const name = item
+          .trim()
+          .replace(/^type\s+/, "")
+          .split(/\s+as\s+/)[0];
+        if (ENGINE_TYPES.has(name)) found.push([source.indexOf(name, cursor), name]);
+        cursor += item.length + 1;
+      }
+    }
+    const namespace = /\*\s*as\s+([\w$]+)/.exec(clause);
+    if (namespace) {
+      const escaped = namespace[1].replace(/\$/g, "\\$");
+      const member = new RegExp(`(?<![\\w$.])${escaped}\\s*\\.\\s*([\\w$]+)`, "g");
+      for (const use of code.matchAll(member)) {
+        if (ENGINE_TYPES.has(use[1])) found.push([use.index, use[1]]);
+      }
+    }
+  }
+  for (const match of source.matchAll(INLINE_IMPORT)) {
+    if (inCode(match.index) && ENGINE_TYPES.has(match[2])) found.push([match.index, match[2]]);
+  }
+  return found;
+}
+
+// True when the `$` at `offset` is declared in a parameter list: the innermost bracket around
+// it is a `(` that opens a function's parameters, not a call's arguments.
+function isParameter(code, offset) {
+  let depth = 0;
+  let open = -1;
+  for (let k = offset - 1; k >= 0 && open === -1; k--) {
+    const char = code[k];
+    if (char === ")" || char === "]" || char === "}") depth++;
+    else if (char === "(" || char === "[" || char === "{") {
+      if (depth === 0) {
+        if (char !== "(") return false;
+        open = k;
+      } else depth--;
+    }
+  }
+  if (open === -1) return false;
+  if (PARAMETER_LIST_OPENER.test(code.slice(Math.max(0, open - 60), open))) return true;
+  depth = 0;
+  for (let k = open; k < code.length; k++) {
+    if (code[k] === "(") depth++;
+    else if (code[k] === ")" && --depth === 0) {
+      return /^\s*(=>|\{)/.test(code.slice(k + 1, k + 40));
+    }
+  }
+  return false;
+}
+
+// Each bare `$` in a hooks module that is not a parameter or a member access's object.
+function engineHandedOut(code) {
+  const found = [];
+  for (const match of code.matchAll(BARE_ENGINE)) {
+    const after = code.slice(match.index + 1).trimStart();
+    if (after.startsWith(".") || after.startsWith("?.") || after.startsWith("[")) continue;
+    if (!isParameter(code, match.index)) found.push(match.index);
+  }
+  return found;
+}
+
+function engineEscapes(pluginDir) {
   const hooksDir = join(pluginDir, "hooks");
   const declared = JSON.parse(readFileSync(join(hooksDir, "hooks.json"), "utf8")).modules ?? [];
   const modules = new Set(declared.map((module) => resolve(hooksDir, module)));
+  const named = declared.join(", ");
   const problems = [];
   for (const file of sourceFiles(pluginDir)) {
-    if (modules.has(file)) continue;
-    const lines = codeOnly(readFileSync(file, "utf8")).split("\n");
-    lines.forEach((line, index) => {
+    const source = readFileSync(file, "utf8");
+    const code = codeOnly(source);
+    const at = (offset) => `${relative(pluginDir, file)}:${lineAt(source, offset)}`;
+    if (modules.has(file)) {
+      for (const offset of engineHandedOut(code)) {
+        problems.push(`${at(offset)}: $ handed on rather than called, in the hooks module`);
+      }
+      continue;
+    }
+    code.split("\n").forEach((line, index) => {
       if (ENGINE_CALL.test(line)) {
         problems.push(
-          `${relative(pluginDir, file)}:${index + 1}: a $ call outside the hooks module (${declared.join(", ")})`,
+          `${relative(pluginDir, file)}:${index + 1}: a $ call outside the hooks module (${named})`,
         );
       }
     });
+    for (const [offset, name] of engineTypeReferences(source, code)) {
+      problems.push(`${at(offset)}: the engine type ${name} outside the hooks module (${named})`);
+    }
   }
-  return problems;
+  return problems.sort();
 }
 
 function compare(reported, allowed, problems) {
@@ -230,7 +356,7 @@ function main() {
   }
 
   compare(reportedOf(report, problems), allowed, problems);
-  problems.push(...callsOutsideModules(pluginDir));
+  problems.push(...engineEscapes(pluginDir));
 
   if (problems.length > 0) fail(problems, pluginDir, allowlistPath);
   console.log(`check-plugin-allowlist: ${shown(pluginDir)} matches ${shown(allowlistPath)}`);
