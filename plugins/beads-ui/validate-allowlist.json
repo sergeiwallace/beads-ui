@@ -1,12 +1,38 @@
 {
   "modules": {
     "./register.ts": {
-      "hooks": ["session.start", "command.run{command=beads}", "ui.render{component=Pane}"],
-      "calls": ["$.command.register", "$.ui.open", "$.ui.resolve"],
-      "env reads": [],
+      "hooks": [
+        "session.start",
+        "command.run{command=beads|bu}",
+        "ui.close{id=beads|beads-confirm}",
+        "ui.focus{requestId=beads}",
+        "ui.render{component=AbovePrompt}",
+        "ui.render{component=Pane}"
+      ],
+      "calls": [
+        "$.clock.every",
+        "$.clock.now",
+        "$.command.register",
+        "$.env.get",
+        "$.fs.read",
+        "$.process.run",
+        "$.store.get",
+        "$.store.set",
+        "$.ui.close",
+        "$.ui.focus",
+        "$.ui.invalidate",
+        "$.ui.open",
+        "$.ui.resolve",
+        "$.ui.toast"
+      ],
+      "env reads": ["HOME", "XDG_CONFIG_HOME"],
       "env writes": [],
       "surface modules": ["client/hello.ts"],
-      "gating hook with .catch": ["command.run{command=beads}"],
+      "gating hook with .catch": [
+        "command.run{command=beads|bu}",
+        "ui.close{id=beads|beads-confirm}",
+        "ui.focus{requestId=beads}"
+      ],
       "gating hook without .catch": []
     }
   }

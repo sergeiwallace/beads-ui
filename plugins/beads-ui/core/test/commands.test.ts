@@ -49,10 +49,12 @@ describe("COMMANDS", () => {
       "tab.detail": "4",
       "issue.new": "n",
       "board.swimlane": "s",
+      "view.sort": "o",
       help: "h",
       "card.detail": "d",
       "card.move": "m",
       "card.delete": "x",
+      "close.undo": "u",
       "confirm.close-instead": "c",
       "confirm.delete": "x",
     });

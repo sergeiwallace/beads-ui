@@ -35,8 +35,8 @@ function editRegister(dir: string, from: string, to: string) {
 const runGate = (dir: string) =>
   spawnSync("node", [gate, dir, allowlist], { cwd: repoRoot, encoding: "utf8" });
 
-const SESSION_START = "await $.command.register(COMMAND_SPEC);";
-const CORE_IMPORT = 'import { STATUS_CATEGORIES } from "../core/src/index.ts";';
+const SESSION_START = "for (const spec of COMMAND_SPECS) await $.command.register(spec);";
+const IMPORT_ANCHOR = 'import { drawBand } from "./bands.ts";';
 
 describe("the validate allow-list gate", () => {
   it("should pass when run on the real plugin", () => {
@@ -50,14 +50,14 @@ describe("the validate allow-list gate", () => {
 
   it("should fail naming the call when the hooks module makes a $ call the allow-list lacks", () => {
     const dir = pluginWith((d) =>
-      editRegister(d, SESSION_START, `${SESSION_START}\n    await $.store.get("view");`),
+      editRegister(d, SESSION_START, `${SESSION_START}\n    await $.store.delete("view");`),
     );
 
     const result = runGate(dir);
 
     expect(result.status).toBe(1);
     expect(result.stdout).toContain(
-      "check-plugin-allowlist: ./register.ts calls: $.store.get is not in the allow-list",
+      "check-plugin-allowlist: ./register.ts calls: $.store.delete is not in the allow-list",
     );
   });
 
@@ -86,7 +86,7 @@ describe("the validate allow-list gate", () => {
         join(d, "hooks/helper.ts"),
         'import type { EngineInterface } from "claude-code";\n\nexport async function view($: EngineInterface) {\n  return $.ui.open({ id: "other" });\n}\n',
       );
-      editRegister(d, CORE_IMPORT, `${CORE_IMPORT}\nimport { view } from "./helper.ts";`);
+      editRegister(d, IMPORT_ANCHOR, `${IMPORT_ANCHOR}\nimport { view } from "./helper.ts";`);
       editRegister(d, SESSION_START, `${SESSION_START}\n    await view($);`);
     });
 
@@ -105,7 +105,7 @@ describe("the validate allow-list gate", () => {
         join(d, "lib/extra.ts"),
         'import type { On } from "claude-code";\n\nexport function extra(on: On) {\n  on("ui.close", async ($, e, next) => {\n    await $.ui.open({ id: "other" });\n    return next(e);\n  });\n}\n',
       );
-      editRegister(d, CORE_IMPORT, `${CORE_IMPORT}\nimport { extra } from "../lib/extra.ts";`);
+      editRegister(d, IMPORT_ANCHOR, `${IMPORT_ANCHOR}\nimport { extra } from "../lib/extra.ts";`);
       editRegister(
         d,
         "export function register(on: On) {",
@@ -129,15 +129,19 @@ describe("the validate allow-list gate", () => {
         join(d, "hooks/helper.ts"),
         'export async function view(engine) {\n  return engine.ui.open({ id: "other" });\n}\n',
       );
-      editRegister(d, CORE_IMPORT, `${CORE_IMPORT}\nimport { view } from "./helper.ts";`);
+      editRegister(d, IMPORT_ANCHOR, `${IMPORT_ANCHOR}\nimport { view } from "./helper.ts";`);
       editRegister(d, SESSION_START, `${SESSION_START}\n    await view($);`);
     });
 
     const result = runGate(dir);
+    const handOff =
+      readFileSync(join(dir, "hooks/register.ts"), "utf8")
+        .split("\n")
+        .indexOf("    await view($);") + 1;
 
     expect(result.status).toBe(1);
     expect(result.stdout).toContain(
-      "check-plugin-allowlist: hooks/register.ts:26: $ handed on rather than called, in the hooks module",
+      `check-plugin-allowlist: hooks/register.ts:${handOff}: $ handed on rather than called, in the hooks module`,
     );
   });
 
@@ -148,7 +152,7 @@ describe("the validate allow-list gate", () => {
         join(d, "hooks/helper.ts"),
         'export async function view(engine) {\n  return engine.ui.open({ id: "other" });\n}\n',
       );
-      editRegister(d, CORE_IMPORT, `${CORE_IMPORT}\nimport { view } from "./helper.ts";`);
+      editRegister(d, IMPORT_ANCHOR, `${IMPORT_ANCHOR}\nimport { view } from "./helper.ts";`);
       editRegister(
         d,
         SESSION_START,
@@ -203,6 +207,23 @@ describe("the validate allow-list gate", () => {
       "check-plugin-allowlist: lib/types.ts:4: the engine type EngineInterface outside the hooks module (./register.ts)",
       "check-plugin-allowlist: lib/types.ts:5: the engine type Hook outside the hooks module (./register.ts)",
     ]);
+  });
+
+  // Claude Code writes its mod types into the plugin when it loads it (`claude --plugin-dir`),
+  // and their `claude-code/testing` declarations import the registrar types `On` and `Register`.
+  it("should pass when Claude Code has written its mod types into .claude-plugin/types", () => {
+    const dir = pluginWith((d) => {
+      mkdirSync(join(d, ".claude-plugin/types/claude-code"), { recursive: true });
+      writeFileSync(
+        join(d, ".claude-plugin/types/claude-code/index.d.ts"),
+        "declare module 'claude-code/testing' {\n  import type { On } from 'claude-code';\n  import type { Register } from 'claude-code';\n}\n",
+      );
+    });
+
+    const result = runGate(dir);
+
+    expect(result.stdout).not.toContain(".claude-plugin/types");
+    expect(result.status).toBe(0);
   });
 
   it("should fail naming the entry when an allow-listed call is no longer reported", () => {

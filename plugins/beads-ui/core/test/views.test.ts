@@ -95,6 +95,7 @@ describe("boardView", () => {
 
     expect(view.columns[1]).toEqual({
       status: "in_progress",
+      category: "wip",
       label: "in_progress 2",
       count: 2,
       token: "warning",

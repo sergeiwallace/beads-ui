@@ -36,6 +36,7 @@ export const COMMANDS: readonly Command[] = [
     binding: hotkey("s"),
     hint: "s swimlane",
   },
+  { id: "view.sort", label: "Sort", scope: "pane", binding: hotkey("o"), hint: "o sort" },
   {
     id: "view.filter",
     label: "Filter",
@@ -47,6 +48,13 @@ export const COMMANDS: readonly Command[] = [
   { id: "card.detail", label: "Detail", scope: "card", binding: hotkey("d"), hint: "d detail" },
   { id: "card.move", label: "Move to", scope: "card", binding: hotkey("m"), hint: "m move to" },
   { id: "card.delete", label: "Delete", scope: "card", binding: hotkey("x"), hint: "x delete" },
+  {
+    id: "close.undo",
+    label: "Undo close",
+    scope: "pane",
+    binding: hotkey("u"),
+    hint: "u undo close",
+  },
   {
     id: "confirm.close-instead",
     label: "Close instead",

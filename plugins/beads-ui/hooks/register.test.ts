@@ -1,67 +1,81 @@
-import type { Args, RenderPropsOf } from "claude-code";
 import { describe, expect, test } from "claude-code/testing";
 
-import { STATUS_CATEGORIES } from "../core/src/index.ts";
 import { OPEN_FAILED_TEXT, PANE_ID, PLUGIN_NAME } from "./register.ts";
-
-const PANE: RenderPropsOf["Pane"] = {
-  title: "Beads",
-  isFocused: true,
-  bodyColumns: 80,
-  placement: "dock",
-  scroll: { offset: 0, bodyRows: 30 },
-  view: {},
-};
-
-const BEADS = { command: "beads", args: "", origin: { kind: "composer" } } as const;
-
-const SURFACES = ["terminal", "desktop"] as const;
+import { BEADS, BU, PANE_PROPS, SESSION, VIEWPORT, world } from "./tests/world.ts";
 
 describe("register", () => {
-  test("should register /beads and open the beads pane when /beads runs", async ($, on) => {
-    const opened: Args<"ui.open">[] = [];
-    on("session.start", (_engine, e) => ({ cwd: e.cwd }));
-    on("command.register", (_engine, e) => ({ value: { command: e.name } }));
-    on("ui.open", (_engine, e) => {
-      opened.push(e);
-      return { value: undefined };
-    });
+  test("should register /beads and /bu and open the beads pane when /beads runs", async ($, on) => {
+    const w = world(on);
 
-    await $.session.start({ surface: "terminal", isInteractive: true, cwd: "/work" });
+    await $.session.start(SESSION);
     await $.command.run(BEADS);
 
-    expect(opened.map((open) => open.id)).toEqual([PANE_ID]);
+    expect(w.registered).toEqual(["beads", "bu"]);
+    expect(w.opened.map((open) => [open.id, open.focus, open.closeOnEscape])).toEqual([
+      [PANE_ID, true, true],
+    ]);
+  });
+
+  test("should toggle the pane closed and open again when /beads and /bu run in turn", async ($, on) => {
+    const w = world(on);
+    await $.session.start(SESSION);
+
+    await $.command.run(BEADS);
+    await $.command.run(BU);
+    await $.command.run(BU);
+
+    expect(w.opened.map((open) => open.id)).toEqual([PANE_ID, PANE_ID]);
+    expect(w.closed).toEqual([PANE_ID]);
   });
 
   test("should answer with a line when the pane cannot open", async ($, on) => {
-    on("session.start", (_engine, e) => ({ cwd: e.cwd }));
-    on("command.register", (_engine, e) => ({ value: { command: e.name } }));
-    on("ui.open", () => {
-      throw new Error("no surface");
-    });
+    world(on, { openAnswer: new Error("no surface") });
 
-    await $.session.start({ surface: "terminal", isInteractive: true, cwd: "/work" });
+    await $.session.start(SESSION);
 
     expect(await $.command.run(BEADS)).toEqual({ text: OPEN_FAILED_TEXT });
   });
 
-  for (const surface of SURFACES) {
-    test(`should draw the plugin name and the core's columns when the pane renders on ${surface}`, async ($) => {
-      const ui = await $.ui.mount({
-        plugin: PLUGIN_NAME,
-        surface,
-        component: "Pane",
-        props: PANE,
-        requestId: PANE_ID,
-        viewport: { columns: 160, rows: 40, isFullscreen: true },
-      });
-
-      expect((await ui.find({ key: "name" }))?.text).toBe(PLUGIN_NAME);
-      expect((await ui.find({ key: "columns" }))?.text).toBe(
-        `Columns: ${STATUS_CATEGORIES.join(", ")}`,
-      );
-
-      await ui.unmount();
+  test("should restore the tab, filter, swimlane and sort it stored when the pane opens", async ($, on) => {
+    const w = world(on, {
+      stored: {
+        view: { tab: "backlog", filter: "type:epic", swimlane: "assignee", sort: "created:desc" },
+      },
     });
-  }
+    await $.session.start(SESSION);
+    await $.command.run(BEADS);
+    await w.clock.settle();
+
+    const ui = await $.ui.mount({
+      plugin: PLUGIN_NAME,
+      surface: "terminal",
+      component: "Pane",
+      props: PANE_PROPS,
+      requestId: PANE_ID,
+      viewport: VIEWPORT,
+    });
+
+    expect((await ui.find({ key: "backlog-count" }))?.text).toMatch(/open issues, created:desc/);
+    expect((await ui.find({ key: "filter" }))?.props.value).toBe("type:epic");
+    expect((await ui.find({ key: "swimlane" }))?.props.label).toBe("Swimlane: assignee");
+  });
+
+  test("should keep the stored preferences and read nothing else when the store holds junk", async ($, on) => {
+    const w = world(on, { stored: { view: { tab: "kanban", swimlane: 7, sort: "rank" } } });
+    await $.session.start(SESSION);
+    await $.command.run(BEADS);
+    await w.clock.settle();
+
+    const ui = await $.ui.mount({
+      plugin: PLUGIN_NAME,
+      surface: "terminal",
+      component: "Pane",
+      props: PANE_PROPS,
+      requestId: PANE_ID,
+      viewport: VIEWPORT,
+    });
+
+    expect((await ui.find({ key: "column::open" }))?.text).toBe("open 20");
+    expect((await ui.find({ key: "sort" }))?.props.label).toBe("Sort: priority");
+  });
 });

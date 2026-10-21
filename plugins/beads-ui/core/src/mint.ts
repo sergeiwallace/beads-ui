@@ -1,8 +1,8 @@
-// Display-id minting (D-9), a port of ai-harness scripts/bd_new.py's slugify_title and
-// mint_display_id. The two implementations must agree; test/mint.test.ts pins this one against
-// ids bd-new minted in this repository's own store. bd-new's per-machine budget overrides
-// (AIH_SLUG_BODY_MAX_CHARS*) are environment reads, which core does not do, so the budgets here
-// are bd-new's defaults.
+// Display-id minting (D-9), a port of ai-harness scripts/bd_new.py's slugify_title,
+// mint_display_id and display_id_from_primary. The two implementations must agree;
+// test/mint.test.ts pins this one against ids bd-new minted in this repository's own store.
+// bd-new's per-machine budget overrides (AIH_SLUG_BODY_MAX_CHARS*) are environment reads, which
+// core does not do, so the budgets here are bd-new's defaults.
 import { issueIdArg } from "./argv.ts";
 import type { BdArgv, Issue, RandomSource, Result } from "./model.ts";
 
@@ -276,9 +276,26 @@ export interface DisplayIdPlanInput {
 }
 
 /**
+ * The gitleaks `aih-fleet-task-id` rule, ported from ai-harness `.gitleaks.toml` (read
+ * 2026-10-21): a legacy numeric fleet task id. bd-new's `_suffix_would_trip_gate` refuses a
+ * hash suffix whose `PREFIX-<suffix>` matches it, because such an id cannot be written outside
+ * `.beads/`, and mints a random suffix instead.
+ */
+export const FLEET_TASK_ID_RULE =
+  /\b(?:SW|ACN|AG|AI-CLI|CORE|DOJO|AIH|MACOS|MOBILE|AIDO|APT|ART|AURION|HEG|JOB|KC|MNS|EVE|PS|TPL|TP|KG)-[0-9]+\b/;
+
+const HASH_SUFFIX = /^[a-z0-9]+$/;
+const CHILD_ORDINAL_SUFFIX = /^[a-z0-9]+(?:\.[0-9]+)+$/;
+
+/**
  * The step after `bd create`: whether to mint, and the `bd update` that writes
  * `metadata.display_id` and the `id:<display_id>` label, the two-step shape bd-new uses.
  * `off` never touches either; an issue that already carries a display id keeps it.
+ *
+ * The suffix follows bd-new's `display_id_from_primary`: a top-level create's plain base-36
+ * hash suffix is copied (`BU-2zw` gives `BU-<slug>-2zw`); a dotted child ordinal
+ * (`BU-mg2.3.11`) has no suffix of its own, so four letters are drawn, as they are for a hash
+ * suffix that would trip the fleet task-id rule.
  */
 export function planDisplayId(input: DisplayIdPlanInput): Result<DisplayIdPlan, MintError> {
   if (input.policy === "off")
@@ -294,21 +311,36 @@ export function planDisplayId(input: DisplayIdPlanInput): Result<DisplayIdPlan, 
     };
   }
   const dash = input.createdId.lastIndexOf("-");
-  if (dash <= 0 || input.createdId.startsWith("-")) {
+  const prefix = input.createdId.slice(0, dash);
+  const suffix = input.createdId.slice(dash + 1);
+  const copied = HASH_SUFFIX.test(suffix);
+  if (
+    dash <= 0 ||
+    input.createdId.startsWith("-") ||
+    !(copied || CHILD_ORDINAL_SUFFIX.test(suffix))
+  ) {
     return {
       ok: false,
-      error: { kind: "invalid-id", message: `cannot read a prefix from ${input.createdId}` },
+      error: {
+        kind: "invalid-id",
+        message: `${input.createdId} is not a hash id bd mints (PREFIX-<hash> or PREFIX-<hash>.<n>)`,
+      },
     };
   }
-  const minted = mintDisplayId({
-    prefix: input.createdId.slice(0, dash),
-    title: input.title,
-    child: input.child,
-    taken: takenDisplayIds(input.issues),
-    random: input.random,
-  });
-  if (!minted.ok) return minted;
-  const displayId = minted.value;
+  let displayId: string;
+  if (copied && !FLEET_TASK_ID_RULE.test(`${prefix}-${suffix}`)) {
+    displayId = `${prefix}-${slugifyTitle(input.title, { child: input.child })}-${suffix}`;
+  } else {
+    const minted = mintDisplayId({
+      prefix,
+      title: input.title,
+      child: input.child,
+      taken: takenDisplayIds(input.issues),
+      random: input.random,
+    });
+    if (!minted.ok) return minted;
+    displayId = minted.value;
+  }
   return {
     ok: true,
     value: {
@@ -322,6 +354,7 @@ export function planDisplayId(input: DisplayIdPlanInput): Result<DisplayIdPlan, 
         `display_id=${displayId}`,
         "--add-label",
         `id:${displayId}`,
+        "--json",
       ],
     },
   };

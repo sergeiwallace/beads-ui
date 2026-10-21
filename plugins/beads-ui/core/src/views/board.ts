@@ -1,7 +1,8 @@
 import { moveArgv } from "../argv.ts";
 import { buildColumns, buildSwimlanes, type SwimlaneMode } from "../columns.ts";
 import { applyFilter, type Filter } from "../filter.ts";
-import type { BdArgv, Issue, Result, Status } from "../model.ts";
+import type { BdArgv, Issue, Result, Status, StatusCategory } from "../model.ts";
+import type { SortSpec } from "../sort.ts";
 import { priorityToken, statusToken, type Token } from "../tokens.ts";
 import { asOf, priorityBadge, truncate } from "./text.ts";
 
@@ -173,6 +174,8 @@ export interface CardView {
 
 export interface ColumnHeaderView {
   status: string;
+  /** The status category, which the surface groups columns by (Mockups: one Box per group). */
+  category: StatusCategory;
   label: string;
   count: number;
   token: Token;
@@ -184,6 +187,8 @@ export interface LaneView {
   label: string;
   /** One card list per column, aligned with `columns`. */
   cells: CardView[][];
+  /** How many cards each cell left out under `cardLimit`, aligned with `cells`. */
+  hidden: number[];
 }
 
 export interface BoardView {
@@ -205,7 +210,20 @@ export interface BoardViewOptions {
   softWipLimit?: Readonly<Record<string, number>>;
   filter?: Filter;
   readyIds?: ReadonlySet<string>;
+  sort?: SortSpec;
+  /**
+   * The most cards one cell draws, and the most the whole board draws: a mod tree is cut off past
+   * 100,000 serialized characters, so a large store shows the first cards of each cell and a
+   * count of the rest instead of no board at all.
+   */
+  cardLimit?: { perCell: number; total: number };
 }
+
+/**
+ * The mod's card budget. A drawn card measured about 850 serialized characters with this store's
+ * nine statuses in its Move to (hooks/pane.test.ts), so 80 cards stay near 70,000 of the 100,000.
+ */
+export const BOARD_CARD_LIMIT = { perCell: 25, total: 80 } as const;
 
 function errorLine(state: BoardState): string | undefined {
   const error = state.loadError;
@@ -240,8 +258,10 @@ export function boardView(state: BoardState, options: BoardViewOptions): BoardVi
     else filterLine = filtered.error.message;
   }
 
-  const columnOptions =
-    options.softWipLimit === undefined ? {} : { softWipLimit: options.softWipLimit };
+  const columnOptions = {
+    ...(options.softWipLimit === undefined ? {} : { softWipLimit: options.softWipLimit }),
+    ...(options.sort === undefined ? {} : { sort: options.sort }),
+  };
   const { columns, unplaced } = buildColumns(state.statuses, issues, columnOptions);
   const total = buildColumns(state.statuses, state.issues, columnOptions).columns;
   const order = columns.map((column) => column.status.name);
@@ -261,15 +281,26 @@ export function boardView(state: BoardState, options: BoardViewOptions): BoardVi
     columns.flatMap((column) => column.issues),
     options.swimlane ?? "none",
     state.issues,
-  ).map(
-    (lane): LaneView => ({
+  );
+  let budget = options.cardLimit?.total ?? Number.POSITIVE_INFINITY;
+  const perCell = options.cardLimit?.perCell ?? Number.POSITIVE_INFINITY;
+  const laneViews = lanes.map((lane): LaneView => {
+    const cells: CardView[][] = [];
+    const hidden: number[] = [];
+    for (const column of columns) {
+      const members = lane.issues.filter((issue) => issue.status === column.status.name);
+      const shown = Math.max(0, Math.min(members.length, perCell, budget));
+      budget -= shown;
+      cells.push(members.slice(0, shown).map(card));
+      hidden.push(members.length - shown);
+    }
+    return {
       key: lane.key,
       label: truncate(lane.label, width * Math.max(1, columns.length)),
-      cells: columns.map((column) =>
-        lane.issues.filter((issue) => issue.status === column.status.name).map(card),
-      ),
-    }),
-  );
+      cells,
+      hidden,
+    };
+  });
 
   const view: BoardView = {
     loading: !state.loaded,
@@ -277,13 +308,14 @@ export function boardView(state: BoardState, options: BoardViewOptions): BoardVi
       const overLimit = total[i]?.overLimit ?? false;
       return {
         status: column.status.name,
+        category: column.status.category,
         label: truncate(`${column.status.name} ${column.count}`, width),
         count: column.count,
         token: overLimit ? "warning" : statusToken(column.status.category),
         overLimit,
       };
     }),
-    lanes,
+    lanes: laneViews,
     unplaced: unplaced.map(card),
   };
   if (state.loadedAt !== undefined) view.asOf = asOf(state.loadedAt);

@@ -71,3 +71,25 @@ export function parseSort(text: string): Result<SortSpec, SortError> {
   }
   return { ok: true, value: { key: match, direction } };
 }
+
+/** The orders the `o` hotkey steps through, the default first. */
+export const SORT_CYCLE: readonly SortSpec[] = [
+  DEFAULT_SORT,
+  { key: "created", direction: "desc" },
+  { key: "updated", direction: "desc" },
+  { key: "due", direction: "asc" },
+  { key: "assignee", direction: "asc" },
+];
+
+/** The next order for the `o` hotkey; an order outside the cycle goes back to the default. */
+export function nextSort(spec: SortSpec): SortSpec {
+  const index = SORT_CYCLE.findIndex(
+    (candidate) => candidate.key === spec.key && candidate.direction === spec.direction,
+  );
+  return SORT_CYCLE[(index + 1) % SORT_CYCLE.length] ?? DEFAULT_SORT;
+}
+
+/** How a sort reads in the header and in the view preferences: `priority`, `created:desc`. */
+export function sortLabel(spec: SortSpec): string {
+  return spec.direction === "asc" ? spec.key : `${spec.key}:${spec.direction}`;
+}

@@ -1,0 +1,430 @@
+import type { On, RenderSurface } from "claude-code";
+import type { Engine } from "claude-code/testing";
+import { describe, expect, test } from "claude-code/testing";
+
+import {
+  asOf,
+  BOARD_CARD_LIMIT,
+  clockStamp,
+  type Issue,
+  parseBdHistoryEvents,
+  parseBdList,
+  parseBdShow,
+  sortIssues,
+} from "../core/src/index.ts";
+import historyMg23 from "../core/test/fixtures/bd-history-BU-mg2.3.json.ts";
+import list from "../core/test/fixtures/bd-list-all-brief.json.ts";
+import show from "../core/test/fixtures/bd-show.json.ts";
+import minted from "../core/test/fixtures/bd-show-minted.json.ts";
+import { PANE_ID, PLUGIN_NAME } from "./register.ts";
+import {
+  BEADS,
+  CWD,
+  exit,
+  ok,
+  PANE_PROPS,
+  SESSION,
+  START_MS,
+  SURFACES,
+  VIEWPORT,
+  type WorldOptions,
+  world,
+} from "./tests/world.ts";
+
+const issues = (): Issue[] => {
+  const parsed = parseBdList(list);
+  if (!parsed.ok) throw new Error(parsed.error.message);
+  return parsed.value;
+};
+const STAMP = asOf(clockStamp(START_MS, new Date(START_MS).getTimezoneOffset()));
+const COLUMN_ORDER = [
+  "open 20",
+  "in_progress 2",
+  "blocked 0",
+  "hooked 0",
+  "review 0",
+  "uat 0",
+  "deferred 0",
+  "pinned 0",
+  "closed 8",
+];
+
+/** A session in this repository with the pane opened by /beads and drawn on `surface`. */
+async function openPane(
+  $: Engine,
+  on: On,
+  options: WorldOptions = {},
+  surface: RenderSurface = "terminal",
+) {
+  const w = world(on, options);
+  await $.session.start(SESSION);
+  await $.command.run(BEADS);
+  await w.clock.settle();
+  const ui = await $.ui.mount({
+    plugin: PLUGIN_NAME,
+    surface,
+    component: "Pane",
+    props: PANE_PROPS,
+    requestId: PANE_ID,
+    viewport: VIEWPORT,
+  });
+  return { w, ui };
+}
+
+type Mounted = Awaited<ReturnType<typeof openPane>>["ui"];
+
+const keysOf = async (ui: Mounted, prefix: string, type = "Box") =>
+  (await ui.findAll({ type }))
+    .map((element) => element.key ?? "")
+    .filter((key) => key.startsWith(prefix));
+
+describe("the Board tab", () => {
+  for (const surface of SURFACES) {
+    test(`should render one column per bd status in category order with its count when the pane opens on ${surface}`, async ($, on) => {
+      const { ui } = await openPane($, on, {}, surface);
+
+      const headers = await keysOf(ui, "column::");
+      const texts = await Promise.all(headers.map(async (key) => (await ui.find({ key }))?.text));
+
+      expect(texts).toEqual(COLUMN_ORDER);
+      expect((await ui.find({ key: "header" }))?.text).toContain(STAMP);
+      expect((await ui.find({ key: "header" }))?.text).toContain("beads-ui");
+    });
+  }
+
+  test("should give every card a Move to control when the board is drawn", async ($, on) => {
+    const { ui } = await openPane($, on);
+
+    const cards = await keysOf(ui, "card:");
+    const moves = await keysOf(ui, "move:", "Select");
+
+    expect(cards.length).toBe(30);
+    expect(moves).toEqual(cards.map((key) => key.replace(/^card:/, "move:")));
+    const select = await ui.find({ key: "move:BU-2zw" });
+    expect(select?.props.label).toBe("Move to");
+    expect(select?.props.value).toBe("open");
+  });
+
+  test("should run bd update with --if-status on the shown status when a Move to status is picked", async ($, on) => {
+    const { w, ui } = await openPane($, on);
+
+    await ui.select({ key: "move:BU-2zw", value: "in_progress" });
+    await w.clock.settle();
+
+    const update = w.runs.find((argv) => argv[1] === "update");
+    expect(update?.slice(0, 7)).toEqual([
+      "bd",
+      "update",
+      "BU-2zw",
+      "--status",
+      "in_progress",
+      "--if-status",
+      "open",
+    ]);
+  });
+
+  test("should restore the card, show a conflict line and refresh that issue when bd exits 13", async ($, on) => {
+    const { w, ui } = await openPane($, on, {
+      script: (key) =>
+        key.startsWith("bd update BU-mg2.3 --status review")
+          ? exit(13, "status changed: expected in_progress")
+          : undefined,
+    });
+    const before = w.keys().length;
+
+    await ui.select({ key: "move:BU-mg2.3", value: "review" });
+    await w.clock.settle();
+
+    expect((await ui.find({ key: "move:BU-mg2.3" }))?.props.value).toBe("in_progress");
+    expect((await ui.find({ key: "group::wip" }))?.text).toContain("BU-beads-ui-claude-code-ae");
+    expect((await ui.find({ key: "conflict-line" }))?.text).toBe(
+      "BU-mg2.3 changed elsewhere before the move to review; restored to in_progress and refreshed",
+    );
+    expect(w.keys().slice(before)).toContain("bd show BU-mg2.3");
+  });
+
+  test("should draw one row per distinct assignee plus an unassigned row when the swimlane is assignee", async ($, on) => {
+    const { ui } = await openPane($, on);
+
+    await ui.press({ key: "swimlane" });
+
+    expect(await keysOf(ui, "lane:")).toEqual(["lane:aih-3", "lane:aih-ec2-3", "lane:-"]);
+    expect((await ui.find({ key: "lane:-" }))?.text).toContain("unassigned");
+    expect((await ui.find({ key: "swimlane" }))?.props.label).toBe("Swimlane: assignee");
+  });
+
+  test("should keep the last board, show the exit code and retry when bd list fails", async ($, on) => {
+    let failing = false;
+    const { w, ui } = await openPane($, on, {
+      script: (key) =>
+        failing && key === "bd list --all --brief --limit 0"
+          ? exit(1, "Error: database is locked")
+          : undefined,
+    });
+
+    failing = true;
+    await w.clock.advance(10_000);
+
+    expect((await ui.find({ key: "error-line" }))?.text).toBe(
+      `bd list failed (exit 1): Error: database is locked; showing the board ${STAMP}; retrying on the next refresh`,
+    );
+    expect((await ui.find({ key: "column::open" }))?.text).toBe("open 20");
+    expect(await keysOf(ui, "card:")).toHaveLength(30);
+
+    failing = false;
+    await w.clock.advance(10_000);
+
+    expect(await ui.find({ key: "error-line" })).toBeUndefined();
+  });
+
+  test("should keep the last board and say it timed out when bd list does not answer", async ($, on) => {
+    let hanging = false;
+    const { w, ui } = await openPane($, on, {
+      script: (key) =>
+        hanging && key === "bd list --all --brief --limit 0" ? new Error("timed out") : undefined,
+    });
+
+    hanging = true;
+    await w.clock.advance(10_000);
+
+    expect((await ui.find({ key: "error-line" }))?.text).toMatch(/^bd list timed out/);
+    expect((await ui.find({ key: "column::open" }))?.text).toBe("open 20");
+  });
+
+  test("should keep the drawing under the mod's 100,000-character tree limit when the store is large", async ($, on) => {
+    // bd's own records, renamed: the first record of `bd list --json --all --brief --limit 0`.
+    const [first] = JSON.parse(list) as Record<string, unknown>[];
+    const many = Array.from({ length: 600 }, (_, i) => ({
+      ...first,
+      id: `BU-load${i}`,
+      title: `issue number ${i} with a title long enough to fill a card`,
+      status: ["open", "in_progress", "closed"][i % 3],
+      metadata: { display_id: `BU-issue-number-${i}-load` },
+      labels: [`id:BU-issue-number-${i}-load`],
+      assignee: "aih-ec2-3",
+    }));
+    const { ui } = await openPane($, on, {
+      script: (key) =>
+        key === "bd list --all --brief --limit 0" ? ok(JSON.stringify(many)) : undefined,
+    });
+
+    const size = JSON.stringify(await ui.drawn()).length;
+
+    expect(size).toBeLessThan(100_000);
+    expect(await keysOf(ui, "card:")).toHaveLength(BOARD_CARD_LIMIT.perCell * 3);
+    expect((await ui.find({ key: "column::open" }))?.text).toBe("open 200");
+    expect((await ui.find({ key: "group::active" }))?.text).toContain(
+      `+${200 - BOARD_CARD_LIMIT.perCell} more; narrow the filter`,
+    );
+  });
+});
+
+describe("the Backlog tab", () => {
+  const openIds = () =>
+    sortIssues(issues().filter((issue) => issue.status === "open")).map((issue) => issue.id);
+
+  test("should list open issues by priority then created date when the Backlog tab renders", async ($, on) => {
+    const { ui } = await openPane($, on);
+
+    await ui.press({ key: "tab:backlog" });
+
+    expect(await keysOf(ui, "row:")).toEqual(openIds().map((id) => `row:${id}`));
+  });
+
+  test("should honour the type, label, assignee and ready predicates when a filter is entered", async ($, on) => {
+    const { ui } = await openPane($, on);
+    await ui.press({ key: "tab:backlog" });
+    const rows = async (text: string) => {
+      await ui.input({ key: "filter", text });
+      return (await keysOf(ui, "row:")).map((key) => key.slice(4));
+    };
+
+    expect(await rows("type:bug ready:true")).toEqual(["BU-2zw"]);
+    expect(await rows("label:id:BU-t-1-2-backlog-tab-vptb")).toEqual(["BU-mg2.3.6"]);
+    expect(await rows("assignee:aih-3")).toEqual([]);
+    expect(await rows("type:epic")).toEqual(
+      sortIssues(issues().filter((issue) => issue.status === "open" && issue.type === "epic")).map(
+        (issue) => issue.id,
+      ),
+    );
+  });
+
+  test("should show the accepted keys and keep the list when the filter has an unknown key", async ($, on) => {
+    const { ui } = await openPane($, on);
+    await ui.press({ key: "tab:backlog" });
+    await ui.input({ key: "filter", text: "type:bug" });
+    const before = await keysOf(ui, "row:");
+
+    await ui.input({ key: "filter", text: "kind:epic" });
+
+    expect((await ui.find({ key: "filter-line" }))?.text).toBe(
+      'unknown filter key "kind"; accepted keys: type, label, assignee, sprint, ready',
+    );
+    expect(await keysOf(ui, "row:")).toEqual(before);
+  });
+
+  test("should reorder the rows when the sort is stepped with o", async ($, on) => {
+    const { ui } = await openPane($, on);
+    await ui.press({ key: "tab:backlog" });
+
+    await ui.press({ key: "sort" });
+
+    const byCreated = sortIssues(
+      issues().filter((issue) => issue.status === "open"),
+      { key: "created", direction: "desc" },
+    ).map((issue) => `row:${issue.id}`);
+    expect(await keysOf(ui, "row:")).toEqual(byCreated);
+    expect((await ui.find({ key: "sort" }))?.props.label).toBe("Sort: created:desc");
+  });
+});
+
+describe("the Detail tab", () => {
+  const epic = (): Issue => {
+    const parsed = parseBdShow(show);
+    const issue = parsed.ok ? parsed.value[0] : undefined;
+    if (issue === undefined) throw new Error("no bd show fixture");
+    return issue;
+  };
+
+  for (const surface of SURFACES) {
+    test(`should show the issue's fields, dependencies and last ten events when a card's detail opens on ${surface}`, async ($, on) => {
+      const { w, ui } = await openPane($, on, {}, surface);
+
+      await ui.press({ key: "open:BU-mg2.3" });
+      await w.clock.settle();
+
+      const issue = epic();
+      expect((await ui.find({ key: "edit:title" }))?.props.value).toBe(issue.title);
+      expect((await ui.find({ key: "field:displayId" }))?.text).toBe(
+        "Display id: BU-beads-ui-claude-code-aeyb",
+      );
+      expect((await ui.find({ key: "field:createdAt" }))?.text).toBe(`Created: ${issue.createdAt}`);
+      expect((await ui.find({ key: "md:description" }))?.text).toContain("The first surfa");
+      expect(await keysOf(ui, "dep:")).toHaveLength(issue.dependencies.length);
+      expect((await ui.find({ key: `dep:${issue.dependencies[0]?.id}` }))?.text).toContain(
+        issue.dependencies[0]?.status ?? "",
+      );
+      const events = parseBdHistoryEvents(historyMg23);
+      expect((await keysOf(ui, "event:")).length).toBe(
+        Math.min(10, events.ok ? events.value.length : -1),
+      );
+      expect(w.keys()).toContain("bd history BU-mg2.3 --events");
+    });
+  }
+
+  test("should write an edited field with bd update and re-read the issue before redrawing", async ($, on) => {
+    const { w, ui } = await openPane($, on);
+    await ui.press({ key: "open:BU-mg2.3" });
+    await w.clock.settle();
+    const before = w.keys().length;
+
+    await ui.input({ key: "edit:title", text: "beads-ui Claude Code mod" });
+    await w.clock.settle();
+
+    const after = w.keys().slice(before);
+    const write = after.indexOf("bd update BU-mg2.3 --title=beads-ui Claude Code mod");
+    expect(write).toBeGreaterThanOrEqual(0);
+    expect(after.slice(write + 1)).toContain("bd show BU-mg2.3");
+    expect(after.slice(write + 1)).toContain("bd history BU-mg2.3 --events");
+  });
+
+  test("should show the reason and write nothing when an edit cannot be read", async ($, on) => {
+    const { w, ui } = await openPane($, on);
+    await ui.press({ key: "open:BU-mg2.3" });
+    await w.clock.settle();
+    const before = w.keys().length;
+
+    await ui.input({ key: "edit:estimate", text: "soon" });
+
+    expect((await ui.find({ key: "detail-error" }))?.text).toBe(
+      "an estimate is minutes, such as 90 or 1h 30m",
+    );
+    expect(
+      w
+        .keys()
+        .slice(before)
+        .some((key) => key.startsWith("bd update")),
+    ).toBe(false);
+  });
+});
+
+describe("quick-add", () => {
+  // BU-2zw as bd create --json would return it: its record from `bd show ... BU-2zw --json`.
+  const created = () =>
+    JSON.stringify((JSON.parse(minted) as { id: string }[]).find((one) => one.id === "BU-2zw"));
+  // The store as it stood before BU-2zw existed: the list without it.
+  const before = () =>
+    JSON.stringify((JSON.parse(list) as { id: string }[]).filter((one) => one.id !== "BU-2zw"));
+  const LINE =
+    "npm audit: 10 dev-only advisories under markdownlint-cli2 p3 type:bug @aih-3 +ci due:2026-11-01 sprint:s1";
+  const script = (key: string) =>
+    key === "bd list --all --brief --limit 0"
+      ? ok(before())
+      : key.startsWith("bd create ")
+        ? ok(created())
+        : undefined;
+
+  test("should create the issue with the bd create flags each token names when a line is submitted", async ($, on) => {
+    const { w, ui } = await openPane($, on, { script });
+
+    await ui.input({ key: "quickadd", text: LINE });
+    await w.clock.settle();
+
+    expect(w.runs.find((argv) => argv[1] === "create")).toEqual([
+      "bd",
+      "create",
+      "--title=npm audit: 10 dev-only advisories under markdownlint-cli2",
+      "--priority=3",
+      "--type=bug",
+      "--assignee=aih-3",
+      "--labels=ci,sprint:s1",
+      "--due=2026-11-01",
+      "--json",
+    ]);
+  });
+
+  test("should mint the display id bd-new minted and write it when the store uses display ids", async ($, on) => {
+    const { w, ui } = await openPane($, on, { script });
+
+    await ui.input({ key: "quickadd", text: LINE });
+    await w.clock.settle();
+
+    expect(w.runs.find((argv) => argv[1] === "update")).toEqual([
+      "bd",
+      "update",
+      "BU-2zw",
+      "--set-metadata",
+      "display_id=BU-npm-audit-10-dev-only-advisories-2zw",
+      "--add-label",
+      "id:BU-npm-audit-10-dev-only-advisories-2zw",
+      "--json",
+    ]);
+    expect((await ui.find({ key: "notice" }))?.text).toBe(
+      "created BU-2zw as BU-npm-audit-10-dev-only-advisories-2zw",
+    );
+  });
+
+  test("should create the issue without a display id when id_policy is off", async ($, on) => {
+    const { w, ui } = await openPane($, on, {
+      script,
+      files: { [`${CWD}/beads-ui.toml`]: '[stores.default]\nid_policy = "off"\n' },
+    });
+
+    await ui.input({ key: "quickadd", text: LINE });
+    await w.clock.settle();
+
+    expect(w.runs.some((argv) => argv[1] === "create")).toBe(true);
+    expect(w.runs.some((argv) => argv[1] === "update")).toBe(false);
+    expect((await ui.find({ key: "notice" }))?.text).toBe("created BU-2zw");
+  });
+
+  test("should name the problem and create nothing when the line has no title", async ($, on) => {
+    const { w, ui } = await openPane($, on, { script });
+
+    await ui.input({ key: "quickadd", text: "p1 type:task" });
+    await w.clock.settle();
+
+    expect(w.runs.some((argv) => argv[1] === "create")).toBe(false);
+    expect((await ui.find({ key: "notice" }))?.text).toBe("a new issue needs a title");
+  });
+});
