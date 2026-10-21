@@ -37,3 +37,5 @@ export {
   parseBdShow,
   parseBdStatuses,
 } from "./parsers.ts";
+export type { SortDirection, SortError, SortKey, SortSpec } from "./sort.ts";
+export { DEFAULT_SORT, parseSort, SORT_KEYS, sortIssues } from "./sort.ts";
