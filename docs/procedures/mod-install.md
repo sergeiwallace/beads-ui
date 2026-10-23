@@ -34,7 +34,18 @@ Or in one step, which adds the marketplace first if it is not there yet:
 claude plugin install beads-ui --marketplace sergeiwallace/beads-ui
 ```
 
-Both install for your user by default; pass `--scope project` or `--scope local` to install for one repository instead. Start a new session afterwards. To update later, run `claude plugin marketplace update beads-ui`.
+Both install for your user by default; pass `--scope project` or `--scope local` to install for one repository instead. Start a new session afterwards.
+
+### Update it
+
+An installed copy does not follow this repository's `main` by itself. Claude Code turns auto-update on by default only for its official marketplaces, so this one stays off until you turn it on in `/plugin`. To take a new release:
+
+```sh
+claude plugin marketplace update beads-ui
+claude plugin update beads-ui@beads-ui
+```
+
+Pass the same `--scope` you installed with, then start a new session: `claude plugin update` applies on restart. `claude plugin update` compares the `version` in `plugins/beads-ui/.claude-plugin/plugin.json`: a commit that does not raise it reports "already at the latest version" and installs nothing, so every release that should reach installed copies raises the version.
 
 ## What it does
 
