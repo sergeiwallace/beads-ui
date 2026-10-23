@@ -46,6 +46,11 @@ must not generate code or reach a global through a string either: no `eval`, no 
 (called or constructed), no `self`, no `.constructor` access and no `import()` of a computed
 specifier. `npm run lint` fails naming the file and line when it does. Code that needs the time takes a clock function as an argument.
 
+A change to a shipped file under `plugins/beads-ui` must raise the plugin's version above
+`main`'s: a `feat` commit by a minor, anything else by a patch. The pre-push hook does it for you
+in a commit of its own and asks you to push again; a major bump needs the maintainer's approval.
+See [docs/procedures/releasing.md](docs/procedures/releasing.md).
+
 The plugin at `plugins/beads-ui` has no runtime dependencies. Development tools go in the root
 `package.json` as dev dependencies.
 

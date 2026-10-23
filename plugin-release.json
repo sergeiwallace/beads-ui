@@ -1,0 +1,13 @@
+{
+  "$comment": "Which plugin versions must rise when what changes. Read by scripts/plugin-version.mjs (the pre-push hook) and by ai-harness's ghp pr merge guard. See docs/procedures/releasing.md.",
+  "base": "main",
+  "majorApprovalTrailer": "Semver-major-approved-by: Sergei",
+  "plugins": [
+    {
+      "name": "beads-ui",
+      "manifest": "plugins/beads-ui/.claude-plugin/plugin.json",
+      "paths": ["plugins/beads-ui/"],
+      "ignore": ["*.test.ts", "*/test/*", "plugins/beads-ui/vitest.config.ts"]
+    }
+  ]
+}

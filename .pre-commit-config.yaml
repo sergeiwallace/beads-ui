@@ -145,6 +145,17 @@ repos:
         pass_filenames: false
         always_run: true
 
+      # Every change to shipped plugin files raises the plugin's version above main's
+      # (feat -> minor, else patch; a major only with Sergei's trailer). When the
+      # pushed branch falls short this commits the raise itself and fails the push
+      # once; push again. docs/procedures/releasing.md.
+      - id: plugin-version
+        name: plugin version is above main's when shipped plugin files changed
+        entry: node scripts/plugin-version.mjs pre-push
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true
       # docs-index-check REMOVED (CORE-55). The generated docs/README.md index had
       # no reader -- nothing in the fleet consumed it -- yet the gate blocked every
       # docs commit until it was regenerated. It also could not be regenerated

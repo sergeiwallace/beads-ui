@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "lint": "biome check . && turbo run lint typecheck",
-    "test": "turbo run test",
+    "test": "turbo run test && node --test scripts/*.test.mjs",
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
