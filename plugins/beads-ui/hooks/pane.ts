@@ -94,6 +94,8 @@ const WANTED_COLUMNS = 80;
 const WANTED_ROWS = 24;
 
 const READ_TIMEOUT_MS = 8_000;
+/** What `$.process.run` keeps of each pipe: 4194304 bytes. */
+const RUN_OUTPUT_LIMIT = "4 MiB";
 const WRITE_TIMEOUT_MS = 15_000;
 
 export type Tab = "board" | "backlog" | "detail";
@@ -291,13 +293,32 @@ export class BeadsPane {
 
   // ---- bd ---------------------------------------------------------------------------------
 
-  private async run(argv: readonly string[], timeoutMs: number): Promise<Ran> {
+  /**
+   * One bd call. `streamed` reads it through `$.process.spawn`, for a read whose output can pass
+   * the 4 MiB `$.process.run` keeps; a `$.process.run` read cut at that limit is a failure.
+   */
+  private async run(
+    argv: readonly string[],
+    timeoutMs: number,
+    { streamed = false }: { streamed?: boolean } = {},
+  ): Promise<Ran> {
     const host = this.host;
     if (host === undefined) {
       return { ok: false, exitCode: null, stdout: "", stderr: "", message: "no session" };
     }
     try {
-      const result = await host.run(argv, timeoutMs);
+      const result = streamed
+        ? await host.stream(argv, timeoutMs)
+        : await host.run(argv, timeoutMs);
+      if ("isStdoutTruncated" in result && result.isStdoutTruncated === true) {
+        return {
+          ok: false,
+          exitCode: result.exitCode,
+          stdout: result.stdout,
+          stderr: result.stderr,
+          message: `its output passed the ${RUN_OUTPUT_LIMIT} $.process.run keeps and was cut short`,
+        };
+      }
       if (result.exitCode === 0) {
         return { ok: true, exitCode: 0, stdout: result.stdout, stderr: result.stderr };
       }
@@ -315,8 +336,10 @@ export class BeadsPane {
 
   private failure(what: string, ran: Ran): string {
     if (ran.ok) return "";
+    const detail = ran.message === "" ? "" : `: ${ran.message}`;
+    if (ran.exitCode === 0) return `${what} failed${detail}`;
     const how = ran.exitCode === null ? "timed out or could not start" : `exit ${ran.exitCode}`;
-    return `${what} failed (${how})${ran.message === "" ? "" : `: ${ran.message}`}`;
+    return `${what} failed (${how})${detail}`;
   }
 
   private async readConfig(): Promise<ResolvedConfig> {
@@ -367,7 +390,7 @@ export class BeadsPane {
       const full = this.isOpen;
       const [statuses, list, ready] = await Promise.all([
         this.run(statusesArgv(), READ_TIMEOUT_MS),
-        this.run(listArgv(), READ_TIMEOUT_MS),
+        this.run(listArgv(), READ_TIMEOUT_MS, { streamed: true }),
         full ? this.run(readyArgv(), READ_TIMEOUT_MS) : Promise.resolve(undefined),
       ]);
       const loaded = this.applyReads(statuses, list, await this.stamp());
@@ -408,7 +431,7 @@ export class BeadsPane {
       this.dispatch({
         type: "load-failed",
         exitCode: list.exitCode,
-        message: `unreadable output at ${issues.error.path}: ${issues.error.message}`,
+        message: `${issues.error.message} at ${issues.error.path}`,
       });
       return false;
     }

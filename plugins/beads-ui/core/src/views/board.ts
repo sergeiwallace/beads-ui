@@ -431,8 +431,14 @@ function planPages(
 function errorLine(state: BoardState): string | undefined {
   const error = state.loadError;
   if (error === undefined) return undefined;
+  // exitCode null: bd never finished (a deadline, a signal, no start); 0: it finished but what it
+  // wrote cannot be read (cut short, or not the JSON bd list writes). The message says which.
   const what =
-    error.exitCode === null ? "bd list timed out" : `bd list failed (exit ${error.exitCode})`;
+    error.exitCode === null
+      ? "bd list did not finish"
+      : error.exitCode === 0
+        ? "bd list gave output beads-ui cannot read"
+        : `bd list failed (exit ${error.exitCode})`;
   const detail = error.message === "" ? "" : `: ${error.message}`;
   const kept = state.loadedAt === undefined ? "" : `; showing the board ${asOf(state.loadedAt)}`;
   return `${what}${detail}${kept}; retrying on the next refresh`;

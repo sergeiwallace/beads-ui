@@ -4,6 +4,7 @@ import { drawBand } from "./bands.ts";
 import { CONFIRM_ID, DeleteConfirm } from "./confirm.ts";
 import type { Host } from "./host.ts";
 import { BeadsPane, PANE_ID } from "./pane.ts";
+import { readStream } from "./stream.ts";
 
 export const PLUGIN_NAME = "beads-ui";
 export const COMMAND_NAME = "beads";
@@ -45,6 +46,12 @@ export function register(on: On) {
       cwd: e.cwd,
       run: (argv, timeoutMs) =>
         $.process.run(argv, { cwd: e.cwd, timeoutMs, env: { NO_COLOR: "1" } }),
+      stream: (argv, timeoutMs) =>
+        readStream(
+          $.process.spawn({ argv, cwd: e.cwd, env: { NO_COLOR: "1" } }),
+          timeoutMs,
+          (ms, fn) => $.clock.after(ms, fn),
+        ),
       now: () => $.clock.now(),
       every: (ms, fn) => $.clock.every(ms, fn),
       storeGet: (key) => $.store.get(key),
