@@ -7,9 +7,9 @@ import { NARROW_TEXT } from "./pane.ts";
 import { PANE_ID, PLUGIN_NAME } from "./register.ts";
 import {
   BAND_PROPS,
-  BEADS,
   CWD,
   SESSION,
+  SHOW,
   START_MS,
   VIEWPORT,
   type WorldOptions,
@@ -36,12 +36,12 @@ async function started($: Engine, on: On, options: WorldOptions = {}) {
 }
 
 describe("the band above the prompt", () => {
-  test("should register /beads and draw open, in-progress and blocked counts when the session starts", async ($, on) => {
+  test("should register /show-beads-ui and draw open, in-progress and blocked counts when the session starts", async ($, on) => {
     const w = await started($, on);
 
     const ui = await band($);
 
-    expect(w.registered).toEqual(["beads", "bu"]);
+    expect(w.registered).toEqual(["show-beads-ui", "bu"]);
     expect((await ui.find({ key: "beads-band" }))?.text).toBe(
       `beads beads-ui  20 open  2 in progress  0 blocked  ${STAMP}`,
     );
@@ -132,7 +132,7 @@ describe("the pane's width rule", () => {
     const w = await started($, on);
     await band($, 80);
 
-    await $.command.run(BEADS);
+    await $.command.run(SHOW);
 
     expect(w.opened.map((open) => open.id)).toEqual([PANE_ID]);
     expect(w.toasts).toEqual([]);

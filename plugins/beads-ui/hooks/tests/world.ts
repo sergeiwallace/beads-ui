@@ -17,7 +17,7 @@ import statuses from "../../core/test/fixtures/bd-statuses.json.ts";
 
 export const CWD = "/work/beads-ui";
 export const SESSION = { surface: "terminal", isInteractive: true, cwd: CWD } as const;
-export const BEADS = { command: "beads", args: "", origin: { kind: "composer" } } as const;
+export const SHOW = { command: "show-beads-ui", args: "", origin: { kind: "composer" } } as const;
 export const BU = { command: "bu", args: "", origin: { kind: "composer" } } as const;
 /** 2026-10-21 01:12:04 UTC, the clock's start. */
 export const START_MS = Date.UTC(2026, 9, 21, 1, 12, 4);

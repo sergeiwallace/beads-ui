@@ -1,13 +1,13 @@
 # Installing and using the beads-ui mod
 
-Load the mod for one session from a checkout with `claude --plugin-dir <checkout>/plugins/beads-ui`, or install it from this repository's marketplace with `claude plugin install beads-ui@beads-ui` after adding the marketplace. Then run `/beads` (or `/bu`) in a repository that has a Beads store.
+Load the mod for one session from a checkout with `claude --plugin-dir <checkout>/plugins/beads-ui`, or install it from this repository's marketplace with `claude plugin install beads-ui@beads-ui` after adding the marketplace. Then run `/show-beads-ui` (or `/bu`) in a repository that has a Beads store.
 
 ## Requirements
 
 - Claude Code 2.1.299 or later. The design sets that floor because 2.1.299 is the first release that lets a hooks module's helpers live in other files. The mod's gate ran on 2.1.306. Check yours with `claude --version`.
 - `bd` 1.3.x on your `PATH`. The mod runs `bd ... --json` in the session's directory and nothing else.
 - A repository with a Beads store (`bd list` works there). In a directory without one, the mod draws no band and the pane shows bd's error line.
-- For the pane at full size, a terminal at least 110 columns wide. A pane you open with `/beads` opens at any width.
+- For the pane at full size, a terminal at least 110 columns wide. A pane you open with `/show-beads-ui` opens at any width.
 
 ## Load it from a checkout
 
@@ -64,15 +64,15 @@ With auto-update on, Claude Code checks the marketplace when a session starts, n
 
 ## What it does
 
-- `/beads` opens the pane, and runs again to close it. `/bu` is the same command under a short name.
+- `/show-beads-ui` opens the pane, and runs again to close it. `/bu` is the same command under a short name.
 - The band above the prompt shows the store's open, in-progress and blocked counts, refreshed at most every 10 seconds. It draws nothing until the store has been read once.
 - The pane has three tabs: `1` Board, `2` Backlog and `4` Detail. `3` is held for the Sprint tab of a later release. The header shows the store's name and when the board was last read (`as of HH:MM:SS`, local time).
 - The pane refreshes when you open it, after every write and every 10 seconds while it is open. A failed `bd list` keeps the last board on screen with an error line naming the exit code, and the next refresh tries again.
-- If the pane was open when your last session ended, it opens again on its own. On a terminal narrower than 110 columns it stays closed and a toast says so; `/beads` opens it anyway.
+- If the pane was open when your last session ended, it opens again on its own. On a terminal narrower than 110 columns it stays closed and a toast says so; `/show-beads-ui` opens it anyway.
 
 ## Keys
 
-The pane takes these keys while it has the keyboard (`/beads` gives it the keyboard when the prompt is empty; otherwise click the pane or press ctrl+x tab). Tab walks the controls.
+The pane takes these keys while it has the keyboard (`/show-beads-ui` gives it the keyboard when the prompt is empty; otherwise click the pane or press ctrl+x tab). Tab walks the controls.
 
 | Key | Action |
 |---|---|

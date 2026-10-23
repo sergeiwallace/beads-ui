@@ -7,7 +7,7 @@ import { BeadsPane, PANE_ID } from "./pane.ts";
 import { readStream } from "./stream.ts";
 
 export const PLUGIN_NAME = "beads-ui";
-export const COMMAND_NAME = "beads";
+export const COMMAND_NAME = "show-beads-ui";
 /** D-7 (a): the short alias. The command spec has no alias field, so it is a second command. */
 export const ALIAS_NAME = "bu";
 export { CONFIRM_ID, PANE_ID };
@@ -18,11 +18,11 @@ const COMMAND_SPECS = [
     name: COMMAND_NAME,
     description: "Open or close the beads-ui board for this repository's Beads store",
   },
-  { name: ALIAS_NAME, description: "Open or close the beads-ui board (short for /beads)" },
+  { name: ALIAS_NAME, description: "Open or close the beads-ui board (short for /show-beads-ui)" },
 ] as const;
 
 /**
- * Registers `/beads` and `/bu`, the pane they toggle, its delete confirmation and the band above
+ * Registers `/show-beads-ui` and `/bu`, the pane they toggle, its delete confirmation and the band above
  * the prompt. Every `$` call of the plugin sits in this file; the helpers get a Host of plain
  * closures, never `$`.
  *
@@ -78,7 +78,7 @@ export function register(on: On) {
     return next(e);
   });
 
-  on("command.run", { command: ["beads", "bu"] }, async () => {
+  on("command.run", { command: ["show-beads-ui", "bu"] }, async () => {
     await pane.toggle();
 
     return {};

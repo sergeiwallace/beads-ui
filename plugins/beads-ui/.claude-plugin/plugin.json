@@ -1,7 +1,7 @@
 {
   "name": "beads-ui",
   "version": "0.1.1",
-  "description": "A Beads task board for the Claude Code TUI: /beads opens a pane over the current repository's Beads store.",
+  "description": "A Beads task board for the Claude Code TUI: /show-beads-ui opens a pane over the current repository's Beads store.",
   "author": {
     "name": "Sergei Wallace"
   },

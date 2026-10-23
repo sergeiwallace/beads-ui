@@ -3,7 +3,7 @@
     "./register.ts": {
       "hooks": [
         "session.start",
-        "command.run{command=beads|bu}",
+        "command.run{command=show-beads-ui|bu}",
         "ui.close{id=beads|beads-confirm}",
         "ui.focus{requestId=beads}",
         "ui.render{component=AbovePrompt}",
@@ -36,7 +36,7 @@
       "env writes": [],
       "surface modules": ["client/hello.ts"],
       "gating hook with .catch": [
-        "command.run{command=beads|bu}",
+        "command.run{command=show-beads-ui|bu}",
         "ui.close{id=beads|beads-confirm}",
         "ui.focus{requestId=beads}"
       ],

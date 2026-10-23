@@ -68,7 +68,7 @@ claude plugin marketplace add sergeiwallace/beads-ui
 claude plugin install beads-ui@beads-ui
 ```
 
-Then run `/beads` (or `/bu`) in a repository with a Beads store.
+Then run `/show-beads-ui` (or `/bu`) in a repository with a Beads store.
 [docs/procedures/mod-install.md](docs/procedures/mod-install.md) covers the keys, quick-add,
 configuration and how to report a bug.
 

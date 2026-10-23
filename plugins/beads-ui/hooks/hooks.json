@@ -1,4 +1,4 @@
 {
-  "description": "The beads-ui pane: /beads registers at session start and opens a pane drawn from the shared core",
+  "description": "The beads-ui pane: /show-beads-ui registers at session start and opens a pane drawn from the shared core",
   "modules": ["./register.ts"]
 }

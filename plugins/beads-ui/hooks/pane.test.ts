@@ -18,7 +18,6 @@ import minted from "../core/test/fixtures/bd-show-minted.json.ts";
 import statusesFixture from "../core/test/fixtures/bd-statuses.json.ts";
 import { PANE_ID, PLUGIN_NAME } from "./register.ts";
 import {
-  BEADS,
   CWD,
   exit,
   HANG,
@@ -27,6 +26,7 @@ import {
   PANE_PROPS,
   RUN_OUTPUT_LIMIT,
   SESSION,
+  SHOW,
   START_MS,
   SURFACES,
   VIEWPORT,
@@ -52,7 +52,7 @@ const COLUMN_ORDER = [
   "closed 8",
 ];
 
-/** A session in this repository with the pane opened by /beads and drawn on `surface`. */
+/** A session in this repository with the pane opened by /show-beads-ui and drawn on `surface`. */
 async function openPane(
   $: Engine,
   on: On,
@@ -61,7 +61,7 @@ async function openPane(
 ) {
   const w = world(on, options);
   await $.session.start(SESSION);
-  await $.command.run(BEADS);
+  await $.command.run(SHOW);
   await w.clock.settle();
   const ui = await $.ui.mount({
     plugin: PLUGIN_NAME,
