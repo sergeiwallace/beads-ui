@@ -1,11 +1,12 @@
 # beads-ui
 
-A task manager for [Beads](https://github.com/steveyegge/beads) issues, built to run in three places
-from one shared core:
+A task manager for [Beads](https://github.com/steveyegge/beads) issues, designed to run in three places
+from one shared core. Only the first exists today:
 
-- inside the Claude Code terminal UI, as a [Claude Code mod](https://code.claude.com/docs/en/plugins/mods/overview);
-- inside Claude Desktop and Claude on the web, as an MCP UI app;
-- in a browser, as a web app you run locally or host from an infra-as-config template.
+- inside the Claude Code terminal UI, as a [Claude Code mod](https://code.claude.com/docs/en/plugins/mods/overview)
+  (implemented);
+- [TODO, not started] inside Claude Desktop and Claude on the web, as an MCP UI app;
+- [TODO, not started] in a browser, as a web app you run locally or host from an infra-as-config template.
 
 The goal is the views people expect from Jira, Linear or Todoist (board, backlog, sprints,
 roadmap, analytics), working on a Beads store, with one view of the tasks of every Claude Code
@@ -13,11 +14,14 @@ session on a machine.
 
 ## Status
 
-Phase 0 is being built: the monorepo bootstrap, the DOM-free shared core with its purity gate, and
-the repository's public-repo hygiene. The design in
-[docs/designs/beads-ui-design.md](docs/designs/beads-ui-design.md) is approved, and the research
-behind it is in [docs/research/](docs/research/). The first user-facing target is the Claude Code
-TUI mod (Phase 1).
+Only the Claude Code mod (the TUI plugin) is implemented. Phase 0 (the monorepo bootstrap, the
+DOM-free shared core and the public-repo hygiene) and Phase 1 (the MVP, a read-mostly board in the
+mod) have landed.
+
+The MCP UI app for Claude Desktop and claude.ai, and the web app, are [TODO]: neither has been
+started. They are the planned future state in
+[docs/designs/beads-ui-design.md](docs/designs/beads-ui-design.md), and the research behind the
+design is in [docs/research/](docs/research/).
 
 The work is tracked in this repo's own Beads store (prefix `BU`). Later sub-epics cover iOS, macOS
 and Linux.
