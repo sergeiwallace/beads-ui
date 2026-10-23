@@ -7,12 +7,12 @@ import leafText from "../core/test/fixtures/bd-delete-dry-run-leaf.txt.ts";
 import listText from "../core/test/fixtures/bd-list-all-brief.json.ts";
 import { CONFIRM_ID, PANE_ID, PLUGIN_NAME } from "./register.ts";
 import {
-  BEADS,
   DEPENDENTS_STDERR,
   exit,
   ok,
   PANE_PROPS,
   SESSION,
+  SHOW,
   SURFACES,
   VIEWPORT,
   type WorldOptions,
@@ -50,7 +50,7 @@ async function deleting(
 ) {
   const w = world(on, options);
   await $.session.start(SESSION);
-  await $.command.run(BEADS);
+  await $.command.run(SHOW);
   await w.clock.settle();
   const pane = await mount($, PANE_ID, surface);
   await tabTo($, `move:${id}`);

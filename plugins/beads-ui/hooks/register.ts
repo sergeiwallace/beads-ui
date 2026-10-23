@@ -5,9 +5,10 @@ import { CONFIRM_ID, DeleteConfirm } from "./confirm.ts";
 import type { Host } from "./host.ts";
 import { BeadsPane, PANE_ID } from "./pane.ts";
 import { readStream } from "./stream.ts";
+import { BandTally } from "./tally.ts";
 
 export const PLUGIN_NAME = "beads-ui";
-export const COMMAND_NAME = "beads";
+export const COMMAND_NAME = "show-beads-ui";
 /** D-7 (a): the short alias. The command spec has no alias field, so it is a second command. */
 export const ALIAS_NAME = "bu";
 export { CONFIRM_ID, PANE_ID };
@@ -18,11 +19,11 @@ const COMMAND_SPECS = [
     name: COMMAND_NAME,
     description: "Open or close the beads-ui board for this repository's Beads store",
   },
-  { name: ALIAS_NAME, description: "Open or close the beads-ui board (short for /beads)" },
+  { name: ALIAS_NAME, description: "Open or close the beads-ui board (short for /show-beads-ui)" },
 ] as const;
 
 /**
- * Registers `/beads` and `/bu`, the pane they toggle, its delete confirmation and the band above
+ * Registers `/show-beads-ui` and `/bu`, the pane they toggle, its delete confirmation and the band above
  * the prompt. Every `$` call of the plugin sits in this file; the helpers get a Host of plain
  * closures, never `$`.
  *
@@ -30,6 +31,7 @@ const COMMAND_SPECS = [
  */
 export function register(on: On) {
   const pane = new BeadsPane();
+  const tally = new BandTally();
   const confirm = new DeleteConfirm(
     (text, undo) => pane.afterConfirm(text, undo),
     () => void pane.resume(),
@@ -46,6 +48,10 @@ export function register(on: On) {
       cwd: e.cwd,
       run: (argv, timeoutMs) =>
         $.process.run(argv, { cwd: e.cwd, timeoutMs, env: { NO_COLOR: "1" } }),
+      runIn: (cwd, argv, timeoutMs) =>
+        $.process.run(argv, { cwd, timeoutMs, env: { NO_COLOR: "1" } }),
+      // `ai c` pins the session's name here, and it is the assignee of the beads it owns (D-17).
+      sessionName: () => $.env.get("CLAUDE_CODE_TASK_LIST_ID"),
       stream: (argv, timeoutMs) =>
         readStream(
           $.process.spawn({ argv, cwd: e.cwd, env: { NO_COLOR: "1" } }),
@@ -74,11 +80,12 @@ export function register(on: On) {
     for (const spec of COMMAND_SPECS) await $.command.register(spec);
     confirm.host = host;
     await pane.bind(host);
+    await tally.bind(host);
 
     return next(e);
   });
 
-  on("command.run", { command: ["beads", "bu"] }, async () => {
+  on("command.run", { command: ["show-beads-ui", "bu"] }, async () => {
     await pane.toggle();
 
     return {};
@@ -104,7 +111,7 @@ export function register(on: On) {
     if (e.surface !== "terminal" || e.props.hasSurvey) return next(e);
     if (e.viewport !== undefined) pane.measured(e.viewport.columns);
     const { Box, Text } = await $.ui.resolve(e);
-    const band = drawBand({ Box, Text }, pane, e.props.bodyColumns);
+    const band = drawBand({ Box, Text }, tally, e.props.bodyColumns);
     if (band === undefined) return next(e);
 
     return Box({ flexDirection: "column", children: [band, await next(e)] });

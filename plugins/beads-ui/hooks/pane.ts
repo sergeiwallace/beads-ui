@@ -79,7 +79,7 @@ export const PANE_TITLE = "Beads";
 
 /** An open nobody asked for is withdrawn below this width (T-1.6). */
 export const NARROW_COLUMNS = 110;
-export const NARROW_TEXT = `beads-ui did not open its pane: it needs a terminal at least ${NARROW_COLUMNS} columns wide. Widen the terminal or run /beads.`;
+export const NARROW_TEXT = `beads-ui did not open its pane: it needs a terminal at least ${NARROW_COLUMNS} columns wide. Widen the terminal or run /show-beads-ui.`;
 
 /** Where the view preferences live in `$.store`. Issue data is never stored. */
 export const PREFS_KEY = "view";
@@ -144,7 +144,7 @@ const present = <T>(items: readonly (T | undefined | false)[]): T[] =>
   items.filter((item): item is T => item !== undefined && item !== false);
 
 /**
- * The `/beads` pane: its state, the bd reads and writes behind each action, and its drawing. It
+ * The `/show-beads-ui` pane: its state, the bd reads and writes behind each action, and its drawing. It
  * holds no `$`: register.ts binds it to a Host at session start. Every domain rule is core's.
  */
 export class BeadsPane {
@@ -456,7 +456,7 @@ export class BeadsPane {
 
   // ---- opening and closing ----------------------------------------------------------------
 
-  /** `/beads` and `/bu`: close the open pane, else open it, as the person asked. */
+  /** `/show-beads-ui` and `/bu`: close the open pane, else open it, as the person asked. */
   async toggle(): Promise<void> {
     if (this.isOpen) {
       await this.close();
@@ -495,7 +495,7 @@ export class BeadsPane {
     this.closed();
   }
 
-  /** The pane closed, by `/beads` or by the person (Esc, the close mark). */
+  /** The pane closed, by `/show-beads-ui` or by the person (Esc, the close mark). */
   closed(): void {
     this.isOpen = false;
     this.savePrefs();

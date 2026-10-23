@@ -11,6 +11,10 @@ export interface Host {
   cwd: string;
   /** `$.process.run` in `cwd`; rejects when bd cannot start or outlives `timeoutMs`. */
   run: (argv: readonly string[], timeoutMs: number) => Promise<ProcessRunResult>;
+  /** `$.process.run` in another store's directory `cwd`: the band's reads of every store. */
+  runIn: (cwd: string, argv: readonly string[], timeoutMs: number) => Promise<ProcessRunResult>;
+  /** `$.env.get` of the session's name, which `ai c` pins in `CLAUDE_CODE_TASK_LIST_ID`. */
+  sessionName: () => Promise<string | undefined>;
   /**
    * `$.process.spawn` in `cwd`, read to its end: the whole output, past `$.process.run`'s 4 MiB.
    * Rejects when bd cannot start, is ended by a signal or outlives `timeoutMs`.

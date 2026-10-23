@@ -1,41 +1,50 @@
 import type { Elements, RenderElement } from "claude-code";
 
-import { bandView, storeName } from "../core/src/index.ts";
-import type { BeadsPane } from "./pane.ts";
+import { bandRow } from "../core/src/index.ts";
 import { colorOf } from "./pane.ts";
+import type { BandTally } from "./tally.ts";
 
 export type BandUi = Pick<Elements["terminal"], "Box" | "Text">;
 
 /**
- * The band above the prompt (T-1.6): open, in-progress and blocked counts for the session's
- * store, from the pane's last good read, which refreshes at most every 10 seconds. Nothing is
- * drawn until the store has been read once, so a session outside a Beads repository shows no
- * band.
+ * The band above the prompt (T-1.6, T-1.8): open, in-progress and blocked counts of the issues
+ * the session owns, and for a firstmate session the host pair's totals above them, from the
+ * tally's last read. Nothing is drawn until some store has answered, so a session with no store
+ * to read shows no band.
  */
-export function drawBand(ui: BandUi, pane: BeadsPane, width: number): RenderElement | undefined {
-  const { board, host } = pane;
-  if (!board.loaded || host === undefined) return undefined;
-  const view = bandView(board.issues, {
-    store: storeName(host.cwd),
-    ...(board.loadedAt === undefined ? {} : { loadedAt: board.loadedAt }),
-    width,
-  });
+export function drawBand(ui: BandUi, tally: BandTally, width: number): RenderElement | undefined {
+  const last = tally.last;
+  if (last === undefined || !last.answers.flat().some((answer) => answer.ok)) return undefined;
   const { Box, Text } = ui;
-  // One line, cut at the band's edge: the counts never wrap under the store name.
+  const rows = last.reads.map((read, i) =>
+    bandRow(read, last.answers[i] ?? [], { loadedAt: last.loadedAt, width }),
+  );
   return Box({
     key: "beads-band",
-    children: [
-      Text({
-        wrap: "truncate-end",
+    flexDirection: "column",
+    // One line a row, cut at the band's edge: the counts never wrap under the label.
+    children: rows.map((row) =>
+      Box({
+        key: `beads-band:${row.key}`,
         children: [
-          Text({ bold: true, children: view.title }),
-          ...view.counts.flatMap((count) => [
-            "  ",
-            Text({ color: colorOf(count.token), children: `${count.count} ${count.label}` }),
-          ]),
-          ...(view.asOf === undefined ? [] : ["  ", Text({ dimColor: true, children: view.asOf })]),
+          Text({
+            wrap: "truncate-end",
+            children: [
+              Text({ bold: true, children: row.title }),
+              ...(row.counts ?? []).flatMap((count) => [
+                "  ",
+                Text({ color: colorOf(count.token), children: `${count.count} ${count.label}` }),
+              ]),
+              ...(row.note === undefined
+                ? []
+                : ["  ", Text({ color: colorOf("warning"), children: row.note })]),
+              ...(row.asOf === undefined
+                ? []
+                : ["  ", Text({ dimColor: true, children: row.asOf })]),
+            ],
+          }),
         ],
       }),
-    ],
+    ),
   });
 }

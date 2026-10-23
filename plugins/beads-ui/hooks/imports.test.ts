@@ -1,6 +1,6 @@
 import { describe, expect, test } from "claude-code/testing";
 
-import { BEADS, PANE_PROPS, SESSION, VIEWPORT, world } from "./tests/world.ts";
+import { PANE_PROPS, SESSION, SHOW, VIEWPORT, world } from "./tests/world.ts";
 
 // The import probe (design T-0.1). It imports nothing from the plugin's hooks module, so the
 // engine's own load of the plugin is what meets a refused import, and the probe's failure names
@@ -32,7 +32,7 @@ describe("imports", () => {
     const w = world(on);
     const ui = await (async () => {
       await $.session.start(SESSION);
-      await $.command.run(BEADS);
+      await $.command.run(SHOW);
       await w.clock.settle();
       const mounted = await $.ui.mount({
         plugin: "beads-ui",

@@ -13,6 +13,8 @@ const modules = readdirSync(dir).filter((name) => /\.(json|txt)\.ts$/.test(name)
 describe("the fixture modules", () => {
   it("should find a module for each fixture the dual-runner suites read", () => {
     expect(modules.sort()).toEqual([
+      "bd-count-assignee-by-status.json.ts",
+      "bd-count-by-status.json.ts",
       "bd-delete-cascade-dry-run.json.ts",
       "bd-delete-dry-run-dependents.json.ts",
       "bd-delete-dry-run-dependents.txt.ts",

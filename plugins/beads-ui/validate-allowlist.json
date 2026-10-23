@@ -3,7 +3,7 @@
     "./register.ts": {
       "hooks": [
         "session.start",
-        "command.run{command=beads|bu}",
+        "command.run{command=show-beads-ui|bu}",
         "ui.close{id=beads|beads-confirm}",
         "ui.focus{requestId=beads}",
         "ui.render{component=AbovePrompt}",
@@ -30,13 +30,14 @@
       "env reads": [
         "AIH_SLUG_BODY_MAX_CHARS",
         "AIH_SLUG_BODY_MAX_CHARS_CHILD",
+        "CLAUDE_CODE_TASK_LIST_ID",
         "HOME",
         "XDG_CONFIG_HOME"
       ],
       "env writes": [],
       "surface modules": ["client/hello.ts"],
       "gating hook with .catch": [
-        "command.run{command=beads|bu}",
+        "command.run{command=show-beads-ui|bu}",
         "ui.close{id=beads|beads-confirm}",
         "ui.focus{requestId=beads}"
       ],

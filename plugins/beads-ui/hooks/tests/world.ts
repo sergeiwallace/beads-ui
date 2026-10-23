@@ -1,6 +1,7 @@
 import type { Args, On, ProcessRunResult, RenderPropsOf } from "claude-code";
 import { mock } from "claude-code/testing";
 
+import countAll from "../../core/test/fixtures/bd-count-by-status.json.ts";
 import cascadePreview from "../../core/test/fixtures/bd-delete-cascade-dry-run.json.ts";
 import dependentsText from "../../core/test/fixtures/bd-delete-dry-run-dependents.txt.ts";
 import leafText from "../../core/test/fixtures/bd-delete-dry-run-leaf.txt.ts";
@@ -17,7 +18,7 @@ import statuses from "../../core/test/fixtures/bd-statuses.json.ts";
 
 export const CWD = "/work/beads-ui";
 export const SESSION = { surface: "terminal", isInteractive: true, cwd: CWD } as const;
-export const BEADS = { command: "beads", args: "", origin: { kind: "composer" } } as const;
+export const SHOW = { command: "show-beads-ui", args: "", origin: { kind: "composer" } } as const;
 export const BU = { command: "bu", args: "", origin: { kind: "composer" } } as const;
 /** 2026-10-21 01:12:04 UTC, the clock's start. */
 export const START_MS = Date.UTC(2026, 9, 21, 1, 12, 4);
@@ -48,6 +49,7 @@ const READS: Readonly<Record<string, ProcessRunResult>> = {
   "bd delete BU-2zw --dry-run": ok(leafText),
   "bd delete BU-mg2.3 --dry-run": exit(1, DEPENDENTS_STDERR, dependentsText),
   "bd delete BU-mg2.3 --cascade --dry-run": ok(cascadePreview),
+  "bd count --by-status": ok(countAll),
 };
 
 const WRITES = ["bd update ", "bd close ", "bd create ", "bd reopen "];
@@ -55,10 +57,12 @@ const WRITES = ["bd update ", "bd close ", "bd create ", "bd reopen "];
 /**
  * What a script answers: a result, an Error to reject the call, `HANG` for a child that never
  * finishes (a streamed read then meets its deadline), a `Killed` child, or undefined to defer.
+ * `cwd` is the directory bd was run in.
  */
 export type Script = (
   key: string,
   argv: readonly string[],
+  cwd: string | undefined,
 ) => ProcessRunResult | Error | typeof HANG | Killed | undefined;
 
 /** A child that writes nothing and never exits. */
@@ -129,11 +133,11 @@ export function world(on: On, options: WorldOptions = {}) {
     const text = options.files?.[e.path];
     return text === undefined ? { deny: `ENOENT: ${e.path}` } : { value: text };
   });
-  const answerFor = (argv: readonly string[]) => {
+  const answerFor = (argv: readonly string[], cwd: string | undefined) => {
     runs.push([...argv]);
     const key = keyOf(argv);
     return (
-      options.script?.(key, argv) ??
+      options.script?.(key, argv, cwd) ??
       READS[key] ??
       (WRITES.some((prefix) => key.startsWith(prefix)) || key.endsWith(" --force")
         ? ok("{}")
@@ -141,14 +145,14 @@ export function world(on: On, options: WorldOptions = {}) {
     );
   };
   on("process.run", (_engine, e) => {
-    const answer = answerFor(e.argv);
+    const answer = answerFor(e.argv, e.init?.cwd);
     if (answer instanceof Error) return { deny: answer.message };
     if (answer === HANG) return { deny: "aborted: still running" };
     if (answer instanceof Killed) return { value: asRunAnswers({ ...answer.wrote, exitCode: 1 }) };
     return { value: asRunAnswers(answer) };
   });
   on("process.spawn", async function* (_engine, e) {
-    const answer = answerFor(e.argv);
+    const answer = answerFor(e.argv, e.cwd);
     if (answer instanceof Error) throw answer;
     if (answer === HANG) return await new Promise<never>(() => undefined);
     const result = answer instanceof Killed ? answer.wrote : answer;
@@ -202,3 +206,61 @@ export const BAND_PROPS: RenderPropsOf["AbovePrompt"] = {
 
 /** A 120 by 30 terminal on the main screen, as tmux runs it by default. */
 export const VIEWPORT = { columns: 120, rows: 30, isFullscreen: false } as const;
+
+/** An issue as the band's `bd count` reads see it: its status and the session it is assigned. */
+export interface Counted {
+  status: string;
+  assignee?: string;
+}
+
+/**
+ * `bd count [--assignee=<name>] --by-status --json` over `issues`, in bd 1.3.1's shape (the
+ * core's bd-count fixtures are real captures of it): one group per status, sorted by name, a
+ * status nothing holds left out.
+ */
+export function countOf(issues: readonly Counted[], argv: readonly string[]): ProcessRunResult {
+  const flag = "--assignee=";
+  const assignee = argv.find((arg) => arg.startsWith(flag))?.slice(flag.length);
+  const held = issues.filter((issue) => assignee === undefined || issue.assignee === assignee);
+  const by = new Map<string, number>();
+  for (const issue of held) by.set(issue.status, (by.get(issue.status) ?? 0) + 1);
+  const groups = [...by.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([group, count]) => ({ count, group }));
+  return ok(`${JSON.stringify({ groups, schema_version: 1, total: held.length }, null, 2)}\n`);
+}
+
+/** Each store answers `bd count` from its own issues, chosen by the directory bd runs in. */
+export const countScript =
+  (stores: Readonly<Record<string, readonly Counted[]>>): Script =>
+  (key, argv, cwd) => {
+    if (!key.startsWith("bd count ")) return undefined;
+    const issues = cwd === undefined ? undefined : stores[cwd];
+    return issues === undefined
+      ? exit(1, "Error: no beads database found\n")
+      : countOf(issues, argv);
+  };
+
+/** The store inventory under the world's HOME. */
+export const INVENTORY_PATH = "/home/me/.beads/shared-server/publish-sweep.json";
+
+/**
+ * The store inventory as ai-harness's bd_publish_sweep.py writes it (schema 1, trimmed to the
+ * fields the band reads): each store's directory and whether it matched the shared remote.
+ */
+export function inventoryOf(
+  stores: Readonly<Record<string, { repo: string; synced?: boolean }>>,
+): string {
+  const entries = Object.fromEntries(
+    Object.entries(stores).map(([name, { repo, synced = true }]) => [
+      name,
+      {
+        repo,
+        code: 0,
+        step: "push",
+        attestation: { verdict: "shared", sync_state: synced ? "converged" : "local_ahead" },
+      },
+    ]),
+  );
+  return JSON.stringify({ schema: 1, exit_code: 0, stores: entries, skipped: [] }, null, 2);
+}
