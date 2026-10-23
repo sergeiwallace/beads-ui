@@ -10,7 +10,9 @@ import { asOf, priorityBadge, truncate } from "./text.ts";
 export const STALE_WRITE_EXIT = 13;
 
 export interface LoadError {
-  /** null when the read timed out and has no exit status. */
+  /** The bd read that failed: `bd list`, or `bd statuses` when no statuses are known yet. */
+  command: string;
+  /** null when the read did not finish and has no exit status. */
   exitCode: number | null;
   message: string;
 }
@@ -40,7 +42,7 @@ export interface BoardState {
 
 export type BoardEvent =
   | { type: "load-succeeded"; issues: Issue[]; statuses: Status[]; at: string }
-  | { type: "load-failed"; exitCode: number | null; message: string }
+  | { type: "load-failed"; command?: string; exitCode: number | null; message: string }
   | { type: "move-requested"; id: string; to: string }
   | { type: "move-succeeded"; id: string }
   | { type: "move-failed"; id: string; exitCode: number; message: string }
@@ -74,7 +76,14 @@ export function reduceBoard(state: BoardState, event: BoardEvent): BoardState {
       return { ...rest, loaded: true, issues, statuses: event.statuses, loadedAt: event.at };
     }
     case "load-failed":
-      return { ...state, loadError: { exitCode: event.exitCode, message: event.message } };
+      return {
+        ...state,
+        loadError: {
+          command: event.command ?? "bd list",
+          exitCode: event.exitCode,
+          message: event.message,
+        },
+      };
     case "move-requested": {
       const issue = state.issues.find((candidate) => candidate.id === event.id);
       if (issue === undefined || state.pending[event.id] !== undefined) return state;
@@ -435,10 +444,10 @@ function errorLine(state: BoardState): string | undefined {
   // wrote cannot be read (cut short, or not the JSON bd list writes). The message says which.
   const what =
     error.exitCode === null
-      ? "bd list did not finish"
+      ? `${error.command} did not finish`
       : error.exitCode === 0
-        ? "bd list gave output beads-ui cannot read"
-        : `bd list failed (exit ${error.exitCode})`;
+        ? `${error.command} gave output beads-ui cannot read`
+        : `${error.command} failed (exit ${error.exitCode})`;
   const detail = error.message === "" ? "" : `: ${error.message}`;
   const kept = state.loadedAt === undefined ? "" : `; showing the board ${asOf(state.loadedAt)}`;
   return `${what}${detail}${kept}; retrying on the next refresh`;
