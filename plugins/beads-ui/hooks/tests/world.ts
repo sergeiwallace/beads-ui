@@ -52,8 +52,41 @@ const READS: Readonly<Record<string, ProcessRunResult>> = {
 
 const WRITES = ["bd update ", "bd close ", "bd create ", "bd reopen "];
 
-/** What a script answers: a result, an Error to reject the run (a timeout), or undefined to defer. */
-export type Script = (key: string, argv: readonly string[]) => ProcessRunResult | Error | undefined;
+/**
+ * What a script answers: a result, an Error to reject the call, `HANG` for a child that never
+ * finishes (a streamed read then meets its deadline), a `Killed` child, or undefined to defer.
+ */
+export type Script = (
+  key: string,
+  argv: readonly string[],
+) => ProcessRunResult | Error | typeof HANG | Killed | undefined;
+
+/** A child that writes nothing and never exits. */
+export const HANG = "hang" as const;
+
+/** A child a signal ends after it `wrote` part of its output. */
+export class Killed {
+  constructor(
+    readonly signal: string,
+    readonly wrote: ProcessRunResult,
+  ) {}
+}
+
+/**
+ * What `$.process.run` keeps of each pipe (Claude Code 2.1.309's declaration of
+ * ProcessRunResult): the first 4194304 bytes, the rest dropped and `isStdoutTruncated` set.
+ */
+export const RUN_OUTPUT_LIMIT = 4_194_304;
+
+function asRunAnswers(result: ProcessRunResult): ProcessRunResult {
+  const bytes = new TextEncoder().encode(result.stdout);
+  if (bytes.length <= RUN_OUTPUT_LIMIT) return { ...result, isStdoutTruncated: false };
+  const kept = new TextDecoder().decode(bytes.subarray(0, RUN_OUTPUT_LIMIT));
+  return { ...result, stdout: kept, isStdoutTruncated: true };
+}
+
+/** The pieces a spawned child's output arrives in: 64 KiB, as a pipe's reads are. */
+const PIECE = 65_536;
 
 export interface WorldOptions {
   script?: Script;
@@ -96,17 +129,35 @@ export function world(on: On, options: WorldOptions = {}) {
     const text = options.files?.[e.path];
     return text === undefined ? { deny: `ENOENT: ${e.path}` } : { value: text };
   });
-  on("process.run", (_engine, e) => {
-    runs.push([...e.argv]);
-    const key = keyOf(e.argv);
-    const answer =
-      options.script?.(key, e.argv) ??
+  const answerFor = (argv: readonly string[]) => {
+    runs.push([...argv]);
+    const key = keyOf(argv);
+    return (
+      options.script?.(key, argv) ??
       READS[key] ??
       (WRITES.some((prefix) => key.startsWith(prefix)) || key.endsWith(" --force")
         ? ok("{}")
-        : exit(1, `unscripted: ${key}`));
+        : exit(1, `unscripted: ${key}`))
+    );
+  };
+  on("process.run", (_engine, e) => {
+    const answer = answerFor(e.argv);
     if (answer instanceof Error) return { deny: answer.message };
-    return { value: answer };
+    if (answer === HANG) return { deny: "aborted: still running" };
+    if (answer instanceof Killed) return { value: asRunAnswers({ ...answer.wrote, exitCode: 1 }) };
+    return { value: asRunAnswers(answer) };
+  });
+  on("process.spawn", async function* (_engine, e) {
+    const answer = answerFor(e.argv);
+    if (answer instanceof Error) throw answer;
+    if (answer === HANG) return await new Promise<never>(() => undefined);
+    const result = answer instanceof Killed ? answer.wrote : answer;
+    for (let at = 0; at < result.stdout.length; at += PIECE) {
+      yield { stream: "stdout" as const, text: result.stdout.slice(at, at + PIECE) };
+    }
+    if (result.stderr !== "") yield { stream: "stderr" as const, text: result.stderr };
+    if (answer instanceof Killed) return { value: { code: null, signal: answer.signal } };
+    return { value: { code: result.exitCode, signal: null } };
   });
   on("ui.open", (_engine, e) => {
     opened.push(e);

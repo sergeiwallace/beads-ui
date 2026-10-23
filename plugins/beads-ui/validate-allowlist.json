@@ -10,12 +10,14 @@
         "ui.render{component=Pane}"
       ],
       "calls": [
+        "$.clock.after",
         "$.clock.every",
         "$.clock.now",
         "$.command.register",
         "$.env.get",
         "$.fs.read",
         "$.process.run",
+        "$.process.spawn",
         "$.store.get",
         "$.store.set",
         "$.ui.close",

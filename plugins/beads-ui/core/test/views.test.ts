@@ -254,10 +254,10 @@ describe("a failed bd list", () => {
     const timedOut = reduceBoard(INITIAL_BOARD_STATE, {
       type: "load-failed",
       exitCode: null,
-      message: "",
+      message: "timed out after 8000 ms",
     });
     expect(boardView(timedOut, { columnWidth: 20 }).errorLine).toBe(
-      "bd list timed out; retrying on the next refresh",
+      "bd list did not finish: timed out after 8000 ms; retrying on the next refresh",
     );
 
     const recovered = reduceBoard(timedOut, {

@@ -1,5 +1,7 @@
 import type { PaneOpenArgs, ProcessRunResult, Timer } from "claude-code";
 
+import type { Streamed } from "./stream.ts";
+
 /**
  * The engine as `session.start` bound it from its `$`: plain closures, each one `$` call in
  * register.ts, so no helper file ever holds `$` (the pattern Claude Code's own `diff` mod uses).
@@ -9,6 +11,11 @@ export interface Host {
   cwd: string;
   /** `$.process.run` in `cwd`; rejects when bd cannot start or outlives `timeoutMs`. */
   run: (argv: readonly string[], timeoutMs: number) => Promise<ProcessRunResult>;
+  /**
+   * `$.process.spawn` in `cwd`, read to its end: the whole output, past `$.process.run`'s 4 MiB.
+   * Rejects when bd cannot start, is ended by a signal or outlives `timeoutMs`.
+   */
+  stream: (argv: readonly string[], timeoutMs: number) => Promise<Streamed>;
   /** `$.clock.now`. */
   now: () => Promise<number>;
   /** `$.clock.every`. */

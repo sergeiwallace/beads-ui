@@ -21,8 +21,11 @@ import {
   BEADS,
   CWD,
   exit,
+  HANG,
+  Killed,
   ok,
   PANE_PROPS,
+  RUN_OUTPUT_LIMIT,
   SESSION,
   START_MS,
   SURFACES,
@@ -206,16 +209,86 @@ describe("the Board tab", () => {
   test("should keep the last board and say it timed out when bd list does not answer", async ($, on) => {
     let hanging = false;
     const { w, ui } = await openPane($, on, {
-      script: (key) =>
-        hanging && key === "bd list --all --brief --limit 0" ? new Error("timed out") : undefined,
+      script: (key) => (hanging && key === "bd list --all --brief --limit 0" ? HANG : undefined),
     });
 
     hanging = true;
     await w.clock.advance(10_000);
+    await w.clock.advance(8_000);
 
-    expect((await ui.find({ key: "error-line" }))?.text).toMatch(/^bd list timed out/);
+    expect((await ui.find({ key: "error-line" }))?.text).toBe(
+      `bd list did not finish: timed out after 8000 ms; showing the board ${STAMP}; retrying on the next refresh`,
+    );
     expect((await ui.find({ key: "column::open" }))?.text).toBe("open 20");
   });
+
+  test("should keep the last board and name the signal when bd list is killed partway through its output", async ($, on) => {
+    let killing = false;
+    const { w, ui } = await openPane($, on, {
+      script: (key) =>
+        killing && key === "bd list --all --brief --limit 0"
+          ? new Killed("SIGKILL", ok(list.slice(0, list.length / 2)))
+          : undefined,
+    });
+
+    killing = true;
+    await w.clock.advance(10_000);
+
+    expect((await ui.find({ key: "error-line" }))?.text).toBe(
+      `bd list did not finish: stopped by SIGKILL; showing the board ${STAMP}; retrying on the next refresh`,
+    );
+    expect(await keysOf(ui, "card:")).toHaveLength(30);
+  });
+
+  test("should say what bd list wrote cannot be read, not that it failed, when it exits 0 with broken JSON", async ($, on) => {
+    const { ui } = await openPane($, on, {
+      script: (key) =>
+        key === "bd list --all --brief --limit 0" ? ok(list.slice(0, 1000)) : undefined,
+    });
+
+    expect((await ui.find({ key: "error-line" }))?.text).toMatch(
+      /^bd list gave output beads-ui cannot read: .+ at \$; retrying on the next refresh$/,
+    );
+  });
+
+  // The store this bug was found on (ai-harness, 2026-10-23): bd list --json --all --brief
+  // --limit 0 wrote 7,141,443 bytes for 6964 issues, past the 4194304 $.process.run keeps.
+  const STORE_ISSUES = 6964;
+  const sevenMegabyteStore = () => {
+    const [first] = JSON.parse(list) as Record<string, unknown>[];
+    return Array.from({ length: STORE_ISSUES }, (_, i) => ({
+      ...first,
+      id: `BU-big${i}`,
+      title: `issue number ${i} with a title long enough to fill a card`,
+      status: ["open", "closed", "closed"][i % 3],
+      close_reason: `closed by the run that landed issue ${i}: `.padEnd(400, "x"),
+      metadata: { display_id: `BU-issue-number-${i}-big` },
+      labels: [`id:BU-issue-number-${i}-big`],
+    }));
+  };
+
+  test(
+    "should load the board and reach every card when bd list writes about 7 MB for 6964 issues",
+    { timeoutMs: 300_000 },
+    async ($, on) => {
+      const store = JSON.stringify(sevenMegabyteStore());
+      expect(store.length).toBeGreaterThan(7_000_000);
+      expect(store.length).toBeGreaterThan(RUN_OUTPUT_LIMIT);
+
+      const { ui } = await openPane($, on, {
+        script: (key) => (key === "bd list --all --brief --limit 0" ? ok(store) : undefined),
+      });
+
+      expect(await ui.find({ key: "error-line" })).toBeUndefined();
+      expect((await ui.find({ key: "column::open" }))?.text).toBe("open 2322");
+      expect((await ui.find({ key: "column::closed" }))?.text).toBe("closed 4642");
+      const { moves, largest } = await walkBoard(ui);
+      expect(moves).toEqual(
+        Array.from({ length: STORE_ISSUES }, (_, i) => `move:BU-big${i}`).sort(),
+      );
+      expect(largest).toBeLessThan(100_000);
+    },
+  );
 
   const everyMove = Array.from({ length: 600 }, (_, i) => `move:BU-load${i}`).sort();
 
@@ -555,6 +628,22 @@ describe("the Detail tab", () => {
       expect(w.keys()).toContain("bd history BU-mg2.3 --events");
     });
   }
+
+  test("should name the 4 MiB cut when an issue's history passes what $.process.run keeps", async ($, on) => {
+    const { w, ui } = await openPane($, on, {
+      script: (key) =>
+        key === "bd history BU-mg2.3 --events"
+          ? ok(`[${'{"kind":"x"},'.repeat(RUN_OUTPUT_LIMIT / 10)}]`)
+          : undefined,
+    });
+
+    await ui.press({ key: "open:BU-mg2.3" });
+    await w.clock.settle();
+
+    expect((await ui.find({ key: "detail-error" }))?.text).toBe(
+      "bd history BU-mg2.3 failed: its output passed the 4 MiB $.process.run keeps and was cut short",
+    );
+  });
 
   test("should write an edited field with bd update and re-read the issue before redrawing", async ($, on) => {
     const { w, ui } = await openPane($, on);
