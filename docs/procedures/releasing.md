@@ -11,7 +11,7 @@ rather than relying on anyone to remember.
 A branch whose diff against `main` touches a shipped plugin file must raise that plugin's version
 above `main`'s current one, by at least the level its commits call for:
 
-| The branch's commits (and, for a squash merge, the PR title) | Bump |
+| The branch's commits that change a shipped file (and, for a squash merge, the PR title) | Bump |
 |---|---|
 | any `feat` commit | minor (`0.1.1` -> `0.2.0`) |
 | only other types (`fix`, `perf`, `refactor`, `chore`, untyped, ...) | patch (`0.1.1` -> `0.1.2`) |

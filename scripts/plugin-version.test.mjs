@@ -174,3 +174,11 @@ test("a version raised past main's by the right level passes as it is", () => {
   assert.equal(run(cwd, "pre-push").status, 0);
   assert.equal(git(cwd, "rev-parse", "HEAD"), before);
 });
+
+test("a feat that touches no shipped file does not raise the plugin's bump to minor", () => {
+  const cwd = repo();
+  commit(cwd, "feat(release): repository tooling", { "scripts/tool.mjs": "x\n" });
+  commit(cwd, "fix(mod): one", { "plugins/beads-ui/hooks/pane.ts": "export const a = 10;\n" });
+  assert.equal(run(cwd, "pre-push").status, 1);
+  assert.equal(version(cwd), "0.1.2");
+});

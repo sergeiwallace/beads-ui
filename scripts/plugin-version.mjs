@@ -115,26 +115,31 @@ export function evaluate({ cwd, base, head = "HEAD", messages = [], worktree = f
   const changed = git(cwd, ["diff", "--name-only", "--no-renames", `${mergeBase}`, head])
     .split("\n")
     .filter(Boolean);
-  const log = git(cwd, ["log", "--no-merges", "--format=%B%x00", `${mergeBase}..${head}`]);
-  const allMessages = [
-    ...log
-      .split("\0")
-      .map((m) => m.trim())
-      .filter(Boolean),
-    ...messages,
-  ];
-  const approved = allMessages.some((m) =>
+  // Each commit with the files it touches: a commit's type counts only for a plugin whose
+  // shipped files it changed, so a feat to the repository's tooling never raises the mod.
+  const commits = git(cwd, ["rev-list", "--no-merges", `${mergeBase}..${head}`])
+    .split("\n")
+    .filter(Boolean)
+    .map((sha) => ({
+      message: git(cwd, ["log", "-1", "--format=%B", sha]).trim(),
+      files: git(cwd, ["diff-tree", "--no-commit-id", "--name-only", "-r", "--no-renames", sha])
+        .split("\n")
+        .filter(Boolean),
+    }));
+  const approved = [...commits.map((c) => c.message), ...messages].some((m) =>
     m
       .split("\n")
       .some((line) => line.trim().toLowerCase() === policy.majorApprovalTrailer.toLowerCase()),
   );
   return policy.plugins.map((plugin) => {
     const ignore = (plugin.ignore ?? []).map(globToRegExp);
-    const shipped = changed.filter(
-      (file) =>
-        plugin.paths.some((prefix) => file.startsWith(prefix)) &&
-        !ignore.some((re) => re.test(file)),
-    );
+    const ships = (file) =>
+      plugin.paths.some((prefix) => file.startsWith(prefix)) && !ignore.some((re) => re.test(file));
+    const shipped = changed.filter(ships);
+    const allMessages = [
+      ...commits.filter((c) => c.files.some(ships)).map((c) => c.message),
+      ...messages,
+    ];
     const result = { name: plugin.name, manifest: plugin.manifest, shipped, approved };
     const baseText = manifestVersion(cwd, base, plugin.manifest);
     const headText = manifestVersion(cwd, worktree ? null : head, plugin.manifest);
