@@ -47,6 +47,21 @@ claude plugin update beads-ui@beads-ui
 
 Pass the same `--scope` you installed with, then start a new session: `claude plugin update` applies on restart. `claude plugin update` compares the `version` in `plugins/beads-ui/.claude-plugin/plugin.json`: a commit that does not raise it reports "already at the latest version" and installs nothing, so every release that should reach installed copies raises the version.
 
+To turn auto-update on without `/plugin`, declare the marketplace in your user `settings.json`:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "beads-ui": {
+      "source": { "source": "github", "repo": "sergeiwallace/beads-ui" },
+      "autoUpdate": true
+    }
+  }
+}
+```
+
+With auto-update on, Claude Code checks the marketplace when a session starts, not while it runs, so a session that is already open never sees a new release. At that startup check it installs a raised version and then tries to reload it into the session that just started: the notice reads "reloaded for this session" when that works. When the reload would change the session's tool list, Claude Code skips it and the notice says to run `/reload-plugins`; run it, or start another session. The version rule above still applies: a release that does not raise the version is not installed. (Read from the Claude Code 2.1.309 binary.)
+
 ## What it does
 
 - `/beads` opens the pane, and runs again to close it. `/bu` is the same command under a short name.
