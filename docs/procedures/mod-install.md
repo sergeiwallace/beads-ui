@@ -45,7 +45,7 @@ claude plugin marketplace update beads-ui
 claude plugin update beads-ui@beads-ui
 ```
 
-Pass the same `--scope` you installed with, then start a new session: `claude plugin update` applies on restart. `claude plugin update` compares the `version` in `plugins/beads-ui/.claude-plugin/plugin.json`: a commit that does not raise it reports "already at the latest version" and installs nothing, so every release that should reach installed copies raises the version.
+Pass the same `--scope` you installed with, then start a new session: `claude plugin update` applies on restart. `claude plugin update` compares the `version` in `plugins/beads-ui/.claude-plugin/plugin.json`: a commit that does not raise it reports "already at the latest version" and installs nothing, so every release that should reach installed copies raises the version. The repository enforces that: the pre-push hook raises it for you and `ghp pr merge` refuses a merge that does not ([releasing.md](releasing.md)).
 
 To turn auto-update on without `/plugin`, declare the marketplace in your user `settings.json`:
 
