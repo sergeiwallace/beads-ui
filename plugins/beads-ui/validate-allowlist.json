@@ -30,6 +30,7 @@
       "env reads": [
         "AIH_SLUG_BODY_MAX_CHARS",
         "AIH_SLUG_BODY_MAX_CHARS_CHILD",
+        "CLAUDE_CODE_TASK_LIST_ID",
         "HOME",
         "XDG_CONFIG_HOME"
       ],

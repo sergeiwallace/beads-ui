@@ -1,6 +1,7 @@
 export {
   cascadePreviewArgv,
   closeArgv,
+  countArgv,
   deleteArgv,
   deletePreviewArgv,
   historyArgv,
@@ -117,6 +118,7 @@ export type {
 export { STATUS_CATEGORIES } from "./model.ts";
 export type { ParseError, ParseResult } from "./parsers.ts";
 export {
+  parseBdCount,
   parseBdCreatedId,
   parseBdDeletePreview,
   parseBdHistoryEvents,
@@ -147,8 +149,14 @@ export {
 } from "./tokens.ts";
 export type { BacklogOptions, BacklogRow, BacklogView } from "./views/backlog.ts";
 export { BACKLOG_PAGE_SIZE, backlogView } from "./views/backlog.ts";
-export type { BandCount, BandView } from "./views/band.ts";
-export { bandView } from "./views/band.ts";
+export type { BandCount, BandRead, BandRow, BandStore, StoreCounts } from "./views/band.ts";
+export {
+  bandReads,
+  bandRow,
+  isFirstmate,
+  parseStoreInventory,
+  STORE_INVENTORY_FILE,
+} from "./views/band.ts";
 export type {
   BoardEvent,
   BoardPageLimit,

@@ -24,6 +24,12 @@ export function readyArgv(): BdArgv {
   return ["bd", "ready", "--json", "--brief", "--limit", "0"];
 }
 
+/** Counts by status: of the issues `assignee` holds when given, else of the whole store. */
+export function countArgv(assignee?: string): BdArgv {
+  const owner = assignee === undefined ? [] : [`--assignee=${assignee}`];
+  return ["bd", "count", ...owner, "--by-status", "--json"];
+}
+
 export function showArgv(id: string): BdArgv {
   return ["bd", "show", issueIdArg(id), "--json"];
 }

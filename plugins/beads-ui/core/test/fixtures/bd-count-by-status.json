@@ -1,0 +1,22 @@
+{
+  "groups": [
+    {
+      "count": 1,
+      "group": "blocked"
+    },
+    {
+      "count": 27,
+      "group": "closed"
+    },
+    {
+      "count": 6,
+      "group": "in_progress"
+    },
+    {
+      "count": 14,
+      "group": "open"
+    }
+  ],
+  "schema_version": 1,
+  "total": 48
+}

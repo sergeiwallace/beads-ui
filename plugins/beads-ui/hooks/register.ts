@@ -5,6 +5,7 @@ import { CONFIRM_ID, DeleteConfirm } from "./confirm.ts";
 import type { Host } from "./host.ts";
 import { BeadsPane, PANE_ID } from "./pane.ts";
 import { readStream } from "./stream.ts";
+import { BandTally } from "./tally.ts";
 
 export const PLUGIN_NAME = "beads-ui";
 export const COMMAND_NAME = "show-beads-ui";
@@ -30,6 +31,7 @@ const COMMAND_SPECS = [
  */
 export function register(on: On) {
   const pane = new BeadsPane();
+  const tally = new BandTally();
   const confirm = new DeleteConfirm(
     (text, undo) => pane.afterConfirm(text, undo),
     () => void pane.resume(),
@@ -46,6 +48,10 @@ export function register(on: On) {
       cwd: e.cwd,
       run: (argv, timeoutMs) =>
         $.process.run(argv, { cwd: e.cwd, timeoutMs, env: { NO_COLOR: "1" } }),
+      runIn: (cwd, argv, timeoutMs) =>
+        $.process.run(argv, { cwd, timeoutMs, env: { NO_COLOR: "1" } }),
+      // `ai c` pins the session's name here, and it is the assignee of the beads it owns (D-17).
+      sessionName: () => $.env.get("CLAUDE_CODE_TASK_LIST_ID"),
       stream: (argv, timeoutMs) =>
         readStream(
           $.process.spawn({ argv, cwd: e.cwd, env: { NO_COLOR: "1" } }),
@@ -74,6 +80,7 @@ export function register(on: On) {
     for (const spec of COMMAND_SPECS) await $.command.register(spec);
     confirm.host = host;
     await pane.bind(host);
+    await tally.bind(host);
 
     return next(e);
   });
@@ -104,7 +111,7 @@ export function register(on: On) {
     if (e.surface !== "terminal" || e.props.hasSurvey) return next(e);
     if (e.viewport !== undefined) pane.measured(e.viewport.columns);
     const { Box, Text } = await $.ui.resolve(e);
-    const band = drawBand({ Box, Text }, pane, e.props.bodyColumns);
+    const band = drawBand({ Box, Text }, tally, e.props.bodyColumns);
     if (band === undefined) return next(e);
 
     return Box({ flexDirection: "column", children: [band, await next(e)] });

@@ -5,9 +5,15 @@ import { describe, expect, test } from "claude-code/testing";
 import { asOf, clockStamp } from "../core/src/index.ts";
 import { NARROW_TEXT } from "./pane.ts";
 import { PANE_ID, PLUGIN_NAME } from "./register.ts";
+import { TALLY_REFRESH_MS } from "./tally.ts";
 import {
   BAND_PROPS,
+  type Counted,
   CWD,
+  countScript,
+  exit,
+  INVENTORY_PATH,
+  inventoryOf,
   SESSION,
   SHOW,
   START_MS,
@@ -28,6 +34,35 @@ const band = ($: Engine, columns = 120, hasSurvey = false) =>
     viewport: { ...VIEWPORT, columns },
   });
 
+const row = async (ui: Awaited<ReturnType<typeof band>>, key: string) =>
+  (await ui.find({ key: `beads-band:${key}` }))?.text;
+
+/** A session `ai c` named, so `CLAUDE_CODE_TASK_LIST_ID` holds its name. */
+const named = (session: string, options: WorldOptions = {}): WorldOptions => ({
+  ...options,
+  env: { HOME: "/home/me", CLAUDE_CODE_TASK_LIST_ID: session },
+});
+
+const HARNESS = "/work/ai-harness";
+/** Two stores holding issues of three sessions and one with no assignee. */
+const STORES: Readonly<Record<string, readonly Counted[]>> = {
+  [CWD]: [
+    { status: "open", assignee: "aih-ec2-3" },
+    { status: "in_progress", assignee: "aih-ec2-3" },
+    { status: "closed", assignee: "aih-ec2-3" },
+    { status: "open", assignee: "kg-ec2-1" },
+    { status: "blocked", assignee: "kg-ec2-1" },
+    { status: "open" },
+  ],
+  [HARNESS]: [
+    { status: "open", assignee: "aih-ec2-3" },
+    { status: "blocked", assignee: "aih-ec2-3" },
+    { status: "in_progress", assignee: "aih-ec2-firstmate-1" },
+    { status: "open", assignee: "kg-ec2-1" },
+  ],
+};
+const INVENTORY = { [INVENTORY_PATH]: inventoryOf({ BU: { repo: CWD }, AIH: { repo: HARNESS } }) };
+
 async function started($: Engine, on: On, options: WorldOptions = {}) {
   const w = world(on, options);
   await $.session.start(SESSION);
@@ -36,15 +71,162 @@ async function started($: Engine, on: On, options: WorldOptions = {}) {
 }
 
 describe("the band above the prompt", () => {
-  test("should register /show-beads-ui and draw open, in-progress and blocked counts when the session starts", async ($, on) => {
-    const w = await started($, on);
+  test("should count only the session's own issues across every store when a named session starts", async ($, on) => {
+    const w = await started(
+      $,
+      on,
+      named("aih-ec2-3", { files: INVENTORY, script: countScript(STORES) }),
+    );
 
     const ui = await band($);
 
     expect(w.registered).toEqual(["show-beads-ui", "bu"]);
-    expect((await ui.find({ key: "beads-band" }))?.text).toBe(
-      `beads beads-ui  20 open  2 in progress  0 blocked  ${STAMP}`,
+    expect(await row(ui, "own")).toBe(
+      `beads aih-ec2-3, all 2 stores  2 open  1 in progress  1 blocked  ${STAMP}`,
     );
+    expect(await row(ui, "totals")).toBeUndefined();
+  });
+
+  test("should count the session's own issues in its directory's store when there is no store inventory", async ($, on) => {
+    const w = await started($, on, named("aih-ec2-3", { script: countScript(STORES) }));
+
+    const ui = await band($);
+
+    expect(await row(ui, "own")).toBe(
+      `beads aih-ec2-3 in beads-ui  1 open  1 in progress  0 blocked  ${STAMP}`,
+    );
+    expect(w.runs.filter((argv) => argv[1] === "count")).toEqual([
+      ["bd", "count", "--assignee=aih-ec2-3", "--by-status", "--json"],
+    ]);
+  });
+
+  test("should draw the host pair's totals above its own counts when a firstmate session starts", async ($, on) => {
+    await started(
+      $,
+      on,
+      named("aih-ec2-firstmate-1", { files: INVENTORY, script: countScript(STORES) }),
+    );
+
+    const ui = await band($);
+
+    expect(await row(ui, "totals")).toBe(
+      `beads host pair, all 2 stores  5 open  2 in progress  2 blocked  ${STAMP}`,
+    );
+    expect(await row(ui, "own")).toBe(
+      `beads aih-ec2-firstmate-1, all 2 stores  0 open  1 in progress  0 blocked  ${STAMP}`,
+    );
+    const text = (await ui.find({ key: "beads-band" }))?.text ?? "";
+    expect(text.indexOf("host pair")).toBeLessThan(text.indexOf("aih-ec2-firstmate-1,"));
+  });
+
+  test("should name the stores not in step with the pair in the totals label when the inventory says so", async ($, on) => {
+    const files = {
+      [INVENTORY_PATH]: inventoryOf({ BU: { repo: CWD }, AIH: { repo: HARNESS, synced: false } }),
+    };
+    await started($, on, named("aih-ec2-firstmate-1", { files, script: countScript(STORES) }));
+
+    const ui = await band($);
+
+    expect(await row(ui, "totals")).toBe(
+      `beads host pair, all 2 stores, 1 not synced with the pair  5 open  2 in progress  2 blocked  ${STAMP}`,
+    );
+  });
+
+  test("should label the store's counts as every owner's when the session has no name", async ($, on) => {
+    const w = await started($, on, { files: INVENTORY });
+
+    const ui = await band($);
+
+    expect(await row(ui, "store")).toBe(
+      `beads beads-ui, all owners (session name unknown)  14 open  6 in progress  1 blocked  ${STAMP}`,
+    );
+    expect(await row(ui, "own")).toBeUndefined();
+    expect(await row(ui, "totals")).toBeUndefined();
+    expect(w.runs.some((argv) => argv.some((arg) => arg.startsWith("--assignee")))).toBe(false);
+  });
+
+  test("should treat an empty session name as no name when the variable is set but blank", async ($, on) => {
+    await started($, on, named("  ", { files: INVENTORY }));
+
+    const ui = await band($);
+
+    expect(await row(ui, "store")).toBe(
+      `beads beads-ui, all owners (session name unknown)  14 open  6 in progress  1 blocked  ${STAMP}`,
+    );
+  });
+
+  test("should name the failure on the totals row and still draw its own counts when the totals cannot be read", async ($, on) => {
+    const counts = countScript(STORES);
+    await started(
+      $,
+      on,
+      named("aih-ec2-firstmate-1", {
+        files: INVENTORY,
+        script: (key, argv, cwd) =>
+          key === "bd count --by-status"
+            ? exit(1, "Error: database is locked\n")
+            : counts(key, argv, cwd),
+      }),
+    );
+
+    const ui = await band($);
+
+    expect(await row(ui, "totals")).toBe(
+      `beads host pair, all 2 stores  could not read any of the 2 stores  ${STAMP}`,
+    );
+    expect(await row(ui, "own")).toBe(
+      `beads aih-ec2-firstmate-1, all 2 stores  0 open  1 in progress  0 blocked  ${STAMP}`,
+    );
+  });
+
+  test("should total the stores that answered and name the one that did not when one store fails", async ($, on) => {
+    const counts = countScript(STORES);
+    await started(
+      $,
+      on,
+      named("aih-ec2-firstmate-1", {
+        files: INVENTORY,
+        script: (key, argv, cwd) =>
+          key === "bd count --by-status" && cwd === HARNESS
+            ? exit(1, "Error: database is locked\n")
+            : counts(key, argv, cwd),
+      }),
+    );
+
+    const ui = await band($);
+
+    expect(await row(ui, "totals")).toBe(
+      `beads host pair, all 2 stores  3 open  1 in progress  1 blocked  1 of 2 stores unread (AIH)  ${STAMP}`,
+    );
+  });
+
+  test("should say it cannot list the stores and still draw its own counts when a firstmate has no inventory", async ($, on) => {
+    await started($, on, named("aih-ec2-firstmate-1", { script: countScript(STORES) }));
+
+    const ui = await band($);
+
+    expect(await row(ui, "totals")).toBe(
+      `beads host pair  cannot list the stores: no store inventory at ${INVENTORY_PATH}  ${STAMP}`,
+    );
+    expect(await row(ui, "own")).toBe(
+      `beads aih-ec2-firstmate-1 in beads-ui  0 open  0 in progress  0 blocked  ${STAMP}`,
+    );
+  });
+
+  test("should read the counts again every 30 seconds and not sooner", async ($, on) => {
+    const w = await started(
+      $,
+      on,
+      named("aih-ec2-3", { files: INVENTORY, script: countScript(STORES) }),
+    );
+    const counts = () => w.keys().filter((key) => key.startsWith("bd count ")).length;
+    const first = counts();
+
+    await w.clock.advance(TALLY_REFRESH_MS - 1);
+    expect(counts()).toBe(first);
+
+    await w.clock.advance(1);
+    expect(counts()).toBe(first * 2);
   });
 
   test("should refresh at most every 10 seconds when the pane is closed", async ($, on) => {
@@ -74,7 +256,9 @@ describe("the band above the prompt", () => {
   test("should draw nothing of its own when the store cannot be read", async ($, on) => {
     await started($, on, {
       script: (key) =>
-        key === LIST ? { exitCode: 1, stdout: "", stderr: "no beads database" } : undefined,
+        key === LIST || key.startsWith("bd count ")
+          ? { exitCode: 1, stdout: "", stderr: "no beads database" }
+          : undefined,
     });
 
     const ui = await band($);

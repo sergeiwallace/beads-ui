@@ -2,12 +2,15 @@
 // claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
+  parseBdCount,
   parseBdCreatedId,
   parseBdDeletePreview,
   parseBdHistoryEvents,
   parseBdReady,
   parseBdShow,
 } from "../src/index.ts";
+import countMine from "./fixtures/bd-count-assignee-by-status.json.ts";
+import countAll from "./fixtures/bd-count-by-status.json.ts";
 import cascadePreview from "./fixtures/bd-delete-cascade-dry-run.json.ts";
 import refusedPreview from "./fixtures/bd-delete-dry-run-dependents.json.ts";
 import historyMg22 from "./fixtures/bd-history-BU-mg2.2.json.ts";
@@ -156,5 +159,26 @@ describe("parseBdCreatedId", () => {
     const error = errorOf(parseBdCreatedId('{"title":"x"}'));
 
     expect([error?.source, error?.path]).toEqual(["bd create", "$.id"]);
+  });
+});
+
+describe("parseBdCount", () => {
+  test("should read each status's count when bd count --by-status --json groups the store", () => {
+    expect(unwrap(parseBdCount(countAll))).toEqual({
+      blocked: 1,
+      closed: 27,
+      in_progress: 6,
+      open: 14,
+    });
+  });
+
+  test("should leave out a status nothing holds when one assignee's issues are counted", () => {
+    expect(unwrap(parseBdCount(countMine))).toEqual({ blocked: 1, closed: 3, in_progress: 4 });
+  });
+
+  test("should return a parse error at the count when a group's count is not a whole number", () => {
+    const error = errorOf(parseBdCount('{"groups":[{"group":"open","count":"3"}]}'));
+
+    expect([error?.source, error?.path]).toEqual(["bd count", "$.groups[0].count"]);
   });
 });

@@ -18,7 +18,8 @@ export interface ParseError {
     | "bd ready"
     | "bd history"
     | "bd delete"
-    | "bd create";
+    | "bd create"
+    | "bd count";
   path: string;
   message: string;
 }
@@ -308,4 +309,24 @@ export function parseBdDeletePreview(text: string): ParseResult<DeletePreview> {
 /** Reads the new issue's hash id from `bd create --json`, as bd-new does. */
 export function parseBdCreatedId(text: string): ParseResult<string> {
   return run("bd create", text, (json) => requiredString(asObject(json, "$"), "id", "$"));
+}
+
+/**
+ * Reads `bd count --by-status --json`: the count of each status bd grouped. bd leaves out a
+ * status nothing holds, so a status missing here counts zero.
+ */
+export function parseBdCount(text: string): ParseResult<Record<string, number>> {
+  return run("bd count", text, (json) => {
+    const counts: Record<string, number> = {};
+    asArray(asObject(json, "$").groups, "$.groups").forEach((entry, i) => {
+      const path = `$.groups[${i}]`;
+      const group = asObject(entry, path);
+      const count = group.count;
+      if (typeof count !== "number" || !Number.isInteger(count) || count < 0) {
+        throw new Invalid(`${path}.count`, "expected a non-negative integer");
+      }
+      counts[requiredString(group, "group", path)] = count;
+    });
+    return counts;
+  });
 }
