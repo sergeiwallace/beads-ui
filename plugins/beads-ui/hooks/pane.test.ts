@@ -222,6 +222,16 @@ describe("the Board tab", () => {
     expect((await ui.find({ key: "column::open" }))?.text).toBe("open 20");
   });
 
+  test("should name bd statuses, not bd list, when the first bd statuses read fails", async ($, on) => {
+    const { ui } = await openPane($, on, {
+      script: (key) => (key === "bd statuses" ? exit(1, "Error: database is locked") : undefined),
+    });
+
+    expect((await ui.find({ key: "error-line" }))?.text).toBe(
+      "bd statuses failed (exit 1): Error: database is locked; retrying on the next refresh",
+    );
+  });
+
   test("should keep the last board and name the signal when bd list is killed partway through its output", async ($, on) => {
     let killing = false;
     const { w, ui } = await openPane($, on, {

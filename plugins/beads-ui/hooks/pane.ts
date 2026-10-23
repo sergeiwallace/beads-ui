@@ -440,10 +440,13 @@ export class BeadsPane {
     if (known.length === 0) {
       this.dispatch({
         type: "load-failed",
-        exitCode: statuses.exitCode,
-        message: statuses.ok
-          ? "bd statuses returned no statuses"
-          : this.failure("bd statuses", statuses),
+        command: "bd statuses",
+        exitCode: statuses.ok ? 0 : statuses.exitCode,
+        message: !statuses.ok
+          ? statuses.message
+          : parsedStatuses?.ok === false
+            ? `${parsedStatuses.error.message} at ${parsedStatuses.error.path}`
+            : "it listed no statuses",
       });
       return false;
     }
