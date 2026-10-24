@@ -96,6 +96,7 @@ import {
   type SwimlaneMode,
   settingsView,
   showArgv,
+  showsTasks,
   slugBudgets,
   sortLabel,
   stateDirOf,
@@ -138,9 +139,17 @@ import type { StoreResolver } from "./store.ts";
 export const PANE_ID = "beads";
 export const PANE_TITLE = "Beads";
 
-/** An open nobody asked for is withdrawn below this width (T-1.6). */
+/**
+ * Claude Code places a pane nobody asked for only from UNASKED_COLUMNS terminal columns, and from
+ * NARROW_COLUMNS once the person has opened it; below that it holds the open unplaced.
+ */
+export const UNASKED_COLUMNS = 144;
 export const NARROW_COLUMNS = 110;
-export const NARROW_TEXT = `beads-ui did not open its pane: it needs a terminal at least ${NARROW_COLUMNS} columns wide. Widen the terminal or run /show-beads-ui.`;
+/** The toast when Claude Code holds the session-start open unplaced (T-2B.7, D-32). */
+export const NARROW_TEXT = `beads-ui did not open its task panel: Claude Code opens a pane nobody asked for from ${UNASKED_COLUMNS} terminal columns, or ${NARROW_COLUMNS} once you have opened it. Widen the terminal or run /bu.`;
+/** The one toast when Claude Code's task panel is retired and panel.mode is native (D-32 point 3). */
+export const NO_PANEL_TEXT =
+  "No task panel is enabled: Claude Code's task panel is retired here and beads-ui's panel.mode is native. Set Panel mode to beads in the pane's Settings (/bu, then 6), or mode = \"beads\" under [panel] in beads-ui.toml.";
 
 /** Where the view preferences live in `$.store`. Issue data is never stored. */
 export const PREFS_KEY = "view";
@@ -213,7 +222,6 @@ export interface Prefs {
   filter: string;
   swimlane: SwimlaneMode;
   sort: string;
-  open: boolean;
 }
 
 type Ran =
@@ -308,8 +316,10 @@ export class BeadsPane {
   focusedId: string | undefined;
   help = false;
   quickAddText = "";
-  /** Set at session start when the pane was open last time; resolved once the width is known. */
-  autoOpenPending = false;
+  /** The session-start open (T-2B.7) has run: a session never opens the panel unasked twice. */
+  private started = false;
+  /** The person has opened the pane this session. */
+  private asked = false;
   /** The delete confirmation, wired by register.ts. */
   onDelete: ((issue: Issue, issues: readonly Issue[]) => void) | undefined;
   /** A write succeeded: the band redraws its counts once more (T-1B.5); wired by register.ts. */
@@ -400,7 +410,6 @@ export class BeadsPane {
       const sort = parseSort(stored.sort);
       if (sort.ok) this.sort = sort.value;
     }
-    this.autoOpenPending = stored.open === true;
   }
 
   private savePrefs(): void {
@@ -409,7 +418,6 @@ export class BeadsPane {
       filter: this.filter.text,
       swimlane: this.swimlane,
       sort: sortLabel(this.sort),
-      open: this.isOpen,
     };
     void this.host?.storeSet(PREFS_KEY, prefs).catch(() => undefined);
   }
@@ -756,7 +764,42 @@ export class BeadsPane {
       await this.open(true);
       return;
     }
+    this.settleTab();
     await this.host?.focus(PANE_ID, `tab:${this.tab}`).catch(() => undefined);
+  }
+
+  /** The panel mode draws the Tasks view: every mode but native (T-2B.7). */
+  get tasksShown(): boolean {
+    return showsTasks(this.panel.settings.mode);
+  }
+
+  /** Under native the Tasks view is never drawn: a kept or default Tasks view opens the Board. */
+  private settleTab(): void {
+    if (this.tab === "tasks" && !this.tasksShown) this.tab = "board";
+  }
+
+  /**
+   * The session's start (T-2B.7, D-32), once a session. Under `panel.mode` both or beads, read
+   * from beads-ui.toml and the held Settings change now, the pane opens unasked on the Tasks
+   * view, docked where Claude Code places it and leaving the keyboard on the prompt. Under native
+   * nothing opens, and when `retired` (Claude Code's task panel is retired on this machine, D-21)
+   * one toast says no task panel is enabled.
+   */
+  async start(retired: boolean): Promise<void> {
+    if (this.started || this.host === undefined) return;
+    this.started = true;
+    this.config = await this.readConfig();
+    if (!this.tasksShown) {
+      if (retired) this.host.toast(NO_PANEL_TEXT);
+      return;
+    }
+    // The person opened the pane while the settings were read: theirs is the open, even if closed.
+    if (this.isOpen || this.asked) return;
+    const kept = this.tab;
+    this.tab = "tasks";
+    await this.open(false).catch(() => undefined);
+    // Held unplaced: `/bu` later opens on the view the person kept.
+    if (!this.isOpen) this.tab = kept;
   }
 
   /**
@@ -766,6 +809,8 @@ export class BeadsPane {
   async open(asked: boolean): Promise<void> {
     const host = this.host;
     if (host === undefined) throw new Error("beads-ui has no session yet");
+    if (asked) this.asked = true;
+    this.settleTab();
     // T-1B.8: a board with nothing to draw yet takes the store's snapshot before the pane opens,
     // so the first render draws cards; the bd read below then replaces it.
     if (!this.board.loaded && this.store?.ok === true) {
@@ -798,22 +843,6 @@ export class BeadsPane {
   closed(): void {
     this.isOpen = false;
     this.savePrefs();
-  }
-
-  /**
-   * The terminal's width, as the band's drawing measured it. A pane left open last session
-   * reopens on its own, unless the terminal is narrower than NARROW_COLUMNS: then a toast names
-   * the width and no pane is drawn.
-   */
-  measured(columns: number): void {
-    if (!this.autoOpenPending || this.host === undefined) return;
-    this.autoOpenPending = false;
-    if (this.isOpen) return;
-    if (columns < NARROW_COLUMNS) {
-      this.host.toast(NARROW_TEXT);
-      return;
-    }
-    void this.open(false).catch(() => undefined);
   }
 
   // ---- actions ----------------------------------------------------------------------------
@@ -1019,6 +1048,7 @@ export class BeadsPane {
    * would fall back to the prompt.
    */
   setTab(tab: Tab): void {
+    if (tab === "tasks" && !this.tasksShown) return;
     this.tab = tab;
     this.menuOpen = false;
     this.clearHint();
@@ -1440,6 +1470,8 @@ export class BeadsPane {
       return Box({ children: [Text({ children: "beads-ui starts with the session." })] });
     }
     this.frame = frame;
+    // A panel.mode changed to native in beads-ui.toml shows at this draw.
+    this.settleTab();
     const nav = this.navAt(frame);
     // The view's own width: the body less the side nav when it is drawn (T-2B.1).
     const width = nav.viewColumns;
@@ -1497,7 +1529,14 @@ export class BeadsPane {
 
   /** The nav at a body size, for the view now open (T-2B.1). */
   private navAt(frame: PaneFrame): NavLayout {
-    return navLayout(frame.width, frame.placement, frame.bodyRows, this.tab, frame.bodyColumns);
+    return navLayout(
+      frame.width,
+      frame.placement,
+      frame.bodyRows,
+      this.tab,
+      frame.bodyColumns,
+      !this.tasksShown,
+    );
   }
 
   private pressNav(view: PanelView): void {
@@ -1524,6 +1563,7 @@ export class BeadsPane {
       lanesPaged: this.tab === "board" && view.lanePage.pages > 1,
       bandSettings: this.bandSettings !== undefined,
       ...(list?.collapsible === true ? { more: list.moreLabel } : {}),
+      ...(this.tasksShown ? {} : { hideTasks: true }),
     };
   }
 

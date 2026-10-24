@@ -10,6 +10,7 @@ import ready from "../../core/test/fixtures/bd-ready.json.ts";
 import show from "../../core/test/fixtures/bd-show.json.ts";
 import show5 from "../../core/test/fixtures/bd-show-BU-mg2.3.5.json.ts";
 import statuses from "../../core/test/fixtures/bd-statuses.json.ts";
+import { UNASKED_COLUMNS } from "../pane.ts";
 
 // The world beneath the mod in the hooks tests: a session in this repository, whose bd answers
 // from the real output of its own Beads store (the core's fixtures, each captured read-only with
@@ -153,8 +154,16 @@ export interface WorldOptions {
   stored?: Readonly<Record<string, unknown>>;
   files?: Readonly<Record<string, string>>;
   env?: Readonly<Record<string, string>>;
-  /** What `$.ui.open` answers, nothing (placed) when not given; an Error makes the open throw. */
+  /**
+   * What `$.ui.open` answers; an Error makes the open throw. When not given, the world answers
+   * as Claude Code 2.1.310 does: an open the person asked for (the mod passes `focus: true` on
+   * exactly those) is placed, and one nobody asked for is held unplaced below UNASKED_COLUMNS.
+   */
   openAnswer?: unknown;
+  /** The terminal's width the engine places panes by: VIEWPORT's 120 columns when not given. */
+  columns?: number;
+  /** The merged settings `$.settings.read` answers: none when not given. */
+  settings?: Readonly<Record<string, unknown>>;
   /** Runs after each `$.store.set`, so a test can play another session writing meanwhile. */
   afterStoreSet?: (key: string, store: Map<string, unknown>) => void;
   /**
@@ -258,10 +267,18 @@ export function world(on: On, options: WorldOptions = {}) {
     if (answer instanceof Killed) return { value: { code: null, signal: answer.signal } };
     return { value: { code: result.exitCode, signal: null } };
   });
+  on("settings.read", () => ({ value: { ...options.settings } }));
   on("ui.open", (_engine, e) => {
     opened.push(e);
     if (options.openAnswer instanceof Error) throw options.openAnswer;
-    return { value: options.openAnswer as undefined };
+    if (options.openAnswer !== undefined) return { value: options.openAnswer as undefined };
+    const columns = options.columns ?? VIEWPORT.columns;
+    if (e.focus !== true && columns < UNASKED_COLUMNS) {
+      // Claude Code 2.1.310's own answer, read from its binary.
+      const reason = `unasked below ${UNASKED_COLUMNS} columns (${columns} now): placed when the person opens it, or when the terminal is widened to ${UNASKED_COLUMNS} columns`;
+      return { value: { isPlaced: false, reason } as unknown as undefined };
+    }
+    return { value: undefined };
   });
   on("ui.close", (_engine, e) => {
     closed.push(e.id);

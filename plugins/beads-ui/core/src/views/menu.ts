@@ -4,7 +4,7 @@
 
 import { commandById } from "../commands.ts";
 import { type Labels, labels } from "../layout.ts";
-import { hotkeyOf, NAV_ENTRIES, type PanelView } from "./nav.ts";
+import { hotkeyOf, navEntries, type PanelView } from "./nav.ts";
 import type { TaskListView } from "./panel.ts";
 
 export interface PanelAction {
@@ -33,6 +33,8 @@ export interface ActionContext {
   bandSettings: boolean;
   /** The Tasks view's "+M more" control, when it is drawn. */
   more?: string;
+  /** `panel.mode = native`: the nav, and so the menu's Go to section, has no Tasks entry (T-2B.7). */
+  hideTasks?: boolean;
 }
 
 const action = (
@@ -156,7 +158,7 @@ export function menuView(ctx: ActionContext, task?: string): MenuView {
       {
         key: "menu:nav",
         title: "Go to",
-        items: NAV_ENTRIES.map((entry) => itemOf(entry.command)),
+        items: navEntries(ctx.hideTasks).map((entry) => itemOf(entry.command)),
       },
     ],
   };

@@ -852,51 +852,21 @@ describe("the band's parts (T-1B.11)", () => {
   });
 });
 
+// The open nobody asked for, at session start, is panelmode.test.ts's (T-2B.7).
 describe("the pane's width rule", () => {
-  const REOPEN = { stored: { view: { open: true } } };
-
-  test("should toast the width needed and draw no pane when an open nobody asked for meets a narrow terminal", async ($, on) => {
-    const w = await started($, on, REOPEN);
-
-    await band($, 100);
-    await w.clock.settle();
-
-    expect(w.toasts).toEqual([NARROW_TEXT]);
-    expect(NARROW_TEXT).toContain("110 columns");
-    expect(w.opened).toEqual([]);
-  });
-
-  test("should reopen the pane left open last session without taking the keyboard when the terminal is wide", async ($, on) => {
-    const w = await started($, on, REOPEN);
-
-    await band($, 120);
-    await w.clock.settle();
-
-    expect(w.opened.map((open) => [open.id, open.focus])).toEqual([[PANE_ID, undefined]]);
-    expect(w.toasts).toEqual([]);
-  });
-
-  test("should withdraw the pane and toast when the engine holds an unasked open unplaced", async ($, on) => {
-    const w = await started($, on, {
-      ...REOPEN,
-      openAnswer: { isPlaced: false, reason: "unasked below 144 columns (120 now)" },
-    });
-
-    await band($, 120);
-    await w.clock.settle();
-
-    expect(w.closed).toEqual([PANE_ID]);
-    expect(w.toasts).toEqual([NARROW_TEXT]);
-  });
-
   test("should open the pane the person asked for whatever the width", async ($, on) => {
-    const w = await started($, on);
+    // At 80 columns Claude Code held the session-start open unplaced, and the mod said so.
+    const w = await started($, on, { columns: 80 });
+    expect(w.toasts).toEqual([NARROW_TEXT]);
     await band($, 80);
 
     await $.command.run(SHOW);
 
-    expect(w.opened.map((open) => open.id)).toEqual([PANE_ID]);
-    expect(w.toasts).toEqual([]);
+    expect(w.opened.map((open) => [open.id, open.focus])).toEqual([
+      [PANE_ID, undefined],
+      [PANE_ID, true],
+    ]);
+    expect(w.toasts).toEqual([NARROW_TEXT]);
   });
 });
 

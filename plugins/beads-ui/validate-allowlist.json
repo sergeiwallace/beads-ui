@@ -23,6 +23,7 @@
         "$.process.run",
         "$.process.spawn",
         "$.prompt.submit",
+        "$.settings.read",
         "$.store.get",
         "$.store.set",
         "$.ui.close",

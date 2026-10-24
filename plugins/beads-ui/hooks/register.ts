@@ -1,5 +1,6 @@
 import type { On } from "claude-code";
 
+import { isTaskPanelRetired } from "../core/src/index.ts";
 import { BandSettingsPanel } from "./bandSettings.ts";
 import { drawBand } from "./bands.ts";
 import { CONFIRM_ID, DeleteConfirm } from "./confirm.ts";
@@ -107,6 +108,15 @@ export function register(on: On) {
     await pane.bind(host);
     await tally.bind(host);
     sync.bind(host);
+    // T-2B.7: the task panel opens at session start under panel.mode. Claude Code's own task
+    // panel is retired when the settings deny TaskCreate by name, as ai-harness's switch does (D-21).
+    if (e.isInteractive) {
+      void $.settings
+        .read({ key: "permissions" })
+        .catch(() => undefined)
+        .then((permissions) => pane.start(isTaskPanelRetired(permissions)))
+        .catch(() => undefined);
+    }
 
     return next(e);
   });
@@ -142,7 +152,6 @@ export function register(on: On) {
 
   on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
     if (e.surface !== "terminal" || e.props.hasSurvey) return next(e);
-    if (e.viewport !== undefined) pane.measured(e.viewport.columns);
     const { Box, Text, Button } = await $.ui.resolve(e);
     const band = drawBand({ Box, Text, Button }, tally, () => void pane.openOrFocus());
     if (band === undefined) return next(e);

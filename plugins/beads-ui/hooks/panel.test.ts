@@ -564,15 +564,15 @@ describe("the Settings view (T-2B.8)", () => {
     const { w, ui } = await openPanel($, on);
     await ui.press({ key: "tab:settings" });
 
-    await ui.select({ key: "settings:mode", value: "native" });
+    await ui.select({ key: "settings:mode", value: "beads" });
     await ui.select({ key: "settings:collapse", value: "none" });
     await ui.select({ key: "settings:debug", value: "on" });
     await ui.input({ key: "band:window", text: "7d" });
     await w.clock.settle();
 
-    expect(w.store.get(PANEL_SETTINGS_KEY)).toEqual({ mode: "native", collapse: "none" });
+    expect(w.store.get(PANEL_SETTINGS_KEY)).toEqual({ mode: "beads", collapse: "none" });
     expect(w.store.get("band-settings")).toEqual({ debug: true, doneWindow: "7d" });
-    expect((await ui.find({ key: "settings:mode" }))?.props.value).toBe("native");
+    expect((await ui.find({ key: "settings:mode" }))?.props.value).toBe("beads");
     expect((await ui.find({ key: "settings:debug" }))?.props.value).toBe("on");
     await ui.press({ key: "tab:tasks" });
     expect(await taskIds(ui)).toEqual(MINE_ORDER);
@@ -581,7 +581,7 @@ describe("the Settings view (T-2B.8)", () => {
     await ui.press({ key: "settings:save" });
     await w.clock.settle();
     const saved = w.files.get(USER_CONFIG) ?? "";
-    expect(saved).toContain('[panel]\nshown = 10\ncollapse = "none"\nmode = "native"');
+    expect(saved).toContain('[panel]\nshown = 10\ncollapse = "none"\nmode = "beads"');
     expect(saved).toContain('[band]\ndone_window = "7d"');
     expect(saved).toContain("debug = true");
     expect(w.store.get(PANEL_SETTINGS_KEY)).toEqual({});
@@ -589,6 +589,6 @@ describe("the Settings view (T-2B.8)", () => {
     expect((await ui.find({ key: "settings:notice" }))?.text).toBe(
       `saved the panel and band settings to ${USER_CONFIG}`,
     );
-    expect((await ui.find({ key: "settings:mode" }))?.props.value).toBe("native");
+    expect((await ui.find({ key: "settings:mode" }))?.props.value).toBe("beads");
   });
 });
