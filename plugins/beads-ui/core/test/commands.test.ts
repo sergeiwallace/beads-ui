@@ -7,7 +7,6 @@ import {
   commandForKey,
   footerHints,
   priorityToken,
-  RESERVED_KEYS,
   STATUS_CATEGORIES,
   statusToken,
   TERMINAL_THEME,
@@ -37,7 +36,7 @@ describe("COMMANDS", () => {
     }
   });
 
-  test("should bind the Mockups' footer keys and leave 3 for the Sprint tab", () => {
+  test("should bind the Mockups' footer keys and 3 to the planned Sprint tab", () => {
     const hotkeys = Object.fromEntries(
       COMMANDS.flatMap((command) =>
         command.binding.kind === "hotkey" ? [[command.id, command.binding.key]] : [],
@@ -46,6 +45,7 @@ describe("COMMANDS", () => {
     expect(hotkeys).toEqual({
       "tab.board": "1",
       "tab.backlog": "2",
+      "tab.sprint": "3",
       "tab.detail": "4",
       "issue.new": "n",
       "board.swimlane": "s",
@@ -62,7 +62,6 @@ describe("COMMANDS", () => {
       "confirm.delete": "x",
     });
     expect(commandById("view.filter")?.binding).toEqual({ kind: "input", hint: "/" });
-    expect(Object.keys(RESERVED_KEYS)).toEqual(["3"]);
   });
 });
 
@@ -78,8 +77,8 @@ describe("commandForKey", () => {
     expect(commandForKey("n", "confirm")).toBeUndefined();
   });
 
-  test("should return undefined for an unbound or reserved key", () => {
-    expect(commandForKey("3", "pane")).toBeUndefined();
+  test("should return undefined for an unbound key", () => {
+    expect(commandForKey("3", "confirm")).toBeUndefined();
     expect(commandForKey("/", "pane")).toBeUndefined();
   });
 });

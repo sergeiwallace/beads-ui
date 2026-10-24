@@ -65,10 +65,29 @@ With auto-update on, Claude Code checks the marketplace when a session starts, n
 ## What it does
 
 - `/show-beads-ui` opens the pane, and runs again to close it. `/bu` is the same command under a short name.
-- The band above the prompt shows open, in-progress and blocked counts of the issues the session owns: those whose assignee is the session's name, which `ai c` pins in `CLAUDE_CODE_TASK_LIST_ID`. It counts them in every store listed in `~/.beads/shared-server/publish-sweep.json`, the machine's store inventory that ai-harness's publish sweep writes, and in the session directory's store alone when there is no inventory; the row's label says which. A firstmate session (a name ending `-firstmate-<N>`) draws a second row above it, `beads host pair, all <N> stores`, totalling every issue in those stores. Each store is the copy both hosts of the pair pull, so the totals hold the other host's work as of the last sync, and the label names any store not in step. A session without a name owns nothing it can count, so its band counts the directory's store and says `all owners (session name unknown)`. A store that cannot be read is named on its row, and the other rows still draw. The counts are read at session start and every 30 seconds, with up to two `bd count` calls a store. The band draws nothing until some store has answered.
-- The pane has three tabs: `1` Board, `2` Backlog and `4` Detail. `3` is held for the Sprint tab of a later release. The header shows the store's name and when the board was last read (`as of HH:MM:SS`, local time).
+- The band above the prompt shows open, in-progress and blocked counts of the issues the session owns: those whose assignee is the session's name, which `ai c` pins in `CLAUDE_CODE_TASK_LIST_ID`. It counts them in every store listed in `~/.beads/shared-server/publish-sweep.json`, the machine's store inventory that ai-harness's publish sweep writes, and in the session's own store (see [The store a session reads](#the-store-a-session-reads)) alone when there is no inventory; the row's label says which. A firstmate session (a name ending `-firstmate-<N>`) draws a second row above it, `beads host pair, all <N> stores`, totalling every issue in those stores. Each store is the copy both hosts of the pair pull, so the totals hold the other host's work as of the last sync, and the label names any store not in step. A session without a name owns nothing it can count, so its band counts the session's own store and says `all owners (session name unknown)`; when that store does not resolve, the band draws nothing. A store that cannot be read is named on its row, and the other rows still draw. The counts are read at session start and every 30 seconds, with up to two `bd count` calls a store. The band draws nothing until some store has answered.
+- The pane has the tabs `1` Board, `2` Backlog and `4` Detail. `3` Sprint is drawn dimmed: the Sprint view is planned and not built yet, so pressing it shows a line that says so and leaves you on the tab you were on. The header names the store the pane reads, as `KG (sw-bms-workspace)` (its prefix and directory) or the directory alone, and when the board was last read (`as of HH:MM:SS`, local time).
 - The pane refreshes when you open it, after every write and every 10 seconds while it is open. A failed `bd list` keeps the last board on screen with an error line naming the exit code, and the next refresh tries again.
 - If the pane was open when your last session ended, it opens again on its own. On a terminal narrower than 110 columns it stays closed and a toast says so; `/show-beads-ui` opens it anyway.
+
+## The store a session reads
+
+The pane and the band read one store for the session, found in this order; the first that applies wins:
+
+1. A `[directory_stores]` entry in `beads-ui.toml` for the name of the session's directory, or of a directory above it (so a worktree inside a mapped repository reads the same store). The value is the directory of the repository whose store to read, absolute or starting with `~/`. Quote a name that holds a dot.
+2. The session directory's own store, as `bd where` finds it. The mod asks once a session, and again only when bd gave no answer.
+3. The store in `~/.beads/shared-server/publish-sweep.json` whose prefix the session name implies: the name less its `-<host>-<N>` or `-<host>-firstmate-<N>` tail, upper-cased, hyphens turned to underscores. `kg-ec2-3` reads the `KG` store, `aih-ec2-3` the `AIH` store, `ai-cli-ec2-1` the `AI_CLI` store. Only an exact prefix counts.
+
+For example, a repository with no store of its own, whose work lives in another repository's store:
+
+```toml
+[directory_stores]
+bms-semantic-knowledge-graph = "~/projects/sw-bms-workspace"
+```
+
+`beads-ui.toml` is read from the session's directory first, then from `$XDG_CONFIG_HOME/beads-ui/beads-ui.toml` (else `~/.config/beads-ui/beads-ui.toml`); the first file found is used. Put a mapping in the user file, so the repository itself stays untouched. The file is read on every refresh, so a new entry takes effect without restarting the session.
+
+When no store resolves, the pane draws no board and runs no `bd` read. It lists what it checked (the session's directory, the config files, the inventory and the prefix it took from the session name) and the `[directory_stores]` line to add, and picks the store up on the next refresh after you add it.
 
 ## Keys
 
@@ -77,6 +96,7 @@ The pane takes these keys while it has the keyboard (`/show-beads-ui` gives it t
 | Key | Action |
 |---|---|
 | `1`, `2`, `4` | Board, Backlog, Detail tab |
+| `3` | Sprint: planned, not built yet; shows a line saying so |
 | `n` | Focus the quick-add field |
 | `s` | Next swimlane: none, assignee, epic |
 | `o` | Next sort: priority, newest created, recently updated, due date, assignee |

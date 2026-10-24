@@ -82,18 +82,20 @@ export interface BandRead {
 
 /**
  * The rows a session's band draws (D-17: `assignee` names the session). A named session counts
- * the issues it holds in every store of the inventory, or in its own directory's store when the
+ * the issues it holds in every store of the inventory, or in its own store (D-24) when the
  * inventory cannot be read. A firstmate session first draws the whole-machine totals, labelled
  * as the host pair's. A session with no name holds nothing it could count, so its one row counts
- * its directory's store and says it is every owner's.
+ * its own store and says it is every owner's. `here` is undefined when the session's store did
+ * not resolve: a row that needs it reads nothing, so the band draws nothing for it.
  */
 export function bandReads(options: {
   session: string | undefined;
-  here: BandStore;
+  here: BandStore | undefined;
   inventory: Result<BandStore[], string>;
 }): BandRead[] {
   const { session, here, inventory } = options;
   if (session === undefined) {
+    if (here === undefined) return [];
     return [
       {
         key: "store",
@@ -124,12 +126,20 @@ export function bandReads(options: {
           stores: inventory.value,
           assignee: session,
         }
-      : {
-          key: "own",
-          title: `beads ${session} in ${here.name}`,
-          stores: [here],
-          assignee: session,
-        },
+      : here === undefined
+        ? {
+            key: "own",
+            title: `beads ${session}`,
+            stores: [],
+            assignee: session,
+            missing: inventory.error,
+          }
+        : {
+            key: "own",
+            title: `beads ${session} in ${here.name}`,
+            stores: [here],
+            assignee: session,
+          },
   );
   return reads;
 }

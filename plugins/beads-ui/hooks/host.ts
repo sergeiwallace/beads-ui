@@ -7,19 +7,23 @@ import type { Streamed } from "./stream.ts";
  * register.ts, so no helper file ever holds `$` (the pattern Claude Code's own `diff` mod uses).
  */
 export interface Host {
-  /** The session's directory: where bd runs and where beads-ui.toml is looked for first. */
+  /**
+   * The session's directory: where `bd where` asks for a store and beads-ui.toml is looked for
+   * first. The store the pane reads can be another directory (D-24, hooks/store.ts).
+   */
   cwd: string;
   /** `$.process.run` in `cwd`; rejects when bd cannot start or outlives `timeoutMs`. */
   run: (argv: readonly string[], timeoutMs: number) => Promise<ProcessRunResult>;
-  /** `$.process.run` in another store's directory `cwd`: the band's reads of every store. */
+  /** `$.process.run` in a store's directory `cwd`: the pane's store and the band's every store. */
   runIn: (cwd: string, argv: readonly string[], timeoutMs: number) => Promise<ProcessRunResult>;
   /** `$.env.get` of the session's name, which `ai c` pins in `CLAUDE_CODE_TASK_LIST_ID`. */
   sessionName: () => Promise<string | undefined>;
   /**
-   * `$.process.spawn` in `cwd`, read to its end: the whole output, past `$.process.run`'s 4 MiB.
-   * Rejects when bd cannot start, is ended by a signal or outlives `timeoutMs`.
+   * `$.process.spawn` in the store directory `cwd`, read to its end: the whole output, past
+   * `$.process.run`'s 4 MiB. Rejects when bd cannot start, is ended by a signal or outlives
+   * `timeoutMs`.
    */
-  stream: (argv: readonly string[], timeoutMs: number) => Promise<Streamed>;
+  stream: (cwd: string, argv: readonly string[], timeoutMs: number) => Promise<Streamed>;
   /** `$.clock.now`. */
   now: () => Promise<number>;
   /** `$.clock.every`. */

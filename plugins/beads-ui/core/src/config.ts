@@ -31,6 +31,8 @@ export interface TomlError {
 }
 
 const BARE_KEY = /^[A-Za-z0-9_-]+$/;
+// A quoted key with no escapes and no `=` inside, such as a directory name holding a dot.
+const QUOTED_KEY = /^"([^"\\=]+)"$|^'([^'=]+)'$/;
 const INTEGER = /^[+-]?(?:0|[1-9](?:_?[0-9])*)$/;
 const FLOAT = /^[+-]?(?:0|[1-9](?:_?[0-9])*)\.[0-9](?:_?[0-9])*$/;
 
@@ -123,7 +125,7 @@ function readValue(text: string): [TomlValue, string] {
 
 /**
  * The TOML subset `beads-ui.toml` uses: `[table]` and `[dotted.table]` headers, `key = value`
- * with bare keys, basic and literal strings, integers, floats, booleans, and flat inline tables.
+ * with bare keys or quoted keys without escapes, basic and literal strings, integers, floats, booleans, and flat inline tables.
  * Anything else is an error naming the line, never a guess.
  */
 export function parseToml(text: string): Result<TomlTable, TomlError> {
@@ -163,8 +165,12 @@ export function parseToml(text: string): Result<TomlTable, TomlError> {
       }
       const eq = line.indexOf("=");
       if (eq === -1) return fail("expected key = value");
-      const key = line.slice(0, eq).trim();
-      if (!BARE_KEY.test(key)) return fail(`invalid key ${JSON.stringify(key)}`);
+      const written = line.slice(0, eq).trim();
+      const quoted = QUOTED_KEY.exec(written);
+      const key = quoted?.[1] ?? quoted?.[2] ?? written;
+      if (key === written && !BARE_KEY.test(key)) {
+        return fail(`invalid key ${JSON.stringify(key)}`);
+      }
       if (key in current) return fail(`duplicate key ${key}`);
       const [value, rest] = readValue(line.slice(eq + 1));
       if (rest.trim() !== "") return fail(`unexpected text after the value: ${rest.trim()}`);

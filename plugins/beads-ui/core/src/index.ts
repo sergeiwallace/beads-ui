@@ -11,6 +11,7 @@ export {
   reopenArgv,
   showArgv,
   statusesArgv,
+  whereArgv,
 } from "./argv.ts";
 export type {
   Column,
@@ -35,7 +36,6 @@ export {
   commandById,
   commandForKey,
   footerHints,
-  RESERVED_KEYS,
 } from "./commands.ts";
 export type {
   BeadsUiConfig,
@@ -129,6 +129,15 @@ export {
 } from "./parsers.ts";
 export type { QuickAdd, QuickAddError } from "./quickadd.ts";
 export { createArgv, parseQuickAdd } from "./quickadd.ts";
+export type { StoreFacts, StoreResolution, StoreSource } from "./resolve.ts";
+export {
+  DIRECTORY_STORES_TABLE,
+  directoryStores,
+  parseBdWhere,
+  resolveStore,
+  sessionPrefix,
+  storeLabel,
+} from "./resolve.ts";
 export type { SortDirection, SortError, SortKey, SortSpec } from "./sort.ts";
 export {
   DEFAULT_SORT,

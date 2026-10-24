@@ -27,6 +27,14 @@ const hotkey = (key: string): KeyBinding => ({ kind: "hotkey", key });
 export const COMMANDS: readonly Command[] = [
   { id: "tab.board", label: "Board", scope: "pane", binding: hotkey("1"), hint: "1 Board" },
   { id: "tab.backlog", label: "Backlog", scope: "pane", binding: hotkey("2"), hint: "2 Backlog" },
+  // D-28: 3 is the Sprint tab Phase 2 builds; until then it is drawn dimmed and says so.
+  {
+    id: "tab.sprint",
+    label: "Sprint (planned, not built yet)",
+    scope: "pane",
+    binding: hotkey("3"),
+    hint: "3 Sprint",
+  },
   { id: "tab.detail", label: "Detail", scope: "pane", binding: hotkey("4"), hint: "4 Detail" },
   { id: "issue.new", label: "New", scope: "pane", binding: hotkey("n"), hint: "n new" },
   {
@@ -105,9 +113,6 @@ export const COMMANDS: readonly Command[] = [
     hint: "esc cancel",
   },
 ];
-
-/** Digit keys held for tabs that arrive later: `3` is the Phase 2 Sprint tab. */
-export const RESERVED_KEYS: Readonly<Record<string, string>> = { "3": "Sprint tab (Phase 2)" };
 
 /** Pane hotkeys stay live while a card has focus, so both scopes share one key space. */
 const SHARED_SCOPES: Readonly<Record<CommandScope, readonly CommandScope[]>> = {

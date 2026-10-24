@@ -16,6 +16,11 @@ export function listArgv(): BdArgv {
   return ["bd", "list", "--json", "--all", "--brief", "--limit", "0"];
 }
 
+/** The store bd finds from the directory it runs in, or `no_beads_directory`. */
+export function whereArgv(): BdArgv {
+  return ["bd", "where", "--json"];
+}
+
 export function statusesArgv(): BdArgv {
   return ["bd", "statuses", "--json"];
 }

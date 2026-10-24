@@ -56,6 +56,8 @@ export class DeleteConfirm {
   constructor(
     private readonly finished: (text: string, undo: UndoClose | undefined) => void,
     private readonly dismissed: () => void,
+    /** The directory of the store the pane reads, where bd runs. */
+    private readonly storeDir: () => string,
   ) {}
 
   async open(issue: Issue, issues: readonly Issue[]): Promise<void> {
@@ -103,7 +105,7 @@ export class DeleteConfirm {
       await this.settle(state);
       return;
     }
-    const result = await host.run(argv, RUN_TIMEOUT_MS).catch(
+    const result = await host.runIn(this.storeDir(), argv, RUN_TIMEOUT_MS).catch(
       (reason: unknown): ProcessRunResult => ({
         exitCode: -1,
         stdout: "",
