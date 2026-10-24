@@ -73,7 +73,7 @@ export const BAND_PARTS = [
 ] as const;
 export type BandPart = (typeof BAND_PARTS)[number];
 
-/** Sergei's order (ylx A007): in progress and blocked first. */
+/** In progress and blocked first, the order the band's format asks for. */
 export const DEFAULT_BAND_PARTS: readonly BandPart[] = BAND_PARTS;
 
 export const BAND_PART_LABELS: Readonly<Record<BandPart, string>> = {
