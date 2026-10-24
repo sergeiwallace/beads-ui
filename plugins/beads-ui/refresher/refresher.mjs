@@ -12,9 +12,16 @@
 // dependencies: Node runs this file and the core modules it imports with its type stripping.
 //
 // For each store a live session's pane reads, it also keeps a board snapshot in
-// `<state-dir>/boards/`, re-read only when the store's Dolt head moved (T-1B.4, D-29), and it
-// re-reads a store a session just wrote to as soon as that session drops a marker in
+// `<state-dir>/boards/<token>/`, re-read only when the store's Dolt head moved (T-1B.4, D-29),
+// and it re-reads a store a session just wrote to as soon as that session drops a marker in
 // `<state-dir>/wake/`.
+//
+// Every snapshot it writes is its own: `counts-<token>.json` and `boards/<token>/`, which no
+// other refresher writes. A session reads the snapshot of the token `lease.json` names, so a
+// refresher ousted while it was stopped between its lease check and its write writes only its
+// own files, which nobody reads any more. `counts.json`, the last published snapshot, is
+// replaced only after the holder's own file is written and the lease checked again; a session
+// reads it only when no lease names a refresher.
 
 import { execFile, spawn } from "node:child_process";
 import {
@@ -27,6 +34,7 @@ import {
   readFileSync,
   realpathSync,
   renameSync,
+  rmdirSync,
   statSync,
   unlinkSync,
   writeFileSync,
@@ -44,6 +52,7 @@ import {
   boardFileName,
   boardRow,
   IDLE_EXIT_MS,
+  isRefresherToken,
   LEASE_DEAD_MS,
   LEASE_FILE,
   parseHead,
@@ -55,6 +64,7 @@ import {
   SESSIONS_DIR,
   SNAPSHOT_FILE,
   SNAPSHOT_SCHEMA,
+  snapshotFileName,
   storeReads,
   storeSnapshotOf,
   WAKE_DIR,
@@ -65,11 +75,31 @@ import { parseStoreInventory, STORE_INVENTORY_FILE } from "../core/src/views/ban
 const COUNT_TIMEOUT_MS = 8_000;
 /** A board read lists every open issue: more time and room than a count. */
 const BOARD_TIMEOUT_MS = 30_000;
+/**
+ * Every read of a beat, and of a wake, ends within this of its start, and the snapshot is written
+ * then with what answered. Beats start BEAT_MS apart, so two snapshots are at most 88 s apart:
+ * within T-1B.4's 90, however many stores there are and however slowly they answer.
+ */
+const CYCLE_MS = 28_000;
+/** How many stores a beat reads at once. */
+const CONCURRENT_STORES = 4;
+/** The error of a read the cycle's deadline cut short, or never started. */
+const UNREAD = "not read before the beat's deadline";
 const BOARD_BUFFER = 256 * 1024 * 1024;
 /** A registry file this old names a session long gone; the holder removes it. */
 const REGISTRY_KEEP_MS = 86_400_000;
 
-const NUMBER_FLAGS = ["beat-ms", "renew-ms", "stale-ms", "idle-ms", "wake-ms"];
+// `pause-ms` stalls the process, its timers with it, after each lease check before a snapshot
+// write, as swap or a stopped process stalls a real one: a test's window between the two.
+const NUMBER_FLAGS = [
+  "beat-ms",
+  "renew-ms",
+  "stale-ms",
+  "idle-ms",
+  "wake-ms",
+  "pause-ms",
+  "cycle-ms",
+];
 
 /** The command and its `--name value` options; the timings exist so tests can run in seconds. */
 function parseArgs(argv) {
@@ -89,7 +119,7 @@ function parseArgs(argv) {
     }
   }
   if (!options["state-dir"].startsWith("/")) throw new Error("--state-dir must be absolute");
-  if (!/^[A-Za-z0-9_-]{8,64}$/.test(options.token)) {
+  if (!isRefresherToken(options.token)) {
     throw new Error("--token must be 8 to 64 letters, digits, _ or -");
   }
   for (const name of NUMBER_FLAGS) {
@@ -289,20 +319,31 @@ class FileLease {
   }
 }
 
-function count(store, argv, timeout = COUNT_TIMEOUT_MS, maxBuffer = 4 * 1024 * 1024) {
+/**
+ * One bd call in the store's directory, given at most `timeout` and never past `deadline`. A call
+ * the deadline cuts short, or leaves no time to start, answers `unread`.
+ */
+function count(store, argv, deadline, timeout = COUNT_TIMEOUT_MS, maxBuffer = 4 * 1024 * 1024) {
+  const left = deadline - Date.now();
+  if (left <= 0) return Promise.resolve({ ok: false, error: UNREAD, unread: true });
+  const cut = left < timeout;
   return new Promise((resolve) => {
     execFile(
       argv[0],
       argv.slice(1),
       {
         cwd: store.path,
-        timeout,
+        timeout: Math.min(timeout, left),
         maxBuffer,
         env: { ...process.env, NO_COLOR: "1" },
       },
       (error, stdout, stderr) => {
         if (error === null) {
           resolve({ ok: true, stdout });
+          return;
+        }
+        if (cut && error.killed === true) {
+          resolve({ ok: false, error: UNREAD, unread: true });
           return;
         }
         const why = `${stderr}`.trim().split("\n")[0] || `${stdout}`.trim().split("\n")[0] || "";
@@ -314,14 +355,31 @@ function count(store, argv, timeout = COUNT_TIMEOUT_MS, maxBuffer = 4 * 1024 * 1
   });
 }
 
-/** One store's counts by owner for every done window asked for; undefined once `holds` fails. */
-async function countStore(store, windows, holds) {
+/**
+ * One store's counts by owner for every done window asked for, by `deadline`: a store with a read
+ * left unanswered then is marked unread. Undefined once `holds` fails.
+ */
+async function countStore(store, windows, holds, deadline) {
   const answers = [];
   for (const read of storeReads(windows, Date.now())) {
     if (!holds()) return undefined;
-    answers.push({ key: read.key, ...(await count(store, read.argv)) });
+    answers.push({ key: read.key, ...(await count(store, read.argv, deadline)) });
   }
   return storeSnapshotOf({ name: store.name, path: store.path }, answers, Date.now());
+}
+
+/** Runs `tasks` at most `limit` at a time; false, starting no more, once one answers false. */
+async function inTurn(tasks, limit) {
+  let next = 0;
+  let ok = true;
+  const worker = async () => {
+    while (ok && next < tasks.length) {
+      const task = tasks[next++];
+      if (!(await task())) ok = false;
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker));
+  return ok;
 }
 
 const parseJson = (text) => {
@@ -333,29 +391,42 @@ const parseJson = (text) => {
 };
 
 /**
- * One store's board snapshot (T-1B.4, D-29). The store's Dolt head is read first: when it is the
- * head `known` was read at and the file is there, nothing else is read and only `checkedAt`
- * moves. Otherwise `bd statuses`, the open issues and the most recent closed page are read, cut
- * to the fields the board draws and written whole, unless the file would pass BOARD_MAX_BYTES,
- * which the entry names instead. `writable` is the lease check, made just before the write;
- * undefined means it failed and nothing was written.
+ * One store's board snapshot (T-1B.4, D-29), in this refresher's own `boards/<token>/`. The
+ * store's Dolt head is read first: when it is the head `known` was read at and the file is there,
+ * nothing else is read and only `checkedAt` moves; `inherited` is the file the last refresher
+ * wrote at that head, linked in rather than read again. Otherwise `bd statuses`, the open issues
+ * and the most recent closed page are read, cut to the fields the board draws and written whole,
+ * unless the file would pass BOARD_MAX_BYTES, which the entry names instead. `writable` is the
+ * lease check, made just before the write; undefined means it failed and nothing was written. A
+ * read the cycle's `deadline` cuts short keeps `known` as it was, its `checkedAt` unmoved.
  */
-async function readBoard(store, known, dir, token, writable) {
+async function readBoard(store, known, dir, token, writable, inherited, deadline) {
   const checkedAt = Date.now();
   const failed = (error) => ({ path: store.path, ok: false, checkedAt, error });
-  const head = await count(store, headArgv());
+  const head = await count(store, headArgv(), deadline);
+  if (head.unread === true) return known ?? failed(UNREAD);
   if (!head.ok) return failed(`bd vc status failed (${head.error})`);
   const commit = parseHead(head.stdout);
   if (commit === undefined) return failed("bd vc status named no commit");
   const file = boardFileName(store.path);
-  const path = join(dir, BOARDS_DIR, file);
-  if (known?.ok === true && known.head === commit && existsSync(path)) {
-    return { ...known, checkedAt };
+  const path = join(dir, BOARDS_DIR, token, file);
+  if (known?.ok === true && known.head === commit) {
+    if (existsSync(path)) return { ...known, checkedAt };
+    if (inherited !== undefined && existsSync(inherited)) {
+      if (!writable()) return undefined;
+      try {
+        linkSync(inherited, path);
+        return { ...known, checkedAt };
+      } catch {
+        // gone meanwhile: read the store as for a moved head
+      }
+    }
   }
   const [openArgv, closedArgv] = boardReadArgvs();
   const parts = [];
   for (const argv of [statusesArgv(), openArgv, closedArgv]) {
-    const ran = await count(store, argv, BOARD_TIMEOUT_MS, BOARD_BUFFER);
+    const ran = await count(store, argv, deadline, BOARD_TIMEOUT_MS, BOARD_BUFFER);
+    if (ran.unread === true) return known ?? failed(UNREAD);
     if (!ran.ok) return failed(`${argv.slice(0, 2).join(" ")} failed (${ran.error})`);
     const json = parseJson(ran.stdout);
     if (!json.ok) return failed(`${argv.slice(0, 2).join(" ")} did not answer JSON`);
@@ -376,6 +447,61 @@ async function readBoard(store, known, dir, token, writable) {
   if (!writable()) return undefined;
   writeWhole(path, text, token);
   return { path: store.path, ok: true, file, head: commit, readAt, checkedAt: readAt, bytes };
+}
+
+/** A synchronous stall of `ms`: the event loop, and so every timer, waits with it. */
+const stall = (ms) => {
+  if (ms > 0) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+};
+
+/**
+ * Removes the snapshots of other refreshers' tokens once they are older than `staleMs`: a
+ * `counts-<token>.json` whose heartbeat is that old, and a `boards/<token>/` directory with no
+ * fresh counts of its token and no file added within `staleMs`. `isHolder` is checked before
+ * each removal; a session never reads them, since no lease names their tokens.
+ */
+function dropOtherTokens(dir, token, now, staleMs, isHolder) {
+  const old = (path) => {
+    try {
+      return now - statSync(path).mtimeMs > staleMs;
+    } catch {
+      return false;
+    }
+  };
+  const fresh = new Set([token]);
+  for (const name of readdirSync(dir)) {
+    const match = /^counts-(.+)\.json$/.exec(name);
+    if (match === null || match[1] === token) continue;
+    const parsed = parseSnapshot(readText(join(dir, name)) ?? "");
+    const beatAt = parsed.ok ? parsed.value.beatAt : undefined;
+    const stale = beatAt === undefined ? old(join(dir, name)) : now - beatAt > staleMs;
+    if (!stale) {
+      fresh.add(match[1]);
+      continue;
+    }
+    if (!isHolder()) return;
+    try {
+      unlinkSync(join(dir, name));
+    } catch {
+      // another holder removed it first
+    }
+  }
+  const boardsDir = join(dir, BOARDS_DIR);
+  for (const name of readdirSync(boardsDir)) {
+    const path = join(boardsDir, name);
+    if (fresh.has(name) || !old(path)) continue;
+    if (!isHolder()) return;
+    try {
+      if (statSync(path).isDirectory()) {
+        for (const file of readdirSync(path)) unlinkSync(join(path, file));
+        rmdirSync(path);
+      } else {
+        unlinkSync(path);
+      }
+    } catch {
+      // being written, or removed by another holder: left for the next pass
+    }
+  }
 }
 
 /** Keeps `value` for `path` unless the map holds one whose reads began later. */
@@ -460,8 +586,12 @@ async function run(options) {
   if (!lease.acquire(Date.now())) return;
 
   const snapshotPath = join(dir, SNAPSHOT_FILE);
+  const ownPath = join(dir, snapshotFileName(token));
+  const pauseMs = options["pause-ms"] ?? 0;
+  const cycleMs = options["cycle-ms"] ?? CYCLE_MS;
+  const staleMs = options["stale-ms"] ?? LEASE_DEAD_MS;
   const wakeDir = join(dir, WAKE_DIR);
-  mkdirSync(join(dir, BOARDS_DIR), { recursive: true });
+  mkdirSync(join(dir, BOARDS_DIR, token), { recursive: true });
   mkdirSync(wakeDir, { recursive: true });
   let lastSeen = Date.now();
   let last = { schema: SNAPSHOT_SCHEMA, token, pid: process.pid, beatAt: lastSeen, stores: [] };
@@ -473,11 +603,26 @@ async function run(options) {
   // beat can overlap, and the read that began later wins.
   const counts = new Map();
   const boards = new Map();
-  // A restarted refresher keeps the boards the last one read, so an unchanged store is not read.
+  // A restarted refresher keeps the boards the last one published, so an unchanged store is not
+  // read: their files are linked into its own directory.
   const previous = parseSnapshot(readText(snapshotPath) ?? "");
+  const inherited = new Map();
   for (const entry of previous.ok ? (previous.value.boards ?? []) : []) {
     boards.set(entry.path, { value: entry, startedAt: 0 });
+    if (entry.ok && isRefresherToken(previous.value.token) && previous.value.token !== token) {
+      inherited.set(entry.path, join(dir, BOARDS_DIR, previous.value.token, entry.file));
+    }
   }
+  const boardOf = (store, deadline) =>
+    readBoard(
+      store,
+      boards.get(store.path)?.value,
+      dir,
+      token,
+      writable,
+      inherited.get(store.path),
+      deadline,
+    );
   let storeList = [];
   let boardList = [];
   let windows = [];
@@ -489,9 +634,18 @@ async function run(options) {
     clearInterval(wakeTimer);
   };
   const holds = () => !stopped && lease.holds();
-  /** Writes the snapshot from the newest reads; false, writing nothing, without the lease. */
-  const publish = () => {
+  /** The lease check before a write; `pause-ms` stalls between it and the write. */
+  const writable = () => {
     if (!holds()) return false;
+    stall(pauseMs);
+    return true;
+  };
+  /**
+   * Writes the snapshot from the newest reads into this refresher's own file, then, checking the
+   * lease again, replaces `counts.json`; false once the lease is not held.
+   */
+  const publish = () => {
+    if (!writable()) return false;
     const values = (map, list) =>
       list.flatMap((store) => {
         const held = map.get(store.path);
@@ -505,18 +659,22 @@ async function run(options) {
       stores: values(counts, storeList),
       boards: values(boards, boardList),
     };
-    writeWhole(snapshotPath, `${JSON.stringify(last)}\n`, token);
+    const text = `${JSON.stringify(last)}\n`;
+    writeWhole(ownPath, text, token);
+    if (!holds()) return false;
+    writeWhole(snapshotPath, text, token);
+    dropOtherTokens(dir, token, Date.now(), staleMs, holds);
     return true;
   };
   /** Reads one store's counts, and its board when a pane reads it; false once the lease is lost. */
-  const readStore = async (store, withBoard) => {
+  const readStore = async (store, withBoard, deadline) => {
     const startedAt = Date.now();
-    const counted = await countStore(store, windows, holds);
+    const counted = await countStore(store, windows, holds, deadline);
     if (counted === undefined) return false;
     keepNewer(counts, store.path, counted, startedAt);
     if (!withBoard) return holds();
     if (!holds()) return false;
-    const entry = await readBoard(store, boards.get(store.path)?.value, dir, token, holds);
+    const entry = await boardOf(store, deadline);
     if (entry === undefined) return false;
     keepNewer(boards, store.path, entry, startedAt);
     return holds();
@@ -527,7 +685,9 @@ async function run(options) {
     if (stopped) return;
     quit();
     if (lease.holds()) {
-      writeWhole(snapshotPath, `${JSON.stringify({ ...last, stoppedAt: Date.now() })}\n`, token);
+      const text = `${JSON.stringify({ ...last, stoppedAt: Date.now() })}\n`;
+      writeWhole(ownPath, text, token);
+      if (lease.holds()) writeWhole(snapshotPath, text, token);
       lease.release();
     }
   };
@@ -551,17 +711,24 @@ async function run(options) {
     windows = [...new Set(sessions.flatMap((session) => session.windows))];
     storeList = storesToRead(options.home, sessions);
     boardList = unique(sessions.flatMap((session) => session.boards));
-    for (const store of storeList) {
+    // CONCURRENT_STORES stores at a time, every read ending by the deadline: then the snapshot
+    // is written with what answered, and a store still unanswered is marked unread.
+    const deadline = began + cycleMs;
+    const reads = storeList.map((store) => () => {
       const withBoard = boardList.some((board) => samePath(board.path, store.path));
-      if (!(await readStore(store, withBoard))) return quit();
-    }
+      return readStore(store, withBoard, deadline);
+    });
     for (const store of boardList) {
       if (storeList.some((known) => samePath(known.path, store.path))) continue;
-      if (!holds()) return quit();
-      const entry = await readBoard(store, boards.get(store.path)?.value, dir, token, holds);
-      if (entry === undefined) return quit();
-      keepNewer(boards, store.path, entry, began);
+      reads.push(async () => {
+        if (!holds()) return false;
+        const entry = await boardOf(store, deadline);
+        if (entry === undefined) return false;
+        keepNewer(boards, store.path, entry, began);
+        return true;
+      });
     }
+    if (!(await inTurn(reads, CONCURRENT_STORES))) return quit();
     for (const map of [counts, boards]) {
       for (const path of map.keys()) {
         if (![...storeList, ...boardList].some((store) => store.path === path)) map.delete(path);
@@ -598,6 +765,7 @@ async function run(options) {
         }
         if (marker !== undefined) paths.add(marker.path.replace(/\/+$/, ""));
       }
+      const deadline = Date.now() + cycleMs;
       for (const path of paths) {
         // A session in a linked worktree names its own directory: its counts are its main
         // tree's entry, and its board its own.
@@ -607,12 +775,12 @@ async function run(options) {
           (board === undefined ? undefined : storeList.find((known) => sameDatabase(known, board)));
         if (store !== undefined) {
           const withBoard = boardList.some((known) => samePath(known.path, store.path));
-          if (!(await readStore(store, withBoard))) return quit();
+          if (!(await readStore(store, withBoard, deadline))) return quit();
         }
         if (board !== undefined && (store === undefined || !samePath(store.path, board.path))) {
           const startedAt = Date.now();
           if (!holds()) return quit();
-          const entry = await readBoard(board, boards.get(board.path)?.value, dir, token, holds);
+          const entry = await boardOf(board, deadline);
           if (entry === undefined) return quit();
           keepNewer(boards, board.path, entry, startedAt);
         }

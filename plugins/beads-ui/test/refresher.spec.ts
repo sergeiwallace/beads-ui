@@ -19,12 +19,14 @@ const REFRESHER = resolve(import.meta.dirname, "../refresher/refresher.mjs");
 const FAST = ["--beat-ms", "300", "--renew-ms", "100", "--stale-ms", "1500", "--idle-ms", "4000"];
 
 // A stub bd: it logs each call with the directory it ran in and the process that ran it, fails when the store directory holds
-// a `fail` file, and answers `bd count --by-assignee` from the store's `issues.json`.
+// a `fail` file, never answers when it holds a `hang` file, and answers `bd count --by-assignee`
+// from the store's `issues.json`.
 const STUB = `#!/usr/bin/env node
 const fs = require("node:fs");
 const args = process.argv.slice(2);
 fs.appendFileSync(process.env.STUB_LOG, JSON.stringify({ cwd: process.cwd(), args, ppid: process.ppid }) + "\\n");
 if (fs.existsSync("fail")) { process.stderr.write("Error: database is locked\\n"); process.exit(1); }
+if (fs.existsSync("hang")) { setInterval(() => {}, 1000); return; }
 const issues = JSON.parse(fs.readFileSync("issues.json", "utf8"));
 if (args[0] === "vc") {
   const commit = fs.existsSync("head") ? fs.readFileSync("head", "utf8").trim() : "head-1";
@@ -185,6 +187,11 @@ const readJson = (path: string) => {
 };
 const snapshot = (h: Host) => readJson(join(h.state, "counts.json"));
 const lease = (h: Host) => readJson(join(h.state, "lease.json"));
+/** The snapshot a session takes as current: the one of the token `lease.json` names. */
+const current = (h: Host) => {
+  const token = lease(h)?.token;
+  return typeof token === "string" ? readJson(join(h.state, `counts-${token}.json`)) : undefined;
+};
 const calls = (h: Host) =>
   readFileSync(h.log, "utf8")
     .split("\n")
@@ -335,6 +342,35 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     expect(existsSync(join(h.state, "lease-token-ousted11.json"))).toBe(false);
   });
 
+  it("should leave the new holder's snapshot as the current one when it was stalled between its lease check and its write", async () => {
+    const h = host(STORES);
+    register(h, "aih-ec2-3");
+    // The session registers once, so FAST's 4-second idle exit could stop the new holder before
+    // the stalled one wakes on a loaded host; a minute keeps both running for the whole case.
+    const running = [...FAST.slice(0, 6), "--idle-ms", "60000"];
+    // The first refresher stalls after the lease check before each snapshot write, its renewals
+    // with it, for longer than the lease's staleness (1.5 s here).
+    const ousted = launch(h, "token-stalled1", [...running, "--pause-ms", "6000"]);
+    await until(() =>
+      lease(h)?.token === "token-stalled1" && Date.now() - lease(h).beatAt > 1_800
+        ? true
+        : undefined,
+    );
+
+    launch(h, "token-holder01", running);
+    await until(() =>
+      lease(h)?.token === "token-holder01" && snapshot(h)?.token === "token-holder01"
+        ? true
+        : undefined,
+    );
+    // The stalled refresher wakes, writes and finds itself ousted.
+    await until(() => (alive(ousted) ? undefined : true));
+
+    expect(lease(h)?.token).toBe("token-holder01");
+    expect(snapshot(h)?.token).toBe("token-holder01");
+    expect(current(h)?.token).toBe("token-holder01");
+  });
+
   it("should leave a newer holder's lease alone when it is stopped on purpose after losing it", async () => {
     const h = host(STORES);
     register(h, "aih-ec2-3");
@@ -403,6 +439,32 @@ describe("the host refresher", { timeout: 30_000 }, () => {
       error: "exit 1, Error: database is locked",
     });
     expect(written.stores.find((store: { name: string }) => store.name === "AIH").ok).toBe(true);
+  });
+
+  it("should write the snapshot by the beat's deadline with the stores that answered, a store that hangs marked unread", async () => {
+    const h = host({
+      ...STORES,
+      KG: [{ status: "open", assignee: "kg-ec2-1" }],
+      SW: [{ status: "open", assignee: "kg-ec2-2" }],
+      HUNG: [{ status: "open" }],
+    });
+    writeFileSync(join(h.root, "HUNG", "hang"), "");
+    register(h, "aih-ec2-3");
+
+    const launched = Date.now();
+    // A 3-second deadline. Read one after another, the hung store's four reads would wait out
+    // 8 seconds each before the first snapshot; the bound leaves room for a loaded host's launch.
+    launch(h, "token-deadline", [...FAST, "--cycle-ms", "3000"]);
+    const written = await until(() => snapshot(h));
+
+    expect(written.beatAt - launched).toBeLessThan(12_000);
+    const byName = (name: string) =>
+      written.stores.find((store: { name: string }) => store.name === name);
+    expect(byName("HUNG")).toMatchObject({
+      ok: false,
+      error: "not read before the beat's deadline",
+    });
+    for (const name of ["AIH", "BU", "KG", "SW"]) expect(byName(name)?.ok).toBe(true);
   });
 
   it("should count each database once when sessions reach it through a linked worktree or a symlinked path", async () => {
@@ -477,7 +539,12 @@ describe("the host refresher", { timeout: 30_000 }, () => {
   describe("board snapshots (T-1B.4, T-1B.8)", () => {
     const boardOf = (h: Host, store: string) =>
       readJson(
-        join(h.state, "boards", `${join(h.root, store).replace(/[^A-Za-z0-9._-]/g, "_")}.json`),
+        join(
+          h.state,
+          "boards",
+          String(snapshot(h)?.token),
+          `${join(h.root, store).replace(/[^A-Za-z0-9._-]/g, "_")}.json`,
+        ),
       );
     const entryOf = (h: Host, store: string) =>
       snapshot(h)?.boards?.find((entry: { path: string }) => entry.path === join(h.root, store));
@@ -562,6 +629,29 @@ describe("the host refresher", { timeout: 30_000 }, () => {
       expect(moved).toBe(true);
       expect(lists(h)).toHaveLength(4);
       expect(boardOf(h, "AIH").head).toBe("head-2");
+    });
+
+    it("should take over the last refresher's board without reading the store again while its head has not moved, then drop the last one's files", async () => {
+      const h = host(MANY);
+      register(h, "aih-ec2-3", { boards: [{ name: "AIH", path: join(h.root, "AIH") }] });
+      const first = launch(h, "token-boardsA1", [...FAST.slice(0, 6), "--idle-ms", "60000"]);
+      await until(() => entryOf(h, "AIH"));
+      process.kill(first, "SIGTERM");
+      await until(() => (alive(first) ? undefined : true));
+      expect(lists(h)).toHaveLength(2);
+
+      launch(h, "token-boardsB1", [...FAST.slice(0, 6), "--idle-ms", "60000"]);
+      await until(() => (snapshot(h)?.token === "token-boardsB1" ? entryOf(h, "AIH") : undefined));
+
+      expect(lists(h)).toHaveLength(2);
+      expect(boardOf(h, "AIH")?.head).toBe("head-1");
+      await until(() =>
+        existsSync(join(h.state, "counts-token-boardsA1.json")) ||
+        existsSync(join(h.state, "boards", "token-boardsA1"))
+          ? undefined
+          : true,
+      );
+      expect(current(h)?.token).toBe("token-boardsB1");
     });
 
     it("should write no board and name the store when its snapshot would pass 4 MiB", async () => {

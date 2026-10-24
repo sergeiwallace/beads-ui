@@ -9,6 +9,7 @@ import {
   resolveStore,
   STORE_INVENTORY_FILE,
   type StoreResolution,
+  userConfigPath,
   whereArgv,
 } from "../core/src/index.ts";
 import type { Host, SessionEnv } from "./host.ts";
@@ -122,6 +123,17 @@ export class StoreResolver {
     });
     const { problems } = directoryStores(config.text, this.env.home);
     return { resolution, config, inventory, problems };
+  }
+
+  /**
+   * The user's own `beads-ui.toml` (userConfigPath), never the repository's: the file `[sync]`
+   * is read from, so a checkout cannot name a command the mod runs.
+   */
+  async userConfigText(): Promise<string | undefined> {
+    const host = this.host;
+    const path = userConfigPath(this.env);
+    if (host === undefined || path === undefined) return undefined;
+    return host.readFile(path).catch(() => undefined);
   }
 
   private async inventory(path: string | undefined): Promise<Result<BandStore[], string>> {

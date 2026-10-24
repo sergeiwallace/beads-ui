@@ -13,6 +13,7 @@ import {
   type FileLease,
   failureOf,
   type HostSnapshot,
+  isRefresherToken,
   LEASE_FILE,
   LEASE_KEY,
   leaseOf,
@@ -30,6 +31,7 @@ import {
   SyncState,
   sameStore,
   sessionFileName,
+  snapshotFileName,
   snapshotLive,
   stateDirOf,
   storeName,
@@ -92,9 +94,10 @@ export class BandTally {
   private failedToken: string | undefined;
   private anonId = `anon-${randomToken()}`;
   private queuedFinal = false;
-  /** The store this session's pane reads, from the last refresh. */
-  private here: BandStore | undefined;
-  /** The band's entry for `here`'s database: the main tree's, for a session in a linked worktree. */
+  /**
+   * The band's entry for the database of the store this session's pane reads: the main tree's,
+   * for a session in a linked worktree.
+   */
   private counted: BandStore | undefined;
   /** When this session last wrote, until the band has drawn a read of its store made after. */
   private wroteAt: number | undefined;
@@ -148,7 +151,6 @@ export class BandTally {
             ...(resolution.prefix === undefined ? {} : { prefix: resolution.prefix }),
           }
         : undefined;
-      this.here = here;
       const reads = bandReads({ session: this.stores.sessionName, here, inventory });
       const now = await host.now();
       const dir = await this.stateDir();
@@ -157,8 +159,8 @@ export class BandTally {
       if (dir !== undefined && reads.length > 0) {
         await this.register(dir, now, settings, inventory.ok ? inventory.value : [], own, here);
       }
-      const snapshot = dir === undefined ? undefined : await this.readSnapshot(dir);
       const fileLease = dir === undefined ? undefined : await this.readLease(dir);
+      const snapshot = dir === undefined ? undefined : await this.readSnapshot(dir, fileLease);
       const live = snapshotLive(snapshot, now);
       const running = refresherRunning(fileLease, now);
       let source: BandSource = "snapshot";
@@ -208,21 +210,21 @@ export class BandTally {
    * the snapshot still holds no read of the store made after the write, it reads that store's
    * counts itself. So the write shows within 10 seconds, not at the next minute (T-1B.5).
    */
-  afterWrite(): void {
-    void this.wake();
+  afterWrite(store: string): void {
+    void this.wake(store);
   }
 
-  private async wake(): Promise<void> {
+  /** `store` is the directory the write ran in: the marker names it, not the band's own store. */
+  private async wake(store: string): Promise<void> {
     const host = this.host;
     if (host === undefined) return;
     const now = await host.now().catch(() => undefined);
     if (now === undefined) return;
     this.wroteAt = now;
     const dir = await this.stateDir();
-    const here = this.here;
-    if (dir !== undefined && here !== undefined) {
+    if (dir !== undefined && store.startsWith("/")) {
       await host
-        .writeFile(`${dir}/${WAKE_DIR}/${wakeFileName(here.path)}`, wakeText(here.path, now))
+        .writeFile(`${dir}/${WAKE_DIR}/${wakeFileName(store)}`, wakeText(store, now))
         .catch(() => undefined);
     }
     void this.refresh();
@@ -345,11 +347,23 @@ export class BandTally {
       .catch(() => undefined);
   }
 
-  private async readSnapshot(dir: string): Promise<HostSnapshot | undefined> {
-    const text = await this.host?.readFile(`${dir}/${SNAPSHOT_FILE}`).catch(() => undefined);
+  /**
+   * The snapshot of the refresher `lease.json` names, written under its token: never another
+   * token's, so a refresher ousted while it wrote cannot pass for the holder. With no lease (the
+   * refresher stopped and a start is under way), the last one published, `counts.json`.
+   */
+  private async readSnapshot(
+    dir: string,
+    lease: FileLease | undefined,
+  ): Promise<HostSnapshot | undefined> {
+    const token = lease?.token;
+    if (token !== undefined && !isRefresherToken(token)) return undefined;
+    const file = token === undefined ? SNAPSHOT_FILE : snapshotFileName(token);
+    const text = await this.host?.readFile(`${dir}/${file}`).catch(() => undefined);
     if (text === undefined) return undefined;
     const parsed = parseSnapshot(text);
-    return parsed.ok ? parsed.value : undefined;
+    if (!parsed.ok || !isRefresherToken(parsed.value.token)) return undefined;
+    return token === undefined || parsed.value.token === token ? parsed.value : undefined;
   }
 
   /** The refresher's file lease, renewed every 20 s while it runs: its liveness (T-1B.4). */
@@ -484,7 +498,8 @@ const messageOf = (reason: unknown): string =>
  * sends a terminal notification (a toast when none is sent) and starts a turn in the session
  * from core's template, unless the same store, step and exit code failed within 10 minutes; a
  * refused or dropped turn is sent again from `turn.complete`, at most 3 times. With no
- * `sync.command` in beads-ui.toml, read at each call, it does nothing.
+ * `sync.command` in the user's beads-ui.toml, read at each call, it does nothing; a
+ * repository's own beads-ui.toml never sets it.
  */
 export class EditSync {
   host: Host | undefined;
@@ -500,8 +515,7 @@ export class EditSync {
   }
 
   private async settings(): Promise<SyncSettings | undefined> {
-    const { config } = await this.stores.resolve();
-    return resolveSync(config.text).settings;
+    return resolveSync(await this.stores.userConfigText()).settings;
   }
 
   /** A write to the store at `store` succeeded. */

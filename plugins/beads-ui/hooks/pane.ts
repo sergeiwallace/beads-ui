@@ -6,13 +6,13 @@ import {
   BACKLOG_PAGE_SIZE,
   type BacklogView,
   BOARD_PAGE_LIMIT,
-  BOARDS_DIR,
   type BoardEntry,
   type BoardEvent,
   type BoardState,
   type BoardView,
   backlogView,
   boardFileName,
+  boardPath,
   boardReadArgvs,
   boardView,
   buttonWidth,
@@ -42,6 +42,7 @@ import {
   isFirstmate,
   isPanelMode,
   isPanelView,
+  isRefresherToken,
   isShort,
   LEASE_FILE,
   MAX_SHOWN,
@@ -98,6 +99,7 @@ import {
   showArgv,
   showsTasks,
   slugBudgets,
+  snapshotFileName,
   sortLabel,
   stateDirOf,
   statusesArgv,
@@ -229,9 +231,13 @@ export interface Prefs {
   sort: string;
 }
 
-type Ran =
+type Ran = (
   | { ok: true; exitCode: 0; stdout: string; stderr: string }
-  | { ok: false; exitCode: number | null; stdout: string; stderr: string; message: string };
+  | { ok: false; exitCode: number | null; stdout: string; stderr: string; message: string }
+) & {
+  /** The directory bd ran in: the store a write landed in, whatever the pane reads by now. */
+  dir: string;
+};
 
 /** A `hint` notice names what to do next, so the next action that succeeds clears it. */
 type Notice = { text: string; token: Token; hint?: true };
@@ -327,8 +333,11 @@ export class BeadsPane {
   private asked = false;
   /** The delete confirmation, wired by register.ts. */
   onDelete: ((issue: Issue, issues: readonly Issue[]) => void) | undefined;
-  /** A write succeeded: the band redraws its counts once more (T-1B.5); wired by register.ts. */
-  onWrite: (() => void) | undefined;
+  /**
+   * A write succeeded in the store at the directory given: the band redraws its counts once more
+   * (T-1B.5) and the store publishes (T-2B.6); wired by register.ts.
+   */
+  onWrite: ((store: string) => void) | undefined;
   /** The inventory's stores out of step with the pair (D-34), named in the header. */
   unsynced: string[] = [];
   /** Display ids minted after a create whose write has not succeeded, retried on each refresh. */
@@ -383,10 +392,10 @@ export class BeadsPane {
     if (now !== undefined) this.wroteAt = now;
   }
 
-  /** As markWrite, and the band hears of it (T-1B.5). */
-  private async wrote(): Promise<void> {
+  /** As markWrite, and the band and the publish hear of the store written, `store` (T-1B.5). */
+  private async wrote(store: string): Promise<void> {
     await this.markWrite();
-    this.onWrite?.();
+    this.onWrite?.(store);
   }
 
   // ---- view preferences -------------------------------------------------------------------
@@ -440,7 +449,7 @@ export class BeadsPane {
    */
   private async retryPendingIds(): Promise<void> {
     const done = new Set<string>();
-    let wrote = false;
+    let wrote: string | undefined;
     for (const pending of [...this.pendingIds]) {
       let step = pendingDisplayIdStep(pending, this.board.issues);
       if (step.kind === "write") {
@@ -467,7 +476,7 @@ export class BeadsPane {
           this.pendingErrors[pending.id] = this.failure("writing its display id", ran);
           continue;
         }
-        wrote = true;
+        wrote = ran.dir;
         this.note(`wrote ${pending.displayId} for ${pending.id}`, "success");
       }
       delete this.pendingErrors[pending.id];
@@ -477,10 +486,10 @@ export class BeadsPane {
       this.pendingIds = this.pendingIds.filter((pending) => !done.has(pending.id));
       this.savePending();
     }
-    if (wrote) {
+    if (wrote !== undefined) {
       this.queued = true;
       // A display id written late is a write like any other: the band and the publish hear of it.
-      this.onWrite?.();
+      this.onWrite?.(wrote);
     }
   }
 
@@ -495,12 +504,21 @@ export class BeadsPane {
     timeoutMs: number,
     { streamed = false }: { streamed?: boolean } = {},
   ): Promise<Ran> {
+    const dir = this.storePath();
+    return { ...(await this.runAt(dir, argv, timeoutMs, streamed)), dir };
+  }
+
+  private async runAt(
+    dir: string,
+    argv: readonly string[],
+    timeoutMs: number,
+    streamed: boolean,
+  ): Promise<Omit<Ran, "dir">> {
     const host = this.host;
     if (host === undefined) {
       return { ok: false, exitCode: null, stdout: "", stderr: "", message: "no session" };
     }
     try {
-      const dir = this.storePath();
       const result = streamed
         ? await host.stream(dir, argv, timeoutMs)
         : await host.runIn(dir, argv, timeoutMs);
@@ -660,19 +678,29 @@ export class BeadsPane {
     const dir = await this.stateDir();
     if (host === undefined || dir === undefined || this.store?.ok !== true) return false;
     const path = this.store.path.replace(/\/+$/, "");
-    const [countsText, leaseText, now] = await Promise.all([
-      host.readFile(`${dir}/${SNAPSHOT_FILE}`).catch(() => undefined),
+    const [leaseText, now] = await Promise.all([
       host.readFile(`${dir}/${LEASE_FILE}`).catch(() => undefined),
       host.now().catch(() => 0),
     ]);
-    const counts = countsText === undefined ? undefined : parseSnapshot(countsText);
-    const entry: BoardEntry | undefined =
-      counts?.ok === true
-        ? counts.value.boards?.find((one) => one.path.replace(/\/+$/, "") === path)
+    const lease = leaseText === undefined ? undefined : parseFileLease(leaseText);
+    // The snapshot of the token the lease names; with no lease, the last one published.
+    const token = lease === undefined ? undefined : lease.token;
+    if (token !== undefined && !isRefresherToken(token)) return false;
+    const countsFile = token === undefined ? SNAPSHOT_FILE : snapshotFileName(token);
+    const countsText = await host.readFile(`${dir}/${countsFile}`).catch(() => undefined);
+    const parsed = countsText === undefined ? undefined : parseSnapshot(countsText);
+    const counts =
+      parsed?.ok === true &&
+      isRefresherToken(parsed.value.token) &&
+      (token === undefined || parsed.value.token === token)
+        ? parsed.value
         : undefined;
+    const entry: BoardEntry | undefined = counts?.boards?.find(
+      (one) => one.path.replace(/\/+$/, "") === path,
+    );
     this.boardSkipped = entry?.ok === false ? entry.error : undefined;
+    if (counts === undefined) return false;
     if (current) {
-      const lease = leaseText === undefined ? undefined : parseFileLease(leaseText);
       if (entry?.ok !== true || !refresherRunning(lease, now)) return false;
       if (now - entry.checkedAt > STALE_MS || entry.readAt < this.wroteAt) return false;
       // The board already draws this head: nothing to read.
@@ -680,7 +708,9 @@ export class BeadsPane {
     }
     if (entry?.ok === false) return false;
     const file = entry?.ok === true ? entry.file : boardFileName(path);
-    const text = await host.readFile(`${dir}/${BOARDS_DIR}/${file}`).catch(() => undefined);
+    const text = await host
+      .readFile(`${dir}/${boardPath(counts.token, file)}`)
+      .catch(() => undefined);
     const board = text === undefined ? undefined : parseBoardSnapshot(text);
     if (board?.ok !== true || board.value.path.replace(/\/+$/, "") !== path) return false;
     const issues = parseIssueRows(board.value.issues);
@@ -881,7 +911,7 @@ export class BeadsPane {
     this.host?.invalidate();
     const ran = await this.run(plan.value.argv, WRITE_TIMEOUT_MS);
     if (ran.ok) {
-      await this.wrote();
+      await this.wrote(ran.dir);
       this.dispatch({ type: "move-succeeded", id });
       this.undo = undoForMove(this.board.statuses, {
         id,
@@ -924,7 +954,7 @@ export class BeadsPane {
       return;
     }
     this.quickAddText = "";
-    await this.wrote();
+    await this.wrote(created.dir);
     const id = parseBdCreatedId(created.stdout);
     if (!id.ok) {
       this.note(
@@ -1398,7 +1428,7 @@ export class BeadsPane {
       return;
     }
     this.detail = reduceDetail(this.detail, { type: "edit-succeeded" });
-    await this.wrote();
+    await this.wrote(ran.dir);
     await this.loadDetail(detail.issue.id);
     await this.refresh({ direct: true });
   }
@@ -1449,7 +1479,7 @@ export class BeadsPane {
     if (undo === undefined) return;
     this.undo = undefined;
     const ran = await this.run(undoArgv(undo), WRITE_TIMEOUT_MS);
-    if (ran.ok) await this.wrote();
+    if (ran.ok) await this.wrote(ran.dir);
     this.note(
       ran.ok
         ? `${undo.label} is back to ${undo.previous}`

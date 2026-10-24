@@ -1,6 +1,6 @@
 {
   "name": "beads-ui",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "A Beads task board for the Claude Code TUI: /show-beads-ui opens a pane over the Beads store the session's work lives in, and a band above the prompt counts the session's tasks.",
   "author": {
     "name": "Sergei Wallace"

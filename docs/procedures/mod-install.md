@@ -75,7 +75,7 @@ With auto-update on, Claude Code checks the marketplace when a session starts, n
 
 ## The host refresher
 
-One refresher process per machine reads every store's counts once a minute and writes them to a snapshot that every session's band reads, so the number of `bd` calls does not grow with the number of sessions. It is a Node script inside the plugin, `refresher/refresher.mjs`, with no dependencies, so `node` (22.18 or later, which runs TypeScript files by stripping their types) must be on the `PATH` Claude Code runs under. Nothing needs to be installed or enabled: the sessions start it and restart it themselves.
+One refresher process per machine reads every store's counts once a minute and writes them to a snapshot that every session's band reads, so the number of `bd` calls does not grow with the number of sessions. It reads four stores at a time, and every read of a minute's pass ends within 28 seconds of its start: the snapshot is written then with the stores that answered, and a store still unanswered is listed as `not read before the beat's deadline`, which the band marks with `~`. So two snapshots are never more than 88 seconds apart, however slowly a store answers. It is a Node script inside the plugin, `refresher/refresher.mjs`, with no dependencies, so `node` (22.18 or later, which runs TypeScript files by stripping their types) must be on the `PATH` Claude Code runs under. Nothing needs to be installed or enabled: the sessions start it and restart it themselves.
 
 - Each store costs one `bd count --by-assignee --status=<s>` for each of in progress, blocked and open, and one `bd count --by-assignee --status=closed --closed-after=<now less the window>` for each done window a session asks for: four calls a store a minute with the default window, whatever the number of sessions.
 - For each store a live session's pane reads, it also keeps a board snapshot. Each minute it runs `bd vc status --json`, whose `commit` is the store's Dolt head and changes with every write; only when the head moved does it read the board again (`bd statuses` and the two `bd list` reads the pane makes). On the ai-harness store, measured on sem-kg-ec2 on 2026-10-24, the head check took 0.46 to 0.65 s and 94 bytes, and the board reads 2,080,860 bytes of open issues and 54,389 of the closed page, against 7,247,493 for every issue.
@@ -89,13 +89,14 @@ Its files live in the state directory, `$XDG_STATE_HOME/beads-ui`, or `~/.local/
 
 | File | What it holds |
 |---|---|
-| `counts.json` | The snapshot: each store's counts by owner, the refresher's token and pid, and its heartbeat (`beatAt`); `stoppedAt` when it stopped on purpose. Written whole, by a write to a temporary file and a rename. |
+| `counts-<token>.json` | One refresher's snapshot: each store's counts by owner, the refresher's token and pid, and its heartbeat (`beatAt`); `stoppedAt` when it stopped on purpose. Written whole, by a write to a temporary file and a rename, only by the refresher holding that token. A session reads the one whose token `lease.json` names and takes nothing from another token's, so a refresher that stalled between its lease check and its write, and lost the lease meanwhile, writes only a file nobody reads. The holder removes another token's files once they are 50 seconds old. |
+| `counts.json` | The snapshot the holder published last, the same text as its own `counts-<token>.json`, replaced only after that file is written and the lease checked again. A session reads it only when no lease names a refresher: the band while a new refresher starts, and the pane's first paint. |
 | `lease.json` | The refresher's lease: its token, pid and the time it last renewed it. It is a hard link to the holder's own `lease-<token>.json`, which is the only file a refresher renews, so a refresher that stalls and loses the lease can never overwrite or remove the newer holder's. |
 | `sessions/<session>.json` | Each session's registry file: its done window, the stores it reads that the inventory does not list, and the store its pane reads. |
-| `boards/<store>.json` | The board snapshot of a store a session's pane reads: `bd statuses`, and the open issues and the 25 most recently closed with only the fields the board and backlog draw, as of the store's Dolt head. `counts.json` lists each under `boards`, with its head, when it was read and when its head was last checked; a store whose snapshot would pass 4 MiB, the most a session can read from a file, is listed there with the reason instead, and its pane reads `bd` itself. |
+| `boards/<token>/<store>.json` | The board snapshot of a store a session's pane reads, under the token of the refresher that wrote it: `bd statuses`, and the open issues and the 25 most recently closed with only the fields the board and backlog draw, as of the store's Dolt head. That refresher's snapshot lists each under `boards`, with its head, when it was read and when its head was last checked; a store whose snapshot would pass 4 MiB, the most a session can read from a file, is listed there with the reason instead, and its pane reads `bd` itself. |
 | `wake/<store>.json` | A marker a session drops after a write; the refresher reads that store again within a second or two and removes it. |
 
-To stop the refresher, end it by its pid (`counts.json` names it); the next session's minute check starts another.
+To stop the refresher, end it by its pid (`lease.json` and `counts.json` name it); the next session's minute check starts another.
 
 ## The store a session reads
 
@@ -247,6 +248,8 @@ The mod reads `beads-ui.toml` each time it refreshes. It uses the first of these
 1. `beads-ui.toml` in the directory the session runs in (the repository root);
 2. `$XDG_CONFIG_HOME/beads-ui/beads-ui.toml`, or `~/.config/beads-ui/beads-ui.toml` when `XDG_CONFIG_HOME` is unset.
 
+`[sync]` is the exception: it is read from the user's file (2) only, never from the repository's ([Publishing edits](#publishing-edits)).
+
 With no file, these defaults apply:
 
 ```toml
@@ -301,7 +304,7 @@ quiet_seconds = 10      # how long after the last write the publish runs
 timeout_seconds = 300   # how long the command may run, 1 to 600
 ```
 
-The mod reads only the first `beads-ui.toml` it finds ([Configuration](#configuration)), so a repository with its own file publishes only when that file carries a `[sync]` table too.
+The mod reads `[sync]` from the user's file alone: `$XDG_CONFIG_HOME/beads-ui/beads-ui.toml`, or `~/.config/beads-ui/beads-ui.toml` when `XDG_CONFIG_HOME` is unset. A `[sync]` table in a repository's own `beads-ui.toml` is ignored, so a checkout can never name a command the mod runs; the repository's file still sets every other table ([Configuration](#configuration)).
 
 After every write the pane or the delete confirmation makes (a move, a field edit, a create, a close, an undo, a delete, a display id written late), the mod waits `quiet_seconds` with no further write and then runs `command` once for the store written, in that store's directory, with `{store}` replaced wherever it appears in an argument. It runs the argument list directly, never through a shell. A session runs one publish at a time; a write made during a publish starts a new quiet period that runs once that publish ends. The setting is read at each write and again when the publish starts, so a change in the file applies without a restart.
 

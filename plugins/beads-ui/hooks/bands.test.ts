@@ -44,7 +44,10 @@ import {
 const LIST = OPEN_LIST;
 const HOUR = 3_600_000;
 const STATE = "/home/me/.local/state/beads-ui";
-const SNAPSHOT = `${STATE}/counts.json`;
+/** The snapshot of the played refresher's token, the one its lease names. */
+const SNAPSHOT = `${STATE}/counts-${REFRESHER_TOKEN}.json`;
+/** The last snapshot published, read only when no lease names a refresher. */
+const PUBLISHED = `${STATE}/counts.json`;
 const USER_CONFIG = "/home/me/.config/beads-ui/beads-ui.toml";
 
 const band = ($: Engine, columns = 120, hasSurvey = false) =>
@@ -114,7 +117,7 @@ function storeOf(path: string, issues: readonly Counted[], at: number, windows =
 /** The host snapshot as the refresher writes it, its heartbeat `beatAt`. */
 function snapshotOf(
   stores: Readonly<Record<string, readonly Counted[]>>,
-  options: { beatAt?: number; failed?: string[]; stoppedAt?: number } = {},
+  options: { beatAt?: number; failed?: string[]; stoppedAt?: number; token?: string } = {},
 ): string {
   const beatAt = options.beatAt ?? START_MS - 10_000;
   const entries: StoreSnapshot[] = Object.entries(stores).map(([path, issues]) =>
@@ -124,7 +127,7 @@ function snapshotOf(
   );
   return JSON.stringify({
     schema: 1,
-    token: "refresher-token-1",
+    token: options.token ?? REFRESHER_TOKEN,
     pid: 4242,
     beatAt,
     ...(options.stoppedAt === undefined ? {} : { stoppedAt: options.stoppedAt }),
@@ -165,6 +168,21 @@ describe("the band's format (T-1B.10)", () => {
 
     expect(await line($, "own")).toBe(OWN);
     expect(await line($, "all")).toBeUndefined();
+    expect(w.keys().filter(isCount)).toEqual([]);
+  });
+
+  test("should draw the snapshot of the token the lease names, never one an ousted refresher wrote", async ($, on) => {
+    const OUSTED: Readonly<Record<string, readonly Counted[]>> = {
+      [CWD]: [{ status: "open", assignee: "aih-ec2-3" }],
+      [HARNESS]: [],
+    };
+    const files = {
+      ...LIVE,
+      [PUBLISHED]: snapshotOf(OUSTED, { beatAt: START_MS - 1_000, token: "ousted-token-1" }),
+    };
+    const w = await started($, on, named("aih-ec2-3", { refresher: true, files }));
+
+    expect(await line($, "own")).toBe(OWN);
     expect(w.keys().filter(isCount)).toEqual([]);
   });
 
@@ -360,6 +378,7 @@ describe("one refresher for the host (T-1B.4)", () => {
   const STALE = {
     [INVENTORY_PATH]: INVENTORY,
     [SNAPSHOT]: snapshotOf(STORES, { beatAt: START_MS - 4 * 60_000 }),
+    [PUBLISHED]: snapshotOf(STORES, { beatAt: START_MS - 4 * 60_000 }),
   };
   const spawned = (w: ReturnType<typeof world>) => w.runs.filter((argv) => isStart(keyOf(argv)));
 
@@ -915,7 +934,7 @@ describe("the unpublished-edit count (T-2B.6)", () => {
       on,
       named("aih-ec2-3", {
         refresher: true,
-        files: { ...LIVE, [`${CWD}/beads-ui.toml`]: SYNC },
+        files: { ...LIVE, [USER_CONFIG]: SYNC },
         stored: ALL_VIEW,
         script: (_key, argv) =>
           argv[0] === PUBLISH ? exit(code(), code() === 0 ? "" : "conflict\n") : undefined,

@@ -224,25 +224,39 @@ export function parseToml(text: string): Result<TomlTable, TomlError> {
   return { ok: true, value: root };
 }
 
+const joinPath = (dir: string, name: string) => `${dir.replace(/\/+$/, "")}/${name}`;
+
+/**
+ * The user's `beads-ui.toml`: `$XDG_CONFIG_HOME/beads-ui/beads-ui.toml`, else
+ * `$HOME/.config/beads-ui/beads-ui.toml`; undefined with neither. `[sync]` is read from this
+ * file alone, so a repository's own file can never name a command the mod runs.
+ */
+export function userConfigPath(env: {
+  xdgConfigHome?: string | undefined;
+  home?: string | undefined;
+}): string | undefined {
+  const configHome =
+    env.xdgConfigHome !== undefined && env.xdgConfigHome !== ""
+      ? env.xdgConfigHome
+      : env.home !== undefined && env.home !== ""
+        ? joinPath(env.home, ".config")
+        : undefined;
+  return configHome === undefined
+    ? undefined
+    : joinPath(joinPath(configHome, "beads-ui"), CONFIG_FILE_NAME);
+}
+
 /**
  * Where the mod looks for `beads-ui.toml`, in order; the first file that exists is used. The
- * repository root first, then the user's config directory (`$XDG_CONFIG_HOME/beads-ui`, else
- * `$HOME/.config/beads-ui`).
+ * repository root first, then the user's file (userConfigPath).
  */
 export function configCandidates(
   repoRoot: string,
   env: { xdgConfigHome?: string | undefined; home?: string | undefined },
 ): string[] {
-  const join = (dir: string, name: string) => `${dir.replace(/\/+$/, "")}/${name}`;
-  const candidates = [join(repoRoot, CONFIG_FILE_NAME)];
-  const configHome =
-    env.xdgConfigHome !== undefined && env.xdgConfigHome !== ""
-      ? env.xdgConfigHome
-      : env.home !== undefined && env.home !== ""
-        ? join(env.home, ".config")
-        : undefined;
-  if (configHome !== undefined)
-    candidates.push(join(join(configHome, "beads-ui"), CONFIG_FILE_NAME));
+  const user = userConfigPath(env);
+  const candidates = [joinPath(repoRoot, CONFIG_FILE_NAME)];
+  if (user !== undefined) candidates.push(user);
   return candidates;
 }
 
