@@ -4,7 +4,8 @@ import { BandSettingsPanel } from "./bandSettings.ts";
 import { drawBand } from "./bands.ts";
 import { CONFIRM_ID, DeleteConfirm } from "./confirm.ts";
 import type { Host } from "./host.ts";
-import { BeadsPane, PANE_ID } from "./pane.ts";
+import { BeadsPane, PANE_ID, type TasksRegion } from "./pane.ts";
+import { TASKS_CLIENT_KEY } from "./panel.ts";
 import { StoreResolver } from "./store.ts";
 import { readStream } from "./stream.ts";
 import { BandTally } from "./tally.ts";
@@ -147,10 +148,17 @@ export function register(on: On) {
     const width = Math.max(20, e.props.bodyColumns - 1);
     if (e.requestId === CONFIRM_ID) return confirm.draw(ui, width);
 
-    const help =
+    // A Client draws in the terminal and the desktop; VS Code draws none (D-31).
+    const Client =
       e.surface === "terminal" || e.surface === "desktop"
-        ? (await $.ui.resolve(e)).Client({ key: "hello", module: "../client/hello.ts" })
+        ? (await $.ui.resolve(e)).Client
         : undefined;
+    const help = Client?.({ key: "hello", module: "../client/hello.ts" });
+    const tasks: TasksRegion | undefined =
+      Client === undefined
+        ? undefined
+        : (props, width, height) =>
+            Client({ key: TASKS_CLIENT_KEY, module: "../client/tasks.ts", props, width, height });
     // The tier and the short-height rule come from the props, which Claude Code redraws with on
     // every resize (T-1B.9).
     const frame = {
@@ -159,6 +167,20 @@ export function register(on: On) {
       placement: e.props.placement,
       ...(e.props.scroll === undefined ? {} : { bodyRows: e.props.scroll.bodyRows }),
     };
-    return pane.draw(ui, frame, help);
+    return pane.draw(ui, frame, help, tasks);
+  });
+
+  // The task list's Client (T-2B.5): what it posts runs the pane's own actions, and a fault drops
+  // it for the rest of the session, the element tree drawing the list in its place.
+  on("ui.message", { requestId: "beads" }, async (_$, e, next) => {
+    if (e.element === TASKS_CLIENT_KEY) await pane.clientMessage(e.data);
+
+    return next(e);
+  });
+
+  on("ui.fault", { requestId: "beads" }, (_$, e, next) => {
+    pane.clientFault(e.element);
+
+    return next(e);
   });
 }

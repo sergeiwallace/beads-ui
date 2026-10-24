@@ -75,6 +75,7 @@ import {
   parseSort,
   parseStatusesJson,
   parseSwimlaneMode,
+  parseTaskMessage,
   pendingDisplayIdStep,
   planDisplayId,
   planMove,
@@ -102,9 +103,11 @@ import {
   stepPage,
   storeLabel,
   submitFilter,
+  type TaskClientProps,
   type TaskListView,
   TERMINAL_THEME,
   type Token,
+  taskClientProps,
   taskListView,
   textWidth,
   tierOf,
@@ -122,8 +125,13 @@ import {
   drawMenu,
   drawSettings,
   drawTaskList,
+  menuColumns,
+  menuRows,
   PanelSettingsState,
+  rowControlColumns,
   settingsOptionRoom,
+  TASKS_CLIENT_KEY,
+  type TaskListClient,
 } from "./panel.ts";
 import type { StoreResolver } from "./store.ts";
 
@@ -192,6 +200,12 @@ export type PaneUi = Pick<
   Elements["terminal"],
   "Box" | "Text" | "Button" | "Input" | "Select" | "Markdown" | "Code"
 >;
+
+/**
+ * Draws the task list's Client (T-2B.5) where the surface has one: register.ts names the module,
+ * since Claude Code reads a Client's module path off the hooks module's source.
+ */
+export type TasksRegion = (props: TaskClientProps, width: number, height: number) => RenderElement;
 
 export interface Prefs {
   /** The open view; `tab`, which held 0.4.0's board-first tab, is no longer read. */
@@ -273,6 +287,12 @@ export class BeadsPane {
   /** The options menu is open (T-2B.4), about `menuFor` when a task was focused. */
   menuOpen = false;
   menuFor: string | undefined;
+  /** The column a right click opened the menu at (T-2B.5); undefined when a key or button did. */
+  menuX: number | undefined;
+  /** The task list's Client failed (T-2B.5): the element tree draws the list for the session. */
+  clientFaulted = false;
+  /** The props the task list's Client was last handed, which its posts are read against. */
+  private clientProps: TaskClientProps | undefined;
   /** The Settings view's last notice. */
   settingsNotice: Notice | undefined;
   /** The body size the pane last drew at, for the actions that run between draws. */
@@ -1087,12 +1107,13 @@ export class BeadsPane {
    * `k`, or a task row's menu button (T-2B.4): opens the options menu about the focused task, or
    * about `id`, and moves the focus ring onto its first item; a second press closes it.
    */
-  async toggleMenu(id?: string): Promise<void> {
+  async toggleMenu(id?: string, x?: number): Promise<void> {
     if (this.menuOpen && (id === undefined || id === this.menuFor)) {
       this.closeMenu();
       return;
     }
     if (id !== undefined) this.focusedId = id;
+    this.menuX = x;
     this.menuFor = this.target();
     this.menuOpen = true;
     this.clearHint();
@@ -1113,6 +1134,38 @@ export class BeadsPane {
     this.menuOpen = false;
     if (this.menuFor !== undefined && this.tab !== "detail") this.focusedId = this.menuFor;
     this.runCommand(command);
+    this.host?.invalidate();
+  }
+
+  /**
+   * A post from the task list's Client (T-2B.5), read against the props it was handed: each kind
+   * runs what the element tree's focus ring, row button, menu button or key runs.
+   */
+  async clientMessage(data: unknown): Promise<void> {
+    const props = this.clientProps;
+    const message = props === undefined ? undefined : parseTaskMessage(data, props);
+    if (message === undefined) return;
+    if (message.kind === "run") {
+      if (message.id !== undefined) this.focusedId = message.id;
+      this.runCommand(message.command);
+      this.host?.invalidate();
+      return;
+    }
+    if (message.kind === "menu") {
+      await this.toggleMenu(message.id, message.x);
+      return;
+    }
+    if (message.kind === "open") {
+      await this.openDetailFor(message.id);
+      return;
+    }
+    this.focused(`task:${message.id}`);
+  }
+
+  /** `ui.fault` (T-2B.5): the task list's Client failed, so the element tree draws it from now on. */
+  clientFault(element: string): void {
+    if (element !== TASKS_CLIENT_KEY || this.clientFaulted) return;
+    this.clientFaulted = true;
     this.host?.invalidate();
   }
 
@@ -1372,7 +1425,12 @@ export class BeadsPane {
    * under 12 rows the help, the band settings and the footer's hints are dropped and the inputs
    * move below the board, so the tabs, the board's header and a card come first.
    */
-  draw(ui: PaneUi, frame: PaneFrame, helpRegion?: RenderElement): RenderElement {
+  draw(
+    ui: PaneUi,
+    frame: PaneFrame,
+    helpRegion?: RenderElement,
+    tasksRegion?: TasksRegion,
+  ): RenderElement {
     const { Box, Text } = ui;
     if (this.host === undefined) {
       return Box({ children: [Text({ children: "beads-ui starts with the session." })] });
@@ -1389,10 +1447,13 @@ export class BeadsPane {
     const { groups, perRow, groupWidth } = this.layout(width);
     const view = this.boardViewAt(width);
     const ctx = this.actionContext(width, view);
-    const menu = this.menuOpen ? this.drawMenu(ui, ctx, width) : undefined;
+    const region = this.clientFaulted ? undefined : tasksRegion;
+    const menu = this.menuOpen
+      ? this.drawMenu(ui, ctx, width, this.tab === "tasks" && region !== undefined)
+      : undefined;
     const body =
       this.tab === "tasks"
-        ? this.drawTasks(ui, width, frame, menu)
+        ? this.drawTasks(ui, width, frame, ctx, menu, region)
         : this.tab === "board"
           ? this.drawBoard(ui, view, groups, perRow, groupWidth)
           : this.tab === "backlog"
@@ -1472,28 +1533,33 @@ export class BeadsPane {
     return menuView(this.actionContext(width), name);
   }
 
-  private drawMenu(ui: PaneUi, ctx: ActionContext, width: number): RenderElement {
+  private menuViewOf(ctx: ActionContext): MenuView {
     const id = this.menuFor;
     const issue =
       id === undefined ? undefined : this.board.issues.find((candidate) => candidate.id === id);
+    return menuView(ctx, id === undefined ? undefined : (issue?.displayId ?? id));
+  }
+
+  /** The options menu; over the Client's rows it is as wide as its widest line (T-2B.5). */
+  private drawMenu(ui: PaneUi, ctx: ActionContext, width: number, popup: boolean): RenderElement {
+    const menu = this.menuViewOf(ctx);
     return drawMenu(
       ui,
-      menuView(ctx, id === undefined ? undefined : (issue?.displayId ?? id)),
-      width,
+      menu,
+      popup ? menuColumns(menu, width) : width,
       (command) => this.runFromMenu(command),
       () => this.closeMenu(),
     );
   }
 
   /** The Tasks view's list at a width (T-2B.2); at short height a window round the focused task. */
-  private taskListAt(width: number, frame: PaneFrame): TaskListView {
+  private taskListAt(width: number, frame: PaneFrame, client = false): TaskListView {
     const short = isShort(frame.placement, frame.bodyRows);
     return taskListView(this.shown().issues, {
       statuses: this.board.statuses,
       settings: this.panel.settings,
       expanded: this.expanded,
-      // The row's menu button and the gap before it take two columns.
-      width: Math.max(1, width - 2),
+      width: Math.max(1, width - rowControlColumns(client)),
       ...(this.focusedId === undefined ? {} : { focusedId: this.focusedId }),
       windowRows: short
         ? Math.max(3, (frame.bodyRows ?? SHORT_ROWS) - SHORT_CHROME_ROWS)
@@ -1501,11 +1567,42 @@ export class BeadsPane {
     });
   }
 
+  /**
+   * The Client path (T-2B.5): the rows as the Client's props, the room it leaves under the row
+   * the menu is about, and the column the menu opens at, kept inside the view.
+   */
+  private tasksClient(
+    list: TaskListView,
+    ctx: ActionContext,
+    width: number,
+    region: TasksRegion,
+  ): TaskListClient {
+    const menu = this.menuOpen ? this.menuViewOf(ctx) : undefined;
+    const menuWidth = menu === undefined ? 0 : menuColumns(menu, width);
+    const props = taskClientProps(list, ctx, {
+      ...(this.focusedId === undefined ? {} : { selected: this.focusedId }),
+      ...(menu === undefined || this.menuFor === undefined
+        ? {}
+        : { gapAfter: this.menuFor, gapRows: menuRows(menu) }),
+      selectedColor: colorOf("surface.focus"),
+    });
+    this.clientProps = props;
+    const labelWidth = Math.max(1, width - rowControlColumns(true));
+    return {
+      region: region(props, labelWidth, props.rows.length + props.gapRows),
+      gapRows: props.gapRows,
+      menuLeft: Math.max(0, Math.min(this.menuX ?? 0, width - menuWidth)),
+      menuWidth,
+    };
+  }
+
   private drawTasks(
     ui: PaneUi,
     width: number,
     frame: PaneFrame,
+    ctx: ActionContext,
     menu: RenderElement | undefined,
+    region: TasksRegion | undefined,
   ): RenderElement {
     const { Box, Text } = ui;
     if (!this.board.loaded) {
@@ -1515,7 +1612,7 @@ export class BeadsPane {
       });
     }
     const session = this.stores.sessionName;
-    const list = this.taskListAt(width, frame);
+    const list = this.taskListAt(width, frame, region !== undefined);
     const empty =
       this.scope === "mine" && session !== undefined
         ? `No task in progress, blocked or open is assigned to ${session}; a shows every owner's.`
@@ -1530,6 +1627,7 @@ export class BeadsPane {
       },
       ...(this.menuFor === undefined ? {} : { menuFor: this.menuFor }),
       ...(menu === undefined ? {} : { menu }),
+      ...(region === undefined ? {} : { client: this.tasksClient(list, ctx, width, region) }),
     });
   }
 

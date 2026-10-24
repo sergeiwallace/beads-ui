@@ -324,8 +324,25 @@ export {
   reduceDetail,
   toOneLine,
 } from "./views/detail.ts";
-export type { ActionContext, MenuItem, MenuSection, MenuView, PanelAction } from "./views/menu.ts";
-export { menuItemText, menuView, panelActions } from "./views/menu.ts";
+export type {
+  ActionContext,
+  ClientKey,
+  MenuItem,
+  MenuSection,
+  MenuView,
+  PanelAction,
+  TaskClientMessage,
+  TaskClientProps,
+  TaskClientRow,
+} from "./views/menu.ts";
+export {
+  clientKeys,
+  menuItemText,
+  menuView,
+  panelActions,
+  parseTaskMessage,
+  taskClientProps,
+} from "./views/menu.ts";
 export type {
   NavEntry,
   NavItem,
