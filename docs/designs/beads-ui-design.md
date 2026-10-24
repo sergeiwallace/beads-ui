@@ -1926,6 +1926,15 @@ A small Node process with no dependencies, shipped inside the plugin so it reach
 
 Criterion 2 and Sergei's stated preference: the reads are shared infrastructure, so one reader serves the host. Medium confidence because Open Question 11 is unmeasured; the design works under either answer. Mitigations: the first build step measures whether a spawned child survives its session and records it; if it does not, the next session's minute check restarts it, and T-1B.4 bounds the gap at two minutes, during which the band reads the last snapshot and marks it stale past three; the lease is a compare step in `$.store` re-checked by the refresher at start, and a loser exits (Risk 11, with a two-session test); a snapshot carries only the fields the board draws and is split per store, and a store whose snapshot would pass 4 MiB falls back to the session's own read for that store, named on the pane; a stale snapshot falls back to direct reads and the band says so. The stamp shows minutes, never seconds (T-1B.5). Two-way door: the refresher sits behind one read function, and (b) is the fallback path already.
 
+**Version rule (BU-4af, 0.9.4).** The lease records the plugin build its refresher runs (`version`, from `.claude-plugin/plugin.json`), and a later build supersedes a live older lease. Measured 2026-10-24: a 0.4.0 refresher kept its lease across the upgrade to 0.9.3, writing only `counts.json` while 0.9.2 and later read only `counts-<token>.json`, so every restarted session read all 9 stores itself. The rule, as built:
+
+- A refresher takes a live lease when its build is later than the one the lease records; a lease with no build (every build before 0.9.4) is older than any. Equal builds never supersede each other, and a refresher or session that cannot read its own build supersedes nothing, so two builds cannot take turns.
+- The takeover is the stale-lease takeover (move `lease.json` aside, link its own file in), which every build since 0.3.0 obeys: an older refresher finds the lease is not its own at its next renewal or read and exits, with no signal sent.
+- Before it takes the lease, the incoming refresher writes the last live `counts.json` stores and heartbeat as its own `counts-<token>.json`, so sessions read a snapshot from the moment the lease names it, with no beat of direct reads. Boards are left out, since their files are the old refresher's.
+- A session whose build is later than the running refresher's starts one of its own build under a free `$.store` lease, draws the older refresher's snapshot meanwhile if it has one under its token, and otherwise waits as for any start.
+
+Chosen over reading `counts.json` compatibly, which would stop the direct reads but keep the older process, its logic and its file format running for as long as sessions register, and would reopen the ousted-writer gap Risk 11 closed. Bug record: [older-refresher-keeps-lease-across-upgrade](../bugs/older-refresher-keeps-lease-across-upgrade.md).
+
 ---
 
 <a id="d-27"></a>
