@@ -13,7 +13,6 @@ import {
   type CardView,
   COMMANDS,
   clockStamp,
-  configCandidates,
   createArgv,
   DEFAULT_CONFIG,
   DEFAULT_SORT,
@@ -56,13 +55,14 @@ import {
   resolveConfig,
   type SortSpec,
   STATUS_CATEGORIES,
+  type StoreResolution,
   type SwimlaneMode,
   showArgv,
   slugBudgets,
   sortLabel,
   statusesArgv,
   stepPage,
-  storeName,
+  storeLabel,
   submitFilter,
   TERMINAL_THEME,
   type Token,
@@ -73,6 +73,7 @@ import {
   undoView,
 } from "../core/src/index.ts";
 import type { Host } from "./host.ts";
+import type { StoreResolver } from "./store.ts";
 
 export const PANE_ID = "beads";
 export const PANE_TITLE = "Beads";
@@ -181,7 +182,8 @@ export class BeadsPane {
   /** The body width the pane last drew at, for the page steps that run between draws. */
   private width = WANTED_COLUMNS;
 
-  private env: { xdgConfigHome?: string; home?: string } = {};
+  /** The store the pane reads (D-24), from the last refresh; undefined before the first. */
+  store: StoreResolution | undefined;
   /** True while the pane has stepped aside for the delete confirmation. */
   private suspended = false;
   private refreshing = false;
@@ -189,15 +191,11 @@ export class BeadsPane {
   private timer: Timer | undefined;
   private timerMs = 0;
 
+  /** @param stores the session's store resolution, shared with the band (D-24) */
+  constructor(private readonly stores: StoreResolver) {}
+
   async bind(host: Host): Promise<void> {
     this.host = host;
-    const { xdgConfigHome, home } = await host
-      .configEnv()
-      .catch(() => ({ xdgConfigHome: undefined, home: undefined }));
-    this.env = {
-      ...(xdgConfigHome === undefined ? {} : { xdgConfigHome }),
-      ...(home === undefined ? {} : { home }),
-    };
     await this.loadPrefs();
     void this.refresh();
   }
@@ -307,9 +305,10 @@ export class BeadsPane {
       return { ok: false, exitCode: null, stdout: "", stderr: "", message: "no session" };
     }
     try {
+      const dir = this.storePath();
       const result = streamed
-        ? await host.stream(argv, timeoutMs)
-        : await host.run(argv, timeoutMs);
+        ? await host.stream(dir, argv, timeoutMs)
+        : await host.runIn(dir, argv, timeoutMs);
       if ("isStdoutTruncated" in result && result.isStdoutTruncated === true) {
         return {
           ok: false,
@@ -342,14 +341,18 @@ export class BeadsPane {
     return `${what} failed (${how})${detail}`;
   }
 
+  /** The directory bd runs in: the resolved store's, else the session's own. */
+  storePath(): string {
+    return this.store?.ok === true ? this.store.path : (this.host?.cwd ?? "");
+  }
+
+  /** Resolves the session's store (D-24) and reads its settings, both at call time. */
   private async readConfig(): Promise<ResolvedConfig> {
-    const host = this.host;
-    if (host === undefined) return this.config;
-    for (const path of configCandidates(host.cwd, this.env)) {
-      const text = await host.readFile(path).catch(() => undefined);
-      if (text !== undefined) return resolveConfig(text, host.cwd);
-    }
-    return resolveConfig(undefined, host.cwd);
+    if (this.host === undefined) return this.config;
+    const { resolution, config, problems } = await this.stores.resolve();
+    this.store = resolution;
+    const resolved = resolveConfig(config.text, this.storePath());
+    return { ...resolved, problems: [...resolved.problems, ...problems] };
   }
 
   private retime(): void {
@@ -387,6 +390,8 @@ export class BeadsPane {
     try {
       this.config = await this.readConfig();
       this.retime();
+      // No store resolved: the pane says what it tried, and no bd read runs until one does.
+      if (this.store?.ok !== true) return;
       const full = this.isOpen;
       const [statuses, list, ready] = await Promise.all([
         this.run(statusesArgv(), READ_TIMEOUT_MS),
@@ -577,6 +582,11 @@ export class BeadsPane {
     }
     this.undo = undefined;
     this.config = await this.readConfig();
+    if (this.store?.ok !== true) {
+      this.quickAddText = line;
+      this.host?.invalidate();
+      return;
+    }
     const created = await this.run(createArgv(parsed.value), WRITE_TIMEOUT_MS);
     if (!created.ok) {
       this.quickAddText = line;
@@ -908,6 +918,7 @@ export class BeadsPane {
       return Box({ children: [Text({ children: "beads-ui starts with the session." })] });
     }
     this.width = width;
+    if (this.store?.ok === false) return this.drawNoStore(ui, this.store);
     const { groups, groupWidth } = this.layout(width);
     const view = this.boardViewAt(width);
     const body =
@@ -971,6 +982,7 @@ export class BeadsPane {
 
   private drawHeader(ui: PaneUi): RenderElement {
     const { Box, Text, Button } = ui;
+    const resolved = this.store?.ok === true;
     return Box({
       key: "header",
       flexDirection: "row",
@@ -989,15 +1001,52 @@ export class BeadsPane {
         Text({
           wrap: "truncate-end",
           children: [
-            Text({ bold: true, children: truncate(storeName(this.host?.cwd ?? ""), 24) }),
+            Text({
+              bold: true,
+              children: truncate(this.store === undefined ? "" : storeLabel(this.store), 40),
+            }),
             "  ",
             Text({
               dimColor: true,
-              children: this.board.loadedAt === undefined ? "loading…" : asOf(this.board.loadedAt),
+              children: !resolved
+                ? ""
+                : this.board.loadedAt === undefined
+                  ? "loading…"
+                  : asOf(this.board.loadedAt),
             }),
           ],
         }),
       ],
+    });
+  }
+
+  /** D-24's empty state: what the pane looked for, and the line that points it at a store. */
+  private drawNoStore(ui: PaneUi, store: Extract<StoreResolution, { ok: false }>): RenderElement {
+    const { Box, Text } = ui;
+    return Box({
+      flexDirection: "column",
+      children: present<RenderNode>([
+        this.drawHeader(ui),
+        ...this.config.problems.map((problem, i) =>
+          this.line(ui, `config:${i}`, problem, "warning"),
+        ),
+        this.notice === undefined
+          ? undefined
+          : this.line(ui, "notice", this.notice.text, this.notice.token),
+        Box({
+          key: "no-store",
+          flexDirection: "column",
+          children: [
+            Text({ bold: true, children: "beads-ui found no Beads store for this session." }),
+            ...store.tried.map((line) => Text({ children: `- ${line}` })),
+            ...store.fix.map((line, i) =>
+              i === 0
+                ? Text({ children: line })
+                : Text({ color: colorOf("accent"), children: `  ${line}` }),
+            ),
+          ],
+        }),
+      ]),
     });
   }
 

@@ -4,6 +4,7 @@ import { drawBand } from "./bands.ts";
 import { CONFIRM_ID, DeleteConfirm } from "./confirm.ts";
 import type { Host } from "./host.ts";
 import { BeadsPane, PANE_ID } from "./pane.ts";
+import { StoreResolver } from "./store.ts";
 import { readStream } from "./stream.ts";
 import { BandTally } from "./tally.ts";
 
@@ -17,7 +18,7 @@ export const OPEN_FAILED_TEXT = "beads-ui could not open its pane";
 const COMMAND_SPECS = [
   {
     name: COMMAND_NAME,
-    description: "Open or close the beads-ui board for this repository's Beads store",
+    description: "Open or close the beads-ui board for this session's Beads store",
   },
   { name: ALIAS_NAME, description: "Open or close the beads-ui board (short for /show-beads-ui)" },
 ] as const;
@@ -30,11 +31,13 @@ const COMMAND_SPECS = [
  * @param on the engine's registrar
  */
 export function register(on: On) {
-  const pane = new BeadsPane();
-  const tally = new BandTally();
+  const stores = new StoreResolver();
+  const pane = new BeadsPane(stores);
+  const tally = new BandTally(stores);
   const confirm = new DeleteConfirm(
     (text, undo) => pane.afterConfirm(text, undo),
     () => void pane.resume(),
+    () => pane.storePath(),
   );
   pane.onDelete = (issue, issues) => {
     void pane
@@ -52,11 +55,9 @@ export function register(on: On) {
         $.process.run(argv, { cwd, timeoutMs, env: { NO_COLOR: "1" } }),
       // `ai c` pins the session's name here, and it is the assignee of the beads it owns (D-17).
       sessionName: () => $.env.get("CLAUDE_CODE_TASK_LIST_ID"),
-      stream: (argv, timeoutMs) =>
-        readStream(
-          $.process.spawn({ argv, cwd: e.cwd, env: { NO_COLOR: "1" } }),
-          timeoutMs,
-          (ms, fn) => $.clock.after(ms, fn),
+      stream: (cwd, argv, timeoutMs) =>
+        readStream($.process.spawn({ argv, cwd, env: { NO_COLOR: "1" } }), timeoutMs, (ms, fn) =>
+          $.clock.after(ms, fn),
         ),
       now: () => $.clock.now(),
       every: (ms, fn) => $.clock.every(ms, fn),
@@ -79,6 +80,7 @@ export function register(on: On) {
     };
     for (const spec of COMMAND_SPECS) await $.command.register(spec);
     confirm.host = host;
+    await stores.bind(host);
     await pane.bind(host);
     await tally.bind(host);
 

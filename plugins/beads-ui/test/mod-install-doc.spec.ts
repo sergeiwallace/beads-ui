@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Host } from "../hooks/host.ts";
 import { BeadsPane, type PaneUi, type Tab } from "../hooks/pane.ts";
+import { StoreResolver } from "../hooks/store.ts";
 
 const repoRoot = resolve(import.meta.dirname, "../../..");
 const doc = () => readFileSync(join(repoRoot, "docs/procedures/mod-install.md"), "utf8");
@@ -35,7 +36,7 @@ function inputLabels(node: unknown): string[] {
 }
 
 function labelsOn(tab: Tab): string[] {
-  const pane = new BeadsPane();
+  const pane = new BeadsPane(new StoreResolver());
   pane.host = { cwd: "/work/beads-ui" } as Host;
   pane.tab = tab;
   return inputLabels(pane.draw(ui, 118));

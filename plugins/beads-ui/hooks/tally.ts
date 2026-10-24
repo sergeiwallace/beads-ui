@@ -7,13 +7,11 @@ import {
   clockStamp,
   countArgv,
   parseBdCount,
-  parseStoreInventory,
-  type Result,
-  STORE_INVENTORY_FILE,
   type StoreCounts,
   storeName,
 } from "../core/src/index.ts";
 import type { Host } from "./host.ts";
+import type { StoreResolver } from "./store.ts";
 
 /**
  * The band reads every store at most this often: up to two `bd count` calls a store, so a slower
@@ -39,19 +37,14 @@ const firstLine = (text: string) => text.trim().split("\n")[0] ?? "";
 export class BandTally {
   host: Host | undefined;
   last: Tallied | undefined;
-  private session: string | undefined;
-  private home: string | undefined;
   private refreshing = false;
   private timer: Timer | undefined;
 
+  /** @param stores the session's store resolution, shared with the pane (D-24) */
+  constructor(private readonly stores: StoreResolver) {}
+
   async bind(host: Host): Promise<void> {
     this.host = host;
-    const name = (await host.sessionName().catch(() => undefined))?.trim();
-    this.session = name === undefined || name === "" ? undefined : name;
-    const { home } = await host
-      .configEnv()
-      .catch(() => ({ xdgConfigHome: undefined, home: undefined }));
-    this.home = home === undefined || home === "" ? undefined : home;
     this.timer?.cancel();
     this.timer = host.every(TALLY_REFRESH_MS, () => {
       void this.refresh();
@@ -64,8 +57,11 @@ export class BandTally {
     if (host === undefined || this.refreshing) return;
     this.refreshing = true;
     try {
-      const here: BandStore = { name: storeName(host.cwd), path: host.cwd, synced: false };
-      const reads = bandReads({ session: this.session, here, inventory: await this.inventory() });
+      const { resolution, inventory } = await this.stores.resolve();
+      const here: BandStore | undefined = resolution.ok
+        ? { name: storeName(resolution.path), path: resolution.path, synced: false }
+        : undefined;
+      const reads = bandReads({ session: this.stores.sessionName, here, inventory });
       const asked = new Map<string, Promise<StoreCounts>>();
       const answers: StoreCounts[][] = [];
       for (const read of reads) {
@@ -86,17 +82,6 @@ export class BandTally {
       this.refreshing = false;
       host.invalidate();
     }
-  }
-
-  private async inventory(): Promise<Result<BandStore[], string>> {
-    const host = this.host;
-    if (host === undefined || this.home === undefined) {
-      return { ok: false, error: "no home directory to find the store inventory in" };
-    }
-    const path = `${this.home.replace(/\/+$/, "")}/${STORE_INVENTORY_FILE}`;
-    const text = await host.readFile(path).catch(() => undefined);
-    if (text === undefined) return { ok: false, error: `no store inventory at ${path}` };
-    return parseStoreInventory(text);
   }
 
   private async count(store: BandStore, assignee: string | undefined): Promise<StoreCounts> {
