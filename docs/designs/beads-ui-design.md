@@ -39,9 +39,10 @@ The raw record is `docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md` in this
 | ai-harness `docs/asks/BU-epic-agentic-ai-native-beads-ylx.md` A004 | FOLLOW-UP, 2026-10-23T23:42:51Z. The pane fails with "no beads database found" in a kg-ec2-* session: D-24 and T-1B.1, with a regression test frozen first. Order: the `/show-beads-ui` fix first, then or with the pane bug, then research, design and the rest: the Phase 1B task order. |
 | Sergei, 2026-10-23T23:44Z, relayed by aih-ec2-3 (how to enter, use, hide and close the pane; separate skills or shortcuts) | Answered in chat at 23:50Z, then D-27 and T-1B.6: the usage section in `docs/procedures/mod-install.md`, the README and the pane's help. |
 | ai-harness ask record A006, 2026-10-24T00:36:40Z, and A007, 2026-10-24T00:39:54Z (a CORRECTION of A006's format) | The band reads `[bd] {N} tasks ({N} in progress, {N} blocked, {N} open, {N} done last 24h)`, in progress and blocked first (A007), with no session name and no store count: D-30 and T-1B.10. The read time only in a dev, test or debug mode: T-1B.5. The done window, and the order and set of the band's parts, set from the config file and from the pane: T-1B.11. "build the rest of our own version of the beads-ui task panel ... to replace the entire cc task panel. i'd prefer that": R-20, R-21 and Phase 2B. "what should we call this component": the band, Claude Code's `AbovePrompt` render site, as the Architecture section says; the side panel is a `Pane`. A002's firstmate second line is kept under the new format (D-30). |
+| ai-harness ask record A008, 2026-10-24T01:03:49Z | The firstmate's lines: `[bd][all]` totals over an aligned `[fm]` line with the firstmate's own counts, both in A007's part order: D-34 (superseding D-30's `all repos:` label) and T-1B.10. A001's totals label is met by `[all]`. The sync-drift signal today's line 1 carries is kept as a short marker shown only while a store is out of step, recorded in D-34. |
 | ai-harness ask record A005, 2026-10-23T23:51:05Z (on an ai-harness PR not yet merged at this writing) | Tab `3`: D-28 and T-1B.7. "performance and caching or loading fast", "by default actually show useful stuff": D-29 and T-1B.8, fed by D-26's snapshots. Reflow to the terminal and pane size with no overflow and compact labels: T-1B.9 now, and R-24 in Phase 2B. Buttons, dropdowns, side nav and menu bars, icons when space is short, a richer stack (TypeScript, JavaScript, CSS or a framework) if it is fast and light, and "i saw someone load an entire browser": R-24, R-25 and Open Question 10, whose research comes first. |
 
-**Status:** Approved by Sergei on 2026-10-21 (Feedback Round 1); Phases 0 and 1 built under run `beads-ui-build-2026-10-21-aih-ec2-3`; Feedback Rounds 3 and 4 (D-24 to D-33, Phase 1B, Phase 2B) under run `beads-ui-band-pane-panel-2026-10-24-aih-ec2-3`
+**Status:** Approved by Sergei on 2026-10-21 (Feedback Round 1); Phases 0 and 1 built under run `beads-ui-build-2026-10-21-aih-ec2-3`; Feedback Rounds 3 to 5 (D-24 to D-34, Phase 1B, Phase 2B) under run `beads-ui-band-pane-panel-2026-10-24-aih-ec2-3`
 
 **Created:** 2026-10-15
 
@@ -125,6 +126,7 @@ The raw record is `docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md` in this
     - [D-31: How the task panel is drawn](#d-31)
     - [D-32: Where the panel sits and how it lives beside the CC task panel](#d-32)
     - [D-33: How a panel edit is published, and what happens on failure](#d-33)
+    - [D-34: The firstmate's two band lines and the sync-drift signal](#d-34)
 - [Feedback Rounds](#feedback-rounds)
 - [Approval Log](#approval-log)
 
@@ -519,12 +521,13 @@ Each phase carries its scope, deliverables, tasks with EARS acceptance criteria 
     - [ ] `When the pane sits above the prompt (placement inline) or its bodyRows is below 12, the system shall drop the help and hint lines first and keep the tabs, the board's header and at least one card visible.`
   - **T-1B.10 The band's format** (D-30, ylx A006 and A007)
     - [ ] `When a non-firstmate session's band draws, it shall read [bd] {T} tasks ({P} in progress, {B} blocked, {O} open, {D} done last {W}), where P, B and O count the session's own issues by status, D counts its issues closed within the done window W (24h unless configured), and T is their sum, and it shall show neither the session's name nor a store count.`
-    - [ ] `When the firstmate session's band draws, its first line shall read [bd] all repos: followed by the same format over every inventory store and every owner, and its second line shall be the firstmate's own line in the non-firstmate format.`
+    - [ ] `When the firstmate session's band draws, its first line shall read [bd][all] followed by the same counts over every inventory store and every owner, and its second line shall read [fm] followed by the firstmate's own counts, with [fm] right-aligned under [all] so both lines' counts start in the same column (D-34).`
+    - [ ] `While one or more inventory stores are not in step with the pair, the firstmate's first line shall end with a short drift marker naming the count, such as 1 unsynced, and shall show no marker when every store is in step; the pane's header shall name each such store.`
     - [ ] `If a store cannot be read, then the line shall still draw from the stores that answered and shall mark the count as partial with one short glyph that the help explains.`
   - **T-1B.11 The band's parts are configurable** (D-30)
     - [ ] `When beads-ui.toml sets the done window, the order of the band's parts, adds a part from the part list or removes one, the band shall draw the result at its next redraw without a restart.`
     - [ ] `When the user changes the done window, reorders the parts, adds a part from the part list or removes one in the pane's band settings, the system shall apply the change at once, keep it in $.store, and write it to beads-ui.toml when the user chooses Save to file.`
-    - [ ] `When the part list is read, it shall offer at least the four counts, the total, the done count and window, and the unpublished-edit count of T-2B.6, each addable and removable.`
+    - [ ] `When the part list is read, it shall offer at least the four counts, the total, the done count and window, the unpublished-edit count of T-2B.6 and the drift marker of D-34, each addable and removable.`
 - **Exit gate:** `npm run lint` and `npm test` green in beads-ui; ai-harness `pytest` green for T-1B.2 and T-1B.3; on sem-kg-ec2, after the chief's install, `installed_plugins.json` holds no local beads-ui row, a restarted kg session's pane lists the KG store, a restarted non-firstmate session's band equals a hand `bd count --assignee=<session> --by-status` summed across its stores, the firstmate's band shows both lines, and `ps -eo pid,etime,args` shows one refresher; each recorded in the Approval Log.
 
 ### Phase 2: Mod enhancements, pointer drag, sprints and sparklines
@@ -676,7 +679,7 @@ iOS and Android (shared or separate), macOS, Linux and Windows native apps follo
 | 3 | 0 | D-15 mod packaging and validate allow-list | - [x] | Verified 2026-10-21 at dad9a35: plugin at `plugins/beads-ui` with no runtime dependencies, root marketplace listing it, `claude plugin validate .` passes, the `validate --strict --json` allow-list gate, the 1 MB gate over tracked and staged files, `claude plugin test` in `npm test` and pre-commit. Codex findings on the gates fixed in PR #20 |
 | 4 | 1 | D-3 MVP scope; D-4 access route; D-9 display-id minting; D-13 delete ladder | - [x] | Verified 2026-10-21 on wt/aih-ec2-3/bu-build by two Codex reviews, a fresh-context Opus verifier and the coordinator. D-3: a read-mostly mod with Board, Backlog and Detail, no drag, sprints or charts. D-4: every read and write is a `bd` argument list through `$.process.run`, with no `bd serve` or HTTP route in core or hooks. D-9: core mints bd-new's id under `id_policy`, honours its budget overrides with parity tests against `bd_new.py`, and retries a failed attach with the same id after a fresh re-read. D-13: Close instead, a forced delete only after bd's dry-run preview and a full re-check, a typed id for a cascade, and undo after a close. Gate at the landing tip: lint 3/3, Vitest 279 and 37 passed, `claude plugin test` 287 pass 0 fail, tsc 0, allow-list matches |
 | 5 | 2 | D-8 drag in a Client; D-5 sprint convention; D-16 metrics source | - [ ] | |
-| 5a | 1B | D-24 store resolution; D-25 ownership on claim; D-26 host refresher; D-27 focus and visibility; D-28 tab 3; D-29 first paint and default view; D-30 band format | - [ ] | |
+| 5a | 1B | D-24 store resolution; D-25 ownership on claim; D-26 host refresher; D-27 focus and visibility; D-28 tab 3; D-29 first paint and default view; D-30 band format; D-34 firstmate lines and drift marker | - [ ] | |
 | 5b | 2B | D-31 panel drawing; D-32 placement and co-existence; D-33 edit publishing; R-20 to R-22, R-24, R-25 | - [ ] | |
 | 6 | 3 | D-10 web stack; D-6 rank; D-11 queue relationship; D-17 session identity | - [ ] | |
 | 7 | 4 | D-14 MCP topology | - [ ] | |
@@ -812,6 +815,7 @@ Every decision below ran through `/decision-framework` in its fresh-authoring co
 | D-31 | How the task panel is drawn | (a) the element tree for frame, nav, menus, forms and detail, a `Client` for the task list and board, the element tree as fallback; (b) the element tree only; (c) a `Client` for everything | (a) | | | Research (Open Question 10): right-click, hover and drag exist only in a `Client`, which VS Code does not draw; `Image` shows alt text in tmux | `✅ Resolved by aih-ec2-3 Opus coordinator` |
 | D-32 | Where the panel sits and how it lives beside the CC task panel | (a) a docked pane opened at session start under `panel.mode` (`both` by default, `beads`, `native`), the cutover being D-21's per-profile switch plus `beads`; (b) open only on `/bu`; (c) replace the CC task panel on every profile at once | (a) | | | Sergei asked for co-existence by config and a later cutover (ylx A002) and prefers the full replacement (A006); a requested feature ships enabled | `✅ Resolved by aih-ec2-3 Opus coordinator` |
 | D-33 | How a panel edit is published, and what happens on failure | (a) the mod runs a configured `sync.command` after a 10-second quiet, and hands any failure to the session with `$.prompt.submit` and a notification; (b) the host refresher publishes on its minute beat; (c) leave publishing to the session's own hooks | (a) | | | The failure must reach the session that made the edit, and only the mod can start a turn there; the fleet's publish tool already serializes per store | `✅ Resolved by aih-ec2-3 Opus coordinator` |
+| D-34 | The firstmate's two band lines and the sync-drift signal | (a) `[bd][all]` then an indented `[fm]` line, as Sergei wrote them, with a short drift marker on line 1 only while a store is out of step and the stores named in the pane; (b) the same lines with drift moved to the pane only; (c) keep D-30's `all repos:` label | (a) | | | Sergei's format (ylx A008); A001's totals label is met by `[all]`; the drift signal stays on the band because an unsynced store makes the totals wrong | `✅ Resolved by aih-ec2-3 Opus coordinator` |
 
 ### Decision Details
 
@@ -2075,6 +2079,8 @@ Criterion 5: useful-by-default is a definite requirement, so the structure for i
 
 Gate 0 keeps A001's label and A002's second line; A006 and A007 set the format. Mitigation: `all repos:` is the shortest label that still says the line covers every store, and T-1B.11 lets the user reorder, add or remove parts from the config file or the pane, so a longer line can be trimmed without a code change. The total counts the parts drawn, including done within the window, as the native panel's total includes its done.
 
+Later change (Feedback Round 5, 2026-10-24): Sergei set the firstmate's labels himself (ylx A008), so the `all repos:` prefix of option (a) is superseded by D-34. The format on every line and the firstmate's second line stand.
+
 ---
 
 <a id="d-31"></a>
@@ -2199,6 +2205,46 @@ Criterion 2: the failure path must end in the session, and only the mod can star
 
 ---
 
+<a id="d-34"></a>
+
+#### D-34: The firstmate's two band lines and the sync-drift signal — `✅ Resolved by aih-ec2-3 Opus coordinator`
+
+**Context.** Sergei wrote the firstmate's lines himself (ylx A008, 2026-10-24T01:03:49Z): `[bd][all] {N} tasks ({N} in progress, {N} blocked, {N} open, {N} done last 24h)` over `     [fm] {N} tasks (...)`, replacing today's `beads host pair, all 9 stores, 1 not synced with the pair ... as of 21:00:18` and `beads aih-ec2-firstmate-1, all 9 stores ...`. A001 asks that the totals line be "labeled to indicate its totals across all repo beads stores on that machine host pair set", which `[all]` now does. Today's first line also carries "1 not synced with the pair", the only place the band says the totals may be wrong because a store has not converged with the other host; A008 does not mention it.
+
+##### (a) Sergei's two lines, with a short drift marker on line 1 only while a store is out of step
+
+**Pros:**
+- His format exactly in the normal case, and the totals never look right when they are not.
+
+**Cons:**
+- One extra word on line 1 while a store is out of step.
+
+##### (b) Sergei's two lines, with drift shown only in the pane
+
+**Pros:**
+- The band never grows.
+
+**Cons:**
+- Wrong totals look right on the band until someone opens the pane.
+
+##### (c) Keep D-30's `all repos:` label
+
+**Pros:**
+- No change to work already designed.
+
+**Cons:**
+- Contradicts the format Sergei wrote.
+
+##### Recommendation
+
+> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-24); confidence: high — (a) `[bd][all]` then `[fm]` right-aligned under it, with a short drift marker such as `1 unsynced` on line 1 only while a store is out of step, and each such store named in the pane's header
+<!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
+<!-- decision-lineage: decision-id=BU-mg2.2/D-34; decision-topic=the firstmate's band labels and where sync drift is shown; governs=claude-mod:band,packages:core/views/band; normalized-proposition=the firstmate's band reads [bd][all] totals over an aligned [fm] line, and an out-of-step store adds a short count marker to the totals line; applicability=surface:tui; outcome-id=bd-all-fm-drift-marker; relation=supersedes; related-decision-id=BU-mg2.2/D-30; supersedes=BU-mg2.2/D-30; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+
+Gate 0: A008 sets the labels, A001's totals label is met by `[all]`, and A002's second line stays. The drift signal is kept rather than dropped because without it the totals line can be wrong with nothing on screen to say so. Mitigation for the extra word: it appears only while a store is out of step (normally never), it is one count and one word, and the part list of T-1B.11 includes it, so a user who wants it gone removes it from the config file or the pane. Supersedes only D-30's `all repos:` prefix; D-30's format and second line stand.
+
+---
+
 > **Feedback Round 1:** Your approval or feedback on each decision, D-1 to D-23 (D-7, D-11 and D-12 need your choice):
 > - <enter feedback here>
 
@@ -2255,6 +2301,18 @@ Recorded in ai-harness as `docs/asks/BU-epic-agentic-ai-native-beads-ylx.md`, en
 > `[bd] {N} tasks ({N} in progress, {N} blocked, {N} open, {N} done last 24h)` [...] i want to see in progress and blocked first as those are most important. also, we can change via config file / the beads-ui claude code mod tui pane what the time range is for `{N} done last 24h` and perhaps also even configure via config / tui editor how to arrange them / rearrange them / add new components to the overview headline bar. what should we call this component btw?
 
 Resolution: the format, the firstmate's two lines under it, the debug-only read time and the configurable parts are D-30, T-1B.5, T-1B.10 and T-1B.11. Replacing the whole CC task panel is R-20, R-21 and Phase 2B. The component is the band, Claude Code's `AbovePrompt` render site, which every mod shares; the side panel is a `Pane`.
+
+### Feedback Round 5 (Sergei, 2026-10-24, in chat)
+
+Recorded in ai-harness as `docs/asks/BU-epic-agentic-ai-native-beads-ylx.md`, entry A008 (01:03:49Z):
+
+> also, for firstmate headline task overview panels / rows for beads-ui: [...] just have it something like:
+>
+> `[bd][all] {N} tasks ({N} in progress, {N} blocked, {N} open, {N} done last 24h)`
+>
+> `     [fm] {N} tasks ({N} in progress, {N} blocked, {N} open, {N} done last 24h)`
+
+Resolution: D-34 and T-1B.10. Line 1 is `[bd][all]` over every store, line 2 the firstmate's own counts under `[fm]`, aligned; both follow A007's part order and T-1B.11's configurable parts; no store count, no session name; the read time only in debug mode. The sync-drift signal today's line 1 carries is kept as a short marker shown only while a store is out of step, with the stores named in the pane.
 
 <!-- /doc:region name="feedback_rounds" -->
 
