@@ -1,6 +1,7 @@
-import { describe, expect, test } from "claude-code/testing";
+import { describe, expect } from "claude-code/testing";
 
 import { OPEN_FAILED_TEXT, PANE_ID, PLUGIN_NAME } from "./register.ts";
+import { test } from "./tests/kit.ts";
 import { BU, PANE_PROPS, SESSION, SHOW, VIEWPORT, world } from "./tests/world.ts";
 
 describe("register", () => {

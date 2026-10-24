@@ -1,10 +1,11 @@
 import type { Engine } from "claude-code/testing";
-import { describe, expect, test } from "claude-code/testing";
+import { describe, expect } from "claude-code/testing";
 
 import { COMMANDS } from "../core/src/index.ts";
 import { BEADS_BUTTON_KEY } from "./bands.ts";
 import { KEYBINDINGS_BLOCK, USAGE_LINES } from "./pane.ts";
 import { PANE_ID, PLUGIN_NAME } from "./register.ts";
+import { test } from "./tests/kit.ts";
 import {
   BAND_PROPS,
   BU,

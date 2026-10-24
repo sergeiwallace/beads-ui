@@ -1,5 +1,5 @@
-import { describe, expect, test } from "claude-code/testing";
-
+import { describe, expect } from "claude-code/testing";
+import { test } from "./tests/kit.ts";
 import { PANE_PROPS, SESSION, SHOW, VIEWPORT, world } from "./tests/world.ts";
 
 // The import probe (design T-0.1). It imports nothing from the plugin's hooks module, so the

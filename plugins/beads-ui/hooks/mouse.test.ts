@@ -1,6 +1,6 @@
 import type { On, RenderElement, RenderPropsOf } from "claude-code";
 import type { Engine, Mounted as KitMounted } from "claude-code/testing";
-import { describe, expect, test } from "claude-code/testing";
+import { describe, expect } from "claude-code/testing";
 
 import {
   COMMANDS,
@@ -14,6 +14,7 @@ import { BeadsPane, type PaneUi, type TasksRegion } from "./pane.ts";
 import { ROW_OPEN_LABEL, TASKS_CLIENT_KEY } from "./panel.ts";
 import { PANE_ID, PLUGIN_NAME } from "./register.ts";
 import { StoreResolver } from "./store.ts";
+import { test } from "./tests/kit.ts";
 import { MINE, MINE_ORDER } from "./tests/mine.ts";
 import { overflows } from "./tests/width.ts";
 import { CWD, PANE_PROPS, SESSION, SHOW, VIEWPORT, world } from "./tests/world.ts";

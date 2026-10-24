@@ -1,12 +1,13 @@
 import type { On } from "claude-code";
 import type { Engine } from "claude-code/testing";
-import { describe, expect, test } from "claude-code/testing";
+import { describe, expect } from "claude-code/testing";
 
 import { asOf, type BoardEntry, boardFileName, boardRow, clockStamp } from "../core/src/index.ts";
 import list from "../core/test/fixtures/bd-list-all-brief.json.ts";
 import statuses from "../core/test/fixtures/bd-statuses.json.ts";
 import { NO_NAME_TEXT, PREFS_KEY, SCOPE_KEY } from "./pane.ts";
 import { PANE_ID, PLUGIN_NAME } from "./register.ts";
+import { test } from "./tests/kit.ts";
 import {
   BU,
   CLOSED_PAGE,

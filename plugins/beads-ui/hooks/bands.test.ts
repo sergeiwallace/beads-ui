@@ -1,6 +1,6 @@
 import type { On } from "claude-code";
 import type { Engine } from "claude-code/testing";
-import { describe, expect, test } from "claude-code/testing";
+import { describe, expect } from "claude-code/testing";
 
 import {
   asOf,
@@ -16,6 +16,7 @@ import {
 import { BAND_SETTINGS_KEY } from "./bandSettings.ts";
 import { NARROW_TEXT, SCOPE_KEY } from "./pane.ts";
 import { PANE_ID, PLUGIN_NAME } from "./register.ts";
+import { test } from "./tests/kit.ts";
 import {
   BAND_PROPS,
   type Counted,
