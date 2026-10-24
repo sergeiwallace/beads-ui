@@ -46,6 +46,18 @@ describe("bandLine", () => {
 
     expect(bandLine(read, total, options).line).toBe("     [fm] 24 tasks (6 i…");
   });
+
+  test("should read 1 task, not 1 tasks, when the counts sum to one and leave the other parts as they are", () => {
+    const options = { settings: DEFAULT_BAND_SETTINGS, direct: false, width: 200 };
+    const one = { ...total, counts: { in_progress: 1, blocked: 0, open: 0, done: 0 } };
+
+    expect(bandLine(read, one, options).line).toBe(
+      "     [fm] 1 task (1 in progress, 0 blocked, 0 open, 0 done last 24h)",
+    );
+    expect(bandLine(read, total, options).line).toBe(
+      "     [fm] 24 tasks (6 in progress, 1 blocked, 14 open, 3 done last 24h)",
+    );
+  });
 });
 
 describe("boardView with a sort and a card budget", () => {
