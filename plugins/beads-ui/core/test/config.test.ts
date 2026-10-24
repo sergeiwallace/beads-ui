@@ -47,7 +47,7 @@ describe("parseToml", () => {
 
   test("should name the line when the file holds something outside the subset", () => {
     for (const [text, line, message] of [
-      ["a = 1\nb = [1, 2]", 2, "arrays are not supported"],
+      ["a = 1\nb = [1, 2]", 2, "arrays hold strings only, on one line"],
       ["[[stores]]", 1, "arrays of tables are not supported"],
       ["a = 1\na = 2", 2, "duplicate key a"],
       ['a = "open', 1, "unterminated string"],

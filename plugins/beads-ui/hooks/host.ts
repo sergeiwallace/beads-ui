@@ -34,6 +34,12 @@ export interface Host {
   storeSet: (key: string, value: unknown) => Promise<void>;
   /** `$.fs.read`; rejects when the file is missing. */
   readFile: (path: string) => Promise<string>;
+  /** `$.fs.write`, creating the file and its directories; not atomic. */
+  writeFile: (path: string, text: string) => Promise<void>;
+  /** `$.plugin.root`: the plugin's directory, which holds the host refresher. */
+  pluginRoot: string;
+  /** `$.env.get("XDG_STATE_HOME")`, which places the host refresher's state directory. */
+  stateHome: () => Promise<string | undefined>;
   /** `$.env.get` of the two variables that place the user's config directory. */
   configEnv: () => Promise<{ xdgConfigHome: string | undefined; home: string | undefined }>;
   /** `$.env.get` of bd-new's two slug budget overrides, read when an issue is created. */

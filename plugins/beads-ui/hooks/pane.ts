@@ -17,6 +17,7 @@ import {
   DEFAULT_CONFIG,
   DEFAULT_SORT,
   type DetailState,
+  DIRECT_GLYPH,
   describeFilterError,
   detailView,
   type EditableField,
@@ -32,6 +33,7 @@ import {
   nextSort,
   nextSwimlaneMode,
   openDetail,
+  PARTIAL_GLYPH,
   type PageView,
   type PendingDisplayId,
   parseBdCreatedId,
@@ -72,6 +74,7 @@ import {
   undoForMove,
   undoView,
 } from "../core/src/index.ts";
+import type { BandSettingsPanel } from "./bandSettings.ts";
 import type { Host } from "./host.ts";
 import type { StoreResolver } from "./store.ts";
 
@@ -173,6 +176,10 @@ export class BeadsPane {
   autoOpenPending = false;
   /** The delete confirmation, wired by register.ts. */
   onDelete: ((issue: Issue, issues: readonly Issue[]) => void) | undefined;
+  /** A write succeeded: the band redraws its counts once more (T-1B.5); wired by register.ts. */
+  onWrite: (() => void) | undefined;
+  /** The inventory's stores out of step with the pair (D-34), named in the header. */
+  unsynced: string[] = [];
   /** Display ids minted after a create whose write has not succeeded, retried on each refresh. */
   pendingIds: PendingDisplayId[] = [];
   /** The last failed write of each pending display id, by issue id. */
@@ -194,8 +201,14 @@ export class BeadsPane {
   private timer: Timer | undefined;
   private timerMs = 0;
 
-  /** @param stores the session's store resolution, shared with the band (D-24) */
-  constructor(private readonly stores: StoreResolver) {}
+  /**
+   * @param stores the session's store resolution, shared with the band (D-24)
+   * @param bandSettings the band's settings, drawn in the pane's band settings section (T-1B.11)
+   */
+  constructor(
+    private readonly stores: StoreResolver,
+    private readonly bandSettings?: BandSettingsPanel,
+  ) {}
 
   async bind(host: Host): Promise<void> {
     this.host = host;
@@ -352,8 +365,11 @@ export class BeadsPane {
   /** Resolves the session's store (D-24) and reads its settings, both at call time. */
   private async readConfig(): Promise<ResolvedConfig> {
     if (this.host === undefined) return this.config;
-    const { resolution, config, problems } = await this.stores.resolve();
+    const { resolution, config, problems, inventory } = await this.stores.resolve();
     this.store = resolution;
+    this.unsynced = inventory.ok
+      ? inventory.value.filter((store) => !store.synced).map((store) => store.name)
+      : [];
     const resolved = resolveConfig(config.text, this.storePath());
     return { ...resolved, problems: [...resolved.problems, ...problems] };
   }
@@ -556,6 +572,7 @@ export class BeadsPane {
     this.host?.invalidate();
     const ran = await this.run(plan.value.argv, WRITE_TIMEOUT_MS);
     if (ran.ok) {
+      this.onWrite?.();
       this.dispatch({ type: "move-succeeded", id });
       this.undo = undoForMove(this.board.statuses, {
         id,
@@ -598,6 +615,7 @@ export class BeadsPane {
       return;
     }
     this.quickAddText = "";
+    this.onWrite?.();
     const id = parseBdCreatedId(created.stdout);
     if (!id.ok) {
       this.note(
@@ -858,6 +876,7 @@ export class BeadsPane {
       return;
     }
     this.detail = reduceDetail(this.detail, { type: "edit-succeeded" });
+    this.onWrite?.();
     await this.loadDetail(detail.issue.id);
     await this.refresh();
   }
@@ -908,6 +927,7 @@ export class BeadsPane {
     if (undo === undefined) return;
     this.undo = undefined;
     const ran = await this.run(undoArgv(undo), WRITE_TIMEOUT_MS);
+    if (ran.ok) this.onWrite?.();
     this.note(
       ran.ok
         ? `${undo.label} is back to ${undo.previous}`
@@ -949,6 +969,7 @@ export class BeadsPane {
         this.drawToolbar(ui, paged),
         ...this.drawLines(ui, width, view),
         this.help ? this.drawHelp(ui, helpRegion) : undefined,
+        this.bandSettings?.isOpen === true ? this.bandSettings.draw(ui, colorOf) : undefined,
         this.tab === "detail" ? undefined : this.drawInputs(ui),
         body,
         Box({
@@ -1034,6 +1055,15 @@ export class BeadsPane {
                   ? "loading…"
                   : asOf(this.board.loadedAt),
             }),
+            ...(this.unsynced.length === 0
+              ? []
+              : [
+                  "  ",
+                  Text({
+                    color: colorOf("warning"),
+                    children: `unsynced with the pair: ${this.unsynced.join(", ")}`,
+                  }),
+                ]),
           ],
         }),
       ]),
@@ -1095,6 +1125,9 @@ export class BeadsPane {
         paged
           ? button("page-back", "Page back", "b", () => void this.stepFocusedPage(-1))
           : undefined,
+        this.bandSettings === undefined
+          ? undefined
+          : button("band-settings", "Band", "g", () => this.bandSettings?.toggle()),
         button("help", "Help", "h", () => this.toggleHelp()),
       ]),
     });
@@ -1186,6 +1219,9 @@ export class BeadsPane {
           children: "Quick-add: title words plus p0-p4, type:, @assignee, +label, due:, sprint:",
         }),
         Text({ children: `Filter keys: ${FILTER_KEYS.join(", ")}` }),
+        Text({
+          children: `The band above the prompt: [bd] counts your own issues in every store; a firstmate's [bd][all] counts every owner's, with [fm] its own. "N unsynced" means N stores are out of step with the pair, named in the header. A line ending ${PARTIAL_GLYPH} is partial: a store could not be read. ${DIRECT_GLYPH} means this session read the counts itself because the host refresher is not running. g opens the band settings.`,
+        }),
         Box({
           key: "columns",
           children: [Text({ children: `Columns: ${STATUS_CATEGORIES.join(", ")}` })],

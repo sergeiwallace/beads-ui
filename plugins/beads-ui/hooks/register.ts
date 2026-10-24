@@ -1,5 +1,6 @@
 import type { On } from "claude-code";
 
+import { BandSettingsPanel } from "./bandSettings.ts";
 import { drawBand } from "./bands.ts";
 import { CONFIRM_ID, DeleteConfirm } from "./confirm.ts";
 import type { Host } from "./host.ts";
@@ -32,10 +33,16 @@ const COMMAND_SPECS = [
  */
 export function register(on: On) {
   const stores = new StoreResolver();
-  const pane = new BeadsPane(stores);
-  const tally = new BandTally(stores);
+  const bandSettings = new BandSettingsPanel(stores);
+  const pane = new BeadsPane(stores, bandSettings);
+  const tally = new BandTally(stores, bandSettings);
+  bandSettings.onChange = () => void tally.settingsChanged();
+  pane.onWrite = () => tally.afterWrite();
   const confirm = new DeleteConfirm(
-    (text, undo) => pane.afterConfirm(text, undo),
+    (text, undo) => {
+      pane.afterConfirm(text, undo);
+      tally.afterWrite();
+    },
     () => void pane.resume(),
     () => pane.storePath(),
   );
@@ -64,6 +71,9 @@ export function register(on: On) {
       storeGet: (key) => $.store.get(key),
       storeSet: (key, value) => $.store.set(key, value),
       readFile: (path) => $.fs.read(path),
+      writeFile: (path, text) => $.fs.write(path, text),
+      pluginRoot: $.plugin.root,
+      stateHome: () => $.env.get("XDG_STATE_HOME"),
       configEnv: async () => ({
         xdgConfigHome: await $.env.get("XDG_CONFIG_HOME"),
         home: await $.env.get("HOME"),
@@ -81,6 +91,7 @@ export function register(on: On) {
     for (const spec of COMMAND_SPECS) await $.command.register(spec);
     confirm.host = host;
     await stores.bind(host);
+    await bandSettings.bind(host);
     await pane.bind(host);
     await tally.bind(host);
 
@@ -113,7 +124,7 @@ export function register(on: On) {
     if (e.surface !== "terminal" || e.props.hasSurvey) return next(e);
     if (e.viewport !== undefined) pane.measured(e.viewport.columns);
     const { Box, Text } = await $.ui.resolve(e);
-    const band = drawBand({ Box, Text }, tally, e.props.bodyColumns);
+    const band = drawBand({ Box, Text }, tally);
     if (band === undefined) return next(e);
 
     return Box({ flexDirection: "column", children: [band, await next(e)] });

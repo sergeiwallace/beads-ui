@@ -1,10 +1,9 @@
 import type { On } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect, test } from "claude-code/testing";
-
+import { BEAT_MS } from "../core/src/index.ts";
 import { SPRINT_PLANNED_TEXT } from "./pane.ts";
 import { PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { TALLY_REFRESH_MS } from "./tally.ts";
 import {
   BAND_PROPS,
   CWD,
@@ -122,8 +121,8 @@ describe("the store a session reads", () => {
     expect(new Set(cwdsOf(w, LIST))).toEqual(new Set([mapped]));
     expect(new Set(cwdsOf(w, "bd count "))).toEqual(new Set([mapped]));
     expect((await ui.find({ key: "header" }))?.text).toContain("kg-store");
-    expect((await (await band($)).find({ key: "beads-band:own" }))?.text).toContain(
-      "beads kg-ec2-3 in kg-store",
+    expect((await (await band($)).find({ key: "beads-band:own" }))?.text).toBe(
+      "[bd] 1 task (0 in progress, 0 blocked, 1 open, 0 done last 24h) *",
     );
   });
 
@@ -183,9 +182,11 @@ describe("the store a session reads", () => {
     expect(await ui.find({ key: "error-line" })).toBeUndefined();
     expect(text).not.toContain("retrying");
 
-    const paneReads = () => w.keys().filter((key) => !key.startsWith("bd count ")).length;
+    // The band's own reads and its refresher start are not the pane's.
+    const paneReads = () =>
+      w.keys().filter((key) => !key.startsWith("bd count ") && !key.startsWith("node ")).length;
     const before = paneReads();
-    await w.clock.advance(TALLY_REFRESH_MS * 3);
+    await w.clock.advance(BEAT_MS * 3);
 
     expect(paneReads()).toBe(before);
     expect(w.keys().filter((key) => key === "bd where")).toHaveLength(1);

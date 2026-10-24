@@ -6,10 +6,12 @@ import {
   type BoardPageLimit,
   type BoardState,
   type BoardViewOptions,
-  bandRow,
+  bandLine,
   boardView,
   clockStamp,
+  DEFAULT_BAND_SETTINGS,
   DEFAULT_SORT,
+  FIRSTMATE_LABEL,
   fitBlock,
   INITIAL_BOARD_STATE,
   type Issue,
@@ -30,24 +32,19 @@ const boardOf = (issues: Issue[], statuses = storeStatuses()): BoardState =>
     at: "2026-10-21T01:12:04",
   });
 
-describe("bandRow", () => {
+describe("bandLine", () => {
   const here = { name: "beads-ui", path: "/work/beads-ui", synced: false };
-  const read = { key: "store" as const, title: "beads beads-ui", stores: [here] };
-  const answer = { store: "beads-ui", ok: true as const, counts: { open: 14, in_progress: 6 } };
+  const read = { key: "own" as const, label: FIRSTMATE_LABEL, stores: [here] };
+  const total = {
+    counts: { in_progress: 6, blocked: 1, open: 14, done: 3 },
+    answered: 1,
+    partial: false,
+  };
 
-  test("should count open, in-progress and blocked issues when the store has answered", () => {
-    const row = bandRow(read, [answer], { loadedAt: "2026-10-21T01:12:04", width: 120 });
+  test("should keep the label's indent and cut the rest to the width when the band is narrow", () => {
+    const options = { settings: DEFAULT_BAND_SETTINGS, direct: false, width: 24 };
 
-    expect(row.counts?.map((count) => [count.status, count.count])).toEqual([
-      ["open", 14],
-      ["in_progress", 6],
-      ["blocked", 0],
-    ]);
-    expect(row.line).toBe("beads beads-ui | 14 open | 6 in progress | 0 blocked | as of 01:12:04");
-  });
-
-  test("should cut the line to the width when the band is narrow", () => {
-    expect(bandRow(read, [answer], { width: 20 }).line).toBe("beads beads-ui | 14…");
+    expect(bandLine(read, total, options).line).toBe("     [fm] 24 tasks (6 i…");
   });
 });
 
