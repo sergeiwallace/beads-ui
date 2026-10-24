@@ -49,8 +49,13 @@ export interface Tallied {
   readAt: number;
 }
 
+/** 28 base-36 characters: always within the 8 to 64 the refresher accepts for `--token`. */
 const randomToken = () =>
-  Array.from({ length: 4 }, () => Math.floor(Math.random() * 0xffffffff).toString(36)).join("");
+  Array.from({ length: 4 }, () =>
+    Math.floor(Math.random() * 0xffffffff)
+      .toString(36)
+      .padStart(7, "0"),
+  ).join("");
 
 /**
  * The counts behind the band above the prompt (D-26, T-1B.4, T-1B.5). Once a minute, and at

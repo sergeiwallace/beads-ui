@@ -305,6 +305,7 @@ describe("one refresher for the host (T-1B.4)", () => {
     expect(argv?.[0]).toBe("node");
     expect(argv?.[1]).toMatch(/\/refresher\/refresher\.mjs$/);
     const token = argv?.[argv.indexOf("--token") + 1];
+    expect(token).toMatch(/^[0-9a-z]{28}$/);
     expect(argv?.slice(2)).toEqual([
       "start",
       "--state-dir",
