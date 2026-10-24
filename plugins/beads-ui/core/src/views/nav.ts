@@ -25,7 +25,7 @@ export const PANEL_VIEWS = [
 export type PanelView = (typeof PANEL_VIEWS)[number];
 
 /** A view the nav leads to that is not built yet: pressing it says so and stays put. */
-export type PlannedView = "sprint" | "timeline";
+export type PlannedView = "sprint";
 
 export interface NavEntry {
   view: PanelView;
@@ -78,7 +78,7 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
     command: "tab.timeline",
     labels: labels("Timeline", "Time"),
     glyph: "⇢",
-    planned: true,
+    planned: false,
   },
   {
     view: "settings",
@@ -96,7 +96,7 @@ export const navEntries = (hideTasks = false): readonly NavEntry[] =>
 export const isPanelView = (value: unknown): value is PanelView =>
   typeof value === "string" && (PANEL_VIEWS as readonly string[]).includes(value);
 
-const NAMES: Readonly<Record<PlannedView, string>> = { sprint: "Sprint", timeline: "Timeline" };
+const NAMES: Readonly<Record<PlannedView, string>> = { sprint: "Sprint" };
 
 /** D-28 and T-2B.1: what a press on a planned view says; the view does not change. */
 export function plannedText(view: PlannedView): string {

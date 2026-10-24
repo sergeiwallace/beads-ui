@@ -441,5 +441,26 @@ export {
   storeName,
   truncate,
 } from "./views/text.ts";
+export type {
+  TimelineAxis,
+  TimelineEntry,
+  TimelineItem,
+  TimelineLayout,
+  TimelinePlacement,
+  TimelineRow,
+  TimelineView,
+} from "./views/timeline.ts";
+export {
+  barCells,
+  DUE_COLUMNS,
+  dayOf,
+  isTimelineIssue,
+  RASTER_COLORS,
+  RASTER_DEFAULT_COLOR,
+  RASTER_MAX_COLUMNS,
+  TIMELINE_TYPES,
+  timelineLayout,
+  timelineView,
+} from "./views/timeline.ts";
 export type { UndoClose, UndoView } from "./views/undo.ts";
 export { CLOSED_STATUS, undoArgv, undoClose, undoForMove, undoView } from "./views/undo.ts";

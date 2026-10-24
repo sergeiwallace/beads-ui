@@ -38,9 +38,10 @@ export const COMMANDS: readonly Command[] = [
     hint: "3 Sprint",
   },
   { id: "tab.detail", label: "Detail", scope: "pane", binding: hotkey("4"), hint: "4 Detail" },
+  // T-2B.9: the store's epics and milestones by due date.
   {
     id: "tab.timeline",
-    label: "Timeline (planned, not built yet)",
+    label: "Timeline",
     scope: "pane",
     binding: hotkey("5"),
     hint: "5 Timeline",
