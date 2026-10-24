@@ -61,6 +61,7 @@ export function panelActions(ctx: ActionContext): PanelAction[] {
     : undefined;
   const create = action("issue.new", "new", labels("New"));
   const del = action("card.delete", "delete", labels("Delete", "Delete", "Del"), { task: true });
+  const undo = ctx.undo ? action("close.undo", "undo", labels("Undo close", "Undo")) : undefined;
   const list: (PanelAction | undefined)[] =
     ctx.view === "settings"
       ? [menu, help]
@@ -72,6 +73,7 @@ export function panelActions(ctx: ActionContext): PanelAction[] {
             action("card.move", "move", labels("Status", "Stat"), { task: true }),
             action("card.edit", "edit", labels("Edit"), { task: true }),
             del,
+            undo,
             menu,
             band,
             help,
@@ -91,7 +93,7 @@ export function panelActions(ctx: ActionContext): PanelAction[] {
             action("card.detail", "detail", labels("Detail", "Detail", "Dtl"), { task: true }),
             action("card.move", "move", labels("Move to", "Move"), { task: true }),
             del,
-            ctx.undo ? action("close.undo", "undo", labels("Undo close", "Undo")) : undefined,
+            undo,
             ctx.paged ? action("page.next", "page-next", labels("Next page", "Next")) : undefined,
             ctx.paged ? action("page.back", "page-back", labels("Page back", "Back")) : undefined,
             band,

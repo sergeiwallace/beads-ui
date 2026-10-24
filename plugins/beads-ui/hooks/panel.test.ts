@@ -6,7 +6,7 @@ import { COMMANDS, NAV_ENTRIES, wakeFileName } from "../core/src/index.ts";
 import list from "../core/test/fixtures/bd-list-all-brief.json.ts";
 import { SPRINT_PLANNED_TEXT } from "./pane.ts";
 import { PANEL_SETTINGS_KEY } from "./panel.ts";
-import { PANE_ID, PLUGIN_NAME } from "./register.ts";
+import { CONFIRM_ID, PANE_ID, PLUGIN_NAME } from "./register.ts";
 import { overflows } from "./tests/width.ts";
 import {
   CWD,
@@ -485,6 +485,44 @@ describe("every action by menu and by key (T-2B.4)", () => {
       for (const entry of NAV_ENTRIES) expect(listed).toContain(drawnKey(entry.command));
     });
   }
+
+  test("should offer u to undo a Close instead made from the Tasks view, by key and in the menu", async ($, on) => {
+    let closedYet = false;
+    const { w, ui } = await openPanel($, on, {
+      ...MINE,
+      script: (key) =>
+        key === STORE_LIST
+          ? ok(
+              JSON.stringify(
+                ownStore().map((row) =>
+                  row.id === "BU-mg2.3" && closedYet ? { ...row, status: "closed" } : row,
+                ),
+              ),
+            )
+          : undefined,
+    });
+    await focusOn($, "task:BU-mg2.3");
+    await ui.press({ key: "delete" });
+    await w.clock.settle();
+    const confirm = await $.ui.mount({
+      plugin: PLUGIN_NAME,
+      surface: "terminal",
+      component: "Pane",
+      props: PANE_PROPS,
+      requestId: CONFIRM_ID,
+      viewport: VIEWPORT,
+    });
+    closedYet = true;
+    await confirm.press({ key: "close-instead" });
+    await w.clock.settle();
+
+    expect((await ui.find({ key: "undo" }))?.props.hotkey).toBe("u");
+    await ui.press({ key: "menu" });
+    expect(await menuHotkeys(ui)).toContain("u");
+    await ui.press({ key: "menu:item:close.undo" });
+    await w.clock.settle();
+    expect(w.keys()).toContain("bd update BU-mg2.3 --status in_progress --if-status closed");
+  });
 
   const drawnKey = (command: string) => {
     const binding = COMMANDS.find((one) => one.id === command)?.binding;
