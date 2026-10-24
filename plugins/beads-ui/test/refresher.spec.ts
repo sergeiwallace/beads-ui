@@ -48,15 +48,21 @@ interface Issue {
 const scratch: string[] = [];
 const started: number[] = [];
 
-afterEach(() => {
-  for (const pid of started.splice(0)) {
+// Each refresher leads its own process group, its stub bd children with it: the whole group is
+// ended, and its directory removed only once the refresher is gone.
+afterEach(async () => {
+  const pids = started.splice(0);
+  for (const pid of pids) {
     try {
-      process.kill(pid, "SIGKILL");
+      process.kill(-pid, "SIGKILL");
     } catch {
       // already gone
     }
   }
-  for (const dir of scratch.splice(0)) rmSync(dir, { recursive: true, force: true });
+  await until(() => (pids.some(alive) ? undefined : true));
+  for (const dir of scratch.splice(0)) {
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
 });
 
 /** A home with a store inventory over `stores`, a state directory and a stub bd on the PATH. */
@@ -117,11 +123,8 @@ function launch(h: Host, token: string, more: string[] = FAST): number {
 const alive = (pid: number) => {
   try {
     process.kill(pid, 0);
-    return spawnSync("ps", ["-o", "stat=", "-p", String(pid)], { encoding: "utf8" })
-      .stdout.trim()
-      .startsWith("Z")
-      ? false
-      : true;
+    const stat = spawnSync("ps", ["-o", "stat=", "-p", String(pid)], { encoding: "utf8" });
+    return !stat.stdout.trim().startsWith("Z");
   } catch {
     return false;
   }
