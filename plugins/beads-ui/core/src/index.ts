@@ -1,7 +1,6 @@
 export {
   cascadePreviewArgv,
   closeArgv,
-  countArgv,
   deleteArgv,
   deletePreviewArgv,
   historyArgv,
@@ -38,19 +37,26 @@ export {
   footerHints,
 } from "./commands.ts";
 export type {
+  BandOverrides,
   BeadsUiConfig,
+  ResolvedBand,
   ResolvedConfig,
   TomlError,
   TomlTable,
   TomlValue,
 } from "./config.ts";
 export {
+  BAND_TABLE,
+  bandOverridesOf,
   CONFIG_FILE_NAME,
   configCandidates,
   DEFAULT_CONFIG,
   MIN_REFRESH_SECONDS,
   parseToml,
+  resolveBand,
   resolveConfig,
+  withBandTable,
+  withOverrides,
 } from "./config.ts";
 export type {
   Filter,
@@ -138,6 +144,35 @@ export {
   sessionPrefix,
   storeLabel,
 } from "./resolve.ts";
+export type {
+  HostSnapshot,
+  Lease,
+  ReadAnswer,
+  SessionEntry,
+  StoreRead,
+  StoreSnapshot,
+  Supervision,
+} from "./snapshot.ts";
+export {
+  BEAT_MS,
+  DEFAULT_DONE_WINDOW,
+  LEASE_KEY,
+  LEASE_TTL_MS,
+  leaseOf,
+  parseSnapshot,
+  SESSION_LIVE_MS,
+  SESSIONS_DIR,
+  SNAPSHOT_FILE,
+  STALE_MS,
+  START_GRACE_MS,
+  sessionFileName,
+  snapshotLive,
+  stateDirOf,
+  storeReads,
+  storeSnapshotOf,
+  supervise,
+  windowMs,
+} from "./snapshot.ts";
 export type { SortDirection, SortError, SortKey, SortSpec } from "./sort.ts";
 export {
   DEFAULT_SORT,
@@ -158,11 +193,32 @@ export {
 } from "./tokens.ts";
 export type { BacklogOptions, BacklogRow, BacklogView } from "./views/backlog.ts";
 export { BACKLOG_PAGE_SIZE, backlogView } from "./views/backlog.ts";
-export type { BandCount, BandRead, BandRow, BandStore, StoreCounts } from "./views/band.ts";
+export type {
+  BandCounts,
+  BandLine,
+  BandPart,
+  BandRead,
+  BandSegment,
+  BandSettings,
+  BandStore,
+  BandTotal,
+} from "./views/band.ts";
 export {
+  ALL_LABEL,
+  BAND_LABEL,
+  BAND_PART_LABELS,
+  BAND_PARTS,
+  bandLine,
   bandReads,
-  bandRow,
+  bandStores,
+  bandTotal,
+  DEFAULT_BAND_PARTS,
+  DEFAULT_BAND_SETTINGS,
+  DIRECT_GLYPH,
+  FIRSTMATE_LABEL,
+  isBandPart,
   isFirstmate,
+  PARTIAL_GLYPH,
   parseStoreInventory,
   STORE_INVENTORY_FILE,
 } from "./views/band.ts";

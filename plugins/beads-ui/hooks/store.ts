@@ -59,6 +59,15 @@ export class StoreResolver {
     return this.session;
   }
 
+  /** `HOME`, where the store inventory and the user's config and state directories live. */
+  get home(): string | undefined {
+    return this.env.home;
+  }
+
+  get xdgConfigHome(): string | undefined {
+    return this.env.xdgConfigHome;
+  }
+
   async resolve(): Promise<Resolved> {
     const host = this.host;
     if (host === undefined) {

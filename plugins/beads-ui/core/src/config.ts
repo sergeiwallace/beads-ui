@@ -1,5 +1,13 @@
 import { DEFAULT_ID_POLICY, type IdPolicy, parseIdPolicy } from "./mint.ts";
 import type { Result } from "./model.ts";
+import { windowMs } from "./snapshot.ts";
+import {
+  BAND_PARTS,
+  type BandPart,
+  type BandSettings,
+  DEFAULT_BAND_SETTINGS,
+  isBandPart,
+} from "./views/band.ts";
 
 /** The settings the mod reads from `beads-ui.toml` (design, Configuration), at call time. */
 export interface BeadsUiConfig {
@@ -19,7 +27,7 @@ export const DEFAULT_CONFIG: BeadsUiConfig = {
   softWipLimit: { in_progress: 5 },
 };
 
-export type TomlValue = string | number | boolean | TomlTable;
+export type TomlValue = string | number | boolean | string[] | TomlTable;
 export interface TomlTable {
   [key: string]: TomlValue;
 }
@@ -41,7 +49,7 @@ class TomlInvalid {
 }
 
 const isTable = (value: TomlValue | undefined): value is TomlTable =>
-  typeof value === "object" && value !== null;
+  typeof value === "object" && value !== null && !Array.isArray(value);
 
 // Removes a `#` comment that is not inside a string.
 function withoutComment(line: string): string {
@@ -114,7 +122,22 @@ function readValue(text: string): [TomlValue, string] {
       throw new TomlInvalid("expected , or } in an inline table");
     }
   }
-  if (s.startsWith("[")) throw new TomlInvalid("arrays are not supported");
+  if (s.startsWith("[")) {
+    const items: string[] = [];
+    let rest = s.slice(1).trimStart();
+    for (;;) {
+      if (rest.startsWith("]")) return [items, rest.slice(1)];
+      if (!rest.startsWith('"') && !rest.startsWith("'")) {
+        throw new TomlInvalid("arrays hold strings only, on one line");
+      }
+      const [item, after] = readValue(rest);
+      if (typeof item !== "string") throw new TomlInvalid("arrays hold strings only, on one line");
+      items.push(item);
+      rest = after.trimStart();
+      if (rest.startsWith(",")) rest = rest.slice(1).trimStart();
+      else if (!rest.startsWith("]")) throw new TomlInvalid("expected , or ] in an array");
+    }
+  }
   const token = /^[^\s,}]+/.exec(s)?.[0] ?? "";
   const rest = s.slice(token.length);
   if (token === "true") return [true, rest];
@@ -125,7 +148,8 @@ function readValue(text: string): [TomlValue, string] {
 
 /**
  * The TOML subset `beads-ui.toml` uses: `[table]` and `[dotted.table]` headers, `key = value`
- * with bare keys or quoted keys without escapes, basic and literal strings, integers, floats, booleans, and flat inline tables.
+ * with bare keys or quoted keys without escapes, basic and literal strings, integers, floats, booleans,
+ * one-line arrays of strings, and flat inline tables.
  * Anything else is an error naming the line, never a guess.
  */
 export function parseToml(text: string): Result<TomlTable, TomlError> {
@@ -278,4 +302,123 @@ export function resolveConfig(text: string | undefined, storePath: string): Reso
     }
   }
   return { config, problems };
+}
+
+/** The `beads-ui.toml` table of the band's settings (T-1B.5, T-1B.11). */
+export const BAND_TABLE = "band";
+
+export interface ResolvedBand {
+  settings: BandSettings;
+  /** One line per band setting the file got wrong; the default stands for each. */
+  problems: string[];
+}
+
+function partsOf(value: unknown, problems: string[], where: string): BandPart[] | undefined {
+  if (!Array.isArray(value)) {
+    problems.push(`${where} must be a list of parts such as ["total", "open"]; using the default`);
+    return undefined;
+  }
+  const parts: BandPart[] = [];
+  for (const item of value) {
+    if (typeof item === "string" && isBandPart(item)) {
+      if (!parts.includes(item)) parts.push(item);
+    } else {
+      problems.push(
+        `${where}: ${JSON.stringify(item)} is not one of ${BAND_PARTS.join(", ")}; ignored`,
+      );
+    }
+  }
+  return parts;
+}
+
+function windowOf(value: unknown, problems: string[], where: string): string | undefined {
+  if (typeof value === "string" && windowMs(value) !== undefined) return value.trim();
+  problems.push(
+    `${where} ${JSON.stringify(value)} is not a window such as 24h, 90m, 7d or 2w; using the default`,
+  );
+  return undefined;
+}
+
+/** The band's settings from `[band]`: `done_window`, `parts` and `debug`, read at call time. */
+export function resolveBand(text: string | undefined): ResolvedBand {
+  const settings: BandSettings = {
+    ...DEFAULT_BAND_SETTINGS,
+    parts: [...DEFAULT_BAND_SETTINGS.parts],
+  };
+  const problems: string[] = [];
+  if (text === undefined) return { settings, problems };
+  const parsed = parseToml(text);
+  if (!parsed.ok) return { settings, problems };
+  const band = parsed.value[BAND_TABLE];
+  if (band === undefined) return { settings, problems };
+  if (!isTable(band)) {
+    problems.push(`${BAND_TABLE} must be a table; using the band's defaults`);
+    return { settings, problems };
+  }
+  if (band.done_window !== undefined) {
+    const span = windowOf(band.done_window, problems, "band.done_window");
+    if (span !== undefined) settings.doneWindow = span;
+  }
+  if (band.parts !== undefined) {
+    const parts = partsOf(band.parts, problems, "band.parts");
+    if (parts !== undefined) settings.parts = parts;
+  }
+  if (band.debug !== undefined) {
+    if (typeof band.debug === "boolean") settings.debug = band.debug;
+    else problems.push("band.debug must be true or false; using false");
+  }
+  return { settings, problems };
+}
+
+/** The band settings the pane changed, kept in `$.store` until Save to file writes them. */
+export interface BandOverrides {
+  doneWindow?: string;
+  parts?: BandPart[];
+}
+
+/** Reads the pane's stored band settings, dropping anything malformed. */
+export function bandOverridesOf(value: unknown): BandOverrides {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return {};
+  const record = value as Record<string, unknown>;
+  const overrides: BandOverrides = {};
+  const ignored: string[] = [];
+  if (record.doneWindow !== undefined) {
+    const span = windowOf(record.doneWindow, ignored, "doneWindow");
+    if (span !== undefined) overrides.doneWindow = span;
+  }
+  if (record.parts !== undefined) {
+    const parts = partsOf(record.parts, ignored, "parts");
+    if (parts !== undefined) overrides.parts = parts;
+  }
+  return overrides;
+}
+
+export const withOverrides = (settings: BandSettings, overrides: BandOverrides): BandSettings => ({
+  ...settings,
+  ...(overrides.doneWindow === undefined ? {} : { doneWindow: overrides.doneWindow }),
+  ...(overrides.parts === undefined ? {} : { parts: [...overrides.parts] }),
+});
+
+const HEADER = /^\s*\[([^\]]*)\]\s*(?:#.*)?$/;
+
+/**
+ * `text` with its `[band]` table replaced by `settings` (appended when it has none), every other
+ * line kept as written; a file that does not exist yet (`undefined`) becomes the table alone.
+ */
+export function withBandTable(text: string | undefined, settings: BandSettings): string {
+  const table = [
+    `[${BAND_TABLE}]`,
+    `done_window = ${JSON.stringify(settings.doneWindow)}`,
+    `parts = [${settings.parts.map((part) => JSON.stringify(part)).join(", ")}]`,
+    `debug = ${settings.debug ? "true" : "false"}`,
+  ];
+  if (text === undefined || text.trim() === "") return `${table.join("\n")}\n`;
+  const lines = text.replace(/\n$/, "").split("\n");
+  const start = lines.findIndex((line) => HEADER.exec(line)?.[1]?.trim() === BAND_TABLE);
+  if (start === -1) return `${[...lines, "", ...table].join("\n")}\n`;
+  let end = start + 1;
+  while (end < lines.length && !HEADER.test(lines[end] ?? "")) end++;
+  // Blank lines before the next table stay where they were.
+  while (end > start + 1 && (lines[end - 1] ?? "").trim() === "") end--;
+  return `${[...lines.slice(0, start), ...table, ...lines.slice(end)].join("\n")}\n`;
 }

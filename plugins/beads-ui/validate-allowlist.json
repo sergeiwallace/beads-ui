@@ -16,6 +16,7 @@
         "$.command.register",
         "$.env.get",
         "$.fs.read",
+        "$.fs.write",
         "$.process.run",
         "$.process.spawn",
         "$.store.get",
@@ -32,7 +33,8 @@
         "AIH_SLUG_BODY_MAX_CHARS_CHILD",
         "CLAUDE_CODE_TASK_LIST_ID",
         "HOME",
-        "XDG_CONFIG_HOME"
+        "XDG_CONFIG_HOME",
+        "XDG_STATE_HOME"
       ],
       "env writes": [],
       "surface modules": ["client/hello.ts"],

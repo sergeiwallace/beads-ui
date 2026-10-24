@@ -1,7 +1,6 @@
 import type { Args, On, ProcessRunResult, RenderPropsOf } from "claude-code";
 import { mock } from "claude-code/testing";
 
-import countAll from "../../core/test/fixtures/bd-count-by-status.json.ts";
 import cascadePreview from "../../core/test/fixtures/bd-delete-cascade-dry-run.json.ts";
 import dependentsText from "../../core/test/fixtures/bd-delete-dry-run-dependents.txt.ts";
 import leafText from "../../core/test/fixtures/bd-delete-dry-run-leaf.txt.ts";
@@ -76,7 +75,6 @@ const READS: Readonly<Record<string, ProcessRunResult>> = {
   "bd delete BU-2zw --dry-run": ok(leafText),
   "bd delete BU-mg2.3 --dry-run": exit(1, DEPENDENTS_STDERR, dependentsText),
   "bd delete BU-mg2.3 --cascade --dry-run": ok(cascadePreview),
-  "bd count --by-status": ok(countAll),
 };
 
 const WRITES = ["bd update ", "bd close ", "bd create ", "bd reopen "];
@@ -126,6 +124,8 @@ export interface WorldOptions {
   env?: Readonly<Record<string, string>>;
   /** What `$.ui.open` answers, nothing (placed) when not given; an Error makes the open throw. */
   openAnswer?: unknown;
+  /** Runs after each `$.store.set`, so a test can play another session writing meanwhile. */
+  afterStoreSet?: (key: string, store: Map<string, unknown>) => void;
 }
 
 export function world(on: On, options: WorldOptions = {}) {
@@ -150,6 +150,7 @@ export function world(on: On, options: WorldOptions = {}) {
   on("store.get", (_engine, e) => ({ value: store.get(e.key) }));
   on("store.set", (_engine, e) => {
     store.set(e.key, JSON.parse(JSON.stringify(e.value)));
+    options.afterStoreSet?.(e.key, store);
     return { value: undefined };
   });
   on("store.delete", (_engine, e) => {
@@ -158,9 +159,15 @@ export function world(on: On, options: WorldOptions = {}) {
   });
   on("store.keys", () => ({ value: [...store.keys()] }));
   mock.env(on, options.env ?? { HOME: "/home/me" });
+  // The files the session reads and writes, by absolute path; a write is read back.
+  const files = new Map<string, string>(Object.entries(options.files ?? {}));
   on("fs.read", (_engine, e) => {
-    const text = options.files?.[e.path];
+    const text = files.get(e.path);
     return text === undefined ? { deny: `ENOENT: ${e.path}` } : { value: text };
+  });
+  on("fs.write", (_engine, e) => {
+    files.set(e.path, e.text);
+    return { value: undefined };
   });
   const answerFor = (argv: readonly string[], cwd: string | undefined) => {
     runs.push([...argv]);
@@ -213,7 +220,7 @@ export function world(on: On, options: WorldOptions = {}) {
   on("ui.render", { component: "AbovePrompt" }, () => ({ type: "Box", children: [] }));
 
   const keys = () => runs.map(keyOf);
-  return { runs, cwds, keys, registered, opened, closed, toasts, focused, clock, store };
+  return { runs, cwds, keys, registered, opened, closed, toasts, focused, clock, store, files };
 }
 
 export const PANE_PROPS: RenderPropsOf["Pane"] = {
@@ -237,23 +244,42 @@ export const BAND_PROPS: RenderPropsOf["AbovePrompt"] = {
 /** A 120 by 30 terminal on the main screen, as tmux runs it by default. */
 export const VIEWPORT = { columns: 120, rows: 30, isFullscreen: false } as const;
 
-/** An issue as the band's `bd count` reads see it: its status and the session it is assigned. */
+/**
+ * An issue as the band's `bd count` reads see it: its status, the session it is assigned and,
+ * when closed, when.
+ */
 export interface Counted {
   status: string;
   assignee?: string;
+  closedAt?: number;
 }
 
+const flagOf = (argv: readonly string[], flag: string) =>
+  argv.find((arg) => arg.startsWith(`${flag}=`))?.slice(flag.length + 1);
+
 /**
- * `bd count [--assignee=<name>] --by-status --json` over `issues`, in bd 1.3.1's shape (the
- * core's bd-count fixtures are real captures of it): one group per status, sorted by name, a
- * status nothing holds left out.
+ * `bd count [--assignee=<name>] [--status=<s>] [--closed-after=<time>] --by-status|--by-assignee
+ * --json` over `issues`, in bd 1.3.1's shape (the core's bd-count fixtures are real captures of
+ * it, and `--by-assignee` was measured on 1.3.2): one group per status or owner, sorted by name,
+ * `(unassigned)` for no owner, a group nothing holds left out.
  */
 export function countOf(issues: readonly Counted[], argv: readonly string[]): ProcessRunResult {
-  const flag = "--assignee=";
-  const assignee = argv.find((arg) => arg.startsWith(flag))?.slice(flag.length);
-  const held = issues.filter((issue) => assignee === undefined || issue.assignee === assignee);
+  const assignee = flagOf(argv, "--assignee");
+  const status = flagOf(argv, "--status");
+  const after = flagOf(argv, "--closed-after");
+  const since = after === undefined ? undefined : Date.parse(after);
+  const held = issues.filter(
+    (issue) =>
+      (assignee === undefined || issue.assignee === assignee) &&
+      (status === undefined || issue.status === status) &&
+      (since === undefined || (issue.closedAt !== undefined && issue.closedAt > since)),
+  );
+  const byOwner = argv.includes("--by-assignee");
   const by = new Map<string, number>();
-  for (const issue of held) by.set(issue.status, (by.get(issue.status) ?? 0) + 1);
+  for (const issue of held) {
+    const group = byOwner ? (issue.assignee ?? "(unassigned)") : issue.status;
+    by.set(group, (by.get(group) ?? 0) + 1);
+  }
   const groups = [...by.entries()]
     .sort(([a], [b]) => (a < b ? -1 : 1))
     .map(([group, count]) => ({ count, group }));

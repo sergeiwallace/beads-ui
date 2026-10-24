@@ -52,6 +52,13 @@ export const COMMANDS: readonly Command[] = [
     binding: { kind: "input", hint: "/" },
     hint: "/ filter",
   },
+  {
+    id: "band.settings",
+    label: "Band settings",
+    scope: "pane",
+    binding: hotkey("g"),
+    hint: "g band",
+  },
   { id: "help", label: "Help", scope: "pane", binding: hotkey("h"), hint: "? help" },
   { id: "card.detail", label: "Detail", scope: "card", binding: hotkey("d"), hint: "d detail" },
   { id: "card.move", label: "Move to", scope: "card", binding: hotkey("m"), hint: "m move to" },

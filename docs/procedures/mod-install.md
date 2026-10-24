@@ -65,10 +65,31 @@ With auto-update on, Claude Code checks the marketplace when a session starts, n
 ## What it does
 
 - `/show-beads-ui` opens the pane, and runs again to close it. `/bu` is the same command under a short name.
-- The band above the prompt shows open, in-progress and blocked counts of the issues the session owns: those whose assignee is the session's name, which `ai c` pins in `CLAUDE_CODE_TASK_LIST_ID`. It counts them in every store listed in `~/.beads/shared-server/publish-sweep.json`, the machine's store inventory that ai-harness's publish sweep writes, and in the session's own store (see [The store a session reads](#the-store-a-session-reads)) alone when there is no inventory; the row's label says which. A firstmate session (a name ending `-firstmate-<N>`) draws a second row above it, `beads host pair, all <N> stores`, totalling every issue in those stores. Each store is the copy both hosts of the pair pull, so the totals hold the other host's work as of the last sync, and the label names any store not in step. A session without a name owns nothing it can count, so its band counts the session's own store and says `all owners (session name unknown)`; when that store does not resolve, the band draws nothing. A store that cannot be read is named on its row, and the other rows still draw. The counts are read at session start and every 30 seconds, with up to two `bd count` calls a store. The band draws nothing until some store has answered.
+- The band above the prompt reads `[bd] {T} tasks ({P} in progress, {B} blocked, {O} open, {D} done last {W})`: the issues the session owns (their assignee is the session's name, which `ai c` pins in `CLAUDE_CODE_TASK_LIST_ID`) by status, the ones it closed within the done window `W` (`24h` unless you set another), and `T`, the sum of the counts drawn. It counts them in every store listed in `~/.beads/shared-server/publish-sweep.json`, the machine's store inventory that ai-harness's publish sweep writes, plus the session's own store (see [The store a session reads](#the-store-a-session-reads)) when the inventory does not list it, and in that store alone when there is no inventory. A firstmate session (a name ending `-firstmate-<N>`) draws two lines: `[bd][all]` with every owner's issues in those stores, then `[fm]` with its own, right-aligned under `[all]` so both lines' counts start in the same column. Each store is the copy both hosts of the pair pull, so the totals hold the other host's work as of the last sync; while a store is out of step with the pair, the `[bd][all]` line ends with a marker such as `1 unsynced`, and the pane's header names those stores. A session without a name owns nothing it can count, so its one `[bd]` line counts every owner's issues in the session's own store; when that store does not resolve, the band draws nothing. A line ends with `~` when a store it sums could not be read (it draws from the stores that answered) and with `*` when the session read the counts itself because the host refresher is not running (below). The pane's help explains both.
+- The counts come from one host refresher (below), so the band costs no `bd` call of the session's own. The band redraws from the newest counts once a minute, and once more after a write the session makes. It shows no read time unless `debug = true` is set under `[band]` in `beads-ui.toml`; then each line ends with the time its counts were read, to the second.
 - The pane has the tabs `1` Board, `2` Backlog and `4` Detail. `3` Sprint is drawn dimmed: the Sprint view is planned and not built yet, so pressing it shows a line that says so and leaves you on the tab you were on. The header names the store the pane reads, as `KG (sw-bms-workspace)` (its prefix and directory) or the directory alone, and when the board was last read (`as of HH:MM:SS`, local time).
 - The pane refreshes when you open it, after every write and every 10 seconds while it is open. A failed `bd list` keeps the last board on screen with an error line naming the exit code, and the next refresh tries again.
 - If the pane was open when your last session ended, it opens again on its own. On a terminal narrower than 110 columns it stays closed and a toast says so; `/show-beads-ui` opens it anyway.
+
+## The host refresher
+
+One refresher process per machine reads every store's counts once a minute and writes them to a snapshot that every session's band reads, so the number of `bd` calls does not grow with the number of sessions. It is a Node script inside the plugin, `refresher/refresher.mjs`, with no dependencies, so `node` (22.18 or later, which runs TypeScript files by stripping their types) must be on the `PATH` Claude Code runs under. Nothing needs to be installed or enabled: the sessions start it and restart it themselves.
+
+- Each store costs one `bd count --by-assignee --status=<s>` for each of in progress, blocked and open, and one `bd count --by-assignee --status=closed --closed-after=<now less the window>` for each done window a session asks for: four calls a store a minute with the default window, whatever the number of sessions.
+- Every minute each session writes a small registry file with its done window and any store it reads that the inventory does not list, so the refresher counts that store too. The refresher counts only for sessions whose file is under three minutes old, and stops when no session has written one for five minutes.
+- At its minute check a session reads the snapshot. When the snapshot is older than three minutes, or the last refresher stopped on purpose, the session takes a lease in Claude Code's plugin store (it writes its own token, reads it back and goes on only if the token is still its own) and starts the refresher with that token. A second session finding a lease younger than two minutes starts nothing, so a refresher that never comes up is started again within two minutes.
+- The refresher runs detached from the session that started it, so it outlives that session; Claude Code ends a child it started directly when the session ends (measured with Claude Code 2.1.310). It holds a second lease, `lease.json` in the state directory, which it takes only when no live refresher holds it and checks before every read and write: when two start at once, one wins and the other exits without reading anything.
+- If the snapshot is stale and no refresher can be started, or none has written a snapshot 90 seconds after a session started it, the session reads its own counts directly, once a minute, and the band marks them with `*`.
+
+Its files live in the state directory, `$XDG_STATE_HOME/beads-ui`, or `~/.local/state/beads-ui` when `XDG_STATE_HOME` is unset:
+
+| File | What it holds |
+|---|---|
+| `counts.json` | The snapshot: each store's counts by owner, the refresher's token and pid, and its heartbeat (`beatAt`); `stoppedAt` when it stopped on purpose. Written whole, by a write to a temporary file and a rename. |
+| `lease.json` | The refresher's lease: its token, pid and the time it last renewed it. |
+| `sessions/<session>.json` | Each session's registry file: its done window and the stores it reads that the inventory does not list. |
+
+To stop the refresher, end it by its pid (`counts.json` names it); the next session's minute check starts another.
 
 ## The store a session reads
 
@@ -172,7 +193,22 @@ soft_wip_limit = { in_progress = 5 }   # a column over its limit is drawn in the
 
 A `[stores.<name>]` table whose `path` is the repository applies before `[stores.default]`. A setting the mod cannot use keeps its default, and the pane shows a line naming it. The file's other tables (`[queue]`, `[theme]`, `views.rank`) are for later releases.
 
-The mod keeps your view choices (the open tab, filter, swimlane, sort and whether the pane was open) in Claude Code's plugin store, under the key `view`. It never stores issue data. The one other key, `pending-display-ids`, holds a display id the mod minted for an issue it created but could not write yet: the issue's id and the display id, nothing else.
+### The band's settings
+
+The `[band]` table sets the band's done window, which parts it draws and in what order, and debug mode:
+
+```toml
+[band]
+done_window = "24h"   # a number and m, h, d or w: 90m, 24h, 7d, 2w
+parts = ["total", "in_progress", "blocked", "open", "done", "drift", "unpublished"]
+debug = false         # true: each band line ends with the time its counts were read
+```
+
+`parts` is the list of what the band draws, in order: `total` (`{T} tasks`), `in_progress`, `blocked`, `open`, `done` (`{D} done last {W}`), `drift` (the `N unsynced` marker on a firstmate's `[bd][all]` line, drawn only while a store is out of step) and `unpublished` (the count of edits not yet published, drawn once a later release counts them). Leave one out to drop it. When `total` is listed, the counts are drawn in brackets after it; without it, the counts alone. A change in the file shows at the band's next redraw, with no restart.
+
+The pane's band settings (`g`, or the `Band` button) change the same settings at once: add or remove a part, move one with the arrows, and set the `Done window` field. The change is kept in Claude Code's plugin store, under the key `band-settings`, so every session on the machine draws it at its next minute. `Save to file` writes the settings into the `beads-ui.toml` the mod read, or `~/.config/beads-ui/beads-ui.toml` when there is none, replacing its `[band]` table and keeping every other line, and then clears the held change.
+
+The mod keeps your view choices (the open tab, filter, swimlane, sort and whether the pane was open) in Claude Code's plugin store, under the key `view`. It never stores issue data. The key `refresher-lease` holds the lease a session takes before it starts the host refresher, and `band-settings` the band settings changed in the pane until they are saved. The one other key, `pending-display-ids`, holds a display id the mod minted for an issue it created but could not write yet: the issue's id and the display id, nothing else.
 
 ## Report a bug
 
