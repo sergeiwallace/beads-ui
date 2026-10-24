@@ -68,44 +68,46 @@ export function panelActions(ctx: ActionContext): PanelAction[] {
   const list: (PanelAction | undefined)[] =
     ctx.view === "settings"
       ? [menu, help]
-      : ctx.view === "tasks"
-        ? [
-            scope,
-            create,
-            action("card.detail", "detail", labels("Open"), { task: true }),
-            action("card.move", "move", labels("Status", "Stat"), { task: true }),
-            action("card.edit", "edit", labels("Edit"), { task: true }),
-            del,
-            undo,
-            menu,
-            band,
-            help,
-            ctx.more === undefined
-              ? undefined
-              : action("tasks.more", "tasks:more", labels(ctx.more), { place: "view" }),
-          ]
-        : [
-            scope,
-            action(
-              "board.swimlane",
-              "swimlane",
-              labels(`Swimlane: ${ctx.swimlane}`, `Lanes: ${ctx.swimlane}`, "Lanes"),
-            ),
-            action("view.sort", "sort", labels(`Sort: ${ctx.sort}`, `Sort: ${ctx.sort}`, "Sort")),
-            create,
-            action("card.detail", "detail", labels("Detail", "Detail", "Dtl"), { task: true }),
-            action("card.move", "move", labels("Move to", "Move"), { task: true }),
-            del,
-            undo,
-            ctx.paged ? action("page.next", "page-next", labels("Next page", "Next")) : undefined,
-            ctx.paged ? action("page.back", "page-back", labels("Page back", "Back")) : undefined,
-            band,
-            menu,
-            help,
-            ctx.lanesPaged
-              ? action("board.lanes", "lanes-next", labels("more lanes"), { place: "view" })
-              : undefined,
-          ];
+      : ctx.view === "timeline"
+        ? [action("card.detail", "detail", labels("Open"), { task: true }), undo, menu, band, help]
+        : ctx.view === "tasks"
+          ? [
+              scope,
+              create,
+              action("card.detail", "detail", labels("Open"), { task: true }),
+              action("card.move", "move", labels("Status", "Stat"), { task: true }),
+              action("card.edit", "edit", labels("Edit"), { task: true }),
+              del,
+              undo,
+              menu,
+              band,
+              help,
+              ctx.more === undefined
+                ? undefined
+                : action("tasks.more", "tasks:more", labels(ctx.more), { place: "view" }),
+            ]
+          : [
+              scope,
+              action(
+                "board.swimlane",
+                "swimlane",
+                labels(`Swimlane: ${ctx.swimlane}`, `Lanes: ${ctx.swimlane}`, "Lanes"),
+              ),
+              action("view.sort", "sort", labels(`Sort: ${ctx.sort}`, `Sort: ${ctx.sort}`, "Sort")),
+              create,
+              action("card.detail", "detail", labels("Detail", "Detail", "Dtl"), { task: true }),
+              action("card.move", "move", labels("Move to", "Move"), { task: true }),
+              del,
+              undo,
+              ctx.paged ? action("page.next", "page-next", labels("Next page", "Next")) : undefined,
+              ctx.paged ? action("page.back", "page-back", labels("Page back", "Back")) : undefined,
+              band,
+              menu,
+              help,
+              ctx.lanesPaged
+                ? action("board.lanes", "lanes-next", labels("more lanes"), { place: "view" })
+                : undefined,
+            ];
   return list.filter((item): item is PanelAction => item !== undefined);
 }
 

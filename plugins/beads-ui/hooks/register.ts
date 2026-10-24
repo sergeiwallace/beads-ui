@@ -176,11 +176,13 @@ export function register(on: On) {
     const width = Math.max(20, e.props.bodyColumns - 1);
     if (e.requestId === CONFIRM_ID) return confirm.draw(ui, width);
 
-    // A Client draws in the terminal and the desktop; VS Code draws none (D-31).
+    // A Client draws in the terminal and the desktop; VS Code draws none (D-31). Only the
+    // terminal draws a Raster, the Timeline's bars (T-2B.9).
     const Client =
       e.surface === "terminal" || e.surface === "desktop"
         ? (await $.ui.resolve(e)).Client
         : undefined;
+    const Raster = e.surface === "terminal" ? (await $.ui.resolve(e)).Raster : undefined;
     const help = Client?.({ key: "hello", module: "../client/hello.ts" });
     const tasks: TasksRegion | undefined =
       Client === undefined
@@ -195,7 +197,7 @@ export function register(on: On) {
       placement: e.props.placement,
       ...(e.props.scroll === undefined ? {} : { bodyRows: e.props.scroll.bodyRows }),
     };
-    return pane.draw(ui, frame, help, tasks);
+    return pane.draw(ui, frame, help, tasks, Raster);
   });
 
   // The task list's Client (T-2B.5): what it posts runs the pane's own actions, and a fault drops

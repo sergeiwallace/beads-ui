@@ -114,6 +114,8 @@ import {
   taskListView,
   textWidth,
   tierOf,
+  timelineLayout,
+  timelineView,
   truncate,
   type UndoClose,
   undoArgv,
@@ -128,6 +130,7 @@ import {
   drawMenu,
   drawSettings,
   drawTaskList,
+  drawTimeline,
   menuColumns,
   menuRows,
   PanelSettingsState,
@@ -186,14 +189,13 @@ const READ_TIMEOUT_MS = 8_000;
 const RUN_OUTPUT_LIMIT = "4 MiB";
 const WRITE_TIMEOUT_MS = 15_000;
 
-/** The views the nav opens (T-2B.1); Sprint and Timeline are planned and never open. */
+/** The views the nav opens (T-2B.1); Sprint is planned and never opens. */
 export type Tab = Exclude<PanelView, PlannedView>;
 /** D-28: tab 3 is the Sprint view Phase 2 builds; until then pressing it says so and stays put. */
 export const SPRINT_PLANNED_TEXT = plannedText("sprint");
 /** The view the pane opens on when no view was kept (T-2B.2): the task panel. */
 export const DEFAULT_TAB: Tab = "tasks";
-const isTab = (value: unknown): value is Tab =>
-  isPanelView(value) && value !== "sprint" && value !== "timeline";
+const isTab = (value: unknown): value is Tab => isPanelView(value) && value !== "sprint";
 /** The issue types a Detail's Type list offers, with every type the store's issues carry. */
 export const ISSUE_TYPES: readonly string[] = ["task", "bug", "feature", "epic", "chore"];
 
@@ -217,6 +219,9 @@ export type PaneUi = Pick<
  * since Claude Code reads a Client's module path off the hooks module's source.
  */
 export type TasksRegion = (props: TaskClientProps, width: number, height: number) => RenderElement;
+
+/** The terminal's Raster (T-2B.9): a grid of coloured cells; no other surface draws one. */
+export type RasterElement = Elements["terminal"]["Raster"];
 
 export interface Prefs {
   /** The open view; `tab`, which held 0.4.0's board-first tab, is no longer read. */
@@ -1133,7 +1138,7 @@ export class BeadsPane {
     this.host?.invalidate();
   }
 
-  /** Sprint and Timeline (D-28, T-2B.1): a notice that the view is planned; the view stays. */
+  /** Sprint (D-28, T-2B.1): a notice that the view is planned; the view stays. */
   pressPlanned(view: PlannedView): void {
     this.note(plannedText(view), "warning");
     this.host?.invalidate();
@@ -1148,7 +1153,9 @@ export class BeadsPane {
   /** The pane's focus ring moved onto an element: a card's or a task's own controls name it. */
   focused(element: string | undefined): void {
     const match =
-      element === undefined ? null : /^(?:move|open|row|task|taskmenu):(.+)$/.exec(element);
+      element === undefined
+        ? null
+        : /^(?:move|open|row|task|taskmenu|timeline):(.+)$/.exec(element);
     if (match?.[1] === undefined || match[1] === this.focusedId) return;
     this.focusedId = match[1];
     // The Tasks view draws a window of rows that follows the focus, at short height (T-2B.1) and
@@ -1240,6 +1247,7 @@ export class BeadsPane {
       "tab.board": "board",
       "tab.backlog": "backlog",
       "tab.detail": "detail",
+      "tab.timeline": "timeline",
       "tab.settings": "settings",
     };
     const view = views[command];
@@ -1249,7 +1257,6 @@ export class BeadsPane {
     }
     const actions: Readonly<Record<string, () => void>> = {
       "tab.sprint": () => this.pressPlanned("sprint"),
-      "tab.timeline": () => this.pressPlanned("timeline"),
       "panel.menu": () => void this.toggleMenu(),
       "tasks.more": () => this.toggleExpanded(),
       "issue.new": () => void this.focusQuickAdd(),
@@ -1348,7 +1355,9 @@ export class BeadsPane {
 
   async focusQuickAdd(): Promise<void> {
     this.clearHint();
-    if (this.tab === "detail" || this.tab === "settings") this.setTab("board");
+    if (this.tab === "detail" || this.tab === "settings" || this.tab === "timeline") {
+      this.setTab("board");
+    }
     this.host?.invalidate();
     await this.host?.focus(PANE_ID, "quickadd").catch(() => undefined);
   }
@@ -1494,6 +1503,7 @@ export class BeadsPane {
     frame: PaneFrame,
     helpRegion?: RenderElement,
     tasksRegion?: TasksRegion,
+    raster?: RasterElement,
   ): RenderElement {
     const { Box, Text } = ui;
     if (this.host === undefined) {
@@ -1526,9 +1536,11 @@ export class BeadsPane {
             ? this.drawBacklog(ui, width)
             : this.tab === "settings"
               ? this.drawSettingsView(ui, width)
-              : this.drawDetail(ui, width);
+              : this.tab === "timeline"
+                ? this.drawTimeline(ui, width, raster)
+                : this.drawDetail(ui, width);
     const inputs =
-      this.tab === "detail" || this.tab === "settings"
+      this.tab === "detail" || this.tab === "settings" || this.tab === "timeline"
         ? undefined
         : this.drawInputs(ui, this.tab !== "tasks");
     const settings =
@@ -1570,7 +1582,7 @@ export class BeadsPane {
   }
 
   private pressNav(view: PanelView): void {
-    if (view === "sprint" || view === "timeline") this.pressPlanned(view);
+    if (view === "sprint") this.pressPlanned(view);
     else this.setTab(view);
   }
 
@@ -1722,6 +1734,31 @@ export class BeadsPane {
         choose: (key, value) => void this.chooseSetting(key, value),
         save: () => void this.saveSettings(),
       },
+    });
+  }
+
+  /**
+   * The Timeline (T-2B.9): the store's epics and milestones, every owner's, by due date; today is
+   * the day of the last read. Raster bars where the surface has a Raster, Text rows elsewhere.
+   */
+  private drawTimeline(
+    ui: PaneUi,
+    width: number,
+    raster: RasterElement | undefined,
+  ): RenderElement {
+    if (!this.board.loaded) {
+      return ui.Box({
+        key: "timeline",
+        children: [ui.Text({ dimColor: true, children: "reading the store…" })],
+      });
+    }
+    const view = timelineView(this.board.issues, {
+      statuses: this.board.statuses,
+      ...(this.board.loadedAt === undefined ? {} : { today: this.board.loadedAt }),
+    });
+    return drawTimeline(ui, timelineLayout(view, width), {
+      ...(raster === undefined ? {} : { raster }),
+      open: (id) => void this.openDetailFor(id),
     });
   }
 
