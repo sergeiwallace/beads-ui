@@ -95,8 +95,42 @@ describe("directoryStores", () => {
 
 describe("parseBdWhere", () => {
   test("should tell a store, no store and a non-answer apart from bd where's output", () => {
-    expect(parseBdWhere(0, '{"path": "/work/beads-ui/.beads", "schema_version": 1}')).toBe(true);
-    expect(parseBdWhere(1, '{"error": "no_beads_directory", "schema_version": 1}')).toBe(false);
+    expect(parseBdWhere(0, '{"path": "/work/beads-ui/.beads", "schema_version": 1}')).toEqual({
+      hasStore: true,
+    });
+    expect(parseBdWhere(1, '{"error": "no_beads_directory", "schema_version": 1}')).toEqual({
+      hasStore: false,
+    });
     expect(parseBdWhere(null, "")).toBeUndefined();
+  });
+
+  test("should give the database prefix bd 1.3.2 names for a linked worktree's store", () => {
+    const where = JSON.stringify({
+      database_path: "/work/ai-harness/.worktrees/aih-ec2-1/.beads/dolt",
+      path: "/work/ai-harness/.worktrees/aih-ec2-1/.beads",
+      prefix: "AIH",
+      schema_version: 1,
+    });
+
+    expect(parseBdWhere(0, where)).toEqual({ hasStore: true, prefix: "AIH" });
+  });
+});
+
+describe("resolveStore in a linked worktree", () => {
+  test("should name the store by the prefix bd gave when the inventory lists only the main tree", () => {
+    const resolved = resolveStore({
+      ...FACTS,
+      cwd: "/work/beads-ui/.worktrees/feature",
+      cwdHasStore: true,
+      cwdPrefix: "BU",
+      session: "aih-ec2-3",
+    });
+
+    expect(resolved).toEqual({
+      ok: true,
+      path: "/work/beads-ui/.worktrees/feature",
+      prefix: "BU",
+      via: "directory",
+    });
   });
 });

@@ -15,6 +15,7 @@ import {
   NO_STORE_STDERR,
   NO_STORE_WHERE,
   OPEN_LIST,
+  ok,
   onBoard,
   PANE_PROPS,
   type Script,
@@ -144,6 +145,25 @@ describe("the store a session reads", () => {
     expect((await ui.find({ key: "column::open" }))?.text).toBe("open 20");
     expect(new Set(cwdsOf(w, LIST))).toEqual(new Set([CWD]));
     expect((await ui.find({ key: "header" }))?.text).toContain("BU (beads-ui)");
+  });
+
+  test("should name a linked worktree's store by the prefix bd gives it, and read the worktree itself", async ($, on) => {
+    const tree = `${HARNESS}/.worktrees/aih-ec2-3`;
+    const inTree: Script = (key, argv, cwd) =>
+      cwd === tree && key === "bd where"
+        ? ok(
+            `${JSON.stringify({ database_path: `${tree}/.beads/dolt`, path: `${tree}/.beads`, prefix: "AIH", schema_version: 1 })}\n`,
+          )
+        : stores([...ALL_STORES, tree])(key, argv, cwd);
+    const { w, ui } = await openIn(
+      $,
+      on,
+      tree,
+      named("aih-ec2-3", { files: INVENTORY, script: inTree }),
+    );
+
+    expect((await ui.find({ key: "header" }))?.text).toContain("AIH (aih-ec2-3)");
+    expect(new Set(cwdsOf(w, LIST))).toEqual(new Set([tree]));
   });
 
   for (const [session, store, label] of [

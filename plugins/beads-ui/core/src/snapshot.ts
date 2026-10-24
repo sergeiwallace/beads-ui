@@ -447,8 +447,9 @@ export interface SessionEntry {
   id: string;
   seenAt: number;
   windows: string[];
-  stores: { path: string; name: string }[];
-  boards: { path: string; name: string }[];
+  /** Each with the database prefix bd named, when it named one: a worktree's is its main tree's. */
+  stores: { path: string; name: string; prefix?: string }[];
+  boards: { path: string; name: string; prefix?: string }[];
 }
 
 export function parseSessionEntry(text: string): SessionEntry | undefined {
@@ -466,7 +467,15 @@ export function parseSessionEntry(text: string): SessionEntry | undefined {
     Array.isArray(list)
       ? list.flatMap((store) =>
           isRecord(store) && typeof store.path === "string" && store.path.startsWith("/")
-            ? [{ path: store.path, name: typeof store.name === "string" ? store.name : store.path }]
+            ? [
+                {
+                  path: store.path,
+                  name: typeof store.name === "string" ? store.name : store.path,
+                  ...(typeof store.prefix === "string" && store.prefix !== ""
+                    ? { prefix: store.prefix }
+                    : {}),
+                },
+              ]
             : [],
         )
       : [];

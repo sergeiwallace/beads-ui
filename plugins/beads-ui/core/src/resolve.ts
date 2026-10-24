@@ -39,6 +39,8 @@ export interface StoreFacts {
   home: string | undefined;
   /** Whether bd finds a store in `cwd` (`bd where`); undefined when bd did not say. */
   cwdHasStore: boolean | undefined;
+  /** The prefix bd names for the store in `cwd`: a linked worktree shares its main tree's. */
+  cwdPrefix?: string | undefined;
   session: string | undefined;
   inventory: Result<BandStore[], string>;
   inventoryPath: string | undefined;
@@ -55,11 +57,19 @@ export function sessionPrefix(session: string): string | undefined {
   return base === undefined ? undefined : base.toUpperCase().replace(/-/g, "_");
 }
 
+/** What `bd where --json` said of a directory: whether it has a store, and the store's prefix. */
+export interface BdWhere {
+  hasStore: boolean;
+  /** The database's prefix, its identity on the shared server; an older bd names none. */
+  prefix?: string;
+}
+
 /**
- * Whether `bd where --json` found a store: true on exit 0 with a `path`, false on its
- * `no_beads_directory` answer, undefined for anything else (a timeout, another error).
+ * What `bd where --json` found: a store on exit 0 with a `path`, with its `prefix` when bd names
+ * one; no store on its `no_beads_directory` answer; undefined for anything else (a timeout,
+ * another error).
  */
-export function parseBdWhere(exitCode: number | null, stdout: string): boolean | undefined {
+export function parseBdWhere(exitCode: number | null, stdout: string): BdWhere | undefined {
   let json: unknown;
   try {
     json = JSON.parse(stdout);
@@ -67,8 +77,12 @@ export function parseBdWhere(exitCode: number | null, stdout: string): boolean |
     return undefined;
   }
   if (!isTable(json)) return undefined;
-  if (exitCode === 0 && typeof json.path === "string" && json.path !== "") return true;
-  if (json.error === "no_beads_directory") return false;
+  if (exitCode === 0 && typeof json.path === "string" && json.path !== "") {
+    return typeof json.prefix === "string" && json.prefix !== ""
+      ? { hasStore: true, prefix: json.prefix }
+      : { hasStore: true };
+  }
+  if (json.error === "no_beads_directory") return { hasStore: false };
   return undefined;
 }
 
@@ -136,7 +150,7 @@ const withPrefix = (prefix: string | undefined) => (prefix === undefined ? {} : 
  * and how to add a mapping.
  */
 export function resolveStore(facts: StoreFacts): StoreResolution {
-  const { cwd, config, home, cwdHasStore, session, inventory, inventoryPath } = facts;
+  const { cwd, config, home, cwdHasStore, cwdPrefix, session, inventory, inventoryPath } = facts;
   const { stores } = directoryStores(config.text, home);
   const names = directoryNames(cwd);
   const mapped = names.find((name) => stores[name] !== undefined);
@@ -145,7 +159,8 @@ export function resolveStore(facts: StoreFacts): StoreResolution {
     return { ok: true, path, ...withPrefix(prefixOf(inventory, path)), via: "mapping" };
   }
   if (cwdHasStore === true) {
-    return { ok: true, path: cwd, ...withPrefix(prefixOf(inventory, cwd)), via: "directory" };
+    const prefix = cwdPrefix ?? prefixOf(inventory, cwd);
+    return { ok: true, path: cwd, ...withPrefix(prefix), via: "directory" };
   }
   const prefix = session === undefined ? undefined : sessionPrefix(session);
   const matched =
