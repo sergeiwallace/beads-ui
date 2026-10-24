@@ -345,16 +345,19 @@ describe("the host refresher", { timeout: 30_000 }, () => {
   it("should leave the new holder's snapshot as the current one when it was stalled between its lease check and its write", async () => {
     const h = host(STORES);
     register(h, "aih-ec2-3");
+    // The session registers once, so FAST's 4-second idle exit could stop the new holder before
+    // the stalled one wakes on a loaded host; a minute keeps both running for the whole case.
+    const running = [...FAST.slice(0, 6), "--idle-ms", "60000"];
     // The first refresher stalls after the lease check before each snapshot write, its renewals
     // with it, for longer than the lease's staleness (1.5 s here).
-    const ousted = launch(h, "token-stalled1", [...FAST, "--pause-ms", "6000"]);
+    const ousted = launch(h, "token-stalled1", [...running, "--pause-ms", "6000"]);
     await until(() =>
       lease(h)?.token === "token-stalled1" && Date.now() - lease(h).beatAt > 1_800
         ? true
         : undefined,
     );
 
-    launch(h, "token-holder01");
+    launch(h, "token-holder01", running);
     await until(() =>
       lease(h)?.token === "token-holder01" && snapshot(h)?.token === "token-holder01"
         ? true
