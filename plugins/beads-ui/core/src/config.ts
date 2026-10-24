@@ -2,6 +2,13 @@ import { DEFAULT_ID_POLICY, type IdPolicy, parseIdPolicy } from "./mint.ts";
 import type { Result } from "./model.ts";
 import { windowMs } from "./snapshot.ts";
 import {
+  DEFAULT_QUIET_SECONDS,
+  DEFAULT_SYNC_TIMEOUT_SECONDS,
+  MAX_SYNC_TIMEOUT_SECONDS,
+  STORE_TOKEN,
+  type SyncSettings,
+} from "./sync.ts";
+import {
   BAND_PARTS,
   type BandPart,
   type BandSettings,
@@ -493,4 +500,71 @@ export function withPanelTable(text: string | undefined, settings: PanelSettings
     `collapse = ${JSON.stringify(settings.collapse)}`,
     `mode = ${JSON.stringify(settings.mode)}`,
   ]);
+}
+
+/** The `beads-ui.toml` table of the publish run after an edit (D-33, T-2B.6). */
+export const SYNC_TABLE = "sync";
+
+export interface ResolvedSync {
+  /** Undefined when `sync.command` is unset or empty: nothing publishes. */
+  settings: SyncSettings | undefined;
+  /** One line per sync setting the file got wrong. */
+  problems: string[];
+}
+
+const wholeSeconds = (value: unknown, max: number): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= max;
+
+/**
+ * The publish settings from `[sync]`, read at call time: `command`, an argument list whose
+ * `{store}` is the written store's directory; `quiet_seconds` (default 10), the quiet after the
+ * last write; `timeout_seconds` (default 300, at most 600). An unset or empty command, or one
+ * that is not a list of strings, publishes nothing.
+ */
+export function resolveSync(text: string | undefined): ResolvedSync {
+  const problems: string[] = [];
+  if (text === undefined) return { settings: undefined, problems };
+  const parsed = parseToml(text);
+  if (!parsed.ok) return { settings: undefined, problems };
+  const sync = parsed.value[SYNC_TABLE];
+  if (sync === undefined) return { settings: undefined, problems };
+  if (!isTable(sync)) {
+    problems.push(`${SYNC_TABLE} must be a table; nothing is published`);
+    return { settings: undefined, problems };
+  }
+  const command = sync.command;
+  if (command === undefined) return { settings: undefined, problems };
+  if (!Array.isArray(command)) {
+    problems.push(
+      `sync.command must be a list of arguments such as ["publish", "--repo", "${STORE_TOKEN}"]; nothing is published`,
+    );
+    return { settings: undefined, problems };
+  }
+  if (command.length === 0 || (command[0] ?? "").trim() === "") {
+    return { settings: undefined, problems };
+  }
+  const settings: SyncSettings = {
+    command: [...command],
+    quietSeconds: DEFAULT_QUIET_SECONDS,
+    timeoutSeconds: DEFAULT_SYNC_TIMEOUT_SECONDS,
+  };
+  if (sync.quiet_seconds !== undefined) {
+    if (wholeSeconds(sync.quiet_seconds, Number.MAX_SAFE_INTEGER)) {
+      settings.quietSeconds = sync.quiet_seconds;
+    } else {
+      problems.push(
+        `sync.quiet_seconds must be a whole number of seconds from 1; using ${DEFAULT_QUIET_SECONDS}`,
+      );
+    }
+  }
+  if (sync.timeout_seconds !== undefined) {
+    if (wholeSeconds(sync.timeout_seconds, MAX_SYNC_TIMEOUT_SECONDS)) {
+      settings.timeoutSeconds = sync.timeout_seconds;
+    } else {
+      problems.push(
+        `sync.timeout_seconds must be a whole number of seconds from 1 to ${MAX_SYNC_TIMEOUT_SECONDS}; using ${DEFAULT_SYNC_TIMEOUT_SECONDS}`,
+      );
+    }
+  }
+  return { settings, problems };
 }

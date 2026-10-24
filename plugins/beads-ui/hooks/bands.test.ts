@@ -878,3 +878,82 @@ describe("the pane's refresh", () => {
     expect(await (await band($)).find({ key: "beads-band" })).toBeUndefined();
   });
 });
+
+describe("the unpublished-edit count (T-2B.6)", () => {
+  const PUBLISH = "/opt/fleet/bin/publish-store";
+  const SYNC = `[sync]\ncommand = ["${PUBLISH}", "--repo", "{store}"]\n`;
+  const ALL_VIEW = { [SCOPE_KEY]: { "aih-ec2-3": "all" } };
+
+  /** A named session with the pane open on the board, `sync.command` set, and a publish answering `code`. */
+  async function editing($: Engine, on: On, code: () => number) {
+    const w = world(
+      on,
+      named("aih-ec2-3", {
+        refresher: true,
+        files: { ...LIVE, [`${CWD}/beads-ui.toml`]: SYNC },
+        stored: ALL_VIEW,
+        script: (_key, argv) =>
+          argv[0] === PUBLISH ? exit(code(), code() === 0 ? "" : "conflict\n") : undefined,
+      }),
+    );
+    on("ui.notify", () => ({ value: { isSent: true, channel: "terminal_bell" } }));
+    on("prompt.submit", () => ({
+      drop: "the session was stopped and nobody has sent input since",
+    }));
+    on("turn.complete", (_engine, e) => ({ text: e.answer }));
+    await $.session.start(SESSION);
+    await w.clock.settle();
+    await $.command.run(SHOW);
+    await w.clock.settle();
+    const ui = await pane($);
+    const write = async () => {
+      await ui.select({ key: "move:BU-2zw", value: "in_progress" });
+      await w.clock.settle();
+    };
+    const turnEnds = async () => {
+      await $.turn.complete({ answer: "done", durationMs: 1, isAborted: false, turnId: "t" });
+      await w.clock.settle();
+    };
+    return { w, write, turnEnds };
+  }
+
+  test("should count each write until its publish succeeds, then draw no count", async ($, on) => {
+    const { w, write } = await editing($, on, () => 0);
+
+    await write();
+    expect(await line($, "own")).toBe(`${OWN} 1 unpublished`);
+    await w.clock.advance(2_000);
+    await write();
+    expect(await line($, "own")).toBe(`${OWN} 2 unpublished`);
+
+    await w.clock.advance(10_000);
+    await w.clock.settle();
+
+    expect(await line($, "own")).toBe(OWN);
+  });
+
+  test("should keep the count after a failed publish, and mark the failure once its turn was refused 3 more times", async ($, on) => {
+    let code = 5;
+    const { w, write, turnEnds } = await editing($, on, () => code);
+
+    await write();
+    await w.clock.advance(10_000);
+    await w.clock.settle();
+    expect(await line($, "own")).toBe(`${OWN} 1 unpublished`);
+    await turnEnds();
+    await turnEnds();
+    expect(await line($, "own")).toBe(`${OWN} 1 unpublished`);
+
+    await turnEnds();
+
+    expect(await line($, "own")).toBe(`${OWN} 1 unpublished publish failed`);
+
+    code = 0;
+    await write();
+    expect(await line($, "own")).toBe(`${OWN} 2 unpublished publish failed`);
+    await w.clock.advance(10_000);
+    await w.clock.settle();
+
+    expect(await line($, "own")).toBe(OWN);
+  });
+});

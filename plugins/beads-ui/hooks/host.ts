@@ -50,6 +50,16 @@ export interface Host {
   invalidate: () => void;
   /** `$.ui.toast`. */
   toast: (text: string) => void;
+  /**
+   * `$.ui.notify`: a terminal notification. Resolves `{ isSent: true, channel }`, or `{ isSent:
+   * false, reason }` when no channel took it; rejects when the channel's write failed.
+   */
+  notify: (text: string) => Promise<unknown>;
+  /**
+   * `$.prompt.submit`: a turn in the session once it is idle, with Claude Code naming the mod as
+   * its sender. Resolves `{ drop: reason }` when the session refused or dropped it.
+   */
+  submit: (text: string) => Promise<unknown>;
   /** `$.ui.open`; resolves what the engine answered, `{ isPlaced: false }` when it held the pane. */
   openPane: (pane: PaneOpenArgs) => Promise<unknown>;
   /** `$.ui.close`. */

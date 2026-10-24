@@ -60,7 +60,7 @@ export const isFirstmate = (session: string): boolean => /-firstmate-\d+$/.test(
 /**
  * The parts a band line can draw (T-1B.11), each addable and removable: the total, the four
  * counts (the done count with its window), the drift marker of D-34 and the unpublished-edit
- * count of T-2B.6, which draws once later work gives it a count.
+ * count of T-2B.6, with its failure mark.
  */
 export const BAND_PARTS = [
   "total",
@@ -112,6 +112,9 @@ export const DIRECT_GLYPH = "*";
 export const BAND_LABEL = "[bd]";
 export const ALL_LABEL = "[bd][all]";
 export const FIRSTMATE_LABEL = "     [fm]";
+
+/** The mark after the unpublished count once a failed publish's turn was given up (T-2B.6). */
+export const SYNC_FAILED_MARK = "publish failed";
 
 /** One line of the band and what it counts: `assignee`'s issues, or every issue, in `stores`. */
 export interface BandRead {
@@ -245,7 +248,8 @@ const COUNT_PARTS: readonly { part: BandPart; token: Token }[] = [
  * A band line (T-1B.10, T-1B.11): `[bd] {T} tasks ({P} in progress, {B} blocked, {O} open, {D}
  * done last {W})` in the configured part order, T the sum of the counts drawn (`1 task` for one).
  * The counts follow the total in brackets when the total is drawn. The drift marker (`1 unsynced`) and the
- * unpublished-edit count draw only while above zero. The line ends with PARTIAL_GLYPH when a
+ * unpublished-edit count (`2 unpublished`) draw only while above zero, the count followed by
+ * SYNC_FAILED_MARK while `syncFailed` is set. The line ends with PARTIAL_GLYPH when a
  * store did not answer, DIRECT_GLYPH when the session read the counts itself, and in debug mode
  * the read time.
  */
@@ -258,6 +262,8 @@ export function bandLine(
     /** The read time as a local ISO stamp, shown in debug mode. */
     readAt?: string;
     unpublished?: number;
+    /** A failed publish's turn was given up, and the store has not published since. */
+    syncFailed?: boolean;
     width: number;
   },
 ): BandLine {
@@ -295,7 +301,13 @@ export function bandLine(
         groups.push([{ text: `${read.drift} unsynced`, token: "warning" }]);
     } else if (part === "unpublished") {
       const count = options.unpublished ?? 0;
-      if (count > 0) groups.push([{ text: `${count} unpublished`, token: "accent" }]);
+      const group: BandSegment[] =
+        count > 0 ? [{ text: `${count} unpublished`, token: "accent" }] : [];
+      if (options.syncFailed === true) {
+        if (group.length > 0) group.push({ text: " " });
+        group.push({ text: SYNC_FAILED_MARK, token: "error" });
+      }
+      if (group.length > 0) groups.push(group);
     } else if (!listed && !parts.includes("total")) {
       const group: BandSegment[] = [];
       list(group);

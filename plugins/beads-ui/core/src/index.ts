@@ -45,6 +45,7 @@ export type {
   ResolvedBand,
   ResolvedConfig,
   ResolvedPanel,
+  ResolvedSync,
   TomlError,
   TomlTable,
   TomlValue,
@@ -61,6 +62,8 @@ export {
   resolveBand,
   resolveConfig,
   resolvePanel,
+  resolveSync,
+  SYNC_TABLE,
   withBandTable,
   withOverrides,
   withPanelTable,
@@ -221,6 +224,36 @@ export {
   sortIssues,
   sortLabel,
 } from "./sort.ts";
+export type {
+  Finished,
+  PendingSubmit,
+  SubmitAnswer,
+  SyncFailure,
+  SyncRun,
+  SyncSettings,
+  SyncStep,
+} from "./sync.ts";
+export {
+  cleanDetail,
+  DEDUPE_WINDOW_MS,
+  DEFAULT_QUIET_SECONDS,
+  DEFAULT_SYNC_TIMEOUT_SECONDS,
+  DETAIL_MAX_CHARS,
+  dedupeKey,
+  failureOf,
+  MAX_SUBMIT_RETRIES,
+  MAX_SYNC_TIMEOUT_SECONDS,
+  notifyText,
+  programName,
+  STORE_TOKEN,
+  SYNC_STEP_TEXT,
+  SYNC_STEPS,
+  SyncState,
+  sessionText,
+  stepOf,
+  syncArgv,
+  syncedText,
+} from "./sync.ts";
 export type { TerminalColor, Token } from "./tokens.ts";
 export {
   priorityToken,
@@ -259,6 +292,7 @@ export {
   PARTIAL_GLYPH,
   parseStoreInventory,
   STORE_INVENTORY_FILE,
+  SYNC_FAILED_MARK,
 } from "./views/band.ts";
 export type {
   BoardEvent,
