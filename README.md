@@ -16,7 +16,9 @@ session on a machine.
 
 Only the Claude Code mod (the TUI plugin) is implemented. Phase 0 (the monorepo bootstrap, the
 DOM-free shared core and the public-repo hygiene) and Phase 1 (the MVP, a read-mostly board in the
-mod) have landed.
+mod) have landed. The mod's pane now opens on a task panel: the session's own tasks, a nav to the
+board, backlog and settings, an options menu for every action and a Settings view
+([docs/procedures/mod-install.md](docs/procedures/mod-install.md#the-task-panel)).
 
 The MCP UI app for Claude Desktop and claude.ai, and the web app, are [TODO]: neither has been
 started. They are the planned future state in
@@ -48,7 +50,7 @@ How focus reaches the pane and leaves it, and how to close and reopen it. The pa
 }
 ```
 
-If `~/.claude/keybindings.json` already exists, add the `Chat` entry to its `bindings` list rather than replacing the file. The chord opens the pane when it is closed and closes it when it is open; it cannot move the focus into a pane that is already open, which Ctrl+X then Tab and the beads button do. Claude Code has no way to hide a pane and keep it open, so hiding it is closing it, and `/bu` brings it back on the same tab.
+If `~/.claude/keybindings.json` already exists, add the `Chat` entry to its `bindings` list rather than replacing the file. The chord opens the pane when it is closed and closes it when it is open; it cannot move the focus into a pane that is already open, which Ctrl+X then Tab and the beads button do. Claude Code has no way to hide a pane and keep it open, so hiding it is closing it, and `/bu` brings it back on the same view. It opens on the Tasks view the first time, and on whichever view you left it on after that.
 
 ## Repository structure
 
