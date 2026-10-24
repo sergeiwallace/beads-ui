@@ -42,16 +42,17 @@ export function register(on: On) {
   tally.sync = sync.state;
   sync.onChange = () => tally.syncChanged();
   bandSettings.onChange = () => void tally.settingsChanged();
-  // Every write the pane or the confirmation makes lands in the store the pane reads.
-  const wrote = () => {
-    tally.afterWrite();
-    sync.wrote(pane.storePath());
+  // Each write the pane or the confirmation makes names the store it ran in: that store is
+  // woken and published, even when the pane has re-resolved its store since.
+  const wrote = (store: string) => {
+    tally.afterWrite(store);
+    sync.wrote(store);
   };
   pane.onWrite = wrote;
   const confirm = new DeleteConfirm(
-    (text, undo) => {
+    (text, undo, store) => {
       pane.afterConfirm(text, undo);
-      wrote();
+      wrote(store);
     },
     () => void pane.resume(),
     () => pane.storePath(),

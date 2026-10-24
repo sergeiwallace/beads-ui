@@ -52,9 +52,15 @@ export class DeleteConfirm {
   state: ConfirmState | undefined;
   /** Moves on every phase change, so an answer for a phase already left is dropped. */
   private epoch = 0;
+  /**
+   * The store directory the confirmation opened on: its preview, its re-check and its write all
+   * run there, and the write is reported there, whatever the pane re-resolves meanwhile.
+   */
+  private dir = "";
 
   constructor(
-    private readonly finished: (text: string, undo: UndoClose | undefined) => void,
+    /** The confirmation wrote in the store at `store`, or closed with nothing written. */
+    private readonly finished: (text: string, undo: UndoClose | undefined, store: string) => void,
     private readonly dismissed: () => void,
     /** The directory of the store the pane reads, where bd runs. */
     private readonly storeDir: () => string,
@@ -64,6 +70,7 @@ export class DeleteConfirm {
     const host = this.host;
     if (host === undefined) return;
     this.state = openDeleteConfirm(issue, issues);
+    this.dir = this.storeDir();
     this.epoch++;
     await host.openPane({
       id: CONFIRM_ID,
@@ -105,7 +112,7 @@ export class DeleteConfirm {
       await this.settle(state);
       return;
     }
-    const result = await host.runIn(this.storeDir(), argv, RUN_TIMEOUT_MS).catch(
+    const result = await host.runIn(this.dir, argv, RUN_TIMEOUT_MS).catch(
       (reason: unknown): ProcessRunResult => ({
         exitCode: -1,
         stdout: "",
@@ -122,7 +129,7 @@ export class DeleteConfirm {
     const view = confirmView(state, 200);
     this.state = undefined;
     await this.host?.closePane(CONFIRM_ID).catch(() => undefined);
-    this.finished(view.statusLine ?? "", view.undo);
+    this.finished(view.statusLine ?? "", view.undo, this.dir);
   }
 
   draw(ui: PaneUi, width: number): RenderElement {

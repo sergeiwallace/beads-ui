@@ -92,9 +92,10 @@ export class BandTally {
   private failedToken: string | undefined;
   private anonId = `anon-${randomToken()}`;
   private queuedFinal = false;
-  /** The store this session's pane reads, from the last refresh. */
-  private here: BandStore | undefined;
-  /** The band's entry for `here`'s database: the main tree's, for a session in a linked worktree. */
+  /**
+   * The band's entry for the database of the store this session's pane reads: the main tree's,
+   * for a session in a linked worktree.
+   */
   private counted: BandStore | undefined;
   /** When this session last wrote, until the band has drawn a read of its store made after. */
   private wroteAt: number | undefined;
@@ -148,7 +149,6 @@ export class BandTally {
             ...(resolution.prefix === undefined ? {} : { prefix: resolution.prefix }),
           }
         : undefined;
-      this.here = here;
       const reads = bandReads({ session: this.stores.sessionName, here, inventory });
       const now = await host.now();
       const dir = await this.stateDir();
@@ -208,21 +208,21 @@ export class BandTally {
    * the snapshot still holds no read of the store made after the write, it reads that store's
    * counts itself. So the write shows within 10 seconds, not at the next minute (T-1B.5).
    */
-  afterWrite(): void {
-    void this.wake();
+  afterWrite(store: string): void {
+    void this.wake(store);
   }
 
-  private async wake(): Promise<void> {
+  /** `store` is the directory the write ran in: the marker names it, not the band's own store. */
+  private async wake(store: string): Promise<void> {
     const host = this.host;
     if (host === undefined) return;
     const now = await host.now().catch(() => undefined);
     if (now === undefined) return;
     this.wroteAt = now;
     const dir = await this.stateDir();
-    const here = this.here;
-    if (dir !== undefined && here !== undefined) {
+    if (dir !== undefined && store.startsWith("/")) {
       await host
-        .writeFile(`${dir}/${WAKE_DIR}/${wakeFileName(here.path)}`, wakeText(here.path, now))
+        .writeFile(`${dir}/${WAKE_DIR}/${wakeFileName(store)}`, wakeText(store, now))
         .catch(() => undefined);
     }
     void this.refresh();

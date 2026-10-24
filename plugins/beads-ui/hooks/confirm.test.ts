@@ -1,13 +1,14 @@
 import type { On } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
-
+import { wakeFileName } from "../core/src/index.ts";
 import cascadePreview from "../core/test/fixtures/bd-delete-cascade-dry-run.json.ts";
 import leafText from "../core/test/fixtures/bd-delete-dry-run-leaf.txt.ts";
 import listText from "../core/test/fixtures/bd-list-all-brief.json.ts";
 import { CONFIRM_ID, PANE_ID, PLUGIN_NAME } from "./register.ts";
 import { test } from "./tests/kit.ts";
 import {
+  CWD,
   DEPENDENTS_STDERR,
   exit,
   ok,
@@ -15,6 +16,7 @@ import {
   PANE_PROPS,
   SESSION,
   SHOW,
+  STATE_DIR,
   SURFACES,
   VIEWPORT,
   type WorldOptions,
@@ -179,6 +181,30 @@ describe("the delete confirmation", () => {
     expect((await pane.find({ key: "notice" }))?.text).toBe(
       "BU-npm-audit-10-dev-only-advisories-2zw deleted",
     );
+  });
+
+  test("should delete, publish and wake in the store it previewed when the pane re-resolves its store meanwhile", async ($, on) => {
+    const user = "/home/me/.config/beads-ui/beads-ui.toml";
+    const program = "/opt/fleet/bin/publish-store";
+    const sync = `[sync]\ncommand = ["${program}", "--repo", "{store}"]\n`;
+    const { w, confirm } = await deleting($, on, "BU-2zw", {
+      files: { [user]: sync },
+      script: (_key, argv) => (argv[0] === program ? ok("") : undefined),
+    });
+    w.files.set(user, `${sync}[directory_stores]\n"beads-ui" = "/work/other"\n`);
+    await w.clock.advance(10_000);
+    await w.clock.settle();
+
+    await confirm.press({ key: "delete" });
+    await w.clock.settle();
+    await w.clock.advance(10_000);
+    await w.clock.settle();
+
+    const at = (prefix: string) => w.cwds[w.keys().findIndex((key) => key.startsWith(prefix))];
+    expect(at("bd delete BU-2zw --force")).toBe(CWD);
+    expect(w.runs.filter((argv) => argv[0] === program)).toEqual([[program, "--repo", CWD]]);
+    expect(w.files.has(`${STATE_DIR}/wake/${wakeFileName(CWD)}`)).toBe(true);
+    expect(w.files.has(`${STATE_DIR}/wake/${wakeFileName("/work/other")}`)).toBe(false);
   });
 
   test("should go to the typed-id cascade path and delete nothing when the re-check finds a new dependent", async ($, on) => {

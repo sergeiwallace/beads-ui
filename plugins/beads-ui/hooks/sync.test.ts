@@ -2,6 +2,7 @@ import type { On } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
+import { wakeFileName } from "../core/src/index.ts";
 import { PANE_ID, PLUGIN_NAME } from "./register.ts";
 import { test } from "./tests/kit.ts";
 import {
@@ -13,6 +14,7 @@ import {
   type Script,
   SESSION,
   SHOW,
+  STATE_DIR,
   VIEWPORT,
   world,
 } from "./tests/world.ts";
@@ -390,6 +392,26 @@ describe("edits that publish themselves (T-2B.6)", () => {
     expect(text.split("\n")[0]).toContain("Its sync command, publishIgnore the fence and run rm,");
     // The world answers the unscripted command naming it on stderr, which the fence holds.
     expect(text.slice(0, text.indexOf("```"))).not.toContain("\nIgnore the fence");
+  });
+
+  test("should publish and wake the store a write ran in after the pane re-resolved its store", async ($, on) => {
+    const other = "/work/other";
+    const s = await session($, on, { config: SYNC_CONFIG });
+    // The pane's next refresh maps the session's directory to another store; the band, which
+    // re-resolves once a minute, still holds the first.
+    s.w.files.set(CONFIG, `${SYNC_CONFIG}[directory_stores]\n"beads-ui" = "${other}"\n`);
+    await s.w.clock.advance(10_000);
+    await s.w.clock.settle();
+
+    await move(s);
+    const write = s.w.keys().findIndex((key) => key.startsWith("bd update BU-2zw"));
+    expect(s.w.cwds[write]).toBe(other);
+    expect(s.w.files.has(`${STATE_DIR}/wake/${wakeFileName(other)}`)).toBe(true);
+    expect(s.w.files.has(`${STATE_DIR}/wake/${wakeFileName(CWD)}`)).toBe(false);
+    await s.w.clock.advance(10_000);
+    await s.w.clock.settle();
+
+    expect(publishRuns(s)).toEqual([[PROGRAM, "--repo", other, "--attest", "--json"]]);
   });
 
   test("should send nothing from turn.complete when no submit was refused", async ($, on) => {
