@@ -206,10 +206,13 @@ Claude Code's task panel exists on the fleet's machines only because ai-harness 
 
 ## The Timeline
 
-`5` opens the Timeline: the store's epics and milestone issues (type `epic` or `milestone`, such as a `Sprint <name>` milestone), every owner's, placed by due date. A line counts them, such as `10 epics and milestones: 4 with a due date, 6 without`, and the next names the axis, from the earliest due date to the latest, or from today when every due date is later. The items come from the same read as the board: the open issues and the 25 most recently closed.
+`5` opens the Timeline: the store's epics and milestone issues (type `epic` or `milestone`, such as a `Sprint <name>` milestone), closed ones included, placed by due date. Like the Board, Backlog and Tasks views it honours Mine and All: a session that is not a firstmate opens on the epics and milestones assigned to it, `a` switches to every owner's, and a firstmate opens on every owner's. A line counts them, such as `10 epics and milestones: 4 with a due date, 6 without`, and the next names the axis, from the earliest due date to the latest, or from today when every due date is later.
+
+The open items come from the board's read. Opening the Timeline also reads every closed epic and every closed milestone, one `bd list --status closed --type <type>` call for each type, since bd 1.3 takes one type a call; the board's read holds only the 25 most recently closed issues. The pane keeps that read while it draws the same host refresher snapshot of the same store, and reads again when the Timeline next opens after the snapshot moved, or every time it opens when the pane reads bd directly. A failed read keeps the last good one and says so in a line above the view.
 
 - In the terminal each item is a bar from the axis start to its due date, coloured by its status (blue open, orange in progress or blocked, grey deferred, green closed), with its display id, or its title when it has none, and its due date. From 72 columns of view the label sits left of its bar; narrower, it sits on its own line above it. Elsewhere (the desktop and VS Code) each item is one row of its due date and label.
 - The epics and milestones with no due date are listed apart under `No due date (N)`. With none dated, the view says so, and lists them all there.
+- The view draws as many items as the pane's height holds, the dated ones and then the undated ones as one list, in a window that follows the focus as the Tasks view's does: Tab or Down onto the last drawn item draws the next one, and `↑ N above` and `↓ N below` count the items outside it. So a large store stays within what Claude Code draws, and every item is still reachable from the keyboard.
 - Enter or a click on an item opens its detail, as on the Tasks view; `d` opens the focused one's. Set an item's due date with the Due field on its detail.
 
 ## Quick-add

@@ -146,6 +146,22 @@ function drawnCount(tasks: readonly TaskRowView[], settings: PanelSettings): num
   return Math.min(tasks.length, settings.shown);
 }
 
+/**
+ * The rows a list of `ids` draws under a window of at most `limit` (T-2B.1): all of them when
+ * they fit or there is no limit; else the focused row and, while there is one, the row after it,
+ * so Down always reaches a drawn row and the window follows the focus.
+ */
+export function rowWindow(
+  ids: readonly string[],
+  focusedId: string | undefined,
+  limit: number | undefined,
+): { start: number; end: number } {
+  if (limit === undefined || limit < 1 || ids.length <= limit) return { start: 0, end: ids.length };
+  const at = Math.max(0, focusedId === undefined ? 0 : ids.indexOf(focusedId));
+  const end = Math.min(ids.length, Math.max(limit, at + 2));
+  return { start: Math.max(0, end - limit), end };
+}
+
 export function taskListView(issues: readonly Issue[], options: TaskListOptions): TaskListView {
   const tasks = panelTasks(issues, options.statuses).map((issue): TaskRowView => {
     const group = taskGroupOf(issue, options.statuses) ?? "open";
@@ -167,25 +183,15 @@ export function taskListView(issues: readonly Issue[], options: TaskListOptions)
   const collapsible = drawn < tasks.length;
   const visible = options.expanded ? tasks : tasks.slice(0, drawn);
   const hidden = tasks.length - visible.length;
-  let rows = visible;
-  let above = 0;
-  let below = 0;
-  const limit = options.windowRows;
-  if (limit !== undefined && limit >= 1 && visible.length > limit) {
-    const at = Math.max(
-      0,
-      visible.findIndex((task) => task.id === options.focusedId),
-    );
-    // The focused row and, while there is one, the row after it, so Down always reaches a drawn
-    // row and the window follows the focus.
-    const end = Math.min(visible.length, Math.max(limit, at + 2));
-    const start = Math.max(0, end - limit);
-    rows = visible.slice(start, end);
-    above = start;
-    below = visible.length - end;
-  }
+  const { start, end } = rowWindow(
+    visible.map((task) => task.id),
+    options.focusedId,
+    options.windowRows,
+  );
+  const above = start;
+  const below = visible.length - end;
   return {
-    rows,
+    rows: visible.slice(start, end),
     total: tasks.length,
     counts,
     hidden,

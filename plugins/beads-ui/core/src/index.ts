@@ -13,6 +13,7 @@ export {
   reopenArgv,
   showArgv,
   statusesArgv,
+  timelineReadArgvs,
   whereArgv,
 } from "./argv.ts";
 export type {
@@ -427,6 +428,7 @@ export {
   panelTasks,
   parseShownCount,
   RETIRED_PANEL_TOOL,
+  rowWindow,
   showsTasks,
   TASK_GLYPHS,
   TASK_GROUPS,
@@ -453,6 +455,7 @@ export type {
   TimelinePlacement,
   TimelineRow,
   TimelineView,
+  TimelineWindow,
 } from "./views/timeline.ts";
 export {
   barCells,
@@ -464,6 +467,7 @@ export {
   RASTER_MAX_COLUMNS,
   TIMELINE_TYPES,
   timelineLayout,
+  timelinePlacement,
   timelineView,
 } from "./views/timeline.ts";
 export type { UndoClose, UndoView } from "./views/undo.ts";

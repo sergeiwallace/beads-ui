@@ -74,8 +74,28 @@ export const NO_STORE_STDERR =
 export const OPEN_LIST = "bd list --brief --limit 0";
 export const CLOSED_PAGE = "bd list --brief --status closed --sort closed --limit 25";
 export const STORE_LIST = "bd list --all --brief --limit 0";
+/** The Timeline's read of every closed issue of one type (T-2B.9), answered from STORE_LIST too. */
+export const timelineList = (type: string) =>
+  `bd list --brief --status closed --type ${type} --limit 0`;
+const TIMELINE_LIST = /^bd list --brief --status closed --type (\S+) --limit 0$/;
 
-function partOf(answer: ReturnType<Script>, closed: boolean): ReturnType<Script> {
+/** A board read's part of a STORE_LIST answer: the open issues, or the newest closed page. */
+const boardPart = (answer: ReturnType<Script>, closed: boolean): ReturnType<Script> =>
+  partOf(answer, (rows) => {
+    const status = (row: unknown) => (row as { status?: unknown }).status;
+    const at = (row: unknown) => String((row as { closed_at?: unknown }).closed_at ?? "");
+    return closed
+      ? rows
+          .filter((row) => status(row) === "closed")
+          .sort((a, b) => (at(a) < at(b) ? 1 : at(a) > at(b) ? -1 : 0))
+          .slice(0, 25)
+      : rows.filter((row) => status(row) !== "closed");
+  });
+
+function partOf(
+  answer: ReturnType<Script>,
+  part: (rows: readonly unknown[]) => unknown[],
+): ReturnType<Script> {
   if (answer === undefined || answer instanceof Error || answer === HANG) return answer;
   if (answer instanceof Killed || answer.exitCode !== 0) return answer;
   let rows: unknown;
@@ -85,15 +105,7 @@ function partOf(answer: ReturnType<Script>, closed: boolean): ReturnType<Script>
     return answer;
   }
   if (!Array.isArray(rows)) return answer;
-  const status = (row: unknown) => (row as { status?: unknown }).status;
-  const at = (row: unknown) => String((row as { closed_at?: unknown }).closed_at ?? "");
-  const part = closed
-    ? rows
-        .filter((row) => status(row) === "closed")
-        .sort((a, b) => (at(a) < at(b) ? 1 : at(a) > at(b) ? -1 : 0))
-        .slice(0, 25)
-    : rows.filter((row) => status(row) !== "closed");
-  return { ...answer, stdout: JSON.stringify(part) };
+  return { ...answer, stdout: JSON.stringify(part(rows)) };
 }
 
 const READS: Readonly<Record<string, ProcessRunResult>> = {
@@ -237,7 +249,19 @@ export function world(on: On, options: WorldOptions = {}) {
     if (key === OPEN_LIST || key === CLOSED_PAGE) {
       return (
         options.script?.(key, argv, cwd) ??
-        partOf(options.script?.(STORE_LIST, argv, cwd) ?? READS[STORE_LIST], key === CLOSED_PAGE)
+        boardPart(options.script?.(STORE_LIST, argv, cwd) ?? READS[STORE_LIST], key === CLOSED_PAGE)
+      );
+    }
+    const typed = TIMELINE_LIST.exec(key)?.[1];
+    if (typed !== undefined) {
+      return (
+        options.script?.(key, argv, cwd) ??
+        partOf(options.script?.(STORE_LIST, argv, cwd) ?? READS[STORE_LIST], (rows) =>
+          rows.filter((row) => {
+            const { status, issue_type } = row as { status?: unknown; issue_type?: unknown };
+            return status === "closed" && issue_type === typed;
+          }),
+        )
       );
     }
     return (

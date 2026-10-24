@@ -69,7 +69,14 @@ export function panelActions(ctx: ActionContext): PanelAction[] {
     ctx.view === "settings"
       ? [menu, help]
       : ctx.view === "timeline"
-        ? [action("card.detail", "detail", labels("Open"), { task: true }), undo, menu, band, help]
+        ? [
+            scope,
+            action("card.detail", "detail", labels("Open"), { task: true }),
+            undo,
+            menu,
+            band,
+            help,
+          ]
         : ctx.view === "tasks"
           ? [
               scope,

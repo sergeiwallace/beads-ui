@@ -6,6 +6,7 @@ import { tierOf } from "../layout.ts";
 import type { Issue, Status, StatusCategory } from "../model.ts";
 import { sortIssues } from "../sort.ts";
 import { statusToken, type Token } from "../tokens.ts";
+import { rowWindow } from "./panel.ts";
 import { truncate } from "./text.ts";
 
 /** The issue types the Timeline places: epics, and milestones such as D-5's `Sprint <name>`. */
@@ -119,6 +120,9 @@ export function timelineView(
 /** `beside`: the label left of its bar, from the wide tier; `above`: the label on its own line. */
 export type TimelinePlacement = "beside" | "above";
 
+export const timelinePlacement = (width: number): TimelinePlacement =>
+  tierOf(Math.max(1, Math.floor(width))) === "wide" ? "beside" : "above";
+
 /** Columns the due date takes after a bar. */
 export const DUE_COLUMNS = 10;
 /** The widest a Raster may be (Claude Code 2.1.310). */
@@ -152,27 +156,51 @@ export interface TimelineLayout {
   undatedHeading: string;
   /** The line drawn in place of the axis when no item has a due date. */
   emptyLine: string;
+  /** With a row window: the items, dated then undated, before and after it, not drawn. */
+  above: number;
+  below: number;
+}
+
+export interface TimelineWindow {
+  /** The item the focus ring is on, kept inside the window. */
+  focusedId?: string;
+  /** The most items drawn, dated and undated together. */
+  rows?: number;
 }
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 /**
  * The Timeline at a view `width`: in the wide tier each label beside its bar, below it the label
- * above; every line, bar and label within `width`.
+ * above; every line, bar and label within `width`. With `shownRows.rows`, at most that many items,
+ * the dated then the undated as one list, in a window that follows the focus as the Tasks view's
+ * does (T-2B.1).
  */
-export function timelineLayout(view: TimelineView, width: number): TimelineLayout {
+export function timelineLayout(
+  view: TimelineView,
+  width: number,
+  shownRows: TimelineWindow = {},
+): TimelineLayout {
   const columns = Math.max(1, Math.floor(width));
-  const placement: TimelinePlacement = tierOf(columns) === "wide" ? "beside" : "above";
+  const placement = timelinePlacement(columns);
   const labelColumns =
     placement === "beside" ? Math.min(28, Math.max(10, Math.floor(columns * 0.3))) : columns;
   // Beside: label, a space, the bar, a space, the due date. Above: the bar, a space, the date.
   const room = columns - DUE_COLUMNS - 1 - (placement === "beside" ? labelColumns + 1 : 0);
   const barColumns = Math.min(RASTER_MAX_COLUMNS, Math.max(1, room));
   const total = view.items.length + view.undated.length;
+  const dated = view.items.length;
+  const { start, end } = rowWindow(
+    [...view.items, ...view.undated].map((entry) => entry.id),
+    shownRows.focusedId,
+    shownRows.rows,
+  );
   return {
     placement,
     labelColumns,
-    rows: view.items.map((item) => ({
+    above: start,
+    below: total - end,
+    rows: view.items.slice(start, Math.min(end, dated)).map((item) => ({
       id: item.id,
       label: truncate(item.label, labelColumns),
       due: item.due,
@@ -182,7 +210,9 @@ export function timelineLayout(view: TimelineView, width: number): TimelineLayou
       filled: 1 + Math.round(item.position * (barColumns - 1)),
       line: truncate(`${item.due} ${item.label}`, columns),
     })),
-    undated: view.undated.map((entry) => ({ id: entry.id, label: truncate(entry.label, columns) })),
+    undated: view.undated
+      .slice(Math.max(0, start - dated), Math.max(0, end - dated))
+      .map((entry) => ({ id: entry.id, label: truncate(entry.label, columns) })),
     summary: truncate(
       `${plural(total, "epic or milestone", "epics and milestones")}: ${view.items.length} with a due date, ${view.undated.length} without`,
       columns,

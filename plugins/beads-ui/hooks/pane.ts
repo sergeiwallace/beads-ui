@@ -109,12 +109,15 @@ import {
   type TaskClientProps,
   type TaskListView,
   TERMINAL_THEME,
+  TIMELINE_TYPES,
   type Token,
   taskClientProps,
   taskListView,
   textWidth,
   tierOf,
   timelineLayout,
+  timelinePlacement,
+  timelineReadArgvs,
   timelineView,
   truncate,
   type UndoClose,
@@ -183,6 +186,11 @@ const SHORT_CHROME_ROWS = 6;
  * characters, so a longer list draws a window of rows that follows the focus.
  */
 export const TASK_WINDOW_ROWS = 100;
+/**
+ * The rows the Timeline's chrome takes besides the nav: the header, the toolbar, the footer, and
+ * the view's count, axis, above, undated heading and below lines.
+ */
+const TIMELINE_CHROME_ROWS = 9;
 
 const READ_TIMEOUT_MS = 8_000;
 /** What `$.process.run` keeps of each pipe: 4194304 bytes. */
@@ -359,6 +367,12 @@ export class BeadsPane {
   private wroteAt = 0;
   /** Why the store's board snapshot cannot be drawn, as the refresher named it. */
   boardSkipped: string | undefined;
+  /**
+   * The Timeline's own read (T-2B.9): the store's closed epics and milestones, read when the
+   * Timeline opens, and kept while the board draws the same snapshot head of the same store.
+   */
+  private timelineRead: { store: string; head: string | undefined; issues: Issue[] } | undefined;
+  private timelineReading = false;
 
   /** The store the pane reads (D-24), from the last refresh; undefined before the first. */
   store: StoreResolution | undefined;
@@ -631,6 +645,10 @@ export class BeadsPane {
         if (loaded) this.boardHead = undefined;
       }
       if (loaded) await this.retryPendingIds();
+      // The pane opened on the Timeline before its store was resolved: its own read runs now.
+      if (full && this.tab === "timeline" && this.timelineRead?.store !== this.store.path) {
+        void this.readTimeline();
+      }
       const readied = await ready;
       if (readied?.ok === true) {
         const parsed = parseBdReady(readied.stdout);
@@ -779,6 +797,64 @@ export class BeadsPane {
     return true;
   }
 
+  /**
+   * The Timeline opened (T-2B.9): reads the store's closed epics and milestones, one bd call a
+   * type, unless the last read was of this store at the snapshot head the board draws. A failed
+   * read keeps the last good one and says so; the Timeline still draws the board's own.
+   */
+  private async readTimeline(): Promise<void> {
+    if (this.store?.ok !== true || this.timelineReading) return;
+    const store = this.store.path;
+    const head = this.boardHead;
+    const kept = this.timelineRead;
+    if (kept?.store === store && head !== undefined && kept.head === head) return;
+    this.timelineReading = true;
+    try {
+      await this.readTimelineOf(store, head);
+    } finally {
+      this.timelineReading = false;
+    }
+  }
+
+  private async readTimelineOf(store: string, head: string | undefined): Promise<void> {
+    const argvs = timelineReadArgvs(TIMELINE_TYPES);
+    const ran = await Promise.all(
+      argvs.map((argv) => this.run(argv, READ_TIMEOUT_MS, { streamed: true })),
+    );
+    const issues: Issue[] = [];
+    for (const [i, read] of ran.entries()) {
+      const what = `bd list --type ${TIMELINE_TYPES[i]}`;
+      const parsed = read.ok ? parseBdList(read.stdout) : undefined;
+      if (parsed?.ok !== true) {
+        const failure = !read.ok
+          ? this.failure(what, read)
+          : `${what} failed: ${parsed?.ok === false ? `${parsed.error.message} at ${parsed.error.path}` : "unreadable"}`;
+        this.note(
+          `The Timeline shows only the newest closed epics and milestones: ${failure}`,
+          "warning",
+        );
+        // Kept with no head, so the next open reads again and no refresh retries meanwhile.
+        const kept = this.timelineRead?.store === store ? this.timelineRead.issues : [];
+        this.timelineRead = { store, head: undefined, issues: kept };
+        this.host?.invalidate();
+        return;
+      }
+      issues.push(...parsed.value);
+    }
+    this.timelineRead = { store, head, issues };
+    this.host?.invalidate();
+  }
+
+  /** What the Timeline places: the board's issues, then the closed ones only its own read has. */
+  private timelineIssues(): Issue[] {
+    const read = this.timelineRead;
+    if (read === undefined || this.store?.ok !== true || read.store !== this.store.path) {
+      return [...this.board.issues];
+    }
+    const known = new Set(this.board.issues.map((issue) => issue.id));
+    return [...this.board.issues, ...read.issues.filter((issue) => !known.has(issue.id))];
+  }
+
   // ---- opening and closing ----------------------------------------------------------------
 
   /** `/show-beads-ui` and `/bu`: close the open pane, else open it, as the person asked. */
@@ -867,6 +943,7 @@ export class BeadsPane {
     this.isOpen = true;
     this.savePrefs();
     void this.refresh({ direct: true });
+    if (this.tab === "timeline") void this.readTimeline();
   }
 
   async close(): Promise<void> {
@@ -1090,6 +1167,7 @@ export class BeadsPane {
     this.savePrefs();
     this.host?.invalidate();
     void this.host?.focus(PANE_ID, `tab:${tab}`).catch(() => undefined);
+    if (tab === "timeline") void this.readTimeline();
   }
 
   cycleSwimlane(): void {
@@ -1104,7 +1182,14 @@ export class BeadsPane {
   shown(): BoardState {
     const session = this.stores.sessionName;
     if (this.scope === "all" || session === undefined) return this.board;
-    return { ...this.board, issues: this.board.issues.filter((one) => one.assignee === session) };
+    return { ...this.board, issues: this.scoped(this.board.issues) };
+  }
+
+  /** `issues` as the scope draws them: on Mine, only the ones assigned to this session. */
+  private scoped(issues: readonly Issue[]): Issue[] {
+    const session = this.stores.sessionName;
+    if (this.scope === "all" || session === undefined) return [...issues];
+    return issues.filter((one) => one.assignee === session);
   }
 
   /**
@@ -1158,9 +1243,9 @@ export class BeadsPane {
         : /^(?:move|open|row|task|taskmenu|timeline):(.+)$/.exec(element);
     if (match?.[1] === undefined || match[1] === this.focusedId) return;
     this.focusedId = match[1];
-    // The Tasks view draws a window of rows that follows the focus, at short height (T-2B.1) and
-    // past TASK_WINDOW_ROWS, so the next row is drawn before Down reaches it.
-    if (this.tab === "tasks") this.host?.invalidate();
+    // The Tasks view and the Timeline draw a window of rows that follows the focus (T-2B.1), so
+    // the next row is drawn before Down reaches it.
+    if (this.tab === "tasks" || this.tab === "timeline") this.host?.invalidate();
   }
 
   private focusHint(): string {
@@ -1537,7 +1622,7 @@ export class BeadsPane {
             : this.tab === "settings"
               ? this.drawSettingsView(ui, width)
               : this.tab === "timeline"
-                ? this.drawTimeline(ui, width, raster)
+                ? this.drawTimeline(ui, width, frame, raster)
                 : this.drawDetail(ui, width);
     const inputs =
       this.tab === "detail" || this.tab === "settings" || this.tab === "timeline"
@@ -1738,12 +1823,15 @@ export class BeadsPane {
   }
 
   /**
-   * The Timeline (T-2B.9): the store's epics and milestones, every owner's, by due date; today is
-   * the day of the last read. Raster bars where the surface has a Raster, Text rows elsewhere.
+   * The Timeline (T-2B.9): the store's epics and milestones, closed ones included, by due date;
+   * on Mine only the session's own (D-29). Today is the day of the last read. Raster bars where
+   * the surface has a Raster, Text rows elsewhere, in a window of rows the pane's body holds that
+   * follows the focus.
    */
   private drawTimeline(
     ui: PaneUi,
     width: number,
+    frame: PaneFrame,
     raster: RasterElement | undefined,
   ): RenderElement {
     if (!this.board.loaded) {
@@ -1752,14 +1840,42 @@ export class BeadsPane {
         children: [ui.Text({ dimColor: true, children: "reading the store…" })],
       });
     }
-    const view = timelineView(this.board.issues, {
+    const view = timelineView(this.scoped(this.timelineIssues()), {
       statuses: this.board.statuses,
       ...(this.board.loadedAt === undefined ? {} : { today: this.board.loadedAt }),
     });
-    return drawTimeline(ui, timelineLayout(view, width), {
-      ...(raster === undefined ? {} : { raster }),
-      open: (id) => void this.openDetailFor(id),
+    const nav = this.navAt(frame);
+    const room =
+      (frame.bodyRows ?? WANTED_ROWS) -
+      TIMELINE_CHROME_ROWS -
+      (nav.kind === "side" ? 0 : nav.rows.length);
+    // A Raster bar under its label takes two rows.
+    const perItem = raster !== undefined && timelinePlacement(width) === "above" ? 2 : 1;
+    const layout = timelineLayout(view, width, {
+      ...(this.focusedId === undefined ? {} : { focusedId: this.focusedId }),
+      rows: Math.min(TASK_WINDOW_ROWS, Math.max(3, Math.floor(room / perItem))),
     });
+    const session = this.stores.sessionName;
+    const mineEmpty =
+      this.scope === "mine" &&
+      session !== undefined &&
+      view.items.length + view.undated.length === 0;
+    return drawTimeline(
+      ui,
+      mineEmpty
+        ? {
+            ...layout,
+            emptyLine: truncate(
+              `No epic or milestone is assigned to ${session}; a shows every owner's.`,
+              width,
+            ),
+          }
+        : layout,
+      {
+        ...(raster === undefined ? {} : { raster }),
+        open: (id) => void this.openDetailFor(id),
+      },
+    );
   }
 
   /** The board's column groups, how many sit on a row, and the width each gets. */
