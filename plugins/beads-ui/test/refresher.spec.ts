@@ -3,6 +3,7 @@
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -16,7 +17,13 @@ import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 const REFRESHER = resolve(import.meta.dirname, "../refresher/refresher.mjs");
+/** The build this plugin's manifest names, which the refresher records in its lease. */
+const BUILD: string = JSON.parse(
+  readFileSync(resolve(import.meta.dirname, "../.claude-plugin/plugin.json"), "utf8"),
+).version;
 const FAST = ["--beat-ms", "300", "--renew-ms", "100", "--stale-ms", "1500", "--idle-ms", "4000"];
+/** FAST, but a lease stays live for a minute and so does an idle refresher: only a build ousts. */
+const LIVE_HOLDER = [...FAST.slice(0, 4), "--stale-ms", "60000", "--idle-ms", "60000"];
 
 // A stub bd: it logs each call with the directory it ran in and the process that ran it, fails when the store directory holds
 // a `fail` file, never answers when it holds a `hang` file, and answers `bd count --by-assignee`
@@ -146,10 +153,10 @@ function register(
 }
 
 /** Runs the launcher as a session's mod does; resolves the refresher's pid. */
-function launch(h: Host, token: string, more: string[] = FAST): number {
+function launch(h: Host, token: string, more: string[] = FAST, refresher = REFRESHER): number {
   const ran = spawnSync(
     process.execPath,
-    [REFRESHER, "start", "--state-dir", h.state, "--home", h.home, "--token", token, ...more],
+    [refresher, "start", "--state-dir", h.state, "--home", h.home, "--token", token, ...more],
     { env: h.env, encoding: "utf8" },
   );
   expect(ran.status, ran.stderr).toBe(0);
@@ -253,28 +260,89 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     expect(new Set(calls(h).map((call) => call.ppid))).toEqual(new Set([winner]));
   });
 
-  it("should start nothing and read nothing when a live refresher holds the lease", async () => {
-    const h = host(STORES);
+  for (const held of [BUILD, "999.0.0"]) {
+    it(`should start nothing and read nothing when a live refresher of build ${held === BUILD ? "its own" : held} holds the lease`, async () => {
+      const h = host(STORES);
+      register(h, "aih-ec2-3");
+      writeFileSync(
+        join(h.state, "lease.json"),
+        JSON.stringify({ token: "someone-else1", pid: 1, beatAt: Date.now(), version: held }),
+      );
+
+      // The holder's beat is written once, so it must stay live for as long as the launch takes:
+      // under FAST's 1500 ms stale-ms a launch slower than that on a loaded host found it stale
+      // and rightly took the lease over. A minute of stale-ms keeps it live whatever the load.
+      const pid = launch(h, "token-loser111", LIVE_HOLDER);
+      await until(() => (alive(pid) ? undefined : true));
+
+      expect(calls(h)).toEqual([]);
+      expect(snapshot(h)).toBeUndefined();
+      expect(existsSync(join(h.state, "counts-token-loser111.json"))).toBe(false);
+      expect(lease(h).token).toBe("someone-else1");
+    });
+  }
+
+  // BU-4af: a refresher from an older build kept its lease across a plugin upgrade, so sessions
+  // of the newer build found no snapshot they read and counted every store themselves. Builds
+  // before 0.9.2 write only counts.json; builds before 0.9.4 record no build in their lease.
+  it("should take over the live lease of an older build's refresher, its last snapshot current under the new token from the moment the lease names it", async () => {
+    const h = host({ ...STORES, HUNG: [{ status: "open" }] });
+    writeFileSync(join(h.root, "HUNG", "hang"), "");
     register(h, "aih-ec2-3");
+    const beatAt = Date.now() - 5_000;
+    const old = {
+      schema: 1,
+      token: "old-build-token1",
+      pid: 1,
+      beatAt,
+      stores: [{ path: join(h.root, "AIH"), name: "AIH", ok: false, readAt: beatAt, error: "x" }],
+    };
+    writeFileSync(join(h.state, "counts.json"), JSON.stringify(old));
     writeFileSync(
       join(h.state, "lease.json"),
-      JSON.stringify({ token: "someone-else1", pid: 1, beatAt: Date.now() }),
+      JSON.stringify({ token: "old-build-token1", pid: 1, beatAt: Date.now() }),
     );
 
-    // The holder's beat is written once, so it must stay live for as long as the launch takes:
-    // under FAST's 1500 ms stale-ms a launch slower than that on a loaded host found it stale and
-    // rightly took the lease over. A minute of stale-ms keeps it live whatever the load.
-    const pid = launch(h, "token-loser111", [
-      ...FAST.slice(0, 4),
-      "--stale-ms",
-      "60000",
-      ...FAST.slice(6),
-    ]);
-    await until(() => (alive(pid) ? undefined : true));
+    // The hung store holds the new refresher's first snapshot back to its 3-second deadline, so
+    // what is current the moment it takes the lease is what it wrote before taking it.
+    const pid = launch(h, "token-newbuild", [...LIVE_HOLDER, "--cycle-ms", "3000"]);
+    await until(() => (lease(h)?.token === "token-newbuild" || !alive(pid) ? true : undefined));
 
-    expect(calls(h)).toEqual([]);
-    expect(snapshot(h)).toBeUndefined();
-    expect(lease(h).token).toBe("someone-else1");
+    expect(lease(h)).toMatchObject({ token: "token-newbuild", pid, version: BUILD });
+    expect(current(h)).toMatchObject({ token: "token-newbuild", pid, beatAt, stores: old.stores });
+    expect(current(h).stoppedAt).toBeUndefined();
+  });
+
+  it("should leave an older build's refresher no lease, so it stops reading and exits, once a newer build's refresher starts", async () => {
+    const h = host(STORES);
+    register(h, "aih-ec2-3");
+    // The older build: this refresher with no manifest beside it, so its lease records no build,
+    // as every build before 0.9.4 wrote it.
+    const older = join(h.root, "older-plugin");
+    cpSync(resolve(import.meta.dirname, "../refresher"), join(older, "refresher"), {
+      recursive: true,
+    });
+    cpSync(resolve(import.meta.dirname, "../core/src"), join(older, "core/src"), {
+      recursive: true,
+    });
+    writeFileSync(join(older, "package.json"), '{"type":"module"}\n');
+    const ousted = launch(h, "token-olderbld", LIVE_HOLDER, join(older, "refresher/refresher.mjs"));
+    await until(() => current(h));
+    expect(lease(h)).toMatchObject({ token: "token-olderbld" });
+    expect(lease(h).version).toBeUndefined();
+
+    const holder = launch(h, "token-newerbld", LIVE_HOLDER);
+    await until(() => (lease(h)?.token === "token-newerbld" || !alive(holder) ? true : undefined));
+    expect(lease(h)).toMatchObject({ token: "token-newerbld", version: BUILD });
+    await until(() => (alive(ousted) ? undefined : true));
+    const fromOusted = () => calls(h).filter((call) => call.ppid === ousted).length;
+    const before = fromOusted();
+    await new Promise((done) => setTimeout(done, 700));
+
+    expect(fromOusted()).toBe(before);
+    expect(alive(holder)).toBe(true);
+    expect(lease(h)?.token).toBe("token-newerbld");
+    await until(() => (current(h)?.token === "token-newerbld" ? true : undefined));
   });
 
   it("should take over a lease whose heartbeat is stale", async () => {
@@ -298,7 +366,12 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     register(fresh, "aih-ec2-3");
     writeFileSync(
       join(fresh.state, "lease.json"),
-      JSON.stringify({ token: "killed-refresher", pid: 1, beatAt: Date.now() - 40_000 }),
+      JSON.stringify({
+        token: "killed-refresher",
+        pid: 1,
+        beatAt: Date.now() - 40_000,
+        version: BUILD,
+      }),
     );
     const refused = launch(fresh, "token-tooearly", DEFAULT_STALE);
     await until(() => (alive(refused) ? undefined : true));
@@ -308,7 +381,12 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     register(dead, "aih-ec2-3");
     writeFileSync(
       join(dead.state, "lease.json"),
-      JSON.stringify({ token: "killed-refresher", pid: 1, beatAt: Date.now() - 55_000 }),
+      JSON.stringify({
+        token: "killed-refresher",
+        pid: 1,
+        beatAt: Date.now() - 55_000,
+        version: BUILD,
+      }),
     );
     launch(dead, "token-replaces", DEFAULT_STALE);
     const written = await until(() => snapshot(dead));

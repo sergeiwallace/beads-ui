@@ -583,6 +583,91 @@ describe("one refresher for the host (T-1B.4)", () => {
     expect(w.keys().filter(isCount)).toEqual([]);
     expect(spawned(w)).toEqual([]);
   });
+
+  // BU-4af: a refresher from an older build keeps its lease across an upgrade. Builds before
+  // 0.9.2 write only counts.json and builds before 0.9.4 record no build in their lease.
+  const OLD_WRITER = { [INVENTORY_PATH]: INVENTORY, [PUBLISHED]: snapshotOf(STORES) };
+
+  test("should start a refresher of its own build and read nothing itself when the running refresher is an older build that writes no snapshot under its token", async ($, on) => {
+    const w = await started(
+      $,
+      on,
+      named("aih-ec2-3", { refresher: true, build: "0.9.4", files: OLD_WRITER, script: starts }),
+    );
+
+    expect(spawned(w)).toHaveLength(1);
+    expect(w.keys().filter(isCount)).toEqual([]);
+    expect(await line($, "own")).not.toBe(`${OWN} *`);
+  });
+
+  test("should start a refresher of its own build and draw the older one's snapshot meanwhile when the running refresher records no build", async ($, on) => {
+    const w = await started(
+      $,
+      on,
+      named("aih-ec2-3", { refresher: true, build: "0.9.4", files: LIVE, script: starts }),
+    );
+
+    expect(spawned(w)).toHaveLength(1);
+    expect(await line($, "own")).toBe(OWN);
+    expect(w.keys().filter(isCount)).toEqual([]);
+  });
+
+  for (const refresherBuild of ["0.9.4", "0.10.0"]) {
+    test(`should start nothing when the running refresher is build ${refresherBuild} and the session 0.9.4`, async ($, on) => {
+      const w = await started(
+        $,
+        on,
+        named("aih-ec2-3", {
+          refresher: true,
+          refresherBuild,
+          build: "0.9.4",
+          files: LIVE,
+          script: starts,
+        }),
+      );
+      await w.clock.advance(BEAT_MS);
+
+      expect(spawned(w)).toEqual([]);
+      expect(await line($, "own")).toBe(OWN);
+    });
+  }
+
+  test("should try the replacing start again once its lease expires when the first start failed and the older build still runs", async ($, on) => {
+    const w = await started(
+      $,
+      on,
+      named("aih-ec2-3", {
+        refresher: true,
+        build: "0.9.4",
+        files: LIVE,
+        script: both((key) => (isStart(key) ? exit(1, "node: not found\n") : undefined)),
+      }),
+    );
+    expect(spawned(w)).toHaveLength(1);
+
+    await w.clock.advance(BEAT_MS);
+    expect(spawned(w)).toHaveLength(1);
+
+    await w.clock.advance(BEAT_MS);
+    expect(spawned(w)).toHaveLength(2);
+  });
+
+  test("should wait, reading nothing itself, while another session starts the refresher that replaces an older build", async ($, on) => {
+    const w = await started(
+      $,
+      on,
+      named("aih-ec2-3", {
+        refresher: true,
+        build: "0.9.4",
+        files: OLD_WRITER,
+        script: starts,
+        stored: { [LEASE_KEY]: { token: "other-session", at: START_MS - 10_000 } },
+      }),
+    );
+
+    expect(spawned(w)).toEqual([]);
+    expect(w.keys().filter(isCount)).toEqual([]);
+  });
 });
 
 describe("the band's cadence and stamp (T-1B.5)", () => {

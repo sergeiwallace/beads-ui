@@ -9,6 +9,7 @@ import {
   bandLine,
   bandReads,
   bandTotal,
+  buildOf,
   clockStamp,
   type FileLease,
   failureOf,
@@ -16,7 +17,9 @@ import {
   isRefresherToken,
   LEASE_FILE,
   LEASE_KEY,
+  laterBuild,
   leaseOf,
+  MANIFEST_PATH,
   type PendingSubmit,
   parseFileLease,
   parseSnapshot,
@@ -106,6 +109,8 @@ export class BandTally {
   private drawnWith: BandSettings | undefined;
   /** The session's publishing state (T-2B.6): the unpublished count and the failure mark. */
   sync: SyncState | undefined;
+  /** The plugin build this session runs, from its manifest: read once, when it can be read. */
+  private build: string | undefined;
 
   /**
    * @param stores the session's store resolution, shared with the pane (D-24)
@@ -163,12 +168,14 @@ export class BandTally {
       const snapshot = dir === undefined ? undefined : await this.readSnapshot(dir, fileLease);
       const live = snapshotLive(snapshot, now);
       const running = refresherRunning(fileLease, now);
+      const outdated = running && laterBuild(await this.ownBuild(), fileLease?.version);
       let source: BandSource = "snapshot";
-      if (!(live && running) && reads.length > 0) {
+      if (!(live && running && !outdated) && reads.length > 0) {
         const lease = leaseOf(await host.storeGet(LEASE_KEY).catch(() => undefined));
         let step = supervise({
           live,
           running,
+          outdated,
           lease,
           heldBy: fileLease?.token,
           nowMs: now,
@@ -364,6 +371,17 @@ export class BandTally {
     const parsed = parseSnapshot(text);
     if (!parsed.ok || !isRefresherToken(parsed.value.token)) return undefined;
     return token === undefined || parsed.value.token === token ? parsed.value : undefined;
+  }
+
+  /** The build in the plugin's manifest, which the refresher this session starts records. */
+  private async ownBuild(): Promise<string | undefined> {
+    if (this.build === undefined && this.host !== undefined) {
+      const text = await this.host
+        .readFile(`${this.host.pluginRoot}/${MANIFEST_PATH}`)
+        .catch(() => undefined);
+      this.build = buildOf(text);
+    }
+    return this.build;
   }
 
   /** The refresher's file lease, renewed every 20 s while it runs: its liveness (T-1B.4). */

@@ -8,6 +8,7 @@
 // process group and session, so it outlives the session that started it, which Claude Code
 // ends with its module) and exits at once, printing `{"pid": N}`. `run` holds the file lease
 // `<state-dir>/lease.json` (a hard link to its own `lease-<token>.json`) under `--token`: it takes it only when no live refresher holds it,
+// or when the live one is an older plugin build (the lease records each refresher's build),
 // re-checks it before every read and write, and exits when it is not the holder. No
 // dependencies: Node runs this file and the core modules it imports with its type stripping.
 //
@@ -40,7 +41,7 @@ import {
   writeFileSync,
   writeSync,
 } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { boardReadArgvs, headArgv, statusesArgv } from "../core/src/argv.ts";
@@ -51,10 +52,13 @@ import {
   BOARDS_DIR,
   boardFileName,
   boardRow,
+  buildOf,
   IDLE_EXIT_MS,
   isRefresherToken,
   LEASE_DEAD_MS,
   LEASE_FILE,
+  laterBuild,
+  MANIFEST_PATH,
   parseHead,
   parseSessionEntry,
   parseSnapshot,
@@ -65,6 +69,7 @@ import {
   SNAPSHOT_FILE,
   SNAPSHOT_SCHEMA,
   snapshotFileName,
+  snapshotLive,
   storeReads,
   storeSnapshotOf,
   WAKE_DIR,
@@ -161,7 +166,7 @@ const inodeOf = (path) => {
 
 /**
  * The lease a refresher holds in the state directory. Each refresher keeps its own file,
- * `lease-<token>.json` (`{ token, pid, beatAt }`), and renews only that file, in place. The shared
+ * `lease-<token>.json` (`{ token, pid, beatAt, version }`), and renews only that file, in place. The shared
  * `lease.json` is a hard link to the holder's file, so it reads the holder's heartbeat, and a
  * refresher holds the lease while `lease.json` is its own file's inode. No refresher ever writes
  * through `lease.json`, so one that stalls after a check and then renews writes only to its own
@@ -174,12 +179,13 @@ const inodeOf = (path) => {
  * it only when it is its own file.
  */
 class FileLease {
-  constructor(dir, token, staleMs) {
+  constructor(dir, token, staleMs, build) {
     this.dir = dir;
     this.path = join(dir, LEASE_FILE);
     this.own = join(dir, `lease-${token}.json`);
     this.token = token;
     this.staleMs = staleMs;
+    this.build = build;
   }
 
   /** The holder `lease.json` names: its record and inode, `garbled` when unreadable. */
@@ -203,7 +209,8 @@ class FileLease {
   }
 
   record(now) {
-    const text = JSON.stringify({ token: this.token, pid: process.pid, beatAt: now });
+    const version = this.build === undefined ? {} : { version: this.build };
+    const text = JSON.stringify({ token: this.token, pid: process.pid, beatAt: now, ...version });
     return `${text.padEnd(LEASE_RECORD_BYTES - 1, " ")}\n`;
   }
 
@@ -247,7 +254,14 @@ class FileLease {
     for (let attempt = 0; attempt < 3; attempt++) {
       const held = this.read();
       if (held !== undefined && held.inode === inodeOf(this.own)) return true;
-      if (held !== undefined && held.garbled !== true && now - held.beatAt <= this.staleMs) {
+      // A live holder keeps the lease unless this is a later build (BU-4af): an upgrade's first
+      // refresher replaces the older one, which finds the lease gone at its next check and exits.
+      if (
+        held !== undefined &&
+        held.garbled !== true &&
+        now - held.beatAt <= this.staleMs &&
+        !laterBuild(this.build, typeof held.version === "string" ? held.version : undefined)
+      ) {
         break;
       }
       if (held !== undefined) {
@@ -504,6 +518,20 @@ function dropOtherTokens(dir, token, now, staleMs, isHolder) {
   }
 }
 
+/**
+ * Writes the last published snapshot's counts as this refresher's own, when that snapshot is live:
+ * its stores and heartbeat as they were, with no boards (their files are the last refresher's).
+ * True when it wrote.
+ */
+function seed(snapshotPath, ownPath, token, now) {
+  const previous = parseSnapshot(readText(snapshotPath) ?? "");
+  if (!previous.ok || !snapshotLive(previous.value, now)) return false;
+  const { beatAt, stores } = previous.value;
+  const text = `${JSON.stringify({ schema: SNAPSHOT_SCHEMA, token, pid: process.pid, beatAt, stores })}\n`;
+  writeWhole(ownPath, text, token);
+  return true;
+}
+
 /** Keeps `value` for `path` unless the map holds one whose reads began later. */
 function keepNewer(map, path, value, startedAt) {
   const held = map.get(path);
@@ -582,11 +610,24 @@ async function run(options) {
   const renewMs = options["renew-ms"] ?? RENEW_MS;
   const idleMs = options["idle-ms"] ?? IDLE_EXIT_MS;
   mkdirSync(dir, { recursive: true });
-  const lease = new FileLease(dir, token, options["stale-ms"] ?? LEASE_DEAD_MS);
-  if (!lease.acquire(Date.now())) return;
-
+  const build = buildOf(
+    readText(join(dirname(fileURLToPath(import.meta.url)), "..", MANIFEST_PATH)),
+  );
+  const lease = new FileLease(dir, token, options["stale-ms"] ?? LEASE_DEAD_MS, build);
   const snapshotPath = join(dir, SNAPSHOT_FILE);
   const ownPath = join(dir, snapshotFileName(token));
+  // The last published counts, under this token before it takes the lease: a session reads them
+  // from the moment the lease names it, not after its first beat, so a takeover (of a killed
+  // refresher or of an older build's) leaves no minute where sessions read every store themselves.
+  const seeded = seed(snapshotPath, ownPath, token, Date.now());
+  if (!lease.acquire(Date.now())) {
+    if (seeded) unlinkSync(ownPath);
+    return;
+  }
+  // The holder it replaced may have dropped the seed as another token's old file just before the
+  // takeover; it is written again now that no other refresher holds the lease.
+  if (seeded && !existsSync(ownPath)) seed(snapshotPath, ownPath, token, Date.now());
+
   const pauseMs = options["pause-ms"] ?? 0;
   const cycleMs = options["cycle-ms"] ?? CYCLE_MS;
   const staleMs = options["stale-ms"] ?? LEASE_DEAD_MS;

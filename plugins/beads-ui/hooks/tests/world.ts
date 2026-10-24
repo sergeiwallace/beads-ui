@@ -183,6 +183,10 @@ export interface WorldOptions {
    * RENEW_MS on the clock until the test calls `killRefresher`, after which it goes stale.
    */
   refresher?: boolean;
+  /** The build the played refresher's lease records; none, as builds before 0.9.4 wrote. */
+  refresherBuild?: string;
+  /** The version the plugin's manifest names, read under `$.plugin.root`; no manifest when not given. */
+  build?: string;
 }
 
 /** The host refresher's state directory under the world's HOME, and the files in it. */
@@ -233,7 +237,12 @@ export function world(on: On, options: WorldOptions = {}) {
   on("fs.read", async (_engine, e) => {
     if (options.refresher === true && e.path === REFRESHER_LEASE && !files.has(e.path)) {
       const beatAt = renewedAt(await clock.now());
-      return { value: JSON.stringify({ token: REFRESHER_TOKEN, pid: 4242, beatAt }) };
+      const version =
+        options.refresherBuild === undefined ? {} : { version: options.refresherBuild };
+      return { value: JSON.stringify({ token: REFRESHER_TOKEN, pid: 4242, beatAt, ...version }) };
+    }
+    if (options.build !== undefined && e.path.endsWith("/.claude-plugin/plugin.json")) {
+      return { value: JSON.stringify({ name: "beads-ui", version: options.build }) };
     }
     const text = files.get(e.path);
     return text === undefined ? { deny: `ENOENT: ${e.path}` } : { value: text };
