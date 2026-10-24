@@ -501,7 +501,9 @@ describe("the host refresher", { timeout: 30_000 }, () => {
       const h = host(MANY);
       register(h, "aih-ec2-3", { boards: [{ name: "AIH", path: join(h.root, "AIH") }] });
 
-      launch(h, "token-unchang1");
+      // The session registers once, so FAST's 4-second idle exit would stop the refresher before
+      // the head moves on a loaded host; a minute keeps it beating for the whole case.
+      launch(h, "token-unchang1", [...FAST.slice(0, 6), "--idle-ms", "60000"]);
       await until(() => entryOf(h, "AIH"));
       const heads = () => calls(h).filter((call) => call.args[0] === "vc").length;
       await until(() => (heads() >= 3 ? true : undefined));

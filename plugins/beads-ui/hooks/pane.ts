@@ -464,7 +464,11 @@ export class BeadsPane {
       this.pendingIds = this.pendingIds.filter((pending) => !done.has(pending.id));
       this.savePending();
     }
-    if (wrote) this.queued = true;
+    if (wrote) {
+      this.queued = true;
+      // A display id written late is a write like any other: the band and the publish hear of it.
+      this.onWrite?.();
+    }
   }
 
   // ---- bd ---------------------------------------------------------------------------------

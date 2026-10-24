@@ -1,12 +1,13 @@
 import type { On, RenderPropsOf } from "claude-code";
 import type { Engine } from "claude-code/testing";
-import { describe, expect, test } from "claude-code/testing";
+import { describe, expect } from "claude-code/testing";
 
 import { COMMANDS, NAV_ENTRIES, wakeFileName } from "../core/src/index.ts";
 import list from "../core/test/fixtures/bd-list-all-brief.json.ts";
 import { SPRINT_PLANNED_TEXT } from "./pane.ts";
 import { PANEL_SETTINGS_KEY } from "./panel.ts";
 import { CONFIRM_ID, PANE_ID, PLUGIN_NAME } from "./register.ts";
+import { test } from "./tests/kit.ts";
 import { ME, MINE, MINE_ORDER, ownStore } from "./tests/mine.ts";
 import { overflows } from "./tests/width.ts";
 import {

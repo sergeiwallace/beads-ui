@@ -1,6 +1,6 @@
 import type { On, RenderSurface } from "claude-code";
 import type { Engine } from "claude-code/testing";
-import { describe, expect, test } from "claude-code/testing";
+import { describe, expect } from "claude-code/testing";
 
 import {
   asOf,
@@ -17,6 +17,7 @@ import show from "../core/test/fixtures/bd-show.json.ts";
 import minted from "../core/test/fixtures/bd-show-minted.json.ts";
 import statusesFixture from "../core/test/fixtures/bd-statuses.json.ts";
 import { PANE_ID, PLUGIN_NAME } from "./register.ts";
+import { test } from "./tests/kit.ts";
 import {
   CWD,
   exit,

@@ -1,9 +1,10 @@
 import type { RenderPropsOf } from "claude-code";
 import type { Engine } from "claude-code/testing";
-import { describe, expect, test } from "claude-code/testing";
+import { describe, expect } from "claude-code/testing";
 
 import { SHORT_HELP_TEXT } from "./pane.ts";
 import { PANE_ID, PLUGIN_NAME } from "./register.ts";
+import { test } from "./tests/kit.ts";
 import { overflows } from "./tests/width.ts";
 import {
   BAND_PROPS,

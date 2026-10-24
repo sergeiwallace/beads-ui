@@ -1,9 +1,10 @@
 import type { On } from "claude-code";
 import type { Engine } from "claude-code/testing";
-import { describe, expect, test } from "claude-code/testing";
+import { describe, expect } from "claude-code/testing";
 import { BEAT_MS } from "../core/src/index.ts";
 import { SCOPE_KEY, SPRINT_PLANNED_TEXT } from "./pane.ts";
 import { PANE_ID, PLUGIN_NAME } from "./register.ts";
+import { test } from "./tests/kit.ts";
 import {
   BAND_PROPS,
   CWD,

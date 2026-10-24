@@ -8,7 +8,7 @@ import { BeadsPane, PANE_ID, type TasksRegion } from "./pane.ts";
 import { TASKS_CLIENT_KEY } from "./panel.ts";
 import { StoreResolver } from "./store.ts";
 import { readStream } from "./stream.ts";
-import { BandTally } from "./tally.ts";
+import { BandTally, EditSync } from "./tally.ts";
 
 export const PLUGIN_NAME = "beads-ui";
 export const COMMAND_NAME = "show-beads-ui";
@@ -26,8 +26,8 @@ const COMMAND_SPECS = [
 ] as const;
 
 /**
- * Registers `/show-beads-ui` and `/bu`, the pane they toggle, its delete confirmation and the band above
- * the prompt. Every `$` call of the plugin sits in this file; the helpers get a Host of plain
+ * Registers `/show-beads-ui` and `/bu`, the pane they toggle, its delete confirmation, the band above
+ * the prompt and the publish after each edit (T-2B.6). Every `$` call of the plugin sits in this file; the helpers get a Host of plain
  * closures, never `$`.
  *
  * @param on the engine's registrar
@@ -37,12 +37,20 @@ export function register(on: On) {
   const bandSettings = new BandSettingsPanel(stores);
   const pane = new BeadsPane(stores, bandSettings);
   const tally = new BandTally(stores, bandSettings);
+  const sync = new EditSync(stores);
+  tally.sync = sync.state;
+  sync.onChange = () => tally.syncChanged();
   bandSettings.onChange = () => void tally.settingsChanged();
-  pane.onWrite = () => tally.afterWrite();
+  // Every write the pane or the confirmation makes lands in the store the pane reads.
+  const wrote = () => {
+    tally.afterWrite();
+    sync.wrote(pane.storePath());
+  };
+  pane.onWrite = wrote;
   const confirm = new DeleteConfirm(
     (text, undo) => {
       pane.afterConfirm(text, undo);
-      tally.afterWrite();
+      wrote();
     },
     () => void pane.resume(),
     () => pane.storePath(),
@@ -86,6 +94,8 @@ export function register(on: On) {
       }),
       invalidate: () => $.ui.invalidate("ui.render"),
       toast: (text) => $.ui.toast(text),
+      notify: (text) => $.ui.notify(text),
+      submit: (text) => $.prompt.submit({ text }),
       openPane: (args) => $.ui.open(args),
       closePane: (id) => $.ui.close({ id }),
       focus: (requestId, key) => $.ui.focus({ requestId, key }),
@@ -96,6 +106,7 @@ export function register(on: On) {
     await bandSettings.bind(host);
     await pane.bind(host);
     await tally.bind(host);
+    sync.bind(host);
 
     return next(e);
   });
@@ -105,6 +116,13 @@ export function register(on: On) {
 
     return {};
   }).catch(() => ({ text: OPEN_FAILED_TEXT }));
+
+  // A turn the session refused or dropped is sent again once a turn ends (T-2B.6).
+  on("turn.complete", ($, e, next) => {
+    sync.turnComplete((text) => $.prompt.submit({ text }));
+
+    return next(e);
+  });
 
   on("ui.close", { id: ["beads", "beads-confirm"] }, async (_$, e, next) => {
     const result = await next(e);

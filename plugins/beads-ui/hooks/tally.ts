@@ -11,17 +11,23 @@ import {
   bandTotal,
   clockStamp,
   type FileLease,
+  failureOf,
   type HostSnapshot,
   LEASE_FILE,
   LEASE_KEY,
   leaseOf,
+  type PendingSubmit,
   parseFileLease,
   parseSnapshot,
   type ReadAnswer,
   refresherRunning,
+  resolveSync,
   SESSIONS_DIR,
   SNAPSHOT_FILE,
   type StoreSnapshot,
+  type SyncRun,
+  type SyncSettings,
+  SyncState,
   sessionFileName,
   snapshotLive,
   stateDirOf,
@@ -29,6 +35,7 @@ import {
   storeReads,
   storeSnapshotOf,
   supervise,
+  syncArgv,
   WAKE_DIR,
   wakeFileName,
   wakeText,
@@ -89,6 +96,10 @@ export class BandTally {
   /** When this session last wrote, until the band has drawn a read of its store made after. */
   private wroteAt: number | undefined;
   private rechecks: Timer[] = [];
+  /** The settings the band last drew with, for a redraw the publishing state asks for. */
+  private drawnWith: BandSettings | undefined;
+  /** The session's publishing state (T-2B.6): the unpublished count and the failure mark. */
+  sync: SyncState | undefined;
 
   /**
    * @param stores the session's store resolution, shared with the pane (D-24)
@@ -260,7 +271,15 @@ export class BandTally {
     host.invalidate();
   }
 
+  /** The unpublished count or the failure mark changed: redraw from the counts held. */
+  syncChanged(): void {
+    if (this.drawnWith === undefined) return;
+    this.draw(this.drawnWith);
+    this.host?.invalidate();
+  }
+
   private draw(settings: BandSettings): void {
+    this.drawnWith = settings;
     const last = this.last;
     if (last === undefined) {
       this.lines = [];
@@ -272,12 +291,18 @@ export class BandTally {
       return;
     }
     const readAt = clockStamp(last.readAt, new Date(last.readAt).getTimezoneOffset());
+    // The session's own edits: on its own line, never the firstmate's totals over every owner.
+    const own = {
+      unpublished: this.sync?.unpublished ?? 0,
+      syncFailed: this.sync?.failed ?? false,
+    };
     this.lines = last.reads.map((read, i) =>
       bandLine(read, totals[i] ?? { counts: EMPTY, answered: 0, partial: true }, {
         settings,
         direct: last.source === "direct",
         readAt,
         width: Number.POSITIVE_INFINITY,
+        ...(read.key === "all" ? {} : own),
       }),
     );
   }
@@ -436,3 +461,122 @@ const samePath = (a: string, b: string) => a.replace(/\/+$/, "") === b.replace(/
 const unique = (stores: readonly BandStore[]): BandStore[] => [
   ...new Map(stores.map((store) => [store.path, store])).values(),
 ];
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const messageOf = (reason: unknown): string =>
+  reason instanceof Error ? reason.message : String(reason);
+
+/**
+ * Edits that publish themselves (D-33, T-2B.6). After a write the pane or the confirmation made,
+ * and `sync.quiet_seconds` (10) with no other, it runs `sync.command` once for the store written,
+ * as an argument list with no shell, one publish at a time. Exit 0 toasts `synced`. A failure
+ * sends a terminal notification (a toast when none is sent) and starts a turn in the session
+ * from core's template, unless the same store, step and exit code failed within 10 minutes; a
+ * refused or dropped turn is sent again from `turn.complete`, at most 3 times. With no
+ * `sync.command` in beads-ui.toml, read at each call, it does nothing.
+ */
+export class EditSync {
+  host: Host | undefined;
+  readonly state = new SyncState();
+  /** The unpublished count or the failure mark changed: the band redraws. */
+  onChange: (() => void) | undefined;
+  private readonly timers = new Map<string, Timer>();
+
+  constructor(private readonly stores: StoreResolver) {}
+
+  bind(host: Host): void {
+    this.host = host;
+  }
+
+  private async settings(): Promise<SyncSettings | undefined> {
+    const { config } = await this.stores.resolve();
+    return resolveSync(config.text).settings;
+  }
+
+  /** A write to the store at `store` succeeded. */
+  wrote(store: string): void {
+    void this.schedule(store).catch(() => undefined);
+  }
+
+  private async schedule(store: string): Promise<void> {
+    const host = this.host;
+    if (host === undefined || store === "") return;
+    const settings = await this.settings();
+    if (settings === undefined) return;
+    const now = await host.now();
+    const quietMs = settings.quietSeconds * 1000;
+    this.state.wrote(store, now, quietMs);
+    this.timers.get(store)?.cancel();
+    this.timers.set(
+      store,
+      host.after(quietMs, () => {
+        this.timers.delete(store);
+        void this.pump().catch(() => undefined);
+      }),
+    );
+    this.onChange?.();
+  }
+
+  /** Runs the publish now due, if no other is running; then the next one due. */
+  private async pump(): Promise<void> {
+    const host = this.host;
+    if (host === undefined) return;
+    const now = await host.now();
+    const store = this.state.next(now);
+    if (store === undefined) return;
+    const settings = await this.settings().catch(() => undefined);
+    if (settings === undefined) {
+      this.state.forget(store);
+      this.onChange?.();
+      return this.pump();
+    }
+    const run: SyncRun = await host
+      .runIn(store, syncArgv(settings.command, store), settings.timeoutSeconds * 1000)
+      .then(
+        (ran): SyncRun =>
+          typeof ran.exitCode === "number"
+            ? { exitCode: ran.exitCode, stdout: ran.stdout, stderr: ran.stderr }
+            : { error: "it was ended by a signal" },
+        (reason: unknown): SyncRun => ({ error: messageOf(reason) }),
+      );
+    const ended = await host.now().catch(() => now);
+    const finished = this.state.finished(store, failureOf(store, settings.command, run), ended);
+    const toast = (text: string) => {
+      try {
+        host.toast(text);
+      } catch {
+        // The engine refused the call (the session is ending).
+      }
+    };
+    if (finished.kind === "synced") {
+      toast(finished.text);
+    } else {
+      const sent = await host.notify(finished.notify).then(
+        (answer) => isRecord(answer) && answer.isSent === true,
+        () => false,
+      );
+      if (!sent) toast(finished.notify);
+      if (finished.submit !== undefined) this.send(finished.submit, host.submit);
+    }
+    this.onChange?.();
+    return this.pump();
+  }
+
+  private send(submit: PendingSubmit, via: (text: string) => Promise<unknown>): void {
+    void via(submit.text)
+      .then(
+        (answer) => isRecord(answer) && answer.drop !== undefined,
+        () => true,
+      )
+      .then((dropped) => {
+        if (this.state.answered(submit.key, dropped) === "given-up") this.onChange?.();
+      });
+  }
+
+  /** A turn ended: each refused or dropped submit goes again, through that hook's own submit. */
+  turnComplete(via: (text: string) => Promise<unknown>): void {
+    for (const submit of this.state.retries()) this.send(submit, via);
+  }
+}

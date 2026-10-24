@@ -4,6 +4,7 @@
       "hooks": [
         "session.start",
         "command.run{command=show-beads-ui|bu}",
+        "turn.complete",
         "ui.close{id=beads|beads-confirm}",
         "ui.fault{requestId=beads}",
         "ui.focus{requestId=beads}",
@@ -21,11 +22,13 @@
         "$.fs.write",
         "$.process.run",
         "$.process.spawn",
+        "$.prompt.submit",
         "$.store.get",
         "$.store.set",
         "$.ui.close",
         "$.ui.focus",
         "$.ui.invalidate",
+        "$.ui.notify",
         "$.ui.open",
         "$.ui.resolve",
         "$.ui.toast"

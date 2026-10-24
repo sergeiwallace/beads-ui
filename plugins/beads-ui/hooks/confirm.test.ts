@@ -1,11 +1,12 @@
 import type { On } from "claude-code";
 import type { Engine } from "claude-code/testing";
-import { describe, expect, test } from "claude-code/testing";
+import { describe, expect } from "claude-code/testing";
 
 import cascadePreview from "../core/test/fixtures/bd-delete-cascade-dry-run.json.ts";
 import leafText from "../core/test/fixtures/bd-delete-dry-run-leaf.txt.ts";
 import listText from "../core/test/fixtures/bd-list-all-brief.json.ts";
 import { CONFIRM_ID, PANE_ID, PLUGIN_NAME } from "./register.ts";
+import { test } from "./tests/kit.ts";
 import {
   DEPENDENTS_STDERR,
   exit,
