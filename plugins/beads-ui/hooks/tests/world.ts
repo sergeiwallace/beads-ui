@@ -39,7 +39,34 @@ export const DEPENDENTS_STDERR =
 export const keyOf = (argv: readonly string[]): string =>
   argv.filter((arg) => arg !== "--json").join(" ");
 
+/**
+ * `bd where --json` as bd 1.3.1 answers it (measured 2026-10-24): the store's `.beads` directory,
+ * exit 0, in a directory with a store; exit 1 and `no_beads_directory` on stdout without one.
+ */
+export const whereOf = (repo: string): ProcessRunResult =>
+  ok(
+    `${JSON.stringify({ database_path: `${repo}/.beads/dolt`, path: `${repo}/.beads`, schema_version: 1 }, null, 2)}\n`,
+  );
+export const NO_STORE_WHERE: ProcessRunResult = exit(
+  1,
+  "",
+  `${JSON.stringify(
+    {
+      error: "no_beads_directory",
+      hint: "check BEADS_DIR/worktree setup, or run 'bd init' to create a new database",
+      message: "No active beads workspace found.",
+      schema_version: 1,
+    },
+    null,
+    2,
+  )}\n`,
+);
+/** bd's refusal of a read in a directory with no store, as the pane showed it (ylx A004). */
+export const NO_STORE_STDERR =
+  "Error: no beads database found\nHint: run 'bd where' to inspect the resolved workspace, or 'bd init' to create a new database\n      or set BEADS_DIR to point to your .beads directory\n";
+
 const READS: Readonly<Record<string, ProcessRunResult>> = {
+  "bd where": whereOf(CWD),
   "bd statuses": ok(statuses),
   "bd list --all --brief --limit 0": ok(list),
   "bd ready --brief --limit 0": ok(ready),
@@ -103,6 +130,8 @@ export interface WorldOptions {
 
 export function world(on: On, options: WorldOptions = {}) {
   const runs: string[][] = [];
+  /** The directory each of `runs` ran in, by index. */
+  const cwds: (string | undefined)[] = [];
   const registered: string[] = [];
   const opened: Args<"ui.open">[] = [];
   const closed: string[] = [];
@@ -135,6 +164,7 @@ export function world(on: On, options: WorldOptions = {}) {
   });
   const answerFor = (argv: readonly string[], cwd: string | undefined) => {
     runs.push([...argv]);
+    cwds.push(cwd);
     const key = keyOf(argv);
     return (
       options.script?.(key, argv, cwd) ??
@@ -183,7 +213,7 @@ export function world(on: On, options: WorldOptions = {}) {
   on("ui.render", { component: "AbovePrompt" }, () => ({ type: "Box", children: [] }));
 
   const keys = () => runs.map(keyOf);
-  return { runs, keys, registered, opened, closed, toasts, focused, clock, store };
+  return { runs, cwds, keys, registered, opened, closed, toasts, focused, clock, store };
 }
 
 export const PANE_PROPS: RenderPropsOf["Pane"] = {
