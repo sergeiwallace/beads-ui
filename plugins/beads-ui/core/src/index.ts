@@ -161,7 +161,7 @@ export {
 } from "./parsers.ts";
 export type { QuickAdd, QuickAddError } from "./quickadd.ts";
 export { createArgv, parseQuickAdd } from "./quickadd.ts";
-export type { StoreFacts, StoreResolution, StoreSource } from "./resolve.ts";
+export type { BdWhere, StoreFacts, StoreResolution, StoreSource } from "./resolve.ts";
 export {
   DIRECTORY_STORES_TABLE,
   directoryStores,
@@ -293,6 +293,7 @@ export {
   parseStoreInventory,
   STORE_INVENTORY_FILE,
   SYNC_FAILED_MARK,
+  sameStore,
 } from "./views/band.ts";
 export type {
   BoardEvent,

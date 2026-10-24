@@ -8,6 +8,7 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -135,7 +136,7 @@ function register(
   extra: Partial<{
     seenAt: number;
     windows: string[];
-    boards: { name: string; path: string }[];
+    boards: { name: string; path: string; prefix?: string }[];
   }> = {},
 ) {
   const entry = { id, seenAt: Date.now(), windows: ["24h"], stores: [], ...extra };
@@ -396,6 +397,40 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     expect(written.stores.find((store: { name: string }) => store.name === "AIH").ok).toBe(true);
   });
 
+  it("should count each database once when sessions reach it through a linked worktree or a symlinked path", async () => {
+    const h = host(STORES);
+    // A linked worktree of AIH: its own `.beads` directory, the same database (prefix AIH).
+    const worktree = join(h.root, "AIH", ".worktrees", "aih-ec2-1");
+    mkdirSync(worktree, { recursive: true });
+    writeFileSync(join(worktree, "issues.json"), JSON.stringify(STORES.AIH));
+    // The main tree through a symlinked parent, as `~/projects` links to `/data/projects`, from a
+    // session whose bd named no prefix.
+    const linked = join(h.root, "linked");
+    symlinkSync(h.root, linked);
+    writeFileSync(
+      join(h.state, "sessions", "aih-ec2-1.json"),
+      JSON.stringify({
+        id: "aih-ec2-1",
+        seenAt: Date.now(),
+        windows: ["24h"],
+        stores: [
+          { name: "aih-ec2-1", path: worktree, prefix: "AIH" },
+          { name: "AIH", path: join(linked, "AIH") },
+        ],
+      }),
+    );
+
+    launch(h, "token-dedupe01");
+    const written = await until(() => snapshot(h));
+
+    expect(written.stores.map((store: { path: string }) => store.path).sort()).toEqual(
+      [join(h.root, "AIH"), join(h.root, "BU")].sort(),
+    );
+    expect(new Set(calls(h).map((call) => call.cwd))).toEqual(
+      new Set([join(h.root, "AIH"), join(h.root, "BU")]),
+    );
+  });
+
   it("should beat once a minute by default, no sooner", async () => {
     const h = host(STORES);
     register(h, "aih-ec2-3");
@@ -564,6 +599,45 @@ describe("the host refresher", { timeout: 30_000 }, () => {
       expect(existsSync(join(h.state, "wake", "_marker.json"))).toBe(false);
       // BU was not woken: its counts are still the first beat's.
       expect(calls(h).filter((call) => call.cwd === join(h.root, "BU"))).toHaveLength(4);
+    });
+
+    it("should read the main tree's counts and the worktree's board again on a wake marker from a linked worktree", async () => {
+      const h = host(STORES);
+      const tree = join(h.root, "AIH", ".worktrees", "aih-ec2-3");
+      mkdirSync(tree, { recursive: true });
+      writeFileSync(join(tree, "issues.json"), JSON.stringify(STORES.AIH));
+      register(h, "aih-ec2-3", { boards: [{ name: "aih-ec2-3", path: tree, prefix: "AIH" }] });
+      launch(h, "token-wakeup22", ["--renew-ms", "100", "--idle-ms", "60000"]);
+      await until(() =>
+        snapshot(h)?.boards?.find((entry: { path: string }) => entry.path === tree),
+      );
+
+      const more = JSON.stringify([
+        ...(STORES.AIH ?? []),
+        { status: "open", assignee: "aih-ec2-3" },
+      ]);
+      for (const dir of [join(h.root, "AIH"), tree]) {
+        writeFileSync(join(dir, "issues.json"), more);
+        writeFileSync(join(dir, "head"), "head-2");
+      }
+      writeFileSync(
+        join(h.state, "wake", "_marker.json"),
+        JSON.stringify({ path: tree, at: Date.now() }),
+      );
+      await until(() =>
+        snapshot(h)?.boards?.find(
+          (entry: { path: string; head: string }) => entry.path === tree && entry.head === "head-2",
+        ),
+      );
+      const aih = await until(() => {
+        const store = snapshot(h).stores.find(
+          (one: { path: string }) => one.path === join(h.root, "AIH"),
+        );
+        return store?.statuses?.open?.["aih-ec2-3"] === 2 ? store : undefined;
+      });
+
+      expect(aih.statuses.open).toEqual({ "aih-ec2-3": 2 });
+      expect(snapshot(h).stores.map((store: { path: string }) => store.path)).not.toContain(tree);
     });
   });
 

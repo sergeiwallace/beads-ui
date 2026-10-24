@@ -1,5 +1,6 @@
 import {
   type BandStore,
+  type BdWhere,
   configCandidates,
   directoryStores,
   parseBdWhere,
@@ -37,7 +38,7 @@ export class StoreResolver {
   private host: Host | undefined;
   private session: string | undefined;
   private env: { xdgConfigHome?: string; home?: string } = {};
-  private where: Promise<boolean | undefined> | undefined;
+  private where: Promise<BdWhere | undefined> | undefined;
 
   async bind(host: Host): Promise<void> {
     this.host = host;
@@ -92,12 +93,14 @@ export class StoreResolver {
         ? undefined
         : `${this.env.home.replace(/\/+$/, "")}/${STORE_INVENTORY_FILE}`;
     const inventory = await this.inventory(inventoryPath);
+    const where = await this.whereCwd();
     const resolution = resolveStore({
       cwd: host.cwd,
       config: { ...config, checked },
       fixFile: checked[checked.length - 1] ?? checked[0] ?? "",
       home: this.env.home,
-      cwdHasStore: await this.cwdHasStore(),
+      cwdHasStore: where?.hasStore,
+      cwdPrefix: where?.prefix,
       session: this.session,
       inventory,
       inventoryPath,
@@ -116,7 +119,7 @@ export class StoreResolver {
     return parseStoreInventory(text);
   }
 
-  private cwdHasStore(): Promise<boolean | undefined> {
+  private whereCwd(): Promise<BdWhere | undefined> {
     const host = this.host;
     if (host === undefined) return Promise.resolve(undefined);
     if (this.where === undefined) {

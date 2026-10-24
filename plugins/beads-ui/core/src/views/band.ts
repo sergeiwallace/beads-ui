@@ -9,6 +9,11 @@ export interface BandStore {
   path: string;
   /** True when the store was last seen in step with the remote both hosts of the pair pull. */
   synced: boolean;
+  /**
+   * The store's database prefix, its identity on the shared server: the inventory's key, or what
+   * `bd where` named. A linked worktree has its own `.beads` directory and the same prefix.
+   */
+  prefix?: string;
 }
 
 /**
@@ -43,7 +48,7 @@ export function parseStoreInventory(text: string): Result<BandStore[], string> {
     }
     const attestation = isRecord(entry.attestation) ? entry.attestation : {};
     const synced = attestation.verdict === "shared" && attestation.sync_state === "converged";
-    stores.push({ name, path: entry.repo, synced });
+    stores.push({ name, path: entry.repo, synced, prefix: name });
   }
   for (const entry of Array.isArray(json.skipped) ? json.skipped : []) {
     if (isRecord(entry) && typeof entry.repo === "string" && entry.repo !== "") {
@@ -131,9 +136,21 @@ export interface BandRead {
 const samePath = (a: string, b: string) => a.replace(/\/+$/, "") === b.replace(/\/+$/, "");
 
 /**
+ * Whether two stores are one database: the same prefix, or, where either has none, the same
+ * directory. A linked worktree and its main tree share a prefix and not a directory.
+ */
+export const sameStore = (
+  a: Pick<BandStore, "path" | "prefix">,
+  b: Pick<BandStore, "path" | "prefix">,
+): boolean =>
+  a.prefix !== undefined && b.prefix !== undefined
+    ? a.prefix === b.prefix
+    : samePath(a.path, b.path);
+
+/**
  * The stores a session sums: the inventory's, plus the session's own store when the inventory
- * does not list it (a `[directory_stores]` mapping, T-1B.1); its own store alone when there is
- * no inventory.
+ * holds no store of its database (a `[directory_stores]` mapping, T-1B.1); its own store alone
+ * when there is no inventory. A session in a linked worktree sums its main tree's entry.
  */
 export function bandStores(
   here: BandStore | undefined,
@@ -141,7 +158,7 @@ export function bandStores(
 ): BandStore[] {
   if (!inventory.ok) return here === undefined ? [] : [here];
   const listed = inventory.value;
-  return here === undefined || listed.some((store) => samePath(store.path, here.path))
+  return here === undefined || listed.some((store) => sameStore(store, here))
     ? listed
     : [...listed, here];
 }

@@ -28,6 +28,7 @@ import {
   type SyncRun,
   type SyncSettings,
   SyncState,
+  sameStore,
   sessionFileName,
   snapshotLive,
   stateDirOf,
@@ -93,6 +94,8 @@ export class BandTally {
   private queuedFinal = false;
   /** The store this session's pane reads, from the last refresh. */
   private here: BandStore | undefined;
+  /** The band's entry for `here`'s database: the main tree's, for a session in a linked worktree. */
+  private counted: BandStore | undefined;
   /** When this session last wrote, until the band has drawn a read of its store made after. */
   private wroteAt: number | undefined;
   private rechecks: Timer[] = [];
@@ -138,13 +141,19 @@ export class BandTally {
       const { resolution, inventory, config } = await this.stores.resolve();
       const settings = await this.settings.current(config.text);
       const here: BandStore | undefined = resolution.ok
-        ? { name: storeName(resolution.path), path: resolution.path, synced: false }
+        ? {
+            name: storeName(resolution.path),
+            path: resolution.path,
+            synced: false,
+            ...(resolution.prefix === undefined ? {} : { prefix: resolution.prefix }),
+          }
         : undefined;
       this.here = here;
       const reads = bandReads({ session: this.stores.sessionName, here, inventory });
       const now = await host.now();
       const dir = await this.stateDir();
       const own = reads.flatMap((read) => read.stores);
+      this.counted = here === undefined ? undefined : own.find((store) => sameStore(store, here));
       if (dir !== undefined && reads.length > 0) {
         await this.register(dir, now, settings, inventory.ok ? inventory.value : [], own, here);
       }
@@ -237,7 +246,7 @@ export class BandTally {
     final: boolean,
   ): Promise<StoreSnapshot[]> {
     const wroteAt = this.wroteAt;
-    const here = this.here;
+    const here = this.counted;
     if (wroteAt === undefined || here === undefined) return stores;
     const i = stores.findIndex((one) => samePath(one.path, here.path));
     if ((stores[i]?.readAt ?? Number.NEGATIVE_INFINITY) >= wroteAt) {
@@ -321,15 +330,15 @@ export class BandTally {
     here: BandStore | undefined,
   ): Promise<void> {
     const id = this.stores.sessionName ?? this.anonId;
-    const extra = own.filter((store) => !listed.some((known) => known.path === store.path));
+    const extra = own.filter((store) => !listed.some((known) => sameStore(known, store)));
+    const named = ({ name, path, prefix }: BandStore) =>
+      prefix === undefined ? { name, path } : { name, path, prefix };
     const entry = {
       id,
       seenAt: now,
       windows: [settings.doneWindow],
-      stores: [...new Map(extra.map((store) => [store.path, store])).values()].map(
-        ({ name, path }) => ({ name, path }),
-      ),
-      boards: here === undefined ? [] : [{ name: here.name, path: here.path }],
+      stores: [...new Map(extra.map((store) => [store.path, store])).values()].map(named),
+      boards: here === undefined ? [] : [named(here)],
     };
     await this.host
       ?.writeFile(`${dir}/${SESSIONS_DIR}/${sessionFileName(id)}`, `${JSON.stringify(entry)}\n`)

@@ -301,6 +301,61 @@ describe("the store a session sums (T-1B.1)", () => {
   });
 });
 
+describe("a store reached through a linked worktree (BU-beads-ui-band-double-dzwp)", () => {
+  const OWN_TREE = `${HARNESS}/.worktrees/aih-ec2-3`;
+  const FM_TREE = `${HARNESS}/.worktrees/aih-ec2-firstmate-1`;
+  /** bd where in a linked worktree: its own `.beads` directory, the main tree's database. */
+  const worktrees: Script = (key, _argv, cwd) =>
+    key === "bd where" && cwd !== undefined && cwd.startsWith(`${HARNESS}/.worktrees/`)
+      ? ok(
+          `${JSON.stringify({ database_path: `${cwd}/.beads/dolt`, path: `${cwd}/.beads`, prefix: "AIH", schema_version: 1 })}\n`,
+        )
+      : undefined;
+  /** Each worktree answers bd with the main tree's issues, as one database does. */
+  const SAME = { ...STORES, [OWN_TREE]: STORES[HARNESS] ?? [], [FM_TREE]: STORES[HARNESS] ?? [] };
+
+  test("should count the main tree's database once in a worktree session's band and register no store of its own", async ($, on) => {
+    const files = { [INVENTORY_PATH]: INVENTORY, [SNAPSHOT]: snapshotOf(SAME) };
+    const w = world(on, named("aih-ec2-3", { refresher: true, files, script: worktrees }));
+    await $.session.start({ ...SESSION, cwd: OWN_TREE });
+    await w.clock.settle();
+
+    expect(await line($, "own")).toBe(OWN);
+    const entry = JSON.parse(w.files.get(`${STATE}/sessions/aih-ec2-3.json`) ?? "{}");
+    expect(entry.stores).toEqual([]);
+  });
+
+  test("should read the main tree's database once when a worktree session reads its own counts", async ($, on) => {
+    const w = world(
+      on,
+      named("aih-ec2-3", {
+        files: { [INVENTORY_PATH]: INVENTORY },
+        script: both(worktrees, countScript(SAME)),
+      }),
+    );
+    await $.session.start({ ...SESSION, cwd: OWN_TREE });
+    await w.clock.settle();
+
+    expect(await line($, "own")).toBe(`${OWN} *`);
+    expect(new Set(w.keys().flatMap((key, i) => (isCount(key) ? [w.cwds[i]] : [])))).toEqual(
+      new Set([CWD, HARNESS]),
+    );
+  });
+
+  test("should count the main tree's database once in the firstmate's [bd][all] totals and [fm] line from a worktree", async ($, on) => {
+    const files = { [INVENTORY_PATH]: INVENTORY, [SNAPSHOT]: snapshotOf(SAME) };
+    const w = world(
+      on,
+      named("aih-ec2-firstmate-1", { refresher: true, files, script: worktrees }),
+    );
+    await $.session.start({ ...SESSION, cwd: FM_TREE });
+    await w.clock.settle();
+
+    expect(await line($, "all")).toBe(ALL);
+    expect(await line($, "own")).toBe(FM);
+  });
+});
+
 describe("one refresher for the host (T-1B.4)", () => {
   const STALE = {
     [INVENTORY_PATH]: INVENTORY,

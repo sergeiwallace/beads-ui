@@ -25,6 +25,7 @@ import {
   openSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   renameSync,
   statSync,
   unlinkSync,
@@ -320,7 +321,7 @@ async function countStore(store, windows, holds) {
     if (!holds()) return undefined;
     answers.push({ key: read.key, ...(await count(store, read.argv)) });
   }
-  return storeSnapshotOf(store, answers, Date.now());
+  return storeSnapshotOf({ name: store.name, path: store.path }, answers, Date.now());
 }
 
 const parseJson = (text) => {
@@ -409,18 +410,44 @@ function liveSessions(dir, now, isHolder) {
   return live;
 }
 
-/** Every inventory store, then each store a live session reads that the inventory lacks. */
+/** A directory with its symlinks resolved; the path as given when it cannot be resolved. */
+const realOf = (path) => {
+  try {
+    return realpathSync(path);
+  } catch {
+    return path.replace(/\/+$/, "");
+  }
+};
+
+/**
+ * Whether two stores are one database: the same prefix, the database's name on the shared
+ * server, or, where either names none, the same directory once symlinks are resolved. A linked
+ * worktree has its own `.beads` directory and its main tree's prefix.
+ */
+const sameDatabase = (a, b) =>
+  a.prefix !== undefined && b.prefix !== undefined
+    ? a.prefix === b.prefix
+    : realOf(a.path) === realOf(b.path);
+
+/**
+ * Every inventory store, then each store a live session reads whose database neither the
+ * inventory nor an earlier session store holds: each database is counted once, by whichever
+ * path a session reaches it.
+ */
 function storesToRead(home, sessions) {
   const inventory = parseStoreInventory(readText(join(home, STORE_INVENTORY_FILE)) ?? "");
-  const stores = inventory.ok ? inventory.value.map(({ name, path }) => ({ name, path })) : [];
-  const trim = (path) => path.replace(/\/+$/, "");
+  const stores = inventory.ok
+    ? inventory.value.map(({ name, path, prefix }) => withPrefix({ name, path }, prefix))
+    : [];
   for (const session of sessions) {
     for (const store of session.stores) {
-      if (!stores.some((known) => trim(known.path) === trim(store.path))) stores.push(store);
+      if (!stores.some((known) => sameDatabase(known, store))) stores.push(store);
     }
   }
   return stores;
 }
+
+const withPrefix = (store, prefix) => (prefix === undefined ? store : { ...store, prefix });
 
 async function run(options) {
   const dir = options["state-dir"];
@@ -572,12 +599,23 @@ async function run(options) {
         if (marker !== undefined) paths.add(marker.path.replace(/\/+$/, ""));
       }
       for (const path of paths) {
+        // A session in a linked worktree names its own directory: its counts are its main
+        // tree's entry, and its board its own.
+        const board = boardList.find((known) => samePath(known.path, path));
         const store =
           storeList.find((known) => samePath(known.path, path)) ??
-          boardList.find((known) => samePath(known.path, path));
-        if (store === undefined) continue;
-        const withBoard = boardList.some((board) => samePath(board.path, path));
-        if (!(await readStore(store, withBoard))) return quit();
+          (board === undefined ? undefined : storeList.find((known) => sameDatabase(known, board)));
+        if (store !== undefined) {
+          const withBoard = boardList.some((known) => samePath(known.path, store.path));
+          if (!(await readStore(store, withBoard))) return quit();
+        }
+        if (board !== undefined && (store === undefined || !samePath(store.path, board.path))) {
+          const startedAt = Date.now();
+          if (!holds()) return quit();
+          const entry = await readBoard(board, boards.get(board.path)?.value, dir, token, holds);
+          if (entry === undefined) return quit();
+          keepNewer(boards, board.path, entry, startedAt);
+        }
       }
       if (!publish()) return quit();
     } finally {
