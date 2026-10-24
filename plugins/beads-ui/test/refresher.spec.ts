@@ -185,6 +185,11 @@ const readJson = (path: string) => {
 };
 const snapshot = (h: Host) => readJson(join(h.state, "counts.json"));
 const lease = (h: Host) => readJson(join(h.state, "lease.json"));
+/** The snapshot a session takes as current: the one of the token `lease.json` names. */
+const current = (h: Host) => {
+  const token = lease(h)?.token;
+  return typeof token === "string" ? readJson(join(h.state, `counts-${token}.json`)) : undefined;
+};
 const calls = (h: Host) =>
   readFileSync(h.log, "utf8")
     .split("\n")
@@ -325,6 +330,32 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     expect(lease(h)?.token).toBe("token-newhold1");
     expect(lease(h)?.pid).toBe(held.pid);
     expect(existsSync(join(h.state, "lease-token-ousted11.json"))).toBe(false);
+  });
+
+  it("should leave the new holder's snapshot as the current one when it was stalled between its lease check and its write", async () => {
+    const h = host(STORES);
+    register(h, "aih-ec2-3");
+    // The first refresher stalls after the lease check before each snapshot write, its renewals
+    // with it, for longer than the lease's staleness (1.5 s here).
+    const ousted = launch(h, "token-stalled1", [...FAST, "--pause-ms", "6000"]);
+    await until(() =>
+      lease(h)?.token === "token-stalled1" && Date.now() - lease(h).beatAt > 1_800
+        ? true
+        : undefined,
+    );
+
+    launch(h, "token-holder01");
+    await until(() =>
+      lease(h)?.token === "token-holder01" && snapshot(h)?.token === "token-holder01"
+        ? true
+        : undefined,
+    );
+    // The stalled refresher wakes, writes and finds itself ousted.
+    await until(() => (alive(ousted) ? undefined : true));
+
+    expect(lease(h)?.token).toBe("token-holder01");
+    expect(snapshot(h)?.token).toBe("token-holder01");
+    expect(current(h)?.token).toBe("token-holder01");
   });
 
   it("should leave a newer holder's lease alone when it is stopped on purpose after losing it", async () => {
@@ -469,7 +500,12 @@ describe("the host refresher", { timeout: 30_000 }, () => {
   describe("board snapshots (T-1B.4, T-1B.8)", () => {
     const boardOf = (h: Host, store: string) =>
       readJson(
-        join(h.state, "boards", `${join(h.root, store).replace(/[^A-Za-z0-9._-]/g, "_")}.json`),
+        join(
+          h.state,
+          "boards",
+          String(snapshot(h)?.token),
+          `${join(h.root, store).replace(/[^A-Za-z0-9._-]/g, "_")}.json`,
+        ),
       );
     const entryOf = (h: Host, store: string) =>
       snapshot(h)?.boards?.find((entry: { path: string }) => entry.path === join(h.root, store));
@@ -554,6 +590,29 @@ describe("the host refresher", { timeout: 30_000 }, () => {
       expect(moved).toBe(true);
       expect(lists(h)).toHaveLength(4);
       expect(boardOf(h, "AIH").head).toBe("head-2");
+    });
+
+    it("should take over the last refresher's board without reading the store again while its head has not moved, then drop the last one's files", async () => {
+      const h = host(MANY);
+      register(h, "aih-ec2-3", { boards: [{ name: "AIH", path: join(h.root, "AIH") }] });
+      const first = launch(h, "token-boardsA1", [...FAST.slice(0, 6), "--idle-ms", "60000"]);
+      await until(() => entryOf(h, "AIH"));
+      process.kill(first, "SIGTERM");
+      await until(() => (alive(first) ? undefined : true));
+      expect(lists(h)).toHaveLength(2);
+
+      launch(h, "token-boardsB1", [...FAST.slice(0, 6), "--idle-ms", "60000"]);
+      await until(() => (snapshot(h)?.token === "token-boardsB1" ? entryOf(h, "AIH") : undefined));
+
+      expect(lists(h)).toHaveLength(2);
+      expect(boardOf(h, "AIH")?.head).toBe("head-1");
+      await until(() =>
+        existsSync(join(h.state, "counts-token-boardsA1.json")) ||
+        existsSync(join(h.state, "boards", "token-boardsA1"))
+          ? undefined
+          : true,
+      );
+      expect(current(h)?.token).toBe("token-boardsB1");
     });
 
     it("should write no board and name the store when its snapshot would pass 4 MiB", async () => {

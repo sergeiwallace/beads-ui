@@ -13,6 +13,7 @@ import {
   type FileLease,
   failureOf,
   type HostSnapshot,
+  isRefresherToken,
   LEASE_FILE,
   LEASE_KEY,
   leaseOf,
@@ -30,6 +31,7 @@ import {
   SyncState,
   sameStore,
   sessionFileName,
+  snapshotFileName,
   snapshotLive,
   stateDirOf,
   storeName,
@@ -157,8 +159,8 @@ export class BandTally {
       if (dir !== undefined && reads.length > 0) {
         await this.register(dir, now, settings, inventory.ok ? inventory.value : [], own, here);
       }
-      const snapshot = dir === undefined ? undefined : await this.readSnapshot(dir);
       const fileLease = dir === undefined ? undefined : await this.readLease(dir);
+      const snapshot = dir === undefined ? undefined : await this.readSnapshot(dir, fileLease);
       const live = snapshotLive(snapshot, now);
       const running = refresherRunning(fileLease, now);
       let source: BandSource = "snapshot";
@@ -345,11 +347,23 @@ export class BandTally {
       .catch(() => undefined);
   }
 
-  private async readSnapshot(dir: string): Promise<HostSnapshot | undefined> {
-    const text = await this.host?.readFile(`${dir}/${SNAPSHOT_FILE}`).catch(() => undefined);
+  /**
+   * The snapshot of the refresher `lease.json` names, written under its token: never another
+   * token's, so a refresher ousted while it wrote cannot pass for the holder. With no lease (the
+   * refresher stopped and a start is under way), the last one published, `counts.json`.
+   */
+  private async readSnapshot(
+    dir: string,
+    lease: FileLease | undefined,
+  ): Promise<HostSnapshot | undefined> {
+    const token = lease?.token;
+    if (token !== undefined && !isRefresherToken(token)) return undefined;
+    const file = token === undefined ? SNAPSHOT_FILE : snapshotFileName(token);
+    const text = await this.host?.readFile(`${dir}/${file}`).catch(() => undefined);
     if (text === undefined) return undefined;
     const parsed = parseSnapshot(text);
-    return parsed.ok ? parsed.value : undefined;
+    if (!parsed.ok || !isRefresherToken(parsed.value.token)) return undefined;
+    return token === undefined || parsed.value.token === token ? parsed.value : undefined;
   }
 
   /** The refresher's file lease, renewed every 20 s while it runs: its liveness (T-1B.4). */

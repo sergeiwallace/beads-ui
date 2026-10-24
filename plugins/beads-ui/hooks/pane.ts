@@ -6,13 +6,13 @@ import {
   BACKLOG_PAGE_SIZE,
   type BacklogView,
   BOARD_PAGE_LIMIT,
-  BOARDS_DIR,
   type BoardEntry,
   type BoardEvent,
   type BoardState,
   type BoardView,
   backlogView,
   boardFileName,
+  boardPath,
   boardReadArgvs,
   boardView,
   buttonWidth,
@@ -42,6 +42,7 @@ import {
   isFirstmate,
   isPanelMode,
   isPanelView,
+  isRefresherToken,
   isShort,
   LEASE_FILE,
   MAX_SHOWN,
@@ -98,6 +99,7 @@ import {
   showArgv,
   showsTasks,
   slugBudgets,
+  snapshotFileName,
   sortLabel,
   stateDirOf,
   statusesArgv,
@@ -671,19 +673,29 @@ export class BeadsPane {
     const dir = await this.stateDir();
     if (host === undefined || dir === undefined || this.store?.ok !== true) return false;
     const path = this.store.path.replace(/\/+$/, "");
-    const [countsText, leaseText, now] = await Promise.all([
-      host.readFile(`${dir}/${SNAPSHOT_FILE}`).catch(() => undefined),
+    const [leaseText, now] = await Promise.all([
       host.readFile(`${dir}/${LEASE_FILE}`).catch(() => undefined),
       host.now().catch(() => 0),
     ]);
-    const counts = countsText === undefined ? undefined : parseSnapshot(countsText);
-    const entry: BoardEntry | undefined =
-      counts?.ok === true
-        ? counts.value.boards?.find((one) => one.path.replace(/\/+$/, "") === path)
+    const lease = leaseText === undefined ? undefined : parseFileLease(leaseText);
+    // The snapshot of the token the lease names; with no lease, the last one published.
+    const token = lease === undefined ? undefined : lease.token;
+    if (token !== undefined && !isRefresherToken(token)) return false;
+    const countsFile = token === undefined ? SNAPSHOT_FILE : snapshotFileName(token);
+    const countsText = await host.readFile(`${dir}/${countsFile}`).catch(() => undefined);
+    const parsed = countsText === undefined ? undefined : parseSnapshot(countsText);
+    const counts =
+      parsed?.ok === true &&
+      isRefresherToken(parsed.value.token) &&
+      (token === undefined || parsed.value.token === token)
+        ? parsed.value
         : undefined;
+    const entry: BoardEntry | undefined = counts?.boards?.find(
+      (one) => one.path.replace(/\/+$/, "") === path,
+    );
     this.boardSkipped = entry?.ok === false ? entry.error : undefined;
+    if (counts === undefined) return false;
     if (current) {
-      const lease = leaseText === undefined ? undefined : parseFileLease(leaseText);
       if (entry?.ok !== true || !refresherRunning(lease, now)) return false;
       if (now - entry.checkedAt > STALE_MS || entry.readAt < this.wroteAt) return false;
       // The board already draws this head: nothing to read.
@@ -691,7 +703,9 @@ export class BeadsPane {
     }
     if (entry?.ok === false) return false;
     const file = entry?.ok === true ? entry.file : boardFileName(path);
-    const text = await host.readFile(`${dir}/${BOARDS_DIR}/${file}`).catch(() => undefined);
+    const text = await host
+      .readFile(`${dir}/${boardPath(counts.token, file)}`)
+      .catch(() => undefined);
     const board = text === undefined ? undefined : parseBoardSnapshot(text);
     if (board?.ok !== true || board.value.path.replace(/\/+$/, "") !== path) return false;
     const issues = parseIssueRows(board.value.issues);

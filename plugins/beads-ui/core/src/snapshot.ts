@@ -27,8 +27,24 @@ export const LEASE_DEAD_MS = 50_000;
 
 /** The `$.store` key of the lease a session takes before it starts the refresher. */
 export const LEASE_KEY = "refresher-lease";
+/**
+ * The snapshot the lease holder published last, replaced only by a holder that still holds the
+ * lease once its own file is written. A session reads it only when no lease names a refresher,
+ * as for a pane's first paint after the refresher stopped; otherwise it reads the snapshot of
+ * the token `lease.json` names (snapshotFileName).
+ */
 export const SNAPSHOT_FILE = "counts.json";
 export const LEASE_FILE = "lease.json";
+
+/** A refresher's lease token: 8 to 64 letters, digits, `_` or `-`, so it is safe in a file name. */
+export const isRefresherToken = (token: unknown): token is string =>
+  typeof token === "string" && /^[A-Za-z0-9_-]{8,64}$/.test(token);
+
+/**
+ * The snapshot each refresher writes under its own token. Only the refresher holding that token
+ * writes it, so a refresher ousted while it wrote can never replace the holder's snapshot.
+ */
+export const snapshotFileName = (token: string): string => `counts-${token}.json`;
 export const SESSIONS_DIR = "sessions";
 export const SNAPSHOT_SCHEMA = 1;
 /** One board snapshot per store a session's pane reads, in this directory (T-1B.4, T-1B.8). */
@@ -299,6 +315,12 @@ function boardEntryOf(value: unknown): BoardEntry | undefined {
 
 /** The board snapshot file of a store directory: its path, with `/` and other marks as `_`. */
 export const boardFileName = (path: string): string => sessionFileName(trimSlash(path));
+
+/**
+ * Where a board snapshot file lives in the state directory: under the token of the refresher
+ * that wrote it, so a snapshot names only board files its own refresher wrote.
+ */
+export const boardPath = (token: string, file: string): string => `${BOARDS_DIR}/${token}/${file}`;
 
 /** The `bd list` fields the board, the backlog and the Mine view draw; a snapshot keeps only these. */
 export const BOARD_FIELDS = [

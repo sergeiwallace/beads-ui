@@ -17,6 +17,7 @@ import {
   OPEN_LIST,
   onBoard,
   PANE_PROPS,
+  REFRESHER_TOKEN,
   type Script,
   SESSION,
   START_MS,
@@ -31,8 +32,9 @@ import {
 // default and its memory, and the board's bounded read.
 
 const ROWS = JSON.parse(list) as Record<string, unknown>[];
-const BOARD_FILE = `${STATE_DIR}/boards/${boardFileName(CWD)}`;
+const boardFile = (token: string) => `${STATE_DIR}/boards/${token}/${boardFileName(CWD)}`;
 const COUNTS = `${STATE_DIR}/counts.json`;
+const countsOf = (token: string) => `${STATE_DIR}/counts-${token}.json`;
 const READ_AT = START_MS - 50_000;
 const CHECKED_AT = START_MS - 20_000;
 const stamp = (ms: number) => asOf(clockStamp(ms, new Date(ms).getTimezoneOffset()));
@@ -42,6 +44,7 @@ function snapshotFiles(
   options: {
     rows?: Record<string, unknown>[];
     entry?: Partial<BoardEntry> & { ok?: boolean };
+    token?: string;
   } = {},
 ): Record<string, string> {
   const rows = options.rows ?? ROWS;
@@ -64,15 +67,21 @@ function snapshotFiles(
     bytes: JSON.stringify(board).length,
     ...options.entry,
   };
+  const token = options.token ?? REFRESHER_TOKEN;
   const counts = {
     schema: 1,
-    token: "refresher-token-1",
+    token,
     pid: 4242,
     beatAt: CHECKED_AT,
     stores: [],
     boards: [entry],
   };
-  return { [BOARD_FILE]: JSON.stringify(board), [COUNTS]: JSON.stringify(counts) };
+  // The refresher writes its own token's files, and publishes the same counts as counts.json.
+  return {
+    [boardFile(token)]: JSON.stringify(board),
+    [countsOf(token)]: JSON.stringify(counts),
+    [COUNTS]: JSON.stringify(counts),
+  };
 }
 
 const named = (session: string, options: WorldOptions = {}): WorldOptions => ({
@@ -152,6 +161,20 @@ describe("the first paint (T-1B.8)", () => {
     await w.clock.settle();
 
     expect(lists(w).sort()).toEqual([OPEN_LIST, CLOSED_PAGE].sort());
+  });
+
+  test("should draw the board of the token the lease names, never one an ousted refresher wrote", async ($, on) => {
+    const ousted = snapshotFiles({ rows: ROWS.slice(0, 5), token: "ousted-token-1" });
+    const files = {
+      ...snapshotFiles(),
+      // The ousted refresher replaced counts.json, and the board file it names, after the holder.
+      [COUNTS]: ousted[COUNTS] ?? "",
+      [`${STATE_DIR}/boards/${boardFileName(CWD)}`]: ousted[boardFile("ousted-token-1")] ?? "",
+      [boardFile("ousted-token-1")]: ousted[boardFile("ousted-token-1")] ?? "",
+    };
+    const { ui } = await opened($, on, { refresher: true, files, script: listsHang });
+
+    expect(await cards(ui)).toHaveLength(30);
   });
 
   test("should name a store the refresher skipped for its size and read it from bd", async ($, on) => {

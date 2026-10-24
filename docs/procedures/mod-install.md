@@ -89,13 +89,14 @@ Its files live in the state directory, `$XDG_STATE_HOME/beads-ui`, or `~/.local/
 
 | File | What it holds |
 |---|---|
-| `counts.json` | The snapshot: each store's counts by owner, the refresher's token and pid, and its heartbeat (`beatAt`); `stoppedAt` when it stopped on purpose. Written whole, by a write to a temporary file and a rename. |
+| `counts-<token>.json` | One refresher's snapshot: each store's counts by owner, the refresher's token and pid, and its heartbeat (`beatAt`); `stoppedAt` when it stopped on purpose. Written whole, by a write to a temporary file and a rename, only by the refresher holding that token. A session reads the one whose token `lease.json` names and takes nothing from another token's, so a refresher that stalled between its lease check and its write, and lost the lease meanwhile, writes only a file nobody reads. The holder removes another token's files once they are 50 seconds old. |
+| `counts.json` | The snapshot the holder published last, the same text as its own `counts-<token>.json`, replaced only after that file is written and the lease checked again. A session reads it only when no lease names a refresher: the band while a new refresher starts, and the pane's first paint. |
 | `lease.json` | The refresher's lease: its token, pid and the time it last renewed it. It is a hard link to the holder's own `lease-<token>.json`, which is the only file a refresher renews, so a refresher that stalls and loses the lease can never overwrite or remove the newer holder's. |
 | `sessions/<session>.json` | Each session's registry file: its done window, the stores it reads that the inventory does not list, and the store its pane reads. |
-| `boards/<store>.json` | The board snapshot of a store a session's pane reads: `bd statuses`, and the open issues and the 25 most recently closed with only the fields the board and backlog draw, as of the store's Dolt head. `counts.json` lists each under `boards`, with its head, when it was read and when its head was last checked; a store whose snapshot would pass 4 MiB, the most a session can read from a file, is listed there with the reason instead, and its pane reads `bd` itself. |
+| `boards/<token>/<store>.json` | The board snapshot of a store a session's pane reads, under the token of the refresher that wrote it: `bd statuses`, and the open issues and the 25 most recently closed with only the fields the board and backlog draw, as of the store's Dolt head. That refresher's snapshot lists each under `boards`, with its head, when it was read and when its head was last checked; a store whose snapshot would pass 4 MiB, the most a session can read from a file, is listed there with the reason instead, and its pane reads `bd` itself. |
 | `wake/<store>.json` | A marker a session drops after a write; the refresher reads that store again within a second or two and removes it. |
 
-To stop the refresher, end it by its pid (`counts.json` names it); the next session's minute check starts another.
+To stop the refresher, end it by its pid (`lease.json` and `counts.json` name it); the next session's minute check starts another.
 
 ## The store a session reads
 
