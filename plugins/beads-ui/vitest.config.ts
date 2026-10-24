@@ -11,5 +11,8 @@ export default defineConfig({
   },
   test: {
     include: ["**/*.spec.ts", "core/test/**/*.test.ts"],
+    // The Node suites spawn claude, git, gitleaks and node; under a loaded host's pre-commit run
+    // (Vitest beside claude plugin test) one spawn can pass the 5000 ms default on its own.
+    testTimeout: 30_000,
   },
 });
