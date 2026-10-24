@@ -122,6 +122,9 @@ The raw record is `docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md` in this
     - [D-28: Tab 3](#d-28)
     - [D-29: First paint and the default view](#d-29)
     - [D-30: The band's format and the firstmate's lines](#d-30)
+    - [D-31: How the task panel is drawn](#d-31)
+    - [D-32: Where the panel sits and how it lives beside the CC task panel](#d-32)
+    - [D-33: How a panel edit is published, and what happens on failure](#d-33)
 - [Feedback Rounds](#feedback-rounds)
 - [Approval Log](#approval-log)
 
@@ -545,9 +548,38 @@ Each phase carries its scope, deliverables, tasks with EARS acceptance criteria 
 
 ### Phase 2B: The beads-ui task panel, beside and then in place of the CC task panel
 
-- **Scope:** R-20 to R-22, R-24 and R-25 in full: the task panel with configurable shown and collapsed counts (config file and in-panel), navigation through every task, select to open, detail and field edits, popup option menus and shortcuts for every capability, keyboard and mouse with left and right click, the prompt-to-panel focus shortcut, co-existence flags with the CC task panel and the cutover path, auto-commit, push and sync of edits with a conflict fallback and a root-cause loop, reflow with compact and icon labels, real-looking controls, and a nav bar leading to kanban, sprint, backlog, timeline and settings views. The rendering route and the edit-sync mechanism are settled by Open Question 10's research before tasks and acceptance criteria are written here; until then this phase has a scope and no tasks.
-- **Deliverables:** named once Open Question 10 is resolved.
-- **Exit gate:** named with the tasks; it will include a live run in tmux over SSM on sem-kg-ec2 and in one local terminal, recorded in the Approval Log.
+- **Scope:** R-20 to R-22, R-24 and R-25 in full, built on the research in `docs/research/claude-code-mod-panel-rendering-and-focus.md` (Open Question 10) and decisions D-31 to D-33: the task panel with configurable shown and collapsed counts (config file and in-panel), navigation through every task, select to open, detail and field edits, popup option menus and shortcuts for every capability, keyboard and mouse with left and right click, the prompt-to-panel focus shortcut, co-existence with the CC task panel and the cutover, edits that publish themselves with a conflict fallback and a root-cause loop, reflow with compact and glyph labels, real-looking controls, and a nav bar leading to the board, backlog, sprint, timeline and settings views. Builds after Phase 1B, whose refresher snapshots (D-26) and store resolution (D-24) it reads.
+- **Deliverables:**
+  - Files created: `plugins/beads-ui/core/src/views/{panel,nav,menu,settings,timeline}.ts`, `plugins/beads-ui/core/src/layout.ts` (the width tiers), `plugins/beads-ui/core/src/sync.ts`, `plugins/beads-ui/client/tasks.ts` (the `Client` task list), `plugins/beads-ui/hooks/panel.ts`.
+  - Files changed: `plugins/beads-ui/hooks/{register,pane,bands}.ts`, `plugins/beads-ui/core/src/config.ts`, `docs/procedures/mod-install.md`, `README.md`.
+  - Tests added: core suites for layout, menu parity, settings, sync and timeline; hooks suites for the panel, the menu and sync under `claude plugin test`.
+- **Tasks + acceptance criteria:**
+  - **T-2B.1 Frame, nav bar and width tiers** (D-31, R-24)
+    - [ ] `When the panel draws with bodyColumns of 72 or more, it shall draw a side nav with Tasks, Board, Backlog, Sprint, Timeline and Settings; from 48 to 71, a top menu bar with short labels; below 48, a bar of key and glyph labels; and no drawn line shall exceed bodyColumns at 40, 48, 64, 72, 80 and 120 columns.`
+    - [ ] `When the terminal or the pane is resized, the panel shall redraw in the tier its new bodyColumns selects without losing the open view or the focused task.`
+  - **T-2B.2 The task list, shown and collapsed** (R-20)
+    - [ ] `When the Tasks view draws, it shall list the session's own tasks in progress first, then blocked, then open, showing the first N (panel.shown, default 10) and a "+M more" control for the rest; pressing it shall expand the rest in place, and Up, Down and Tab shall reach every listed task.`
+    - [ ] `When the user changes the shown count or the collapse rule in Settings, the system shall apply it at once, keep it in $.store, and write it to beads-ui.toml when the user chooses Save to file; a beads-ui.toml change shall apply at the next redraw.`
+  - **T-2B.3 Open, read and edit a task** (R-20)
+    - [ ] `When the user presses Enter on a task or clicks it, the panel shall open its detail with every field the store returned, and each of title, status, priority, type, labels, assignee, due date and description shall have an edit control.`
+    - [ ] `When an edit is submitted, the system shall write it with bd update (a status with --if-status), re-read the issue, redraw it, and hand the write to T-2B.6's sync.`
+  - **T-2B.4 Every action by menu and by key** (R-20)
+    - [ ] `When the user presses the menu key or right-clicks a task, the panel shall open an options menu listing every action for that task with its hotkey, and every hotkey the panel draws shall appear in a menu; a test shall enumerate the actions and fail on one reachable only one way.`
+  - **T-2B.5 The mouse** (D-31, R-20)
+    - [ ] `While the Client task list is mounted, a left click shall select a task, a second left click or Enter shall open it, a right click shall open its options menu at the pointer, and hover shall highlight the row under the pointer.`
+    - [ ] `If the Client faults or the surface has no Client, then the panel shall draw the same list with the element tree, every action still reachable by key and by menu.`
+  - **T-2B.6 Edits that publish themselves** (D-33, R-22)
+    - [ ] `When a write succeeds and no other write follows within 10 seconds, the system shall run the configured sync.command once, with no shell, and on exit 0 shall show a short synced notice.`
+    - [ ] `If sync.command exits non-zero or cannot start, then the system shall send a terminal notification and start a turn in the session with $.prompt.submit carrying the command, exit code, step and detail, an instruction to resolve the conflict or failure, and an instruction to file a bug against the sync automation with that output and fix it with /bug-fix by a delegate or inline; a refused or dropped submit shall be retried from turn.complete.`
+    - [ ] `While an edit is not yet published, the band shall show the count of unpublished edits.`
+  - **T-2B.7 Beside the CC task panel, then in its place** (D-32, R-21)
+    - [ ] `Where panel.mode is both (the default) or beads, when a session starts, the system shall open the panel docked where Claude Code places an unasked pane, and otherwise keep the band; where panel.mode is native, it shall not open the panel unasked.`
+    - [ ] `When a machine profile's task-panel key is retired (T-5.2) and panel.mode is beads, the session shall show the beads-ui panel and no Claude Code task panel.`
+  - **T-2B.8 Settings view** (R-20, R-24, D-30)
+    - [ ] `When the Settings view draws, it shall offer the panel's shown count, the collapse rule, panel.mode, the band's parts and order, the done window and debug mode, each applied at once and saved to beads-ui.toml on Save to file.`
+  - **T-2B.9 Timeline view** (R-24)
+    - [ ] `When the Timeline view draws, it shall place the store's epics and milestone issues by due date, as Raster bars in the terminal and as Text rows elsewhere, and an issue with no due date shall be listed apart.`
+- **Exit gate:** `npm run lint` and `npm test` green; a live run on sem-kg-ec2 in tmux over SSM and in one local terminal covering T-2B.1 to T-2B.9, including whether left and right clicks reach the `Client` inside tmux (Open Question 2), recorded in the Approval Log; one profile run with panel.mode beads and the CC task panel retired for one day.
 
 ### Phase 3: The web app, locally and as the queue dashboard's board
 
@@ -640,7 +672,7 @@ iOS and Android (shared or separate), macOS, Linux and Windows native apps follo
 | 4 | 1 | D-3 MVP scope; D-4 access route; D-9 display-id minting; D-13 delete ladder | - [x] | Verified 2026-10-21 on wt/aih-ec2-3/bu-build by two Codex reviews, a fresh-context Opus verifier and the coordinator. D-3: a read-mostly mod with Board, Backlog and Detail, no drag, sprints or charts. D-4: every read and write is a `bd` argument list through `$.process.run`, with no `bd serve` or HTTP route in core or hooks. D-9: core mints bd-new's id under `id_policy`, honours its budget overrides with parity tests against `bd_new.py`, and retries a failed attach with the same id after a fresh re-read. D-13: Close instead, a forced delete only after bd's dry-run preview and a full re-check, a typed id for a cascade, and undo after a close. Gate at the landing tip: lint 3/3, Vitest 279 and 37 passed, `claude plugin test` 287 pass 0 fail, tsc 0, allow-list matches |
 | 5 | 2 | D-8 drag in a Client; D-5 sprint convention; D-16 metrics source | - [ ] | |
 | 5a | 1B | D-24 store resolution; D-25 ownership on claim; D-26 host refresher; D-27 focus and visibility; D-28 tab 3; D-29 first paint and default view; D-30 band format | - [ ] | |
-| 5b | 2B | R-20 to R-22, R-24, R-25 and the decisions Open Question 10's research leads to | - [ ] | |
+| 5b | 2B | D-31 panel drawing; D-32 placement and co-existence; D-33 edit publishing; R-20 to R-22, R-24, R-25 | - [ ] | |
 | 6 | 3 | D-10 web stack; D-6 rank; D-11 queue relationship; D-17 session identity | - [ ] | |
 | 7 | 4 | D-14 MCP topology | - [ ] | |
 | 8 | 5 | D-21 retirement switch; D-12 backup destination | - [ ] | |
@@ -772,6 +804,9 @@ Every decision below ran through `/decision-framework` in its fresh-authoring co
 | D-28 | Tab 3 | (a) draw `3 Sprint` dimmed with a planned notice until Phase 2 builds it; (b) renumber Detail to 3; (c) build the Sprint tab now | (a) | | | Criterion 1: keeps the digits stable for the Phase 2 tab; answers "why is there no 3" on screen | `✅ Resolved by aih-ec2-3 Opus coordinator` |
 | D-29 | First paint and the default view | (a) draw from the refresher's snapshot at once, default to the session's own open issues (the firstmate's to all), one key to all, and read open issues plus recent closed ones; (b) keep the whole-store board and add a cache only; (c) open on the Backlog | (a) | | | Criterion 5: "by default actually show useful stuff" is a definite requirement; the measured 7.2 MB whole-store read is mostly closed issues | `✅ Resolved by aih-ec2-3 Opus coordinator` |
 | D-30 | The band's format and the firstmate's lines | (a) `[bd] {N} tasks ({N} in progress, {N} blocked, {N} open, {N} done last 24h)` on every line, the firstmate's first line prefixed `all repos:`, its own line second; (b) the format on non-firstmate sessions only, the firstmate keeping today's labels; (c) one line for the firstmate, its own counts dropped | (a) | | | Sergei's format (ylx A006, A007) applied everywhere, and A002's firstmate second line kept with the A001 label it needs | `✅ Resolved by aih-ec2-3 Opus coordinator` |
+| D-31 | How the task panel is drawn | (a) the element tree for frame, nav, menus, forms and detail, a `Client` for the task list and board, the element tree as fallback; (b) the element tree only; (c) a `Client` for everything | (a) | | | Research (Open Question 10): right-click, hover and drag exist only in a `Client`, which VS Code does not draw; `Image` shows alt text in tmux | `✅ Resolved by aih-ec2-3 Opus coordinator` |
+| D-32 | Where the panel sits and how it lives beside the CC task panel | (a) a docked pane opened at session start under `panel.mode` (`both` by default, `beads`, `native`), the cutover being D-21's per-profile switch plus `beads`; (b) open only on `/bu`; (c) replace the CC task panel on every profile at once | (a) | | | Sergei asked for co-existence by config and a later cutover (ylx A002) and prefers the full replacement (A006); a requested feature ships enabled | `✅ Resolved by aih-ec2-3 Opus coordinator` |
+| D-33 | How a panel edit is published, and what happens on failure | (a) the mod runs a configured `sync.command` after a 10-second quiet, and hands any failure to the session with `$.prompt.submit` and a notification; (b) the host refresher publishes on its minute beat; (c) leave publishing to the session's own hooks | (a) | | | The failure must reach the session that made the edit, and only the mod can start a turn there; the fleet's publish tool already serializes per store | `✅ Resolved by aih-ec2-3 Opus coordinator` |
 
 ### Decision Details
 
@@ -2034,6 +2069,128 @@ Criterion 5: useful-by-default is a definite requirement, so the structure for i
 <!-- decision-lineage: decision-id=BU-mg2.2/D-30; decision-topic=the band's text and the firstmate's two lines; governs=claude-mod:band,packages:core/views/band; normalized-proposition=every band line reads [bd] N tasks (in progress, blocked, open, done in window), and the firstmate adds an all-repos line above its own; applicability=surface:tui; outcome-id=bd-format-everywhere; relation=refines; related-decision-id=BU-mg2.2/D-25; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
 Gate 0 keeps A001's label and A002's second line; A006 and A007 set the format. Mitigation: `all repos:` is the shortest label that still says the line covers every store, and T-1B.11 lets the user reorder or drop parts from the config file or the pane, so a longer line can be trimmed without a code change. The total counts the parts drawn, including done within the window, as the native panel's total includes its done.
+
+---
+
+<a id="d-31"></a>
+
+#### D-31: How the task panel is drawn — `✅ Resolved by aih-ec2-3 Opus coordinator`
+
+**Context.** Sergei asked for real-looking controls, a side nav and menu bars, icons when space is short, mouse control with left and right click, and a richer stack if it is fast and light (ylx A002, A005). The research doc (`docs/research/claude-code-mod-panel-rendering-and-focus.md`) found that the element tree draws on every surface with buttons, a dropdown `Select`, inputs, borders and hover styles; that only a `Client` region receives pointer events with a `right` button, and VS Code does not draw one; and that `Image` shows its alt text inside tmux, where the fleet's sessions run.
+
+##### (a) The element tree for the frame, a `Client` for the task list and board, the element tree as fallback
+
+**Pros:**
+- Right-click menus, hover rows and drag where the mouse works, and a complete keyboard path everywhere.
+
+**Cons:**
+- Two drawing paths for the list and board to keep in step.
+- Clicks into a `Client` inside tmux over SSM are unmeasured (Open Question 2).
+
+##### (b) The element tree only
+
+**Pros:**
+- One path, fully covered by `claude plugin test`.
+
+**Cons:**
+- No right-click and no drag, both of which Sergei asked for.
+
+##### (c) A `Client` for everything
+
+**Pros:**
+- The most control over the drawing.
+
+**Cons:**
+- Nothing draws in VS Code; forms and focus order must be rebuilt by hand.
+
+##### Recommendation
+
+> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-24); confidence: medium — (a) The element tree for the frame, nav, menus, forms and detail, a `Client` for the task list and board, the element tree as fallback
+<!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
+<!-- decision-lineage: decision-id=BU-mg2.2/D-31; decision-topic=what the beads-ui task panel is drawn with; governs=claude-mod:panel,plugins:beads-ui/client; normalized-proposition=the panel's frame and forms are element trees and its task list and board are a Client region with an element-tree fallback; applicability=surface:tui; outcome-id=elements-plus-client; relation=refines; related-decision-id=BU-mg2.2/D-8; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+
+Criterion 5: right-click and drag are definite requirements, so the structure for them is built now. Medium confidence until Open Question 2 is measured. Mitigations: both paths draw from one core view model, so they differ only in the last step, and a test renders both from the same model and compares the actions they expose; the element-tree path is the tested baseline and the `Client` is added behind `ui.fault`; Phase 2B's exit gate measures clicks inside tmux, and if they do not arrive the keyboard and menu path is still complete (T-2B.4, T-2B.5).
+
+---
+
+<a id="d-32"></a>
+
+#### D-32: Where the panel sits and how it lives beside the CC task panel — `✅ Resolved by aih-ec2-3 Opus coordinator`
+
+**Context.** "we need to create our own tui claude code mod task panel ... that will sit in that same space as the cc task panel and we can have config file flags / settings to have both of them co-exist, or one or the other ... and eventually we'll do full cutover" (ylx A002); "build the rest of our own version of the beads-ui task panel / pane ui to replace the entire cc task panel. i'd prefer that" (A006). A mod cannot draw inside Claude Code's own panel; it draws in a pane, and an unasked pane appears only from 144 columns, or 110 once the user has opened it (research section 4). D-21 already retires the CC task panel per machine profile.
+
+##### (a) A docked pane opened at session start under `panel.mode`, the cutover through D-21
+
+**Pros:**
+- Both, either or one by a config value; the cutover is a per-profile switch that already exists in the design.
+
+**Cons:**
+- Opening at session start takes width from the transcript.
+
+##### (b) Open only on `/bu`
+
+**Pros:**
+- Never in the way.
+
+**Cons:**
+- Not "in that same space"; nothing replaces the CC panel until the user asks each time.
+
+##### (c) Replace the CC task panel on every profile at once
+
+**Pros:**
+- The end state at once.
+
+**Cons:**
+- Skips the co-existence period Sergei asked for, and the fleet's panel readers are not guarded yet (T-5.3).
+
+##### Recommendation
+
+> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-24); confidence: high — (a) A docked pane opened at session start under `panel.mode`, `both` by default, the cutover being D-21's per-profile switch plus `panel.mode = beads`
+<!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
+<!-- decision-lineage: decision-id=BU-mg2.2/D-32; decision-topic=placement of the beads-ui task panel and its co-existence with the Claude Code task panel; governs=claude-mod:panel,config:panel.mode,repo:ai-harness/task-panel-switch; normalized-proposition=the panel opens docked at session start under panel.mode and the cutover is the per-profile retirement switch; applicability=surface:tui; outcome-id=docked-panel-mode; relation=refines; related-decision-id=BU-mg2.2/D-21; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+
+Sergei's ask decides it; the default ships enabled. Mitigation: Claude Code itself withholds an unasked pane below its width floor, and the mod then keeps the band with a toast, as it does today; the pane's width is the user's to change and Claude Code remembers it; `panel.mode = native` turns the automatic open off for anyone who wants that.
+
+---
+
+<a id="d-33"></a>
+
+#### D-33: How a panel edit is published, and what happens on failure — `✅ Resolved by aih-ec2-3 Opus coordinator`
+
+**Context.** "edit the fields and ideally the get auto-committed / pushed / /sync-git if possible with formatted commits and automation to handle all that; and maybe fallback alert / hook / context injection to tell the cc session to handle any git conflict resolution ... and also /delegate opus 5.5 (or just do inline in driving cc session if no agent slots are available) to investigate root cause and /bug-fix any issues" (ylx A002). Every write is a `bd` call (D-4). On the fleet, publishing is `bd_dolt_publish.py --repo <repo> --attest --json`, whose exit codes separate published, unverified, refused, pull failed, conflict aborted and push failed, and which locks per store. `$.prompt.submit` starts a turn in the session once it is idle (research section 5).
+
+##### (a) The mod runs `sync.command` after a quiet period and hands failures to the session
+
+**Pros:**
+- The failure reaches the session that made the edit, through the context injection Sergei named, and an outside user sets their own command or none.
+
+**Cons:**
+- Each editing session publishes on its own, so two sessions can publish the same store close together.
+- A publish costs seconds of process time per burst of edits.
+
+##### (b) The host refresher publishes on its minute beat
+
+**Pros:**
+- One publisher per host.
+
+**Cons:**
+- The refresher has no mods API, so a failure needs a second hop back to the session; edits wait up to a minute.
+
+##### (c) Leave publishing to the session's own hooks
+
+**Pros:**
+- Nothing new in the mod.
+
+**Cons:**
+- Nothing publishes an edit made in the panel until the session happens to run a hook; no conflict reaches the session.
+
+##### Recommendation
+
+> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-24); confidence: high — (a) The mod runs a configured `sync.command` after a 10-second quiet and hands any failure to the session with `$.prompt.submit` and a notification
+<!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
+<!-- decision-lineage: decision-id=BU-mg2.2/D-33; decision-topic=publishing panel edits and the failure path; governs=claude-mod:sync,config:sync.command; normalized-proposition=the mod publishes edits through a configured command after a quiet period and starts a turn in the session on any failure; applicability=surface:tui; outcome-id=mod-publishes-session-resolves; relation=different-question; related-decision-id=BU-mg2.2/D-4; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+
+Criterion 2: the failure path must end in the session, and only the mod can start a turn there. Mitigations: the fleet's publish tool already takes a per-store lock, so two sessions' publishes serialize instead of colliding, and a session keeps at most one publish in flight; the 10-second quiet turns a burst of edits into one publish; the band counts unpublished edits (T-2B.6) so a slow or failed publish is visible. The fleet sets `sync.command` to its publish tool in the user's `beads-ui.toml`; the mod ships with the setting read at call time, so it is on wherever it is set.
 
 ---
 
