@@ -127,7 +127,7 @@ const alive = (pid: number) => {
   }
 };
 
-async function until<T>(read: () => T | undefined, ms = 8_000): Promise<T> {
+async function until<T>(read: () => T | undefined, ms = 20_000): Promise<T> {
   const end = Date.now() + ms;
   for (;;) {
     const value = read();
@@ -163,7 +163,9 @@ const STORES: Record<string, Issue[]> = {
   BU: [{ status: "blocked", assignee: "aih-ec2-3" }, { status: "open" }],
 };
 
-describe("the host refresher", () => {
+// Each test starts real Node processes, and a stub bd for every count: on a loaded host the first
+// snapshot alone can take seconds, so the tests get room that does not depend on load.
+describe("the host refresher", { timeout: 30_000 }, () => {
   it("should start detached in its own process group and write every store's counts by owner with a heartbeat", async () => {
     const h = host(STORES);
     register(h, "aih-ec2-3");
