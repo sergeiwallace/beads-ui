@@ -99,17 +99,11 @@ describe("the frame, nav bar and width tiers (T-2B.1)", () => {
       expect(nav).toContain(`tab:${view}`);
     }
     expect((await ui.find({ key: "tab:sprint" }))?.props).toMatchObject({ dimColor: true });
-    expect((await ui.find({ key: "tab:timeline" }))?.props).toMatchObject({ dimColor: true });
   });
 
-  test("should say Sprint and Timeline are planned and stay on the Tasks view when either is pressed", async ($, on) => {
+  test("should say Sprint is planned and stay on the Tasks view when it is pressed", async ($, on) => {
     const { ui } = await openPanel($, on);
 
-    await ui.press({ key: "tab:timeline" });
-    expect((await ui.find({ key: "notice" }))?.text).toBe(
-      "5 Timeline: the Timeline view is planned and not built yet; staying on this view",
-    );
-    expect(await ui.find({ key: "tasks-count" })).toBeDefined();
     await ui.press({ key: "tab:sprint" });
     expect((await ui.find({ key: "notice" }))?.text).toBe(SPRINT_PLANNED_TEXT);
     expect(await ui.find({ key: "tasks-count" })).toBeDefined();
@@ -438,6 +432,7 @@ describe("every action by menu and by key (T-2B.4)", () => {
       },
     },
     { name: "Settings", reach: async (ui) => void (await ui.press({ key: "tab:settings" })) },
+    { name: "Timeline", reach: async (ui) => void (await ui.press({ key: "tab:timeline" })) },
   ];
   for (const view of VIEWS) {
     test(`should list in the options menu every key the ${view.name} view draws, and draw a key for every action the menu lists`, async ($, on) => {
@@ -533,7 +528,7 @@ describe("every action by menu and by key (T-2B.4)", () => {
 
     for (const line of [
       "t: Tasks",
-      "5: Timeline (planned, not built yet)",
+      "5: Timeline",
       "6: Settings",
       "k: Options menu",
       "r: More or fewer tasks",

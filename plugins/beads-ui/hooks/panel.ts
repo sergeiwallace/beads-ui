@@ -1,7 +1,9 @@
 import type { RenderElement, RenderNode } from "claude-code";
 
 import {
+  barCells,
   DEFAULT_PANEL_SETTINGS,
+  DUE_COLUMNS,
   hotkeyOf,
   type MenuView,
   menuItemText,
@@ -9,21 +11,24 @@ import {
   type PanelOverrides,
   type PanelSettings,
   panelOverridesOf,
+  RASTER_COLORS,
   resolvePanel,
   type SettingsView,
   SIDE_NAV_COLUMNS,
   SIDE_NAV_GAP,
   type TaskListView,
+  type TimelineLayout,
   type Token,
   textWidth,
   truncate,
   withPanelOverrides,
 } from "../core/src/index.ts";
 import type { Host } from "./host.ts";
-import type { PaneUi } from "./pane.ts";
+import type { PaneUi, RasterElement } from "./pane.ts";
 
-// The task panel drawn with the element tree (D-31): the nav, the Tasks view, the options menu
-// and the Settings view, each from core's view model. The state behind them is the pane's.
+// The task panel drawn with the element tree (D-31): the nav, the Tasks view, the options menu,
+// the Timeline and the Settings view, each from core's view model. The state behind them is the
+// pane's.
 
 /** Where the pane keeps panel settings changed in it until Save to file writes them. */
 export const PANEL_SETTINGS_KEY = "panel-settings";
@@ -377,6 +382,92 @@ export function drawMenu(
         onPress: close,
       }),
     ],
+  });
+}
+
+/**
+ * The Timeline view (T-2B.9): each dated epic or milestone as a button that opens it, with, in
+ * the terminal, a one-row Raster bar from the axis start to its due date coloured by its status
+ * category (the label beside the bar in the wide tier, above it below that), and elsewhere a
+ * Text row of its due date and label; then the ones with no due date, listed apart.
+ */
+export function drawTimeline(
+  ui: PaneUi,
+  layout: TimelineLayout,
+  options: { raster?: RasterElement; open: (id: string) => void },
+): RenderElement {
+  const { Box, Text, Button } = ui;
+  const { raster } = options;
+  const label = (id: string, text: string) =>
+    Button({
+      key: `timeline:${id}`,
+      label: text,
+      plain: true,
+      onPress: () => options.open(id),
+    });
+  const bar = (row: TimelineLayout["rows"][number]): RenderNode[] =>
+    raster === undefined
+      ? []
+      : [
+          raster({
+            key: `timeline-bar:${row.id}`,
+            columns: row.columns,
+            rows: 1,
+            cells: barCells(row.columns, row.filled, RASTER_COLORS[row.category]),
+          }),
+          Box({ width: DUE_COLUMNS, flexShrink: 0, children: [Text({ children: row.due })] }),
+        ];
+  const rows = layout.rows.map((row) => {
+    if (raster === undefined) {
+      return Box({ key: `timeline-row:${row.id}`, children: [label(row.id, row.line)] });
+    }
+    if (layout.placement === "beside") {
+      return Box({
+        key: `timeline-row:${row.id}`,
+        flexDirection: "row",
+        gap: 1,
+        children: [
+          Box({ width: layout.labelColumns, flexShrink: 0, children: [label(row.id, row.label)] }),
+          ...bar(row),
+        ],
+      });
+    }
+    return Box({
+      key: `timeline-row:${row.id}`,
+      flexDirection: "column",
+      children: [
+        label(row.id, row.label),
+        Box({ flexDirection: "row", gap: 1, children: bar(row) }),
+      ],
+    });
+  });
+  return Box({
+    key: "timeline",
+    flexDirection: "column",
+    children: present<RenderNode>([
+      Box({
+        key: "timeline-count",
+        children: [Text({ dimColor: true, children: layout.summary })],
+      }),
+      layout.rows.length === 0
+        ? Box({
+            key: "timeline-empty",
+            children: [Text({ dimColor: true, children: layout.emptyLine })],
+          })
+        : Box({
+            key: "timeline-axis",
+            children: [Text({ dimColor: true, children: layout.axisLine })],
+          }),
+      ...rows,
+      Box({
+        key: "timeline-undated",
+        flexDirection: "column",
+        children: [
+          Text({ bold: true, children: layout.undatedHeading }),
+          ...layout.undated.map((entry) => label(entry.id, entry.label)),
+        ],
+      }),
+    ]),
   });
 }
 

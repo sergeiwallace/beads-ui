@@ -254,7 +254,15 @@ describe("the host refresher", { timeout: 30_000 }, () => {
       JSON.stringify({ token: "someone-else1", pid: 1, beatAt: Date.now() }),
     );
 
-    const pid = launch(h, "token-loser111");
+    // The holder's beat is written once, so it must stay live for as long as the launch takes:
+    // under FAST's 1500 ms stale-ms a launch slower than that on a loaded host found it stale and
+    // rightly took the lease over. A minute of stale-ms keeps it live whatever the load.
+    const pid = launch(h, "token-loser111", [
+      ...FAST.slice(0, 4),
+      "--stale-ms",
+      "60000",
+      ...FAST.slice(6),
+    ]);
     await until(() => (alive(pid) ? undefined : true));
 
     expect(calls(h)).toEqual([]);
