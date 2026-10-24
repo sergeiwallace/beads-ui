@@ -604,8 +604,10 @@ export function supervise(options: {
   startFailed: boolean;
 }): Supervision {
   const { live, running, outdated, lease, heldBy, nowMs, startFailed } = options;
-  const free = lease === undefined || lease.token === heldBy || nowMs - lease.at >= LEASE_TTL_MS;
-  if (running && (!outdated || startFailed)) {
+  const expired = lease === undefined || nowMs - lease.at >= LEASE_TTL_MS;
+  const free = expired || lease.token === heldBy;
+  // A failed replacing start is tried again once its lease expires, as any failed start is.
+  if (running && (!outdated || (startFailed && !expired))) {
     return live ? { kind: "snapshot" } : { kind: "direct" };
   }
   if (free) return { kind: "start" };

@@ -122,7 +122,16 @@ sessions find no snapshot.
   refresher that loses the race removes that file. A 0.9.2 or 0.9.3 holder drops another token's
   counts once their heartbeat is 50 s old, and the seed carries the old heartbeat, so a holder
   publishing in the instant before the takeover can remove it; the new holder writes it again
-  right after taking the lease.
+  right after taking the lease. One gap remains: that older holder checks it still holds the
+  lease and then removes the file, and if the takeover lands between those two steps, which
+  takes microseconds, the seed is gone until the new holder's first beat (at most 28 s). In that
+  case sessions whose minute check falls in that time read their stores themselves once. It needs
+  a 0.9.2 or 0.9.3 holder; the live 0.4.0 one removes no other token's files. Stamping the seed
+  with the new heartbeat would close it, at the cost of a seed that looks fresher than its counts
+  are; the stores' own `readAt` keep their real age either way.
+- Review fix: a session whose replacing start failed now tries again once its plugin-store lease
+  expires, as a failed start already did when no refresher ran. Without this, one failed launch
+  left the older refresher in place for the life of that session.
 - `hooks/tally.ts`: reads the session's build once from `$.plugin.root`'s manifest and passes
   `outdated` to `supervise`.
 - The old refresher needs no change. Every cached build that ships a refresher (0.3.0 to 0.9.3,
@@ -208,6 +217,7 @@ now names the build, and the refresher spec runs an older-build process beside t
 | Date | Commit | Change |
 |---|---|---|
 | 2026-10-24 | this branch | Lease records the build; a later build supersedes a live older lease after seeding its own snapshot; sessions start the takeover; 0.9.4 |
+| 2026-10-24 | this branch | Codex review (gpt-5.6-sol): retry a failed replacing start once its lease expires; new test RED (1 fail of 581), then GREEN (581/581) |
 
 <!-- /doc:region name="fix_log" -->
 

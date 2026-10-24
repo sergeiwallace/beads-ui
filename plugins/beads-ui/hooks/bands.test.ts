@@ -632,6 +632,26 @@ describe("one refresher for the host (T-1B.4)", () => {
     });
   }
 
+  test("should try the replacing start again once its lease expires when the first start failed and the older build still runs", async ($, on) => {
+    const w = await started(
+      $,
+      on,
+      named("aih-ec2-3", {
+        refresher: true,
+        build: "0.9.4",
+        files: LIVE,
+        script: both((key) => (isStart(key) ? exit(1, "node: not found\n") : undefined)),
+      }),
+    );
+    expect(spawned(w)).toHaveLength(1);
+
+    await w.clock.advance(BEAT_MS);
+    expect(spawned(w)).toHaveLength(1);
+
+    await w.clock.advance(BEAT_MS);
+    expect(spawned(w)).toHaveLength(2);
+  });
+
   test("should wait, reading nothing itself, while another session starts the refresher that replaces an older build", async ($, on) => {
     const w = await started(
       $,
