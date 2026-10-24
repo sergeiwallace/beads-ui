@@ -104,7 +104,7 @@ The element table, with what each app draws [VERIFIABLE][^1]:
 | `Image` | A PNG or raw pixels | kitty, Ghostty, iTerm2 only | no | no |
 | `Svg` | SVG markup | no | yes | yes |
 
-A `Client` module exports one component, `(props, surface) => RenderElement`, drawn with `h` and `Fragment`; `surface.setState` schedules one more call on the next frame, `surface.every` runs a callback on the frame clock, `surface.onPointer` and `surface.onKey` set its listeners, and `surface.post` sends plain data to the hooks module as a `ui.message` event [VERIFIABLE][^4]. It "Runs on the drawing thread, a second per call at most" [VERIFIABLE][^4], has no mods API of its own, and when it fails the terminal shows a dimmed line in its place while the rest of the drawing stays [VERIFIABLE][^2].
+A `Client` module exports one component, `(props, surface) => RenderElement`, drawn with `h` and `Fragment` (correction, 2026-10-24: in 2.1.310's installed types a surface module draws with `surface.elements`, the terminal element set less `Client`, `Raster` and `Image`); `surface.setState` schedules one more call on the next frame, `surface.every` runs a callback on the frame clock, `surface.onPointer` and `surface.onKey` set its listeners, and `surface.post` sends plain data to the hooks module as a `ui.message` event [VERIFIABLE][^4]. It "Runs on the drawing thread, a second per call at most" [VERIFIABLE][^4], has no mods API of its own, and when it fails the terminal shows a dimmed line in its place while the rest of the drawing stays [VERIFIABLE][^2].
 
 Icons: the terminal draws characters, so an icon in a narrow pane is a Unicode glyph in a `Text` or a `Button` label. `Image` cannot serve as an icon inside tmux (section 7) [INFERENCE].
 
