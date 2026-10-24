@@ -301,24 +301,47 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     expect(lease(dead).token).toBe("token-replaces");
   });
 
-  it("should stop reading and writing and exit when another refresher takes its lease", async () => {
+  it("should stop reading and writing and exit, leaving the new holder's lease, when another refresher takes its lease while it is stopped", async () => {
     const h = host(STORES);
     register(h, "aih-ec2-3");
-    const pid = launch(h, "token-ousted11");
+    const ousted = launch(h, "token-ousted11");
     await until(() => snapshot(h));
 
-    writeFileSync(
-      join(h.state, "lease.json"),
-      JSON.stringify({ token: "new-holder111", pid: 1, beatAt: Date.now() }),
-    );
-    await until(() => (alive(pid) ? undefined : true));
-    const before = calls(h).length;
-    const last = snapshot(h);
+    // Stalled past the lease's staleness (1.5 s here), as swap or load stalls a real one.
+    process.kill(ousted, "SIGSTOP");
+    await new Promise((done) => setTimeout(done, 2_000));
+    const holder = launch(h, "token-newhold1");
+    await until(() => (lease(h)?.token === "token-newhold1" ? true : undefined));
+    const held = lease(h);
+    process.kill(ousted, "SIGCONT");
+    await until(() => (alive(ousted) ? undefined : true));
+    const fromOusted = () => calls(h).filter((call) => call.ppid === ousted).length;
+    const before = fromOusted();
     await new Promise((done) => setTimeout(done, 700));
 
-    expect(calls(h).length).toBe(before);
-    expect(snapshot(h)).toEqual(last);
-    expect(lease(h).token).toBe("new-holder111");
+    expect(fromOusted()).toBe(before);
+    expect(alive(holder)).toBe(true);
+    expect(lease(h)?.token).toBe("token-newhold1");
+    expect(lease(h)?.pid).toBe(held.pid);
+    expect(existsSync(join(h.state, "lease-token-ousted11.json"))).toBe(false);
+  });
+
+  it("should leave a newer holder's lease alone when it is stopped on purpose after losing it", async () => {
+    const h = host(STORES);
+    register(h, "aih-ec2-3");
+    const ousted = launch(h, "token-ousted22");
+    await until(() => snapshot(h));
+
+    process.kill(ousted, "SIGSTOP");
+    await new Promise((done) => setTimeout(done, 2_000));
+    launch(h, "token-newhold2");
+    await until(() => (lease(h)?.token === "token-newhold2" ? true : undefined));
+    // SIGTERM is queued while it is stopped, so it runs the stop path the moment it resumes.
+    process.kill(ousted, "SIGTERM");
+    process.kill(ousted, "SIGCONT");
+    await until(() => (alive(ousted) ? undefined : true));
+
+    expect(lease(h)?.token).toBe("token-newhold2");
   });
 
   it("should run the same bd calls a beat whatever the number of sessions, and count their windows and stores", async () => {

@@ -90,7 +90,7 @@ Its files live in the state directory, `$XDG_STATE_HOME/beads-ui`, or `~/.local/
 | File | What it holds |
 |---|---|
 | `counts.json` | The snapshot: each store's counts by owner, the refresher's token and pid, and its heartbeat (`beatAt`); `stoppedAt` when it stopped on purpose. Written whole, by a write to a temporary file and a rename. |
-| `lease.json` | The refresher's lease: its token, pid and the time it last renewed it. |
+| `lease.json` | The refresher's lease: its token, pid and the time it last renewed it. It is a hard link to the holder's own `lease-<token>.json`, which is the only file a refresher renews, so a refresher that stalls and loses the lease can never overwrite or remove the newer holder's. |
 | `sessions/<session>.json` | Each session's registry file: its done window, the stores it reads that the inventory does not list, and the store its pane reads. |
 | `boards/<store>.json` | The board snapshot of a store a session's pane reads: `bd statuses`, and the open issues and the 25 most recently closed with only the fields the board and backlog draw, as of the store's Dolt head. `counts.json` lists each under `boards`, with its head, when it was read and when its head was last checked; a store whose snapshot would pass 4 MiB, the most a session can read from a file, is listed there with the reason instead, and its pane reads `bd` itself. |
 | `wake/<store>.json` | A marker a session drops after a write; the refresher reads that store again within a second or two and removes it. |
