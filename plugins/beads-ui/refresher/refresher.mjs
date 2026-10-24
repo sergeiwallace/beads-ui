@@ -75,13 +75,31 @@ import { parseStoreInventory, STORE_INVENTORY_FILE } from "../core/src/views/ban
 const COUNT_TIMEOUT_MS = 8_000;
 /** A board read lists every open issue: more time and room than a count. */
 const BOARD_TIMEOUT_MS = 30_000;
+/**
+ * Every read of a beat, and of a wake, ends within this of its start, and the snapshot is written
+ * then with what answered. Beats start BEAT_MS apart, so two snapshots are at most 88 s apart:
+ * within T-1B.4's 90, however many stores there are and however slowly they answer.
+ */
+const CYCLE_MS = 28_000;
+/** How many stores a beat reads at once. */
+const CONCURRENT_STORES = 4;
+/** The error of a read the cycle's deadline cut short, or never started. */
+const UNREAD = "not read before the beat's deadline";
 const BOARD_BUFFER = 256 * 1024 * 1024;
 /** A registry file this old names a session long gone; the holder removes it. */
 const REGISTRY_KEEP_MS = 86_400_000;
 
 // `pause-ms` stalls the process, its timers with it, after each lease check before a snapshot
 // write, as swap or a stopped process stalls a real one: a test's window between the two.
-const NUMBER_FLAGS = ["beat-ms", "renew-ms", "stale-ms", "idle-ms", "wake-ms", "pause-ms"];
+const NUMBER_FLAGS = [
+  "beat-ms",
+  "renew-ms",
+  "stale-ms",
+  "idle-ms",
+  "wake-ms",
+  "pause-ms",
+  "cycle-ms",
+];
 
 /** The command and its `--name value` options; the timings exist so tests can run in seconds. */
 function parseArgs(argv) {
@@ -301,20 +319,31 @@ class FileLease {
   }
 }
 
-function count(store, argv, timeout = COUNT_TIMEOUT_MS, maxBuffer = 4 * 1024 * 1024) {
+/**
+ * One bd call in the store's directory, given at most `timeout` and never past `deadline`. A call
+ * the deadline cuts short, or leaves no time to start, answers `unread`.
+ */
+function count(store, argv, deadline, timeout = COUNT_TIMEOUT_MS, maxBuffer = 4 * 1024 * 1024) {
+  const left = deadline - Date.now();
+  if (left <= 0) return Promise.resolve({ ok: false, error: UNREAD, unread: true });
+  const cut = left < timeout;
   return new Promise((resolve) => {
     execFile(
       argv[0],
       argv.slice(1),
       {
         cwd: store.path,
-        timeout,
+        timeout: Math.min(timeout, left),
         maxBuffer,
         env: { ...process.env, NO_COLOR: "1" },
       },
       (error, stdout, stderr) => {
         if (error === null) {
           resolve({ ok: true, stdout });
+          return;
+        }
+        if (cut && error.killed === true) {
+          resolve({ ok: false, error: UNREAD, unread: true });
           return;
         }
         const why = `${stderr}`.trim().split("\n")[0] || `${stdout}`.trim().split("\n")[0] || "";
@@ -326,14 +355,31 @@ function count(store, argv, timeout = COUNT_TIMEOUT_MS, maxBuffer = 4 * 1024 * 1
   });
 }
 
-/** One store's counts by owner for every done window asked for; undefined once `holds` fails. */
-async function countStore(store, windows, holds) {
+/**
+ * One store's counts by owner for every done window asked for, by `deadline`: a store with a read
+ * left unanswered then is marked unread. Undefined once `holds` fails.
+ */
+async function countStore(store, windows, holds, deadline) {
   const answers = [];
   for (const read of storeReads(windows, Date.now())) {
     if (!holds()) return undefined;
-    answers.push({ key: read.key, ...(await count(store, read.argv)) });
+    answers.push({ key: read.key, ...(await count(store, read.argv, deadline)) });
   }
   return storeSnapshotOf({ name: store.name, path: store.path }, answers, Date.now());
+}
+
+/** Runs `tasks` at most `limit` at a time; false, starting no more, once one answers false. */
+async function inTurn(tasks, limit) {
+  let next = 0;
+  let ok = true;
+  const worker = async () => {
+    while (ok && next < tasks.length) {
+      const task = tasks[next++];
+      if (!(await task())) ok = false;
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker));
+  return ok;
 }
 
 const parseJson = (text) => {
@@ -351,12 +397,14 @@ const parseJson = (text) => {
  * wrote at that head, linked in rather than read again. Otherwise `bd statuses`, the open issues
  * and the most recent closed page are read, cut to the fields the board draws and written whole,
  * unless the file would pass BOARD_MAX_BYTES, which the entry names instead. `writable` is the
- * lease check, made just before the write; undefined means it failed and nothing was written.
+ * lease check, made just before the write; undefined means it failed and nothing was written. A
+ * read the cycle's `deadline` cuts short keeps `known` as it was, its `checkedAt` unmoved.
  */
-async function readBoard(store, known, dir, token, writable, inherited) {
+async function readBoard(store, known, dir, token, writable, inherited, deadline) {
   const checkedAt = Date.now();
   const failed = (error) => ({ path: store.path, ok: false, checkedAt, error });
-  const head = await count(store, headArgv());
+  const head = await count(store, headArgv(), deadline);
+  if (head.unread === true) return known ?? failed(UNREAD);
   if (!head.ok) return failed(`bd vc status failed (${head.error})`);
   const commit = parseHead(head.stdout);
   if (commit === undefined) return failed("bd vc status named no commit");
@@ -377,7 +425,8 @@ async function readBoard(store, known, dir, token, writable, inherited) {
   const [openArgv, closedArgv] = boardReadArgvs();
   const parts = [];
   for (const argv of [statusesArgv(), openArgv, closedArgv]) {
-    const ran = await count(store, argv, BOARD_TIMEOUT_MS, BOARD_BUFFER);
+    const ran = await count(store, argv, deadline, BOARD_TIMEOUT_MS, BOARD_BUFFER);
+    if (ran.unread === true) return known ?? failed(UNREAD);
     if (!ran.ok) return failed(`${argv.slice(0, 2).join(" ")} failed (${ran.error})`);
     const json = parseJson(ran.stdout);
     if (!json.ok) return failed(`${argv.slice(0, 2).join(" ")} did not answer JSON`);
@@ -539,6 +588,7 @@ async function run(options) {
   const snapshotPath = join(dir, SNAPSHOT_FILE);
   const ownPath = join(dir, snapshotFileName(token));
   const pauseMs = options["pause-ms"] ?? 0;
+  const cycleMs = options["cycle-ms"] ?? CYCLE_MS;
   const staleMs = options["stale-ms"] ?? LEASE_DEAD_MS;
   const wakeDir = join(dir, WAKE_DIR);
   mkdirSync(join(dir, BOARDS_DIR, token), { recursive: true });
@@ -563,7 +613,7 @@ async function run(options) {
       inherited.set(entry.path, join(dir, BOARDS_DIR, previous.value.token, entry.file));
     }
   }
-  const boardOf = (store) =>
+  const boardOf = (store, deadline) =>
     readBoard(
       store,
       boards.get(store.path)?.value,
@@ -571,6 +621,7 @@ async function run(options) {
       token,
       writable,
       inherited.get(store.path),
+      deadline,
     );
   let storeList = [];
   let boardList = [];
@@ -616,14 +667,14 @@ async function run(options) {
     return true;
   };
   /** Reads one store's counts, and its board when a pane reads it; false once the lease is lost. */
-  const readStore = async (store, withBoard) => {
+  const readStore = async (store, withBoard, deadline) => {
     const startedAt = Date.now();
-    const counted = await countStore(store, windows, holds);
+    const counted = await countStore(store, windows, holds, deadline);
     if (counted === undefined) return false;
     keepNewer(counts, store.path, counted, startedAt);
     if (!withBoard) return holds();
     if (!holds()) return false;
-    const entry = await boardOf(store);
+    const entry = await boardOf(store, deadline);
     if (entry === undefined) return false;
     keepNewer(boards, store.path, entry, startedAt);
     return holds();
@@ -660,17 +711,24 @@ async function run(options) {
     windows = [...new Set(sessions.flatMap((session) => session.windows))];
     storeList = storesToRead(options.home, sessions);
     boardList = unique(sessions.flatMap((session) => session.boards));
-    for (const store of storeList) {
+    // CONCURRENT_STORES stores at a time, every read ending by the deadline: then the snapshot
+    // is written with what answered, and a store still unanswered is marked unread.
+    const deadline = began + cycleMs;
+    const reads = storeList.map((store) => () => {
       const withBoard = boardList.some((board) => samePath(board.path, store.path));
-      if (!(await readStore(store, withBoard))) return quit();
-    }
+      return readStore(store, withBoard, deadline);
+    });
     for (const store of boardList) {
       if (storeList.some((known) => samePath(known.path, store.path))) continue;
-      if (!holds()) return quit();
-      const entry = await boardOf(store);
-      if (entry === undefined) return quit();
-      keepNewer(boards, store.path, entry, began);
+      reads.push(async () => {
+        if (!holds()) return false;
+        const entry = await boardOf(store, deadline);
+        if (entry === undefined) return false;
+        keepNewer(boards, store.path, entry, began);
+        return true;
+      });
     }
+    if (!(await inTurn(reads, CONCURRENT_STORES))) return quit();
     for (const map of [counts, boards]) {
       for (const path of map.keys()) {
         if (![...storeList, ...boardList].some((store) => store.path === path)) map.delete(path);
@@ -707,6 +765,7 @@ async function run(options) {
         }
         if (marker !== undefined) paths.add(marker.path.replace(/\/+$/, ""));
       }
+      const deadline = Date.now() + cycleMs;
       for (const path of paths) {
         // A session in a linked worktree names its own directory: its counts are its main
         // tree's entry, and its board its own.
@@ -716,12 +775,12 @@ async function run(options) {
           (board === undefined ? undefined : storeList.find((known) => sameDatabase(known, board)));
         if (store !== undefined) {
           const withBoard = boardList.some((known) => samePath(known.path, store.path));
-          if (!(await readStore(store, withBoard))) return quit();
+          if (!(await readStore(store, withBoard, deadline))) return quit();
         }
         if (board !== undefined && (store === undefined || !samePath(store.path, board.path))) {
           const startedAt = Date.now();
           if (!holds()) return quit();
-          const entry = await boardOf(board);
+          const entry = await boardOf(board, deadline);
           if (entry === undefined) return quit();
           keepNewer(boards, board.path, entry, startedAt);
         }

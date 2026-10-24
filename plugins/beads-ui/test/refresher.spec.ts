@@ -19,12 +19,14 @@ const REFRESHER = resolve(import.meta.dirname, "../refresher/refresher.mjs");
 const FAST = ["--beat-ms", "300", "--renew-ms", "100", "--stale-ms", "1500", "--idle-ms", "4000"];
 
 // A stub bd: it logs each call with the directory it ran in and the process that ran it, fails when the store directory holds
-// a `fail` file, and answers `bd count --by-assignee` from the store's `issues.json`.
+// a `fail` file, never answers when it holds a `hang` file, and answers `bd count --by-assignee`
+// from the store's `issues.json`.
 const STUB = `#!/usr/bin/env node
 const fs = require("node:fs");
 const args = process.argv.slice(2);
 fs.appendFileSync(process.env.STUB_LOG, JSON.stringify({ cwd: process.cwd(), args, ppid: process.ppid }) + "\\n");
 if (fs.existsSync("fail")) { process.stderr.write("Error: database is locked\\n"); process.exit(1); }
+if (fs.existsSync("hang")) { setInterval(() => {}, 1000); return; }
 const issues = JSON.parse(fs.readFileSync("issues.json", "utf8"));
 if (args[0] === "vc") {
   const commit = fs.existsSync("head") ? fs.readFileSync("head", "utf8").trim() : "head-1";
@@ -426,6 +428,33 @@ describe("the host refresher", { timeout: 30_000 }, () => {
       error: "exit 1, Error: database is locked",
     });
     expect(written.stores.find((store: { name: string }) => store.name === "AIH").ok).toBe(true);
+  });
+
+  it("should write the snapshot by the beat's deadline with the stores that answered, a store that hangs marked unread", async () => {
+    const h = host({
+      ...STORES,
+      KG: [{ status: "open", assignee: "kg-ec2-1" }],
+      SW: [{ status: "open", assignee: "kg-ec2-2" }],
+      HUNG: [{ status: "open" }],
+    });
+    writeFileSync(join(h.root, "HUNG", "hang"), "");
+    register(h, "aih-ec2-3");
+
+    const launched = Date.now();
+    // A 3-second deadline; each read of the hung store would otherwise wait out its 8 seconds.
+    launch(h, "token-deadline", [...FAST, "--cycle-ms", "3000"]);
+    const written = await until(() => snapshot(h));
+    const took = Date.now() - launched;
+
+    expect(took).toBeLessThan(8_000);
+    expect(written.beatAt - launched).toBeLessThan(6_000);
+    const byName = (name: string) =>
+      written.stores.find((store: { name: string }) => store.name === name);
+    expect(byName("HUNG")).toMatchObject({
+      ok: false,
+      error: "not read before the beat's deadline",
+    });
+    for (const name of ["AIH", "BU", "KG", "SW"]) expect(byName(name)?.ok).toBe(true);
   });
 
   it("should count each database once when sessions reach it through a linked worktree or a symlinked path", async () => {
