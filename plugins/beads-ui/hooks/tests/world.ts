@@ -126,7 +126,18 @@ export interface WorldOptions {
   openAnswer?: unknown;
   /** Runs after each `$.store.set`, so a test can play another session writing meanwhile. */
   afterStoreSet?: (key: string, store: Map<string, unknown>) => void;
+  /**
+   * Plays a host refresher that is running: its file lease, `REFRESHER_LEASE`, renewed every
+   * RENEW_MS on the clock until the test calls `killRefresher`, after which it goes stale.
+   */
+  refresher?: boolean;
 }
+
+/** The host refresher's state directory under the world's HOME, and the files in it. */
+export const STATE_DIR = "/home/me/.local/state/beads-ui";
+export const REFRESHER_LEASE = `${STATE_DIR}/lease.json`;
+export const REFRESHER_TOKEN = "refresher-token-1";
+const RENEW_EVERY_MS = 20_000;
 
 export function world(on: On, options: WorldOptions = {}) {
   const runs: string[][] = [];
@@ -161,7 +172,17 @@ export function world(on: On, options: WorldOptions = {}) {
   mock.env(on, options.env ?? { HOME: "/home/me" });
   // The files the session reads and writes, by absolute path; a write is read back.
   const files = new Map<string, string>(Object.entries(options.files ?? {}));
-  on("fs.read", (_engine, e) => {
+  // The refresher renews at START_MS and every RENEW_EVERY_MS after, until it is killed.
+  let killedAt: number | undefined;
+  const renewedAt = (now: number) => {
+    const until = killedAt ?? now;
+    return START_MS + Math.floor((until - START_MS) / RENEW_EVERY_MS) * RENEW_EVERY_MS;
+  };
+  on("fs.read", async (_engine, e) => {
+    if (options.refresher === true && e.path === REFRESHER_LEASE && !files.has(e.path)) {
+      const beatAt = renewedAt(await clock.now());
+      return { value: JSON.stringify({ token: REFRESHER_TOKEN, pid: 4242, beatAt }) };
+    }
     const text = files.get(e.path);
     return text === undefined ? { deny: `ENOENT: ${e.path}` } : { value: text };
   });
@@ -220,7 +241,24 @@ export function world(on: On, options: WorldOptions = {}) {
   on("ui.render", { component: "AbovePrompt" }, () => ({ type: "Box", children: [] }));
 
   const keys = () => runs.map(keyOf);
-  return { runs, cwds, keys, registered, opened, closed, toasts, focused, clock, store, files };
+  /** The played refresher dies now: its lease keeps its last renewal and goes stale. */
+  const killRefresher = async () => {
+    killedAt = await clock.now();
+  };
+  return {
+    runs,
+    cwds,
+    keys,
+    registered,
+    opened,
+    closed,
+    toasts,
+    focused,
+    clock,
+    store,
+    files,
+    killRefresher,
+  };
 }
 
 export const PANE_PROPS: RenderPropsOf["Pane"] = {

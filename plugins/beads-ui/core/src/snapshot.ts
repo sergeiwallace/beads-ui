@@ -18,6 +18,12 @@ export const SESSION_LIVE_MS = 180_000;
 export const IDLE_EXIT_MS = 300_000;
 /** The refresher renews its file lease this often, apart from its minute of reads. */
 export const RENEW_MS = 20_000;
+/**
+ * A file lease not renewed for this long names a refresher that has stopped, killed or hung:
+ * two and a half renewals. A session's minute check that finds it starts the next refresher, so
+ * one runs within LEASE_DEAD_MS plus BEAT_MS of the last renewal (T-1B.4: two minutes).
+ */
+export const LEASE_DEAD_MS = 50_000;
 
 /** The `$.store` key of the lease a session takes before it starts the refresher. */
 export const LEASE_KEY = "refresher-lease";
@@ -236,6 +242,33 @@ export function parseSnapshot(text: string): Result<HostSnapshot, string> {
   return { ok: true, value: snapshot };
 }
 
+/** The file lease a running refresher holds and renews every RENEW_MS. */
+export interface FileLease {
+  token: string;
+  pid: number;
+  beatAt: number;
+}
+
+export function parseFileLease(text: string): FileLease | undefined {
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+  return isRecord(json) && typeof json.token === "string" && finite(json.pid) && finite(json.beatAt)
+    ? { token: json.token, pid: json.pid, beatAt: json.beatAt }
+    : undefined;
+}
+
+/**
+ * True while a refresher runs: its file lease was renewed within LEASE_DEAD_MS. A refresher that
+ * stops on purpose removes the lease; a killed one leaves it to go stale.
+ */
+export function refresherRunning(lease: FileLease | undefined, nowMs: number): boolean {
+  return lease !== undefined && nowMs - lease.beatAt <= LEASE_DEAD_MS;
+}
+
 /** True while the snapshot's refresher runs: not stopped, its heartbeat at most STALE_MS old. */
 export function snapshotLive(snapshot: HostSnapshot | undefined, nowMs: number): boolean {
   return (
@@ -302,20 +335,29 @@ export type Supervision =
   | { kind: "direct" };
 
 /**
- * A live snapshot is drawn. A stale one, with the lease free or expired, starts a refresher. A
- * lease taken under LEASE_TTL_MS ago means a start is under way: the session waits START_GRACE_MS
- * for its snapshot, then reads its own counts, as it does at once when the lease is its own and
- * its start failed (`startFailed`); once that lease expires it tries the start again.
+ * A running refresher with a live snapshot is drawn; a running one whose counts are older than
+ * STALE_MS is drawn from this session's own reads, marked so. With no refresher running, a free
+ * or expired `$.store` lease starts one, as does a lease whose start completed (the stopped
+ * refresher's file lease carries its token), so a killed refresher is replaced at the next minute
+ * check rather than when the lease expires. A lease taken under LEASE_TTL_MS ago whose refresher
+ * never ran means a start is under way: the session waits START_GRACE_MS for its snapshot, then
+ * reads its own counts, as it does at once when the lease is its own and its start failed
+ * (`startFailed`); once that lease expires it tries the start again.
  */
 export function supervise(options: {
   live: boolean;
+  running: boolean;
   lease: Lease | undefined;
+  /** The token in the last refresher's file lease, live or stale. */
+  heldBy: string | undefined;
   nowMs: number;
   startFailed: boolean;
 }): Supervision {
-  const { live, lease, nowMs, startFailed } = options;
-  if (live) return { kind: "snapshot" };
-  if (lease === undefined || nowMs - lease.at >= LEASE_TTL_MS) return { kind: "start" };
+  const { live, running, lease, heldBy, nowMs, startFailed } = options;
+  if (running) return live ? { kind: "snapshot" } : { kind: "direct" };
+  if (lease === undefined || lease.token === heldBy || nowMs - lease.at >= LEASE_TTL_MS) {
+    return { kind: "start" };
+  }
   if (startFailed) return { kind: "direct" };
   return nowMs - lease.at <= START_GRACE_MS ? { kind: "wait" } : { kind: "direct" };
 }

@@ -10,11 +10,15 @@ import {
   bandReads,
   bandTotal,
   clockStamp,
+  type FileLease,
   type HostSnapshot,
+  LEASE_FILE,
   LEASE_KEY,
   leaseOf,
+  parseFileLease,
   parseSnapshot,
   type ReadAnswer,
+  refresherRunning,
   SESSIONS_DIR,
   SNAPSHOT_FILE,
   type StoreSnapshot,
@@ -123,13 +127,17 @@ export class BandTally {
         await this.register(dir, now, settings, inventory.ok ? inventory.value : [], own);
       }
       const snapshot = dir === undefined ? undefined : await this.readSnapshot(dir);
+      const fileLease = dir === undefined ? undefined : await this.readLease(dir);
       const live = snapshotLive(snapshot, now);
+      const running = refresherRunning(fileLease, now);
       let source: BandSource = "snapshot";
-      if (!live && reads.length > 0) {
+      if (!(live && running) && reads.length > 0) {
         const lease = leaseOf(await host.storeGet(LEASE_KEY).catch(() => undefined));
         let step = supervise({
           live,
+          running,
           lease,
+          heldBy: fileLease?.token,
           nowMs: now,
           startFailed: lease !== undefined && lease.token === this.failedToken,
         });
@@ -236,6 +244,12 @@ export class BandTally {
     if (text === undefined) return undefined;
     const parsed = parseSnapshot(text);
     return parsed.ok ? parsed.value : undefined;
+  }
+
+  /** The refresher's file lease, renewed every 20 s while it runs: its liveness (T-1B.4). */
+  private async readLease(dir: string): Promise<FileLease | undefined> {
+    const text = await this.host?.readFile(`${dir}/${LEASE_FILE}`).catch(() => undefined);
+    return text === undefined ? undefined : parseFileLease(text);
   }
 
   /**

@@ -28,6 +28,7 @@ import { fileURLToPath } from "node:url";
 import {
   BEAT_MS,
   IDLE_EXIT_MS,
+  LEASE_DEAD_MS,
   LEASE_FILE,
   parseSessionEntry,
   RENEW_MS,
@@ -35,7 +36,6 @@ import {
   SESSIONS_DIR,
   SNAPSHOT_FILE,
   SNAPSHOT_SCHEMA,
-  STALE_MS,
   storeReads,
   storeSnapshotOf,
 } from "../core/src/snapshot.ts";
@@ -241,7 +241,7 @@ async function run(options) {
   const renewMs = options["renew-ms"] ?? RENEW_MS;
   const idleMs = options["idle-ms"] ?? IDLE_EXIT_MS;
   mkdirSync(dir, { recursive: true });
-  const lease = new FileLease(dir, token, options["stale-ms"] ?? STALE_MS);
+  const lease = new FileLease(dir, token, options["stale-ms"] ?? LEASE_DEAD_MS);
   if (!lease.acquire(Date.now())) return;
 
   const snapshotPath = join(dir, SNAPSHOT_FILE);

@@ -241,6 +241,31 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     expect(lease(h).token).toBe("token-takeover");
   });
 
+  it("should take over, by default, the lease of a killed refresher once it is 50 seconds unrenewed and not before", async () => {
+    const DEFAULT_STALE = ["--beat-ms", "300", "--renew-ms", "100", "--idle-ms", "4000"];
+    const fresh = host(STORES);
+    register(fresh, "aih-ec2-3");
+    writeFileSync(
+      join(fresh.state, "lease.json"),
+      JSON.stringify({ token: "killed-refresher", pid: 1, beatAt: Date.now() - 40_000 }),
+    );
+    const refused = launch(fresh, "token-tooearly", DEFAULT_STALE);
+    await until(() => (alive(refused) ? undefined : true));
+    expect(lease(fresh).token).toBe("killed-refresher");
+
+    const dead = host(STORES);
+    register(dead, "aih-ec2-3");
+    writeFileSync(
+      join(dead.state, "lease.json"),
+      JSON.stringify({ token: "killed-refresher", pid: 1, beatAt: Date.now() - 55_000 }),
+    );
+    launch(dead, "token-replaces", DEFAULT_STALE);
+    const written = await until(() => snapshot(dead));
+
+    expect(written.token).toBe("token-replaces");
+    expect(lease(dead).token).toBe("token-replaces");
+  });
+
   it("should stop reading and writing and exit when another refresher takes its lease", async () => {
     const h = host(STORES);
     register(h, "aih-ec2-3");

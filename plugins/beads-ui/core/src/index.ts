@@ -145,6 +145,7 @@ export {
   storeLabel,
 } from "./resolve.ts";
 export type {
+  FileLease,
   HostSnapshot,
   Lease,
   ReadAnswer,
@@ -156,10 +157,14 @@ export type {
 export {
   BEAT_MS,
   DEFAULT_DONE_WINDOW,
+  LEASE_DEAD_MS,
+  LEASE_FILE,
   LEASE_KEY,
   LEASE_TTL_MS,
   leaseOf,
+  parseFileLease,
   parseSnapshot,
+  refresherRunning,
   SESSION_LIVE_MS,
   SESSIONS_DIR,
   SNAPSHOT_FILE,
