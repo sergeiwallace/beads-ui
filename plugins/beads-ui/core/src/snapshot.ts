@@ -428,6 +428,8 @@ export interface FileLease {
   token: string;
   pid: number;
   beatAt: number;
+  /** The plugin build the refresher runs; builds before 0.9.4 record none. */
+  version?: string;
 }
 
 export function parseFileLease(text: string): FileLease | undefined {
@@ -437,9 +439,51 @@ export function parseFileLease(text: string): FileLease | undefined {
   } catch {
     return undefined;
   }
-  return isRecord(json) && typeof json.token === "string" && finite(json.pid) && finite(json.beatAt)
-    ? { token: json.token, pid: json.pid, beatAt: json.beatAt }
-    : undefined;
+  if (
+    !isRecord(json) ||
+    typeof json.token !== "string" ||
+    !finite(json.pid) ||
+    !finite(json.beatAt)
+  ) {
+    return undefined;
+  }
+  const lease: FileLease = { token: json.token, pid: json.pid, beatAt: json.beatAt };
+  if (typeof json.version === "string") lease.version = json.version;
+  return lease;
+}
+
+/** The plugin's manifest under its root, whose `version` is the build a refresher records. */
+export const MANIFEST_PATH = ".claude-plugin/plugin.json";
+
+const BUILD = /^(\d{1,6})\.(\d{1,6})\.(\d{1,6})(?:[-+].*)?$/;
+
+/** The `major.minor.patch` build the manifest's text names; undefined when it names none. */
+export function buildOf(manifest: string | undefined): string | undefined {
+  try {
+    const version: unknown = JSON.parse(manifest ?? "")?.version;
+    const parts = typeof version === "string" ? BUILD.exec(version) : null;
+    return parts === null ? undefined : parts.slice(1, 4).map(Number).join(".");
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * True when `mine` is a later build than `held`, the one a refresher's lease records (D-26): that
+ * refresher is superseded, its lease taken while it is live. A lease that records no build, or
+ * one this cannot read, was written by a build before 0.9.4, so every build is later; with no
+ * build of its own a refresher or session is never later, so it supersedes nothing.
+ */
+export function laterBuild(mine: string | undefined, held: string | undefined): boolean {
+  const own = mine === undefined ? null : BUILD.exec(mine);
+  if (own === null) return false;
+  const their = held === undefined ? null : BUILD.exec(held);
+  if (their === null) return true;
+  for (let i = 1; i <= 3; i++) {
+    const diff = Number(own[i]) - Number(their[i]);
+    if (diff !== 0) return diff > 0;
+  }
+  return false;
 }
 
 /**
@@ -542,21 +586,32 @@ export type Supervision =
  * never ran means a start is under way: the session waits START_GRACE_MS for its snapshot, then
  * reads its own counts, as it does at once when the lease is its own and its start failed
  * (`startFailed`); once that lease expires it tries the start again.
+ *
+ * A running refresher of an older build than the session's (`outdated`, BU-4af) is replaced the
+ * same way: the session starts one of its own build under a free lease, whose refresher takes the
+ * older one's file lease while it is live. Until then the session draws the older one's snapshot
+ * when it has one under its token, and otherwise waits START_GRACE_MS, as for any start.
  */
 export function supervise(options: {
   live: boolean;
   running: boolean;
+  /** The running refresher is an older build than the session's (laterBuild). */
+  outdated: boolean;
   lease: Lease | undefined;
   /** The token in the last refresher's file lease, live or stale. */
   heldBy: string | undefined;
   nowMs: number;
   startFailed: boolean;
 }): Supervision {
-  const { live, running, lease, heldBy, nowMs, startFailed } = options;
-  if (running) return live ? { kind: "snapshot" } : { kind: "direct" };
-  if (lease === undefined || lease.token === heldBy || nowMs - lease.at >= LEASE_TTL_MS) {
-    return { kind: "start" };
+  const { live, running, outdated, lease, heldBy, nowMs, startFailed } = options;
+  const free = lease === undefined || lease.token === heldBy || nowMs - lease.at >= LEASE_TTL_MS;
+  if (running && (!outdated || startFailed)) {
+    return live ? { kind: "snapshot" } : { kind: "direct" };
   }
+  if (free) return { kind: "start" };
+  if (running && live) return { kind: "snapshot" };
   if (startFailed) return { kind: "direct" };
-  return nowMs - lease.at <= START_GRACE_MS ? { kind: "wait" } : { kind: "direct" };
+  return lease !== undefined && nowMs - lease.at <= START_GRACE_MS
+    ? { kind: "wait" }
+    : { kind: "direct" };
 }
