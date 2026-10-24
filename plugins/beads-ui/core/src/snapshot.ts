@@ -31,6 +31,15 @@ export const SNAPSHOT_FILE = "counts.json";
 export const LEASE_FILE = "lease.json";
 export const SESSIONS_DIR = "sessions";
 export const SNAPSHOT_SCHEMA = 1;
+/** One board snapshot per store a session's pane reads, in this directory (T-1B.4, T-1B.8). */
+export const BOARDS_DIR = "boards";
+export const BOARD_SCHEMA = 1;
+/** `$.fs.read` reads at most 4 MiB a file, so a board snapshot past this is not written. */
+export const BOARD_MAX_BYTES = 4 * 1024 * 1024;
+/** Where a session drops a marker after a write, so the refresher re-reads that store early. */
+export const WAKE_DIR = "wake";
+/** How often the refresher looks for wake markers. */
+export const WAKE_POLL_MS = 1_000;
 
 /** The statuses the band counts by owner, besides the issues closed within the done window. */
 export const COUNTED_STATUSES = ["in_progress", "blocked", "open"] as const;
@@ -176,6 +185,24 @@ export function storeSnapshotOf(
   return { ...store, ok: true, readAt, statuses, done };
 }
 
+/**
+ * Where one store's board snapshot stands, in the host snapshot. `head` is the store's Dolt commit
+ * when its issues were last read, `checkedAt` when that head was last confirmed current. A store
+ * whose snapshot would pass BOARD_MAX_BYTES, or could not be read, has `ok: false` and why, and a
+ * session's pane reads that store itself.
+ */
+export type BoardEntry =
+  | {
+      path: string;
+      ok: true;
+      file: string;
+      head: string;
+      readAt: number;
+      checkedAt: number;
+      bytes: number;
+    }
+  | { path: string; ok: false; checkedAt: number; error: string };
+
 /** The host snapshot the refresher writes once a minute, by write-to-temp then rename. */
 export interface HostSnapshot {
   schema: number;
@@ -187,6 +214,8 @@ export interface HostSnapshot {
   /** Set when the refresher stopped on purpose, so a session restarts it without waiting. */
   stoppedAt?: number;
   stores: StoreSnapshot[];
+  /** The board snapshot of each store a live session's pane reads. */
+  boards?: BoardEntry[];
 }
 
 const finite = (value: unknown): value is number =>
@@ -239,7 +268,137 @@ export function parseSnapshot(text: string): Result<HostSnapshot, string> {
     stores,
   };
   if (finite(json.stoppedAt)) snapshot.stoppedAt = json.stoppedAt;
+  if (Array.isArray(json.boards)) {
+    snapshot.boards = json.boards.flatMap((entry) => {
+      const board = boardEntryOf(entry);
+      return board === undefined ? [] : [board];
+    });
+  }
   return { ok: true, value: snapshot };
+}
+
+function boardEntryOf(value: unknown): BoardEntry | undefined {
+  if (!isRecord(value) || typeof value.path !== "string" || !finite(value.checkedAt)) {
+    return undefined;
+  }
+  if (
+    value.ok === true &&
+    typeof value.file === "string" &&
+    typeof value.head === "string" &&
+    finite(value.readAt) &&
+    finite(value.bytes)
+  ) {
+    const { path, file, head, readAt, checkedAt, bytes } = value;
+    return { path, ok: true, file, head, readAt, checkedAt, bytes };
+  }
+  if (value.ok === false && typeof value.error === "string") {
+    return { path: value.path, ok: false, checkedAt: value.checkedAt, error: value.error };
+  }
+  return undefined;
+}
+
+/** The board snapshot file of a store directory: its path, with `/` and other marks as `_`. */
+export const boardFileName = (path: string): string => sessionFileName(trimSlash(path));
+
+/** The `bd list` fields the board, the backlog and the Mine view draw; a snapshot keeps only these. */
+export const BOARD_FIELDS = [
+  "id",
+  "title",
+  "status",
+  "priority",
+  "issue_type",
+  "assignee",
+  "labels",
+  "parent",
+  "due_at",
+  "created_at",
+  "updated_at",
+  "closed_at",
+] as const;
+
+/** One `bd list` row cut to BOARD_FIELDS and the metadata a card draws (its display id). */
+export function boardRow(row: unknown): Record<string, unknown> | undefined {
+  if (!isRecord(row)) return undefined;
+  const kept: Record<string, unknown> = {};
+  for (const field of BOARD_FIELDS) {
+    if (row[field] !== undefined && row[field] !== null) kept[field] = row[field];
+  }
+  let metadata: unknown = row.metadata;
+  if (typeof metadata === "string") {
+    try {
+      metadata = JSON.parse(metadata);
+    } catch {
+      metadata = undefined;
+    }
+  }
+  if (isRecord(metadata)) {
+    const drawn: Record<string, unknown> = {};
+    for (const key of ["display_id", "owner"]) {
+      if (typeof metadata[key] === "string") drawn[key] = metadata[key];
+    }
+    if (Object.keys(drawn).length > 0) kept.metadata = drawn;
+  }
+  return kept;
+}
+
+/** The commit `bd vc status --json` names: the store's Dolt head. */
+export function parseHead(text: string): string | undefined {
+  try {
+    const json: unknown = JSON.parse(text);
+    return isRecord(json) && typeof json.commit === "string" && json.commit !== ""
+      ? json.commit
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** One store's board snapshot file: `bd statuses` and the board's rows as of `head`. */
+export interface BoardSnapshot {
+  schema: number;
+  path: string;
+  name: string;
+  head: string;
+  readAt: number;
+  /** `bd statuses --json` as bd wrote it. */
+  statuses: unknown;
+  /** The open issues, then the most recently closed page, each cut by boardRow. */
+  issues: unknown[];
+}
+
+export function parseBoardSnapshot(text: string): Result<BoardSnapshot, string> {
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    return { ok: false, error: "the board snapshot is not JSON" };
+  }
+  if (!isRecord(json) || json.schema !== BOARD_SCHEMA) {
+    return { ok: false, error: "the board snapshot has another schema" };
+  }
+  const { path, name, head, readAt, statuses, issues } = json;
+  if (typeof path !== "string" || typeof name !== "string" || typeof head !== "string") {
+    return { ok: false, error: "the board snapshot names no store or head" };
+  }
+  if (!finite(readAt) || !Array.isArray(issues)) {
+    return { ok: false, error: "the board snapshot has no read time or issues" };
+  }
+  return { ok: true, value: { schema: BOARD_SCHEMA, path, name, head, readAt, statuses, issues } };
+}
+
+/** A wake marker's file name and text: the store a session just wrote to, and when. */
+export const wakeFileName = boardFileName;
+export const wakeText = (path: string, at: number): string => `${JSON.stringify({ path, at })}\n`;
+
+export function parseWake(text: string): { path: string; at: number } | undefined {
+  try {
+    const json: unknown = JSON.parse(text);
+    return isRecord(json) && typeof json.path === "string" && json.path.startsWith("/")
+      ? { path: json.path, at: finite(json.at) ? json.at : 0 }
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** The file lease a running refresher holds and renews every RENEW_MS. */
@@ -281,13 +440,15 @@ export function snapshotLive(snapshot: HostSnapshot | undefined, nowMs: number):
 /**
  * One session's registry file, rewritten every minute: which done windows it draws, and any
  * store it reads that the inventory does not list (a `[directory_stores]` mapping, or its own
- * store when there is no inventory), so the refresher counts those too.
+ * store when there is no inventory), so the refresher counts those too, and the store its pane
+ * reads, whose board snapshot the refresher keeps.
  */
 export interface SessionEntry {
   id: string;
   seenAt: number;
   windows: string[];
   stores: { path: string; name: string }[];
+  boards: { path: string; name: string }[];
 }
 
 export function parseSessionEntry(text: string): SessionEntry | undefined {
@@ -301,14 +462,21 @@ export function parseSessionEntry(text: string): SessionEntry | undefined {
   const windows = Array.isArray(json.windows)
     ? json.windows.filter((span): span is string => typeof span === "string")
     : [];
-  const stores = Array.isArray(json.stores)
-    ? json.stores.flatMap((store) =>
-        isRecord(store) && typeof store.path === "string" && store.path.startsWith("/")
-          ? [{ path: store.path, name: typeof store.name === "string" ? store.name : store.path }]
-          : [],
-      )
-    : [];
-  return { id: json.id, seenAt: json.seenAt, windows, stores };
+  const named = (list: unknown) =>
+    Array.isArray(list)
+      ? list.flatMap((store) =>
+          isRecord(store) && typeof store.path === "string" && store.path.startsWith("/")
+            ? [{ path: store.path, name: typeof store.name === "string" ? store.name : store.path }]
+            : [],
+        )
+      : [];
+  return {
+    id: json.id,
+    seenAt: json.seenAt,
+    windows,
+    stores: named(json.stores),
+    boards: named(json.boards),
+  };
 }
 
 /** The registry file name of a session id: letters, digits, `.`, `_` and `-` kept, else `_`. */

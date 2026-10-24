@@ -95,6 +95,18 @@ const largeStore = (assignees: number) => {
     assignee: `aih-ec2-${i % assignees}`,
   }));
 };
+/** The cards the board draws from a store: each issue not closed, and the newest 25 closed. */
+const drawnMoves = (rows: readonly Record<string, unknown>[]) =>
+  [
+    ...rows.filter((row) => row.status !== "closed"),
+    ...rows
+      .filter((row) => row.status === "closed")
+      .sort((a, b) => String(b.closed_at ?? "").localeCompare(String(a.closed_at ?? "")))
+      .slice(0, 25),
+  ]
+    .map((row) => `move:${String(row.id)}`)
+    .sort();
+
 // A walk over every page of a 600-card store: about 0.7 s on an idle host, past the kit's default
 // 5,000 ms on a loaded one (measured 2026-10-21), so it gets room that does not depend on load.
 const WALK = { timeoutMs: 30_000 };
@@ -271,19 +283,20 @@ describe("the Board tab", () => {
       id: `BU-big${i}`,
       title: `issue number ${i} with a title long enough to fill a card`,
       status: ["open", "closed", "closed"][i % 3],
-      close_reason: `closed by the run that landed issue ${i}: `.padEnd(400, "x"),
+      close_reason: `closed by the run that landed issue ${i}: `.padEnd(2_000, "x"),
       metadata: { display_id: `BU-issue-number-${i}-big` },
       labels: [`id:BU-issue-number-${i}-big`],
     }));
   };
 
   test(
-    "should load the board and reach every card when bd list writes about 7 MB for 6964 issues",
+    "should load the board from the open issues past the 4 MiB $.process.run keeps and the newest closed page, and reach every card it draws",
     { timeoutMs: 300_000 },
     async ($, on) => {
-      const store = JSON.stringify(sevenMegabyteStore());
-      expect(store.length).toBeGreaterThan(7_000_000);
-      expect(store.length).toBeGreaterThan(RUN_OUTPUT_LIMIT);
+      const rows = sevenMegabyteStore();
+      const store = JSON.stringify(rows);
+      const open = JSON.stringify(rows.filter((row) => row.status !== "closed"));
+      expect(open.length).toBeGreaterThan(RUN_OUTPUT_LIMIT);
 
       const { ui } = await openPane($, on, {
         script: (key) => (key === "bd list --all --brief --limit 0" ? ok(store) : undefined),
@@ -291,16 +304,17 @@ describe("the Board tab", () => {
 
       expect(await ui.find({ key: "error-line" })).toBeUndefined();
       expect((await ui.find({ key: "column::open" }))?.text).toBe("open 2322");
-      expect((await ui.find({ key: "column::closed" }))?.text).toBe("closed 4642");
+      // 4642 closed in the store: the board reads one done page of them, never all.
+      expect((await ui.find({ key: "column::closed" }))?.text).toBe("closed 25");
       const { moves, largest } = await walkBoard(ui);
-      expect(moves).toEqual(
-        Array.from({ length: STORE_ISSUES }, (_, i) => `move:BU-big${i}`).sort(),
-      );
+      expect(moves).toEqual(drawnMoves(rows));
+      expect(moves).toHaveLength(2322 + 25);
       expect(largest).toBeLessThan(100_000);
     },
   );
 
-  const everyMove = Array.from({ length: 600 }, (_, i) => `move:BU-load${i}`).sort();
+  const everyMove = drawnMoves(largeStore(1));
+  const allMoves = Array.from({ length: 600 }, (_, i) => `move:BU-load${i}`).sort();
 
   /**
    * Walks the board as a person would: on each lane page, steps every paged cell through all of
@@ -405,7 +419,7 @@ describe("the Board tab", () => {
 
       const { moves, largest } = await walkBoard(ui);
 
-      expect(moves).toEqual(everyMove);
+      expect(moves).toEqual(allMoves);
       expect(largest).toBeLessThan(100_000);
     },
   );

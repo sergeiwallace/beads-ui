@@ -12,8 +12,39 @@ function checked(kind: string, value: string): string {
 export const issueIdArg = (id: string): string => checked("issue id", id);
 export const statusArg = (status: string): string => checked("status", status);
 
+/** Every issue in the store, closed ones too: the Node adapter's list (packages/bd-node). */
 export function listArgv(): BdArgv {
   return ["bd", "list", "--json", "--all", "--brief", "--limit", "0"];
+}
+
+/** How many closed issues the board reads: one page of the done column (BOARD_PAGE_LIMIT). */
+export const CLOSED_PAGE_SIZE = 25;
+
+/**
+ * The board's reads (D-29, T-1B.8): every issue not closed, then the most recently closed ones,
+ * newest first, up to one page of the done column; never every closed issue.
+ */
+export function boardReadArgvs(): [open: BdArgv, closed: BdArgv] {
+  return [
+    ["bd", "list", "--json", "--brief", "--limit", "0"],
+    [
+      "bd",
+      "list",
+      "--json",
+      "--brief",
+      "--status",
+      "closed",
+      "--sort",
+      "closed",
+      "--limit",
+      String(CLOSED_PAGE_SIZE),
+    ],
+  ];
+}
+
+/** The store's Dolt head: its commit changes with every write, so it says when to re-read. */
+export function headArgv(): BdArgv {
+  return ["bd", "vc", "status", "--json"];
 }
 
 /** The store bd finds from the directory it runs in, or `no_beads_directory`. */

@@ -29,6 +29,9 @@ import {
   storeReads,
   storeSnapshotOf,
   supervise,
+  WAKE_DIR,
+  wakeFileName,
+  wakeText,
 } from "../core/src/index.ts";
 import type { BandSettingsPanel } from "./bandSettings.ts";
 import type { Host } from "./host.ts";
@@ -80,6 +83,12 @@ export class BandTally {
   /** The token of this session's lease whose refresher did not start. */
   private failedToken: string | undefined;
   private anonId = `anon-${randomToken()}`;
+  private queuedFinal = false;
+  /** The store this session's pane reads, from the last refresh. */
+  private here: BandStore | undefined;
+  /** When this session last wrote, until the band has drawn a read of its store made after. */
+  private wroteAt: number | undefined;
+  private rechecks: Timer[] = [];
 
   /**
    * @param stores the session's store resolution, shared with the pane (D-24)
@@ -105,11 +114,12 @@ export class BandTally {
   }
 
   /** The minute check: register, read the snapshot, supervise the refresher, draw. */
-  async refresh(): Promise<void> {
+  async refresh(options: { final?: boolean } = {}): Promise<void> {
     const host = this.host;
     if (host === undefined) return;
     if (this.refreshing) {
       this.queued = true;
+      if (options.final === true) this.queuedFinal = true;
       return;
     }
     this.refreshing = true;
@@ -119,12 +129,13 @@ export class BandTally {
       const here: BandStore | undefined = resolution.ok
         ? { name: storeName(resolution.path), path: resolution.path, synced: false }
         : undefined;
+      this.here = here;
       const reads = bandReads({ session: this.stores.sessionName, here, inventory });
       const now = await host.now();
       const dir = await this.stateDir();
       const own = reads.flatMap((read) => read.stores);
       if (dir !== undefined && reads.length > 0) {
-        await this.register(dir, now, settings, inventory.ok ? inventory.value : [], own);
+        await this.register(dir, now, settings, inventory.ok ? inventory.value : [], own, here);
       }
       const snapshot = dir === undefined ? undefined : await this.readSnapshot(dir);
       const fileLease = dir === undefined ? undefined : await this.readLease(dir);
@@ -148,8 +159,10 @@ export class BandTally {
         this.last = undefined;
       } else if (source === "direct") {
         this.last = { reads, stores: await this.readOwn(own, settings, now), source, readAt: now };
+        this.wroteAt = undefined;
       } else if (snapshot !== undefined) {
-        const stores = await this.withWindow(snapshot.stores, own, settings, now);
+        const held = await this.withWindow(snapshot.stores, own, settings, now);
+        const stores = await this.seenWrite(held, settings, now, options.final === true);
         this.last = { reads, stores, source, readAt: snapshot.beatAt };
       }
       // A start under way with no snapshot yet keeps whatever was drawn last.
@@ -160,15 +173,71 @@ export class BandTally {
       this.refreshing = false;
       host.invalidate();
       if (this.queued) {
+        const final = this.queuedFinal;
         this.queued = false;
-        void this.refresh();
+        this.queuedFinal = false;
+        void this.refresh({ final });
       }
     }
   }
 
-  /** A write this session made (a move, a create, an edit): the band redraws once more. */
+  /**
+   * A write this session made (a move, a create, an edit). The band redraws at once, and the
+   * session drops a wake marker naming its store, so the refresher reads that store again within
+   * a second or two; the band reads the snapshot again 3, 6 and 9 seconds on, and at the last, if
+   * the snapshot still holds no read of the store made after the write, it reads that store's
+   * counts itself. So the write shows within 10 seconds, not at the next minute (T-1B.5).
+   */
   afterWrite(): void {
+    void this.wake();
+  }
+
+  private async wake(): Promise<void> {
+    const host = this.host;
+    if (host === undefined) return;
+    const now = await host.now().catch(() => undefined);
+    if (now === undefined) return;
+    this.wroteAt = now;
+    const dir = await this.stateDir();
+    const here = this.here;
+    if (dir !== undefined && here !== undefined) {
+      await host
+        .writeFile(`${dir}/${WAKE_DIR}/${wakeFileName(here.path)}`, wakeText(here.path, now))
+        .catch(() => undefined);
+    }
     void this.refresh();
+    for (const timer of this.rechecks) timer.cancel();
+    const last = WAKE_RECHECK_MS.length - 1;
+    this.rechecks = WAKE_RECHECK_MS.map((ms, i) =>
+      host.after(ms, () => {
+        void this.refresh({ final: i === last });
+      }),
+    );
+  }
+
+  /**
+   * After this session's write, the snapshot's counts of its store, once a read of it made after
+   * the write is there; at the last recheck (`final`), this session's own read instead.
+   */
+  private async seenWrite(
+    stores: StoreSnapshot[],
+    settings: BandSettings,
+    now: number,
+    final: boolean,
+  ): Promise<StoreSnapshot[]> {
+    const wroteAt = this.wroteAt;
+    const here = this.here;
+    if (wroteAt === undefined || here === undefined) return stores;
+    const i = stores.findIndex((one) => samePath(one.path, here.path));
+    if ((stores[i]?.readAt ?? Number.NEGATIVE_INFINITY) >= wroteAt) {
+      this.wroteAt = undefined;
+      return stores;
+    }
+    if (!final) return stores;
+    this.wroteAt = undefined;
+    const read = await this.readStore(here, storeReads([settings.doneWindow], now), now);
+    if (!read.ok) return stores;
+    return i < 0 ? [...stores, read] : stores.map((one, j) => (j === i ? read : one));
   }
 
   /** The band's settings changed in the pane: redraw from the counts held, reading any missing. */
@@ -215,7 +284,8 @@ export class BandTally {
 
   /**
    * The session's registry file: its done window and the stores it sums that the inventory does
-   * not list, so the refresher counts those too (T-1B.1's mapped store).
+   * not list, so the refresher counts those too (T-1B.1's mapped store), and the store its pane
+   * reads, `here`, whose board snapshot the refresher keeps (T-1B.8).
    */
   private async register(
     dir: string,
@@ -223,6 +293,7 @@ export class BandTally {
     settings: BandSettings,
     listed: readonly BandStore[],
     own: readonly BandStore[],
+    here: BandStore | undefined,
   ): Promise<void> {
     const id = this.stores.sessionName ?? this.anonId;
     const extra = own.filter((store) => !listed.some((known) => known.path === store.path));
@@ -233,6 +304,7 @@ export class BandTally {
       stores: [...new Map(extra.map((store) => [store.path, store])).values()].map(
         ({ name, path }) => ({ name, path }),
       ),
+      boards: here === undefined ? [] : [{ name: here.name, path: here.path }],
     };
     await this.host
       ?.writeFile(`${dir}/${SESSIONS_DIR}/${sessionFileName(id)}`, `${JSON.stringify(entry)}\n`)
@@ -355,6 +427,11 @@ export class BandTally {
 }
 
 const EMPTY = { in_progress: 0, blocked: 0, open: 0, done: 0 };
+
+/** When the band reads the snapshot again after a write of its own. */
+const WAKE_RECHECK_MS = [3_000, 6_000, 9_000];
+
+const samePath = (a: string, b: string) => a.replace(/\/+$/, "") === b.replace(/\/+$/, "");
 
 const unique = (stores: readonly BandStore[]): BandStore[] => [
   ...new Map(stores.map((store) => [store.path, store])).values(),

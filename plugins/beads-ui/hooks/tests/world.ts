@@ -64,10 +64,41 @@ export const NO_STORE_WHERE: ProcessRunResult = exit(
 export const NO_STORE_STDERR =
   "Error: no beads database found\nHint: run 'bd where' to inspect the resolved workspace, or 'bd init' to create a new database\n      or set BEADS_DIR to point to your .beads directory\n";
 
+/**
+ * The board's two reads (D-29): the open issues, and the newest page of closed ones. A script
+ * answers either by its own key, or once for both by STORE_LIST, a list of every issue in the
+ * store, `bd list --all`'s shape: the world then answers each read with its part of that list,
+ * as bd would, and passes a failure, a hang or output that is not a list to both.
+ */
+export const OPEN_LIST = "bd list --brief --limit 0";
+export const CLOSED_PAGE = "bd list --brief --status closed --sort closed --limit 25";
+export const STORE_LIST = "bd list --all --brief --limit 0";
+
+function partOf(answer: ReturnType<Script>, closed: boolean): ReturnType<Script> {
+  if (answer === undefined || answer instanceof Error || answer === HANG) return answer;
+  if (answer instanceof Killed || answer.exitCode !== 0) return answer;
+  let rows: unknown;
+  try {
+    rows = JSON.parse(answer.stdout);
+  } catch {
+    return answer;
+  }
+  if (!Array.isArray(rows)) return answer;
+  const status = (row: unknown) => (row as { status?: unknown }).status;
+  const at = (row: unknown) => String((row as { closed_at?: unknown }).closed_at ?? "");
+  const part = closed
+    ? rows
+        .filter((row) => status(row) === "closed")
+        .sort((a, b) => (at(a) < at(b) ? 1 : at(a) > at(b) ? -1 : 0))
+        .slice(0, 25)
+    : rows.filter((row) => status(row) !== "closed");
+  return { ...answer, stdout: JSON.stringify(part) };
+}
+
 const READS: Readonly<Record<string, ProcessRunResult>> = {
   "bd where": whereOf(CWD),
   "bd statuses": ok(statuses),
-  "bd list --all --brief --limit 0": ok(list),
+  [STORE_LIST]: ok(list),
   "bd ready --brief --limit 0": ok(ready),
   "bd show BU-mg2.3": ok(show),
   "bd show BU-mg2.3.5": ok(show5),
@@ -194,6 +225,12 @@ export function world(on: On, options: WorldOptions = {}) {
     runs.push([...argv]);
     cwds.push(cwd);
     const key = keyOf(argv);
+    if (key === OPEN_LIST || key === CLOSED_PAGE) {
+      return (
+        options.script?.(key, argv, cwd) ??
+        partOf(options.script?.(STORE_LIST, argv, cwd) ?? READS[STORE_LIST], key === CLOSED_PAGE)
+      );
+    }
     return (
       options.script?.(key, argv, cwd) ??
       READS[key] ??
@@ -265,7 +302,7 @@ export const PANE_PROPS: RenderPropsOf["Pane"] = {
   title: "Beads",
   isFocused: true,
   bodyColumns: 118,
-  placement: "inline",
+  placement: "dock",
   scroll: { offset: 0, bodyRows: 28 },
   view: {},
 };

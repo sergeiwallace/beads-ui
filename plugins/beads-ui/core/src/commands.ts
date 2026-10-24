@@ -45,6 +45,14 @@ export const COMMANDS: readonly Command[] = [
     hint: "s swimlane",
   },
   { id: "view.sort", label: "Sort", scope: "pane", binding: hotkey("o"), hint: "o sort" },
+  // D-29: a session opens on its own issues (a firstmate on every issue); a switches.
+  {
+    id: "view.scope",
+    label: "Mine or All: this session's own issues, or every issue",
+    scope: "pane",
+    binding: hotkey("a"),
+    hint: "a mine/all",
+  },
   {
     id: "view.filter",
     label: "Filter",

@@ -1,11 +1,12 @@
 // Runners: Vitest only. It reads docs/procedures/mod-install.md, which the mod environment cannot.
-// The install doc names each field by the label the pane draws on it.
+// The install doc names each field by the label the pane draws on it, and it and README.md carry
+// the usage section the pane's help draws.
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import type { Host } from "../hooks/host.ts";
-import { BeadsPane, type PaneUi, type Tab } from "../hooks/pane.ts";
+import { BeadsPane, KEYBINDINGS_BLOCK, type PaneUi, type Tab, USAGE_LINES } from "../hooks/pane.ts";
 import { StoreResolver } from "../hooks/store.ts";
 
 const repoRoot = resolve(import.meta.dirname, "../../..");
@@ -39,8 +40,29 @@ function labelsOn(tab: Tab): string[] {
   const pane = new BeadsPane(new StoreResolver());
   pane.host = { cwd: "/work/beads-ui" } as Host;
   pane.tab = tab;
-  return inputLabels(pane.draw(ui, 118));
+  return inputLabels(pane.draw(ui, { width: 118, placement: "dock" }));
 }
+
+describe("the usage section (T-1B.6)", () => {
+  const section = (text: string) => {
+    const start = text.indexOf("## Using the pane");
+    if (start === -1) return "";
+    const end = text.indexOf("\n## ", start + 1);
+    return text.slice(start, end === -1 ? undefined : end);
+  };
+  const readme = () => readFileSync(join(repoRoot, "README.md"), "utf8");
+
+  it("should carry the same usage section in README.md and mod-install.md", () => {
+    expect(section(readme())).not.toBe("");
+    expect(section(readme())).toBe(section(doc()));
+  });
+
+  it("should carry each line the pane's help draws, and its keybindings.json block", () => {
+    const usage = section(readme()).replace(/\s+/g, " ");
+    for (const line of USAGE_LINES) expect(usage).toContain(line.replace(/\s+/g, " "));
+    expect(section(readme())).toContain(KEYBINDINGS_BLOCK);
+  });
+});
 
 describe("mod-install.md", () => {
   for (const tab of ["board", "backlog"] as const) {

@@ -11,9 +11,10 @@ import {
   type StoreSnapshot,
   storeReads,
   storeSnapshotOf,
+  wakeFileName,
 } from "../core/src/index.ts";
 import { BAND_SETTINGS_KEY } from "./bandSettings.ts";
-import { NARROW_TEXT } from "./pane.ts";
+import { NARROW_TEXT, SCOPE_KEY } from "./pane.ts";
 import { PANE_ID, PLUGIN_NAME } from "./register.ts";
 import {
   BAND_PROPS,
@@ -25,6 +26,7 @@ import {
   INVENTORY_PATH,
   inventoryOf,
   keyOf,
+  OPEN_LIST,
   ok,
   PANE_PROPS,
   REFRESHER_TOKEN,
@@ -37,7 +39,7 @@ import {
   world,
 } from "./tests/world.ts";
 
-const LIST = "bd list --all --brief --limit 0";
+const LIST = OPEN_LIST;
 const HOUR = 3_600_000;
 const STATE = "/home/me/.local/state/beads-ui";
 const SNAPSHOT = `${STATE}/counts.json`;
@@ -270,6 +272,8 @@ describe("the store a session sums (T-1B.1)", () => {
       seenAt: START_MS,
       windows: ["24h"],
       stores: [{ name: "kg-store", path: MAPPED }],
+      // The store its pane reads, whose board snapshot the refresher keeps (T-1B.8).
+      boards: [{ name: "kg-store", path: MAPPED }],
     });
   });
 
@@ -523,7 +527,15 @@ describe("the band's cadence and stamp (T-1B.5)", () => {
   });
 
   test("should redraw once after a write the session makes", async ($, on) => {
-    const w = await started($, on, named("aih-ec2-3", { refresher: true, files: LIVE }));
+    const w = await started(
+      $,
+      on,
+      named("aih-ec2-3", {
+        refresher: true,
+        files: LIVE,
+        stored: { [SCOPE_KEY]: { "aih-ec2-3": "all" } },
+      }),
+    );
     await $.command.run(SHOW);
     await w.clock.settle();
     const ui = await pane($);
@@ -535,6 +547,80 @@ describe("the band's cadence and stamp (T-1B.5)", () => {
     expect(await line($, "own")).toBe(
       "[bd] 6 tasks (1 in progress, 1 blocked, 3 open, 1 done last 24h)",
     );
+  });
+
+  const ALL_VIEW = { [SCOPE_KEY]: { "aih-ec2-3": "all" } };
+  const MORE_LINE = "[bd] 6 tasks (1 in progress, 1 blocked, 3 open, 1 done last 24h)";
+
+  test("should drop a wake marker for its store after a write and draw the refresher's read of it within 10 seconds", async ($, on) => {
+    const w = await started(
+      $,
+      on,
+      named("aih-ec2-3", { refresher: true, files: LIVE, stored: ALL_VIEW }),
+    );
+    await $.command.run(SHOW);
+    await w.clock.settle();
+    const ui = await pane($);
+
+    await ui.select({ key: "move:BU-2zw", value: "in_progress" });
+    await w.clock.settle();
+
+    const marker = JSON.parse(w.files.get(`${STATE}/wake/${wakeFileName(CWD)}`) ?? "{}");
+    expect(marker).toEqual({ path: CWD, at: START_MS });
+    // The snapshot holds no read of the store since the write yet: the band keeps its line.
+    expect(await line($, "own")).toBe(OWN);
+    // The refresher answers the marker two seconds on.
+    await w.clock.advance(2_000);
+    w.files.set(SNAPSHOT, snapshotOf(MORE, { beatAt: START_MS + 2_000 }));
+    await w.clock.advance(1_000);
+
+    expect(await line($, "own")).toBe(MORE_LINE);
+    expect(w.keys().filter(isCount)).toEqual([]);
+  });
+
+  test("should read its store's counts itself 9 seconds after a write the refresher has not read", async ($, on) => {
+    const w = await started(
+      $,
+      on,
+      named("aih-ec2-3", {
+        refresher: true,
+        files: LIVE,
+        stored: ALL_VIEW,
+        script: countScript(MORE),
+      }),
+    );
+    await $.command.run(SHOW);
+    await w.clock.settle();
+    const ui = await pane($);
+
+    await ui.select({ key: "move:BU-2zw", value: "in_progress" });
+    await w.clock.advance(8_999);
+    expect(w.keys().filter(isCount)).toEqual([]);
+    expect(await line($, "own")).toBe(OWN);
+
+    await w.clock.advance(1);
+
+    expect(await line($, "own")).toBe(MORE_LINE);
+    expect(new Set(w.keys().flatMap((key, i) => (isCount(key) ? [w.cwds[i]] : [])))).toEqual(
+      new Set([CWD]),
+    );
+  });
+
+  test("should read bd for the pane at once after its own write, not wait for the snapshot", async ($, on) => {
+    const w = await started(
+      $,
+      on,
+      named("aih-ec2-3", { refresher: true, files: LIVE, stored: ALL_VIEW }),
+    );
+    await $.command.run(SHOW);
+    await w.clock.settle();
+    const ui = await pane($);
+    const before = w.keys().length;
+
+    await ui.select({ key: "move:BU-2zw", value: "in_progress" });
+    await w.clock.settle();
+
+    expect(w.keys().slice(before)).toContain(LIST);
   });
 
   test("should show no read time when debug mode is off", async ($, on) => {

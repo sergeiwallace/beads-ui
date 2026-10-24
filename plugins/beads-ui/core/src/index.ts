@@ -1,8 +1,11 @@
 export {
+  boardReadArgvs,
+  CLOSED_PAGE_SIZE,
   cascadePreviewArgv,
   closeArgv,
   deleteArgv,
   deletePreviewArgv,
+  headArgv,
   historyArgv,
   listArgv,
   moveArgv,
@@ -75,6 +78,20 @@ export {
   parseFilter,
   submitFilter,
 } from "./filter.ts";
+export type { Labels, Tier } from "./layout.ts";
+export {
+  buttonWidth,
+  groupLayout,
+  isShort,
+  labels,
+  MEDIUM_COLUMNS,
+  MIN_GROUP_COLUMNS,
+  packRows,
+  SHORT_ROWS,
+  textWidth,
+  tierOf,
+  WIDE_COLUMNS,
+} from "./layout.ts";
 export type {
   DisplayIdPlan,
   DisplayIdPlanInput,
@@ -132,6 +149,8 @@ export {
   parseBdReady,
   parseBdShow,
   parseBdStatuses,
+  parseIssueRows,
+  parseStatusesJson,
 } from "./parsers.ts";
 export type { QuickAdd, QuickAddError } from "./quickadd.ts";
 export { createArgv, parseQuickAdd } from "./quickadd.ts";
@@ -145,6 +164,8 @@ export {
   storeLabel,
 } from "./resolve.ts";
 export type {
+  BoardEntry,
+  BoardSnapshot,
   FileLease,
   HostSnapshot,
   Lease,
@@ -156,12 +177,17 @@ export type {
 } from "./snapshot.ts";
 export {
   BEAT_MS,
+  BOARD_MAX_BYTES,
+  BOARDS_DIR,
+  boardFileName,
+  boardRow,
   DEFAULT_DONE_WINDOW,
   LEASE_DEAD_MS,
   LEASE_FILE,
   LEASE_KEY,
   LEASE_TTL_MS,
   leaseOf,
+  parseBoardSnapshot,
   parseFileLease,
   parseSnapshot,
   refresherRunning,
@@ -176,6 +202,9 @@ export {
   storeReads,
   storeSnapshotOf,
   supervise,
+  WAKE_DIR,
+  wakeFileName,
+  wakeText,
   windowMs,
 } from "./snapshot.ts";
 export type { SortDirection, SortError, SortKey, SortSpec } from "./sort.ts";

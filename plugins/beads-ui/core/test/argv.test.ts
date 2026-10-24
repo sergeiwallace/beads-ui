@@ -2,12 +2,13 @@
 // claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
+  boardReadArgvs,
   cascadePreviewArgv,
   closeArgv,
   deleteArgv,
   deletePreviewArgv,
+  headArgv,
   historyArgv,
-  listArgv,
   moveArgv,
   readyArgv,
   reopenArgv,
@@ -17,7 +18,22 @@ import {
 
 describe("bd argv builders", () => {
   test("should build the read commands with --json when asked for the board's inputs", () => {
-    expect(listArgv()).toEqual(["bd", "list", "--json", "--all", "--brief", "--limit", "0"]);
+    expect(boardReadArgvs()).toEqual([
+      ["bd", "list", "--json", "--brief", "--limit", "0"],
+      [
+        "bd",
+        "list",
+        "--json",
+        "--brief",
+        "--status",
+        "closed",
+        "--sort",
+        "closed",
+        "--limit",
+        "25",
+      ],
+    ]);
+    expect(headArgv()).toEqual(["bd", "vc", "status", "--json"]);
     expect(statusesArgv()).toEqual(["bd", "statuses", "--json"]);
     expect(readyArgv()).toEqual(["bd", "ready", "--json", "--brief", "--limit", "0"]);
     expect(showArgv("BU-mg2.3.5")).toEqual(["bd", "show", "BU-mg2.3.5", "--json"]);
