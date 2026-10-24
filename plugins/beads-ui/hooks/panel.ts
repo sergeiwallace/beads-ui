@@ -389,7 +389,8 @@ export function drawMenu(
  * The Timeline view (T-2B.9): each dated epic or milestone as a button that opens it, with, in
  * the terminal, a one-row Raster bar from the axis start to its due date coloured by its status
  * category (the label beside the bar in the wide tier, above it below that), and elsewhere a
- * Text row of its due date and label; then the ones with no due date, listed apart.
+ * Text row of its due date and label; then the ones with no due date, listed apart. A layout with
+ * a row window says how many items are above and below it.
  */
 export function drawTimeline(
   ui: PaneUi,
@@ -458,6 +459,12 @@ export function drawTimeline(
             key: "timeline-axis",
             children: [Text({ dimColor: true, children: layout.axisLine })],
           }),
+      layout.above === 0
+        ? undefined
+        : Box({
+            key: "timeline-above",
+            children: [Text({ dimColor: true, children: `↑ ${layout.above} above` })],
+          }),
       ...rows,
       Box({
         key: "timeline-undated",
@@ -467,6 +474,12 @@ export function drawTimeline(
           ...layout.undated.map((entry) => label(entry.id, entry.label)),
         ],
       }),
+      layout.below === 0
+        ? undefined
+        : Box({
+            key: "timeline-below",
+            children: [Text({ dimColor: true, children: `↓ ${layout.below} below` })],
+          }),
     ]),
   });
 }

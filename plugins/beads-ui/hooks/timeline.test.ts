@@ -6,7 +6,7 @@ import { clockStamp, RASTER_COLORS, RASTER_DEFAULT_COLOR } from "../core/src/ind
 import list from "../core/test/fixtures/bd-list-all-brief.json.ts";
 import { PANE_ID, PLUGIN_NAME } from "./register.ts";
 import { test } from "./tests/kit.ts";
-import { MINE } from "./tests/mine.ts";
+import { ME, MINE } from "./tests/mine.ts";
 import { overflows } from "./tests/width.ts";
 import {
   ok,
@@ -15,6 +15,7 @@ import {
   SHOW,
   START_MS,
   STORE_LIST,
+  timelineList,
   VIEWPORT,
   type WorldOptions,
   world,
@@ -22,7 +23,8 @@ import {
 
 // T-2B.9: the Timeline view, driven through the pane as Claude Code mounts it. The store is the
 // fixture's, with due dates on three epics and one `Sprint 7` milestone (D-5); its six other
-// epics have none. The world's clock reads 2026-10-21 01:12 UTC, before every due date.
+// epics have none. The world's clock reads 2026-10-21 01:12 UTC, before every due date. The
+// session is a firstmate, which opens on every owner's issues; the scope suite names its own.
 
 /** The day of the pane's read in the host's own time zone, which starts the axis. */
 const TODAY = clockStamp(START_MS, new Date(START_MS).getTimezoneOffset()).slice(0, 10);
@@ -56,8 +58,11 @@ const DATED_STORE = [
 const DATED_ORDER = ["BU-mg2.3", "BU-ms7", "BU-mg2.5", "BU-mg2"];
 const UNDATED = ["BU-mg2.4", "BU-mg2.8", "BU-mg2.9", "BU-mg2.10", "BU-mg2.11", "BU-mg2.12"];
 
-const storeOf = (store: readonly unknown[]): WorldOptions => ({
+const FIRSTMATE = "aih-ec2-firstmate-1";
+
+const storeOf = (store: readonly unknown[], session = FIRSTMATE): WorldOptions => ({
   ...MINE,
+  env: { HOME: "/home/me", CLAUDE_CODE_TASK_LIST_ID: session },
   script: (key) => (key === STORE_LIST ? ok(JSON.stringify(store)) : undefined),
 });
 
@@ -267,5 +272,178 @@ describe("reaching the Timeline and its items (T-2B.9)", () => {
     await w.clock.settle();
 
     expect((w.store.get("view") as { view?: string } | undefined)?.view).toBe("timeline");
+  });
+});
+
+/** The person's Tab or arrow onto an element, as the engine raises it. */
+const focusOn = ($: Engine, element: string) =>
+  $.ui.focus({
+    component: "Pane",
+    requestId: PANE_ID,
+    plugin: PLUGIN_NAME,
+    element,
+    origin: { kind: "person" },
+  } as never);
+
+const timelineIds = async (ui: Mounted) =>
+  idsOf(await keysOf(ui, "timeline:", "Button"), "timeline:");
+
+describe("the Timeline's scope (BU-beads-ui-timeline-dety N-1, D-29)", () => {
+  const OWN = ["BU-mg2.3", "BU-ms7"];
+  const owned = DATED_STORE.map((row) => ({
+    ...row,
+    assignee: OWN.includes(String(row.id)) ? ME : "aih-ec2-4",
+  }));
+
+  test("should list only a non-firstmate session's own epics and milestones, and every owner's after a", async ($, on) => {
+    const { ui } = await openTimeline($, on, "vscode", storeOf(owned, ME));
+
+    expect(await timelineIds(ui)).toEqual(OWN);
+    expect((await ui.find({ key: "timeline-count" }))?.text).toBe(
+      "2 epics and milestones: 2 with a due date, 0 without",
+    );
+
+    await ui.press({ key: "scope" });
+
+    const all = await timelineIds(ui);
+    expect(all.slice(0, DATED_ORDER.length)).toEqual(DATED_ORDER);
+    expect([...all.slice(DATED_ORDER.length)].sort()).toEqual([...UNDATED].sort());
+  });
+
+  test("should open a firstmate's Timeline on every owner's epics and milestones", async ($, on) => {
+    const { ui } = await openTimeline($, on, "vscode", storeOf(owned, FIRSTMATE));
+
+    expect(await timelineIds(ui)).toHaveLength(DATED_ORDER.length + UNDATED.length);
+  });
+});
+
+describe("the Timeline's own read (BU-beads-ui-timeline-dety N-2)", () => {
+  // Thirty tasks closed after the old epic and milestone: the board reads only the 25 newest.
+  const [first] = rows;
+  const newer = Array.from({ length: 30 }, (_, i) => ({
+    ...first,
+    id: `BU-done${i}`,
+    issue_type: "task",
+    status: "closed",
+    closed_at: new Date(Date.UTC(2026, 9, 1) + i * 3_600_000).toISOString(),
+  }));
+  const OLD_EPIC = {
+    ...(rows.find((row) => row.id === "BU-mg2.4") ?? {}),
+    id: "BU-old",
+    title: "an epic closed long ago",
+    metadata: {},
+    labels: [],
+    status: "closed",
+    closed_at: "2026-02-01T00:00:00Z",
+    due_at: "2026-02-15T00:00:00Z",
+  };
+  const OLD_MILESTONE = {
+    ...SPRINT,
+    id: "BU-ms1",
+    title: "Sprint 1",
+    status: "closed",
+    closed_at: "2026-03-01T00:00:00Z",
+  };
+
+  test("should draw a closed epic and milestone older than the 25 newest closed issues", async ($, on) => {
+    const store = [...DATED_STORE, ...newer, OLD_EPIC, OLD_MILESTONE];
+    const { w, ui } = await openTimeline($, on, "vscode", storeOf(store));
+    await w.clock.settle();
+
+    expect(w.keys()).toContain(timelineList("epic"));
+    expect(w.keys()).toContain(timelineList("milestone"));
+    expect((await ui.find({ key: "timeline:BU-old" }))?.props.label).toBe(
+      "2026-02-15 an epic closed long ago",
+    );
+    expect(await ui.find({ key: "timeline:BU-ms1" })).toBeDefined();
+    expect((await ui.find({ key: "timeline-axis" }))?.text).toBe("2026-02-15 to 2026-12-15");
+  });
+
+  test("should read the closed epics when the pane reopens on the Timeline kept from before", async ($, on) => {
+    const store = [...DATED_STORE, ...newer, OLD_EPIC];
+    const w = world(on, { ...storeOf(store), stored: { view: { view: "timeline" } } });
+    await $.session.start(SESSION);
+    await $.command.run(SHOW);
+    await w.clock.settle();
+    const ui = await $.ui.mount({
+      plugin: PLUGIN_NAME,
+      surface: "vscode",
+      component: "Pane",
+      props: PANE_PROPS,
+      requestId: PANE_ID,
+      viewport: VIEWPORT,
+    });
+
+    expect(await ui.find({ key: "timeline:BU-old" })).toBeDefined();
+  });
+
+  test("should say so and still draw the board's epics when its own read fails", async ($, on) => {
+    const store = [...DATED_STORE, ...newer, OLD_EPIC];
+    const failing = storeOf(store);
+    const { ui } = await openTimeline($, on, "vscode", {
+      ...failing,
+      script: (key, argv, cwd) =>
+        key === timelineList("epic")
+          ? { exitCode: 1, stdout: "", stderr: "Error: database locked" }
+          : failing.script?.(key, argv, cwd),
+    });
+
+    expect((await ui.find({ key: "notice" }))?.text).toMatch(
+      /^The Timeline shows only the newest closed epics and milestones: bd list --type epic failed \(exit 1\): Error: database locked/,
+    );
+    expect(await ui.find({ key: "timeline:BU-old" })).toBeUndefined();
+    expect((await timelineIds(ui)).slice(0, DATED_ORDER.length)).toEqual(DATED_ORDER);
+  });
+});
+
+describe("the Timeline's row window (BU-beads-ui-timeline-dety N-3, A005)", () => {
+  // 300 dated epics, each with a long title: the Timeline draws a window of rows sized from the
+  // pane's body that follows the focus, so the drawing stays under the 100,000 characters Claude
+  // Code keeps and the focus still reaches the last epic.
+  const [first] = rows;
+  const EPICS = Array.from({ length: 300 }, (_, i) => ({
+    ...first,
+    id: `BU-ep${i}`,
+    issue_type: "epic",
+    status: "open",
+    title: `epic number ${i} with a title long enough to fill the whole of a wide row and more`,
+    metadata: {},
+    labels: [],
+    due_at: new Date(Date.UTC(2026, 10, 1) + i * 86_400_000).toISOString(),
+  }));
+
+  test(
+    "should keep a Timeline of 300 dated epics under the drawing limit and reach the last one by stepping down",
+    { timeoutMs: 120_000 },
+    async ($, on) => {
+      const { ui } = await openTimeline($, on, "terminal", storeOf(EPICS));
+      let largest = 0;
+
+      for (let i = 0; i < EPICS.length; i++) {
+        const drawn = await timelineIds(ui);
+        largest = Math.max(largest, JSON.stringify(await ui.drawn()).length);
+        expect(drawn).toContain(`BU-ep${i}`);
+        expect(drawn.length).toBeLessThanOrEqual(PANE_PROPS.scroll.bodyRows);
+        await focusOn($, `timeline:BU-ep${i}`);
+      }
+
+      expect(largest).toBeLessThan(100_000);
+      expect((await ui.find({ key: "timeline-above" }))?.text).toMatch(/^↑ \d+ above$/);
+      expect((await ui.find({ key: "timeline-count" }))?.text).toBe(
+        "300 epics and milestones: 300 with a due date, 0 without",
+      );
+    },
+  );
+
+  test("should draw fewer Timeline rows in a shorter pane and say how many are below", async ($, on) => {
+    const { ui } = await openTimeline($, on, "vscode", storeOf(EPICS));
+    const tall = (await timelineIds(ui)).length;
+
+    await ui.redraw({ ...PANE_PROPS, scroll: { offset: 0, bodyRows: 14 } });
+
+    const short = (await timelineIds(ui)).length;
+    expect(short).toBeGreaterThan(0);
+    expect(short).toBeLessThan(tall);
+    expect((await ui.find({ key: "timeline-below" }))?.text).toBe(`↓ ${300 - short} below`);
   });
 });

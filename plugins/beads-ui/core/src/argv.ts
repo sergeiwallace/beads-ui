@@ -42,6 +42,26 @@ export function boardReadArgvs(): [open: BdArgv, closed: BdArgv] {
   ];
 }
 
+/**
+ * The Timeline's own reads (T-2B.9): every closed issue of each of `types`, one read a type, as
+ * bd 1.3 takes one `--type` a call. The board's reads hold the open ones and only the newest
+ * closed page, so an epic or milestone closed before that page comes from these.
+ */
+export function timelineReadArgvs(types: readonly string[]): BdArgv[] {
+  return types.map((type) => [
+    "bd",
+    "list",
+    "--json",
+    "--brief",
+    "--status",
+    "closed",
+    "--type",
+    checked("issue type", type),
+    "--limit",
+    "0",
+  ]);
+}
+
 /** The store's Dolt head: its commit changes with every write, so it says when to re-read. */
 export function headArgv(): BdArgv {
   return ["bd", "vc", "status", "--json"];
