@@ -33,13 +33,13 @@ const blank = (value: string | undefined) =>
  * `CLAUDE_CODE_TASK_LIST_ID`. A session Claude Code's daemon hosts (moved to the background, or
  * reached by `claude attach`) runs in a worker whose environment is the daemon's, so that
  * variable there names whichever session started the daemon, often the firstmate; the worker's
- * own session is the name Claude Code sets in `CLAUDE_CODE_SESSION_NAME`. A worker with no such
- * name has none this session can prove, so it counts as unnamed and never takes the firstmate's
- * form.
+ * own session is the name Claude Code sets in `CLAUDE_CODE_SESSION_NAME`, less the ` (N)` Claude
+ * Code adds when an older copy already holds the bare name. A worker with no such name has none
+ * this session can prove, so it counts as unnamed and never takes the firstmate's form.
  */
 function sessionNameOf(env: SessionEnv): string | undefined {
   const hosted = env.kind === "bg" || env.backend === "daemon";
-  return blank(hosted ? env.name : env.taskListId);
+  return blank(hosted ? env.name?.replace(/ \(\d+\)$/, "") : env.taskListId);
 }
 
 /**

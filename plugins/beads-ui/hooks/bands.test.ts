@@ -1021,6 +1021,16 @@ describe("the session a daemon-hosted session draws for (BU-ylx.6.9)", () => {
     expect(w.files.has(registry("aih-ec2-firstmate-1"))).toBe(false);
   });
 
+  test("should count for aih-ec2-2 when Claude Code numbered its background copy aih-ec2-2 (2)", async ($, on) => {
+    const w = await started($, on, hosted("aih-ec2-2 (2)"));
+
+    expect(await line($, "all")).toBeUndefined();
+    expect(await line($, "own")).toBe(
+      "[bd] 2 tasks (1 in progress, 0 blocked, 1 open, 0 done last 24h)",
+    );
+    expect(w.files.has(registry("aih-ec2-2"))).toBe(true);
+  });
+
   test("should draw the single [bd] line and never the firstmate's form when a daemon-hosted session has no name of its own", async ($, on) => {
     await started($, on, hosted());
 
