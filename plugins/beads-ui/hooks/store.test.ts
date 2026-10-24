@@ -14,6 +14,7 @@ import {
   NO_STORE_STDERR,
   NO_STORE_WHERE,
   OPEN_LIST,
+  onBoard,
   PANE_PROPS,
   type Script,
   SESSION,
@@ -60,14 +61,16 @@ async function openIn($: Engine, on: On, cwd: string, options: WorldOptions) {
   await $.session.start({ ...SESSION, cwd });
   await $.command.run(SHOW);
   await w.clock.settle();
-  const ui = await $.ui.mount({
-    plugin: PLUGIN_NAME,
-    surface: "terminal",
-    component: "Pane",
-    props: PANE_PROPS,
-    requestId: PANE_ID,
-    viewport: VIEWPORT,
-  });
+  const ui = await $.ui
+    .mount({
+      plugin: PLUGIN_NAME,
+      surface: "terminal",
+      component: "Pane",
+      props: PANE_PROPS,
+      requestId: PANE_ID,
+      viewport: VIEWPORT,
+    })
+    .then(onBoard);
   return { w, ui };
 }
 

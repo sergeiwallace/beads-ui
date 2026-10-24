@@ -155,6 +155,7 @@ export function register(on: On) {
     // every resize (T-1B.9).
     const frame = {
       width,
+      bodyColumns: e.props.bodyColumns,
       placement: e.props.placement,
       ...(e.props.scroll === undefined ? {} : { bodyRows: e.props.scroll.bodyRows }),
     };

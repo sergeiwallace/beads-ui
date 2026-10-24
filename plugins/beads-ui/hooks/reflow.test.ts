@@ -7,6 +7,7 @@ import { PANE_ID, PLUGIN_NAME } from "./register.ts";
 import { overflows } from "./tests/width.ts";
 import {
   BAND_PROPS,
+  onBoard,
   PANE_PROPS,
   SESSION,
   SHOW,
@@ -18,7 +19,7 @@ import {
 // T-1B.9: the pane reflows to its body's width and height. The kit hands back the element
 // tree, so tests/width.ts measures it as Claude Code lays it out.
 
-const WIDTHS = [40, 48, 64, 80, 120];
+const WIDTHS = [40, 48, 64, 72, 80, 120];
 const LIVE_BAND = {
   env: { HOME: "/home/me", CLAUDE_CODE_TASK_LIST_ID: "aih-ec2-firstmate-1" },
 } satisfies WorldOptions;
@@ -35,14 +36,16 @@ async function paneAt(
   await $.session.start(SESSION);
   await $.command.run(SHOW);
   await w.clock.settle();
-  const ui = await $.ui.mount({
-    plugin: PLUGIN_NAME,
-    surface: "terminal",
-    component: "Pane",
-    props: { ...PANE_PROPS, ...props },
-    requestId: PANE_ID,
-    viewport: { ...VIEWPORT, columns: Math.max(VIEWPORT.columns, (props.bodyColumns ?? 0) * 2) },
-  });
+  const ui = await $.ui
+    .mount({
+      plugin: PLUGIN_NAME,
+      surface: "terminal",
+      component: "Pane",
+      props: { ...PANE_PROPS, ...props },
+      requestId: PANE_ID,
+      viewport: { ...VIEWPORT, columns: Math.max(VIEWPORT.columns, (props.bodyColumns ?? 0) * 2) },
+    })
+    .then(onBoard);
   return { w, ui };
 }
 
@@ -97,11 +100,12 @@ describe("reflow without overflow (T-1B.9)", () => {
     expect((await ui.find({ key: "swimlane" }))?.props.hotkey).toBe("s");
   });
 
-  test("should draw the key and a short word at 40 columns, and stack the board's column groups", async ($, on) => {
+  test("should draw the key and a short word at 40 columns, the nav's key and glyph, and stack the board's column groups", async ($, on) => {
     const { ui } = await paneAt($, on, { bodyColumns: 40 });
 
     expect((await ui.find({ key: "swimlane" }))?.props.label).toBe("Lanes");
-    expect((await ui.find({ key: "tab:backlog" }))?.props.label).toBe("Bklg");
+    // T-2B.1: below 48 columns the nav is a bar of keys and glyphs.
+    expect((await ui.find({ key: "tab:backlog" }))?.props.label).toBe("☰");
     expect((await ui.find({ key: "delete" }))?.props.label).toBe("Del");
     expect((await ui.find({ key: "tab:backlog" }))?.props.hotkey).toBe("2");
     expect((await ui.find({ key: "group::active" }))?.props.width).toBeGreaterThanOrEqual(16);

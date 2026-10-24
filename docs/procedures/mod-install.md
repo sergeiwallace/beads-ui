@@ -67,10 +67,10 @@ With auto-update on, Claude Code checks the marketplace when a session starts, n
 - `/show-beads-ui` opens the pane, and runs again to close it. `/bu` is the same command under a short name.
 - The band above the prompt reads `[bd] {T} tasks ({P} in progress, {B} blocked, {O} open, {D} done last {W})`: the issues the session owns (their assignee is the session's name, which `ai c` pins in `CLAUDE_CODE_TASK_LIST_ID`) by status, the ones it closed within the done window `W` (`24h` unless you set another), and `T`, the sum of the counts drawn. It counts them in every store listed in `~/.beads/shared-server/publish-sweep.json`, the machine's store inventory that ai-harness's publish sweep writes, plus the session's own store (see [The store a session reads](#the-store-a-session-reads)) when the inventory does not list it, and in that store alone when there is no inventory. A firstmate session (a name ending `-firstmate-<N>`) draws two lines: `[bd][all]` with every owner's issues in those stores, then `[fm]` with its own, right-aligned under `[all]` so both lines' counts start in the same column. Each store is the copy both hosts of the pair pull, so the totals hold the other host's work as of the last sync; while a store is out of step with the pair, the `[bd][all]` line ends with a marker such as `1 unsynced`, and the pane's header names those stores. A session without a name owns nothing it can count, so its one `[bd]` line counts every owner's issues in the session's own store; when that store does not resolve, the band draws nothing. A line ends with `~` when a store it sums could not be read (it draws from the stores that answered) and with `*` when the session read the counts itself because the host refresher is not running (below). The pane's help explains both.
 - The counts come from one host refresher (below), so the band costs no `bd` call of the session's own. The band redraws from the newest counts once a minute, and once more after a write the session makes. It shows no read time unless `debug = true` is set under `[band]` in `beads-ui.toml`; then each line ends with the time its counts were read, to the second.
-- The pane has the tabs `1` Board, `2` Backlog and `4` Detail. `3` Sprint is drawn dimmed: the Sprint view is planned and not built yet, so pressing it shows a line that says so and leaves you on the tab you were on. The header names the store the pane reads, as `KG (sw-bms-workspace)` (its prefix and directory) or the directory alone, and when the board was last read (`as of HH:MM:SS`, local time).
+- The pane opens on the Tasks view, the task panel ([below](#the-task-panel)). A nav leads to `t` Tasks, `1` Board, `2` Backlog, `4` Detail and `6` Settings. `3` Sprint and `5` Timeline are drawn dimmed: those views are planned and not built yet, so pressing either shows a line that says so and leaves you on the view you were on. The header names the store the pane reads, as `KG (sw-bms-workspace)` (its prefix and directory) or the directory alone, and when the board was last read (`as of HH:MM:SS`, local time).
 - The pane draws its first render from the host refresher's snapshot of the store (below), with that snapshot's read time in the header, then reads `bd` and draws the result. Every 10 seconds it draws the newest snapshot, and reads `bd` itself only when the refresher is not running, its snapshot is older than three minutes, or the store's snapshot was skipped (a line names why). It reads `bd` itself when you open it and after each write it makes. Either way it reads the open issues and the 25 most recently closed (one page of the done column), never every closed issue: `bd list --json --brief --limit 0` and `bd list --json --brief --status closed --sort closed --limit 25`. A failed `bd list` keeps the last board on screen with an error line naming the exit code, and the next refresh tries again.
 - A session opens its board on its own issues (Mine: the issues assigned to its name); `a` switches to every issue (All) and back. A firstmate session, and a session with no name, opens on All. The choice is kept for each session name. With Mine on and no open issue of its own, the board says so and how many open issues `a` shows.
-- The pane reflows to its size. From 72 columns the controls carry their full labels, from 48 a short word, and below 48 the shortest form, each with its key; the controls wrap onto as many rows as they need, and the board's column groups stack when a row of them would not fit, so no line runs past the pane's edge. Above the prompt, or under 12 rows, the pane drops its help and the footer's hints and moves the input fields below the board, so the tabs, the board's header and a card stay in view.
+- The pane reflows to its size. From 72 columns the nav is a framed side nav beside the view, from 48 a bar of short labels above it, and below 48 a bar of each view's key and a glyph (`✓` Tasks, `▦` Board, `☰` Backlog, `»` Sprint, `◉` Detail, `⇢` Timeline, `⚙` Settings); above the prompt, or under 12 rows, the side nav becomes the bar. The view's own controls carry their full labels from 72 columns, a short word from 48, and below 48 the shortest form, each with its key; the controls wrap onto as many rows as they need, and the board's column groups stack when a row of them would not fit, so no line runs past the pane's edge. Above the prompt, or under 12 rows, the pane drops its help and the footer's hints and moves the input fields below the board, so the tabs, the board's header and a card stay in view.
 - If the pane was open when your last session ended, it opens again on its own. On a terminal narrower than 110 columns it stays closed and a toast says so; `/show-beads-ui` opens it anyway.
 
 ## The host refresher
@@ -138,7 +138,7 @@ How focus reaches the pane and leaves it, and how to close and reopen it. The pa
 }
 ```
 
-If `~/.claude/keybindings.json` already exists, add the `Chat` entry to its `bindings` list rather than replacing the file. The chord opens the pane when it is closed and closes it when it is open; it cannot move the focus into a pane that is already open, which Ctrl+X then Tab and the beads button do. Claude Code has no way to hide a pane and keep it open, so hiding it is closing it, and `/bu` brings it back on the same tab.
+If `~/.claude/keybindings.json` already exists, add the `Chat` entry to its `bindings` list rather than replacing the file. The chord opens the pane when it is closed and closes it when it is open; it cannot move the focus into a pane that is already open, which Ctrl+X then Tab and the beads button do. Claude Code has no way to hide a pane and keep it open, so hiding it is closing it, and `/bu` brings it back on the same view. It opens on the Tasks view the first time, and on whichever view you left it on after that.
 
 ## Keys
 
@@ -146,15 +146,19 @@ The pane takes these keys while it has the keyboard (`/show-beads-ui` gives it t
 
 | Key | Action |
 |---|---|
-| `1`, `2`, `4` | Board, Backlog, Detail tab |
-| `3` | Sprint: planned, not built yet; shows a line saying so |
+| `t` | Tasks view, the task panel |
+| `1`, `2`, `4`, `6` | Board, Backlog, Detail, Settings view |
+| `3`, `5` | Sprint, Timeline: planned, not built yet; shows a line saying so |
+| `k` | Open or close the options menu: every action of the view, each with its key |
 | `a` | Mine or All: this session's own issues, or every issue |
 | `n` | Focus the quick-add field |
-| `s` | Next swimlane: none, assignee, epic |
-| `o` | Next sort: priority, newest created, recently updated, due date, assignee |
-| `d` | Open the focused card's detail |
-| `m` | Focus the focused card's Move to |
-| `x` | Delete the focused card, or the issue on the Detail tab |
+| `s` | Next swimlane: none, assignee, epic (Board, Backlog, Detail) |
+| `o` | Next sort: priority, newest created, recently updated, due date, assignee (Board, Backlog, Detail) |
+| `d` | Open the focused card's or task's detail |
+| `m` | Focus the focused card's Move to; on the Tasks view, open the task's detail on its status |
+| `e` | On the Tasks view, open the focused task's detail on its title |
+| `r` | On the Tasks view, show the collapsed tasks, or collapse them again |
+| `x` | Delete the focused card or task, or the issue on the Detail tab |
 | `p`, `b` | Next or previous page: of the focused card's column on the Board, of the list on the Backlog, while it is paged |
 | `l` | Next page of swimlanes, while they take more than one page |
 | `u` | Undo the last close, while its line is shown |
@@ -174,6 +178,15 @@ In the delete confirmation:
 | Esc | Cancel |
 
 The board steps aside while the confirmation is open, so the confirmation gets the keyboard, and comes back when it closes. The confirmation shows `bd delete <id> --dry-run` before anything is written. Delete runs the dry run once more and deletes only if nothing changed. When the issue has dependents, the delete is a cascade, and Delete appears only after you type the issue's display id into the field. After a close, `u` writes the status the issue had back, through the same guarded write as a move.
+
+## The task panel
+
+The pane opens on the Tasks view, which lists the session's own tasks (Mine; `a` switches to every owner's, as on the board): those in progress first (`◐`, every status of the in-progress kind, such as `in_progress`, `hooked` or `review`), then blocked (`●`), then open (`○`), each group by priority and then age. Deferred, pinned and closed issues are not listed. A line above the list counts them, such as `15 tasks: 2 in progress, 1 blocked, 12 open`. Like the board, the list draws from the host refresher's snapshot when it is current and from the pane's own bounded `bd` read otherwise.
+
+- The first ten tasks are drawn and the rest are collapsed behind a `+5 more` control under the list. Press it (Tab to it and Enter, a click, or `r`) to draw the rest in place; it then reads `show fewer`. Tab, Up and Down move through every task drawn. Above the prompt, under 12 rows, or past 100 tasks, the list draws a window of rows round the focused task that moves with the focus, with `↑ N above` and `↓ N below` lines, so the focused task stays in view and Down always reaches the next one.
+- Enter on a task, or a click on it, opens its detail on the Detail view (see [Edit an issue](#edit-an-issue)). `e` opens the focused task's detail on its title, `m` on its status.
+- `k` opens the options menu about the focused task, under its row: its own actions (`d` Detail, `m` Move to, `e` Edit, `x` Delete), the view's (`a`, `n`, `r`, `g`, `h`, `k`) and every view the nav leads to, each with its key. Press an item to run it; the menu closes. Each task row also carries a `⋮` button that opens the same menu for that task, so a click reaches every action. Every view has the menu: on the Board, Backlog and Detail views it lists their controls, and on Settings its own. Every key a view draws is in its menu, and every menu item has its key.
+- The Settings view (`6`) sets, for every session on the machine: `Shown tasks`, how many tasks are drawn before the rest collapse (1 to 200); `Collapse`, which tasks the count holds back (`rest`: every task past the count; `open`: only open tasks, so in-progress and blocked ones always show; `none`: show every task); `Panel mode`, `both`, `beads` or `native`, which is kept and shown now and which a later release reads to open the panel at session start; `Debug mode`, the band's read time; and the band's parts, their order and its done window, as the band settings do. Each change applies at once and is kept in Claude Code's plugin store, under `panel-settings` (the band's under `band-settings`). `Save to file` writes the `[panel]` and `[band]` tables into the `beads-ui.toml` the mod read, or `~/.config/beads-ui/beads-ui.toml` when there is none, in one write that keeps every other line, and then clears the held changes.
 
 ## Quick-add
 
@@ -200,7 +213,7 @@ Type `key:value` terms into the `Filter` field (Tab to it) and press Enter. Term
 
 ## Edit an issue
 
-The Detail tab shows the issue's fields as controls. Tab to one, change it and press Enter to save: the mod writes that one field with `bd update` and reads the issue again before it redraws. Status and priority are lists; the others are one-line fields.
+The Detail view shows the issue's fields as controls. Tab to one, change it and press Enter to save: the mod writes that one field with `bd update` (a status with `--if-status` on the status shown, an assignee with `--if-assignee`) and reads the issue again before it redraws. Status, priority and type are lists (type offers `task`, `bug`, `feature`, `epic`, `chore` and every type the store's issues carry); title, labels (comma-separated), assignee, due date (`YYYY-MM-DD`), estimate and description are one-line fields.
 
 The description is shown as Markdown and is also edited in the one-line `Description` field. There, a line break is written `\n`, a tab `\t`, a carriage return `\r` and a backslash `\\`; the mod turns them back into those characters when you save, so the text round-trips exactly, and saving it unchanged writes nothing. A backslash before any other character is kept as typed. A description longer than 20,000 characters in that form is not edited inline; the field says so and names the `bd update` command to use.
 
@@ -237,9 +250,22 @@ debug = false         # true: each band line ends with the time its counts were 
 
 `parts` is the list of what the band draws, in order: `total` (`{T} tasks`), `in_progress`, `blocked`, `open`, `done` (`{D} done last {W}`), `drift` (the `N unsynced` marker on a firstmate's `[bd][all]` line, drawn only while a store is out of step) and `unpublished` (the count of edits not yet published, drawn once a later release counts them). Leave one out to drop it. When `total` is listed, the counts are drawn in brackets after it; without it, the counts alone. A change in the file shows at the band's next redraw, with no restart.
 
+### The task panel's settings
+
+The `[panel]` table sets the Tasks view's shown count and collapse rule, and the panel mode:
+
+```toml
+[panel]
+shown = 10          # tasks drawn before the rest collapse, 1 to 200
+collapse = "rest"   # rest: past the count; open: only open tasks collapse; none: never collapse
+mode = "both"       # both, beads or native; kept now, read by a later release at session start
+```
+
+A change in the file shows at the pane's next refresh, with no restart. The Settings view changes the same settings, and the band's, at once ([The task panel](#the-task-panel)).
+
 The pane's band settings (`g`, or the `Band` button) change the same settings at once: add or remove a part, move one with the arrows, and set the `Done window` field. The change is kept in Claude Code's plugin store, under the key `band-settings`, so every session on the machine draws it at its next minute. `Save to file` writes the settings into the `beads-ui.toml` the mod read, or `~/.config/beads-ui/beads-ui.toml` when there is none, replacing its `[band]` table and keeping every other line, and then clears the held change.
 
-The mod keeps your view choices (the open tab, filter, swimlane, sort and whether the pane was open) in Claude Code's plugin store, under the key `view`, and each session's Mine or All choice under `view-scope`, by session name. It never stores issue data there. The key `refresher-lease` holds the lease a session takes before it starts the host refresher, and `band-settings` the band settings changed in the pane until they are saved. The one other key, `pending-display-ids`, holds a display id the mod minted for an issue it created but could not write yet: the issue's id and the display id, nothing else.
+The mod keeps your view choices (the open view, filter, swimlane, sort and whether the pane was open) in Claude Code's plugin store, under the key `view`, and each session's Mine or All choice under `view-scope`, by session name. It never stores issue data there. The key `refresher-lease` holds the lease a session takes before it starts the host refresher, `band-settings` the band settings changed in the pane until they are saved, and `panel-settings` the task panel's settings changed in Settings until they are saved. The one other key, `pending-display-ids`, holds a display id the mod minted for an issue it created but could not write yet: the issue's id and the display id, nothing else.
 
 ## Report a bug
 

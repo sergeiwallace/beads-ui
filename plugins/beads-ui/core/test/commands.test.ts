@@ -43,10 +43,16 @@ describe("COMMANDS", () => {
       ),
     );
     expect(hotkeys).toEqual({
+      "tab.tasks": "t",
       "tab.board": "1",
       "tab.backlog": "2",
       "tab.sprint": "3",
       "tab.detail": "4",
+      "tab.timeline": "5",
+      "tab.settings": "6",
+      "panel.menu": "k",
+      "tasks.more": "r",
+      "card.edit": "e",
       "issue.new": "n",
       "board.swimlane": "s",
       "view.sort": "o",

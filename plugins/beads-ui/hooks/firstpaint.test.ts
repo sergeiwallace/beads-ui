@@ -14,6 +14,7 @@ import {
   HANG,
   keyOf,
   OPEN_LIST,
+  onBoard,
   PANE_PROPS,
   type Script,
   SESSION,
@@ -82,14 +83,16 @@ const named = (session: string, options: WorldOptions = {}): WorldOptions => ({
 const listsHang: Script = (key) => (key.startsWith("bd list ") ? HANG : undefined);
 
 const mount = ($: Engine) =>
-  $.ui.mount({
-    plugin: PLUGIN_NAME,
-    surface: "terminal",
-    component: "Pane",
-    props: PANE_PROPS,
-    requestId: PANE_ID,
-    viewport: VIEWPORT,
-  });
+  $.ui
+    .mount({
+      plugin: PLUGIN_NAME,
+      surface: "terminal",
+      component: "Pane",
+      props: PANE_PROPS,
+      requestId: PANE_ID,
+      viewport: VIEWPORT,
+    })
+    .then(onBoard);
 
 async function opened($: Engine, on: On, options: WorldOptions) {
   const w = world(on, options);

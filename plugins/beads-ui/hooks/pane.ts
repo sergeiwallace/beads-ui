@@ -1,6 +1,7 @@
 import type { Elements, RenderElement, RenderNode, Timer } from "claude-code";
 
 import {
+  type ActionContext,
   asOf,
   BACKLOG_PAGE_SIZE,
   type BacklogView,
@@ -19,6 +20,7 @@ import {
   COMMANDS,
   clockStamp,
   createArgv,
+  DEFAULT_BAND_SETTINGS,
   DEFAULT_CONFIG,
   DEFAULT_SORT,
   type DetailState,
@@ -33,20 +35,30 @@ import {
   footerHints,
   groupLayout,
   historyArgv,
+  hotkeyOf,
   INITIAL_BOARD_STATE,
   type Issue,
+  isCollapseRule,
   isFirstmate,
+  isPanelMode,
+  isPanelView,
   isShort,
-  type Labels,
   LEASE_FILE,
-  labels,
+  MAX_SHOWN,
+  type MenuView,
+  menuView,
+  type NavLayout,
+  navLayout,
   nextSort,
   nextSwimlaneMode,
   openDetail,
   PARTIAL_GLYPH,
   type PageView,
+  type PanelView,
   type PendingDisplayId,
+  type PlannedView,
   packRows,
+  panelActions,
   parseBdCreatedId,
   parseBdHistoryEvents,
   parseBdList,
@@ -58,6 +70,7 @@ import {
   parseFileLease,
   parseIssueRows,
   parseQuickAdd,
+  parseShownCount,
   parseSnapshot,
   parseSort,
   parseStatusesJson,
@@ -65,6 +78,7 @@ import {
   pendingDisplayIdStep,
   planDisplayId,
   planMove,
+  plannedText,
   type ResolvedConfig,
   readPendingDisplayIds,
   readyArgv,
@@ -72,12 +86,14 @@ import {
   reduceDetail,
   refresherRunning,
   resolveConfig,
+  SHORT_ROWS,
   SNAPSHOT_FILE,
   type SortSpec,
   STALE_MS,
   STATUS_CATEGORIES,
   type StoreResolution,
   type SwimlaneMode,
+  settingsView,
   showArgv,
   slugBudgets,
   sortLabel,
@@ -86,8 +102,10 @@ import {
   stepPage,
   storeLabel,
   submitFilter,
+  type TaskListView,
   TERMINAL_THEME,
   type Token,
+  taskListView,
   textWidth,
   tierOf,
   truncate,
@@ -95,9 +113,18 @@ import {
   undoArgv,
   undoForMove,
   undoView,
+  withPanelTable,
 } from "../core/src/index.ts";
 import type { BandSettingsPanel } from "./bandSettings.ts";
 import type { Host } from "./host.ts";
+import {
+  drawFrame,
+  drawMenu,
+  drawSettings,
+  drawTaskList,
+  PanelSettingsState,
+  settingsOptionRoom,
+} from "./panel.ts";
 import type { StoreResolver } from "./store.ts";
 
 export const PANE_ID = "beads";
@@ -127,28 +154,37 @@ export type Scope = "mine" | "all";
 const WANTED_COLUMNS = 80;
 const WANTED_ROWS = 24;
 
+/** At short height, the rows the nav, the header, the toolbar and the list's summary take. */
+const SHORT_CHROME_ROWS = 6;
+/**
+ * The most task rows the Tasks view draws at once: Claude Code keeps only a tree's first 100,000
+ * characters, so a longer list draws a window of rows that follows the focus.
+ */
+export const TASK_WINDOW_ROWS = 100;
+
 const READ_TIMEOUT_MS = 8_000;
 /** What `$.process.run` keeps of each pipe: 4194304 bytes. */
 const RUN_OUTPUT_LIMIT = "4 MiB";
 const WRITE_TIMEOUT_MS = 15_000;
 
-export type Tab = "board" | "backlog" | "detail";
+/** The views the nav opens (T-2B.1); Sprint and Timeline are planned and never open. */
+export type Tab = Exclude<PanelView, PlannedView>;
 /** D-28: tab 3 is the Sprint view Phase 2 builds; until then pressing it says so and stays put. */
-export const SPRINT_PLANNED_TEXT =
-  "3 Sprint: the Sprint view is planned and not built yet; staying on this tab";
-/** Each tab's label in the wide, medium and narrow tiers (T-1B.9). */
-const TABS: readonly { tab: Tab; labels: Labels; hotkey: string }[] = [
-  { tab: "board", labels: labels("Board", "Board", "Brd"), hotkey: "1" },
-  { tab: "backlog", labels: labels("Backlog", "Backlog", "Bklg"), hotkey: "2" },
-  { tab: "detail", labels: labels("Detail", "Detail", "Dtl"), hotkey: "4" },
-];
-const SPRINT_LABELS = labels("Sprint", "Sprint", "Spr");
+export const SPRINT_PLANNED_TEXT = plannedText("sprint");
+/** The view the pane opens on when no view was kept (T-2B.2): the task panel. */
+export const DEFAULT_TAB: Tab = "tasks";
+const isTab = (value: unknown): value is Tab =>
+  isPanelView(value) && value !== "sprint" && value !== "timeline";
+/** The issue types a Detail's Type list offers, with every type the store's issues carry. */
+export const ISSUE_TYPES: readonly string[] = ["task", "bug", "feature", "epic", "chore"];
 
 /** What the pane is drawn into: its body's width and rows, and where it sits (T-1B.9). */
 export interface PaneFrame {
   width: number;
   placement: string;
   bodyRows?: number;
+  /** The props' own bodyColumns, which pick the nav's tier (T-2B.1); `width` when not given. */
+  bodyColumns?: number;
 }
 
 /** The elements the pane draws with: every surface but mobile has them all. */
@@ -158,7 +194,8 @@ export type PaneUi = Pick<
 >;
 
 export interface Prefs {
-  tab: Tab;
+  /** The open view; `tab`, which held 0.4.0's board-first tab, is no longer read. */
+  view: Tab;
   filter: string;
   swimlane: SwimlaneMode;
   sort: string;
@@ -173,6 +210,7 @@ type Ran =
 type Notice = { text: string; token: Token; hint?: true };
 
 const FOCUS_HINT = "focus a card first: Tab moves between cards";
+const TASK_FOCUS_HINT = "focus a task first: Tab or the arrows move between tasks";
 const MOVE_LABEL = "Move to";
 /** What a `Select` draws beside its value: the open mark and a space. */
 export const SELECT_CHROME = 2;
@@ -227,7 +265,18 @@ export class BeadsPane {
   board: BoardState = INITIAL_BOARD_STATE;
   readyIds: ReadonlySet<string> | undefined;
   filter: FilterState = EMPTY_FILTER_STATE;
-  tab: Tab = "board";
+  tab: Tab = DEFAULT_TAB;
+  /** The task panel's settings (T-2B.2, T-2B.8). */
+  readonly panel = new PanelSettingsState();
+  /** The Tasks view shows its collapsed tasks (T-2B.2). */
+  expanded = false;
+  /** The options menu is open (T-2B.4), about `menuFor` when a task was focused. */
+  menuOpen = false;
+  menuFor: string | undefined;
+  /** The Settings view's last notice. */
+  settingsNotice: Notice | undefined;
+  /** The body size the pane last drew at, for the actions that run between draws. */
+  private frame: PaneFrame = { width: WANTED_COLUMNS, placement: "dock" };
   swimlane: SwimlaneMode = "none";
   sort: SortSpec = DEFAULT_SORT;
   config: ResolvedConfig = { config: DEFAULT_CONFIG, problems: [] };
@@ -288,6 +337,7 @@ export class BeadsPane {
 
   async bind(host: Host): Promise<void> {
     this.host = host;
+    await this.panel.bind(host);
     await this.loadPrefs();
     void this.refresh();
   }
@@ -318,8 +368,7 @@ export class BeadsPane {
     if (chosen === "mine" || chosen === "all") this.scope = chosen;
     const stored = await this.host?.storeGet(PREFS_KEY).catch(() => undefined);
     if (!isRecord(stored)) return;
-    const tab = TABS.find((candidate) => candidate.tab === stored.tab)?.tab;
-    if (tab !== undefined) this.tab = tab;
+    if (isTab(stored.view)) this.tab = stored.view;
     if (typeof stored.filter === "string") {
       this.filter = submitFilter(EMPTY_FILTER_STATE, stored.filter);
     }
@@ -336,7 +385,7 @@ export class BeadsPane {
 
   private savePrefs(): void {
     const prefs: Prefs = {
-      tab: this.tab,
+      view: this.tab,
       filter: this.filter.text,
       swimlane: this.swimlane,
       sort: sortLabel(this.sort),
@@ -463,8 +512,12 @@ export class BeadsPane {
     this.unsynced = inventory.ok
       ? inventory.value.filter((store) => !store.synced).map((store) => store.name)
       : [];
+    await this.panel.read(config.text);
     const resolved = resolveConfig(config.text, this.storePath());
-    return { ...resolved, problems: [...resolved.problems, ...problems] };
+    return {
+      ...resolved,
+      problems: [...resolved.problems, ...problems, ...this.panel.problems],
+    };
   }
 
   private retime(): void {
@@ -943,6 +996,7 @@ export class BeadsPane {
    */
   setTab(tab: Tab): void {
     this.tab = tab;
+    this.menuOpen = false;
     this.clearHint();
     this.savePrefs();
     this.host?.invalidate();
@@ -995,9 +1049,9 @@ export class BeadsPane {
     this.host?.invalidate();
   }
 
-  /** Tab 3 (D-28): a notice that the Sprint view is planned; the tab does not change. */
-  pressSprint(): void {
-    this.note(SPRINT_PLANNED_TEXT, "warning");
+  /** Sprint and Timeline (D-28, T-2B.1): a notice that the view is planned; the view stays. */
+  pressPlanned(view: PlannedView): void {
+    this.note(plannedText(view), "warning");
     this.host?.invalidate();
   }
 
@@ -1007,10 +1061,150 @@ export class BeadsPane {
     this.host?.invalidate();
   }
 
-  /** The pane's focus ring moved onto an element: a card's own controls name the card. */
+  /** The pane's focus ring moved onto an element: a card's or a task's own controls name it. */
   focused(element: string | undefined): void {
-    const match = element === undefined ? null : /^(?:move|open|row):(.+)$/.exec(element);
-    if (match?.[1] !== undefined) this.focusedId = match[1];
+    const match =
+      element === undefined ? null : /^(?:move|open|row|task|taskmenu):(.+)$/.exec(element);
+    if (match?.[1] === undefined || match[1] === this.focusedId) return;
+    this.focusedId = match[1];
+    // The Tasks view draws a window of rows that follows the focus, at short height (T-2B.1) and
+    // past TASK_WINDOW_ROWS, so the next row is drawn before Down reaches it.
+    if (this.tab === "tasks") this.host?.invalidate();
+  }
+
+  private focusHint(): string {
+    return this.tab === "tasks" ? TASK_FOCUS_HINT : FOCUS_HINT;
+  }
+
+  /** `r` and the "+M more" control (T-2B.2): the collapsed tasks, in place, or collapsed again. */
+  toggleExpanded(): void {
+    this.expanded = !this.expanded;
+    this.clearHint();
+    this.host?.invalidate();
+  }
+
+  /**
+   * `k`, or a task row's menu button (T-2B.4): opens the options menu about the focused task, or
+   * about `id`, and moves the focus ring onto its first item; a second press closes it.
+   */
+  async toggleMenu(id?: string): Promise<void> {
+    if (this.menuOpen && (id === undefined || id === this.menuFor)) {
+      this.closeMenu();
+      return;
+    }
+    if (id !== undefined) this.focusedId = id;
+    this.menuFor = this.target();
+    this.menuOpen = true;
+    this.clearHint();
+    this.host?.invalidate();
+    const first = this.menuAt(this.frame).sections.flatMap((section) => section.items)[0];
+    if (first !== undefined) {
+      await this.host?.focus(PANE_ID, first.key).catch(() => undefined);
+    }
+  }
+
+  closeMenu(): void {
+    this.menuOpen = false;
+    this.host?.invalidate();
+  }
+
+  /** A menu item: the menu closes, and its action runs on the task the menu was opened about. */
+  runFromMenu(command: string): void {
+    this.menuOpen = false;
+    if (this.menuFor !== undefined && this.tab !== "detail") this.focusedId = this.menuFor;
+    this.runCommand(command);
+    this.host?.invalidate();
+  }
+
+  /** Every command a control or a menu item runs, by COMMANDS id (T-2B.4). */
+  runCommand(command: string): void {
+    const views: Readonly<Record<string, Tab>> = {
+      "tab.tasks": "tasks",
+      "tab.board": "board",
+      "tab.backlog": "backlog",
+      "tab.detail": "detail",
+      "tab.settings": "settings",
+    };
+    const view = views[command];
+    if (view !== undefined) {
+      this.setTab(view);
+      return;
+    }
+    const actions: Readonly<Record<string, () => void>> = {
+      "tab.sprint": () => this.pressPlanned("sprint"),
+      "tab.timeline": () => this.pressPlanned("timeline"),
+      "panel.menu": () => void this.toggleMenu(),
+      "tasks.more": () => this.toggleExpanded(),
+      "issue.new": () => void this.focusQuickAdd(),
+      "board.swimlane": () => this.cycleSwimlane(),
+      "view.sort": () => this.cycleSort(),
+      "view.scope": () => void this.toggleScope(),
+      "band.settings": () => this.bandSettings?.toggle(),
+      help: () => this.toggleHelp(),
+      "card.detail": () => void this.openDetailFor(),
+      "card.move": () => void this.focusMove(),
+      "card.edit": () => void this.editFocused("title"),
+      "card.delete": () => this.requestDelete(),
+      "page.next": () => void this.stepFocusedPage(1),
+      "page.back": () => void this.stepFocusedPage(-1),
+      "board.lanes": () => this.stepLanes(1),
+      "close.undo": () => void this.undoClose(),
+    };
+    actions[command]?.();
+  }
+
+  /** Settings' Shown tasks (T-2B.2): applied at once and kept in `$.store`. */
+  async setShown(text: string): Promise<void> {
+    const shown = parseShownCount(text);
+    if (shown === undefined) {
+      this.settingsNotice = {
+        text: `${JSON.stringify(text.trim())} is not a whole number from 1 to ${MAX_SHOWN}`,
+        token: "error",
+      };
+      this.host?.invalidate();
+      return;
+    }
+    this.settingsNotice = undefined;
+    await this.panel.change({ shown });
+  }
+
+  /** A Settings list (T-2B.8): the collapse rule, panel.mode or debug mode, applied at once. */
+  async chooseSetting(key: string, value: string): Promise<void> {
+    this.settingsNotice = undefined;
+    if (key === "settings:collapse" && isCollapseRule(value)) {
+      await this.panel.change({ collapse: value });
+    } else if (key === "settings:mode" && isPanelMode(value)) {
+      await this.panel.change({ mode: value });
+    } else if (key === "settings:debug") {
+      await this.bandSettings?.setDebug(value === "on");
+    }
+  }
+
+  /**
+   * Settings' Save to file (T-2B.8): one write of the `[panel]` and `[band]` tables into the
+   * `beads-ui.toml` the mod read, every other line kept, then nothing is held in `$.store`.
+   */
+  async saveSettings(): Promise<void> {
+    const panel = this.panel.settings;
+    const band = this.bandSettings;
+    if (band === undefined) return;
+    const saved = await band.save((text) => withPanelTable(text, panel));
+    this.settingsNotice = band.notice;
+    band.notice = undefined;
+    if (saved) await this.panel.saved();
+    this.host?.invalidate();
+  }
+
+  /** `e`, and `m` on the Tasks view: the task's detail, with the focus ring on one field's control. */
+  async editFocused(field: EditableField): Promise<void> {
+    const id = this.target();
+    if (id === undefined) {
+      this.hint(this.focusHint());
+      this.host?.invalidate();
+      return;
+    }
+    await this.openDetailFor(id);
+    await this.host?.focus(PANE_ID, `edit:${field}`).catch(() => undefined);
   }
 
   /** The issue `d`, `m` and `x` act on: the focused card, or on the Detail tab its issue. */
@@ -1019,6 +1213,10 @@ export class BeadsPane {
   }
 
   async focusMove(): Promise<void> {
+    if (this.tab === "tasks") {
+      await this.editFocused("status");
+      return;
+    }
     const id = this.focusedId;
     if (id === undefined) {
       this.hint(FOCUS_HINT);
@@ -1033,14 +1231,14 @@ export class BeadsPane {
 
   async focusQuickAdd(): Promise<void> {
     this.clearHint();
-    if (this.tab === "detail") this.setTab("board");
+    if (this.tab === "detail" || this.tab === "settings") this.setTab("board");
     this.host?.invalidate();
     await this.host?.focus(PANE_ID, "quickadd").catch(() => undefined);
   }
 
   async openDetailFor(id: string | undefined = this.target()): Promise<void> {
     if (id === undefined) {
-      this.hint(FOCUS_HINT);
+      this.hint(this.focusHint());
       this.host?.invalidate();
       return;
     }
@@ -1115,7 +1313,7 @@ export class BeadsPane {
       this.board.issues.find((candidate) => candidate.id === id) ??
       (this.detail?.issue.id === id ? this.detail?.issue : undefined);
     if (issue === undefined) {
-      this.hint(FOCUS_HINT);
+      this.hint(this.focusHint());
       this.host?.invalidate();
       return;
     }
@@ -1179,33 +1377,43 @@ export class BeadsPane {
     if (this.host === undefined) {
       return Box({ children: [Text({ children: "beads-ui starts with the session." })] });
     }
-    const { width } = frame;
+    this.frame = frame;
+    const nav = this.navAt(frame);
+    // The view's own width: the body less the side nav when it is drawn (T-2B.1).
+    const width = nav.viewColumns;
     this.width = width;
-    if (this.store?.ok === false) return this.drawNoStore(ui, this.store, width);
+    const framed = (content: readonly RenderNode[]) =>
+      drawFrame(ui, nav, (item) => this.pressNav(item.view), content);
+    if (this.store?.ok === false) return framed(this.drawNoStore(ui, this.store));
     const short = isShort(frame.placement, frame.bodyRows);
     const { groups, perRow, groupWidth } = this.layout(width);
     const view = this.boardViewAt(width);
+    const ctx = this.actionContext(width, view);
+    const menu = this.menuOpen ? this.drawMenu(ui, ctx, width) : undefined;
     const body =
-      this.tab === "board"
-        ? this.drawBoard(ui, view, groups, perRow, groupWidth)
-        : this.tab === "backlog"
-          ? this.drawBacklog(ui, width)
-          : this.drawDetail(ui, width);
-    const paged =
-      this.tab === "backlog"
-        ? this.backlogViewAt(width).page.pages > 1
-        : this.tab === "board" &&
-          (view.unplacedPage.pages > 1 ||
-            view.lanes.some((lane) => lane.pages.some((page) => page.pages > 1)));
-    const inputs = this.tab === "detail" ? undefined : this.drawInputs(ui);
+      this.tab === "tasks"
+        ? this.drawTasks(ui, width, frame, menu)
+        : this.tab === "board"
+          ? this.drawBoard(ui, view, groups, perRow, groupWidth)
+          : this.tab === "backlog"
+            ? this.drawBacklog(ui, width)
+            : this.tab === "settings"
+              ? this.drawSettingsView(ui, width)
+              : this.drawDetail(ui, width);
+    const inputs =
+      this.tab === "detail" || this.tab === "settings"
+        ? undefined
+        : this.drawInputs(ui, this.tab !== "tasks");
     const settings =
-      this.bandSettings?.isOpen === true ? this.bandSettings.draw(ui, colorOf) : undefined;
-    return Box({
-      flexDirection: "column",
-      children: present<RenderNode>([
-        this.drawHeader(ui, width),
-        this.drawToolbar(ui, paged, width),
+      this.bandSettings?.isOpen === true && this.tab !== "settings"
+        ? this.bandSettings.draw(ui, colorOf)
+        : undefined;
+    return framed(
+      present<RenderNode>([
+        this.drawHeader(ui),
+        this.drawToolbar(ui, ctx, width),
         ...this.drawLines(ui, width, view, short),
+        this.tab === "tasks" ? undefined : menu,
         !short && this.help ? this.drawHelp(ui, helpRegion) : undefined,
         short ? undefined : settings,
         short ? undefined : inputs,
@@ -1219,6 +1427,129 @@ export class BeadsPane {
               children: [Text({ dimColor: true, children: footerHints("card").join(" · ") })],
             }),
       ]),
+    );
+  }
+
+  /** The nav at a body size, for the view now open (T-2B.1). */
+  private navAt(frame: PaneFrame): NavLayout {
+    return navLayout(frame.width, frame.placement, frame.bodyRows, this.tab, frame.bodyColumns);
+  }
+
+  private pressNav(view: PanelView): void {
+    if (view === "sprint" || view === "timeline") this.pressPlanned(view);
+    else this.setTab(view);
+  }
+
+  /** What the drawn view offers (T-2B.4): the toolbar, the view's own controls and the menu read it. */
+  private actionContext(width: number, view: BoardView = this.boardViewAt(width)): ActionContext {
+    const paged =
+      this.tab === "backlog"
+        ? this.backlogViewAt(width).page.pages > 1
+        : this.tab === "board" &&
+          (view.unplacedPage.pages > 1 ||
+            view.lanes.some((lane) => lane.pages.some((page) => page.pages > 1)));
+    const list = this.tab === "tasks" ? this.taskListAt(width, this.frame) : undefined;
+    return {
+      view: this.tab,
+      mine: this.scope === "mine",
+      swimlane: this.swimlane,
+      sort: sortLabel(this.sort),
+      undo: this.undo !== undefined,
+      paged,
+      lanesPaged: this.tab === "board" && view.lanePage.pages > 1,
+      bandSettings: this.bandSettings !== undefined,
+      ...(list?.collapsible === true ? { more: list.moreLabel } : {}),
+    };
+  }
+
+  /** The options menu as the view now offers it. */
+  private menuAt(frame: PaneFrame): MenuView {
+    const width = this.navAt(frame).viewColumns;
+    const id = this.menuFor;
+    const issue =
+      id === undefined ? undefined : this.board.issues.find((candidate) => candidate.id === id);
+    const name = id === undefined ? undefined : (issue?.displayId ?? id);
+    return menuView(this.actionContext(width), name);
+  }
+
+  private drawMenu(ui: PaneUi, ctx: ActionContext, width: number): RenderElement {
+    const id = this.menuFor;
+    const issue =
+      id === undefined ? undefined : this.board.issues.find((candidate) => candidate.id === id);
+    return drawMenu(
+      ui,
+      menuView(ctx, id === undefined ? undefined : (issue?.displayId ?? id)),
+      width,
+      (command) => this.runFromMenu(command),
+      () => this.closeMenu(),
+    );
+  }
+
+  /** The Tasks view's list at a width (T-2B.2); at short height a window round the focused task. */
+  private taskListAt(width: number, frame: PaneFrame): TaskListView {
+    const short = isShort(frame.placement, frame.bodyRows);
+    return taskListView(this.shown().issues, {
+      statuses: this.board.statuses,
+      settings: this.panel.settings,
+      expanded: this.expanded,
+      // The row's menu button and the gap before it take two columns.
+      width: Math.max(1, width - 2),
+      ...(this.focusedId === undefined ? {} : { focusedId: this.focusedId }),
+      windowRows: short
+        ? Math.max(3, (frame.bodyRows ?? SHORT_ROWS) - SHORT_CHROME_ROWS)
+        : TASK_WINDOW_ROWS,
+    });
+  }
+
+  private drawTasks(
+    ui: PaneUi,
+    width: number,
+    frame: PaneFrame,
+    menu: RenderElement | undefined,
+  ): RenderElement {
+    const { Box, Text } = ui;
+    if (!this.board.loaded) {
+      return Box({
+        key: "tasks",
+        children: [Text({ dimColor: true, children: "reading the store…" })],
+      });
+    }
+    const session = this.stores.sessionName;
+    const list = this.taskListAt(width, frame);
+    const empty =
+      this.scope === "mine" && session !== undefined
+        ? `No task in progress, blocked or open is assigned to ${session}; a shows every owner's.`
+        : "No task is in progress, blocked or open.";
+    return drawTaskList(ui, list, {
+      color: colorOf,
+      empty,
+      handlers: {
+        open: (id) => void this.openDetailFor(id),
+        menu: (id) => void this.toggleMenu(id),
+        more: () => this.toggleExpanded(),
+      },
+      ...(this.menuFor === undefined ? {} : { menuFor: this.menuFor }),
+      ...(menu === undefined ? {} : { menu }),
+    });
+  }
+
+  private drawSettingsView(ui: PaneUi, width: number): RenderElement {
+    const band = this.bandSettings;
+    const view = settingsView(
+      this.panel.settings,
+      band?.settings ?? DEFAULT_BAND_SETTINGS,
+      settingsOptionRoom(width),
+    );
+    return drawSettings(ui, view, {
+      color: colorOf,
+      problems: this.panel.problems,
+      ...(this.settingsNotice === undefined ? {} : { notice: this.settingsNotice }),
+      ...(band === undefined ? {} : { band: band.draw(ui, colorOf, { saveButton: false }) }),
+      handlers: {
+        shown: (text) => void this.setShown(text),
+        choose: (key, value) => void this.chooseSetting(key, value),
+        save: () => void this.saveSettings(),
+      },
     });
   }
 
@@ -1250,45 +1581,9 @@ export class BeadsPane {
     return ui.Box({ key, children: [ui.Text({ color: colorOf(token), children: text })] });
   }
 
-  /**
-   * The tabs, then the store and its read time: on the tabs' row when 20 columns are left beside
-   * them, else on a row of its own, cut at the pane's edge.
-   */
-  private drawHeader(ui: PaneUi, width: number): RenderElement {
-    const { Box, Text, Button } = ui;
-    const tier = tierOf(width);
-    const gap = tier === "narrow" ? 1 : 2;
-    const tabs = [
-      ...TABS.slice(0, 2),
-      { tab: "sprint" as const, labels: SPRINT_LABELS, hotkey: "3" },
-      ...TABS.slice(2),
-    ].map((one) => ({
-      ...one,
-      label: one.labels[tier],
-      width: buttonWidth(one.labels[tier], one.hotkey),
-    }));
-    const tab = (one: (typeof tabs)[number]) =>
-      one.tab === "sprint"
-        ? Button({
-            key: "tab:sprint",
-            label: one.label,
-            hotkey: one.hotkey,
-            plain: true,
-            dimColor: true,
-            onPress: () => this.pressSprint(),
-          })
-        : Button({
-            key: `tab:${one.tab}`,
-            label: one.label,
-            hotkey: one.hotkey,
-            plain: true,
-            ...(this.tab === one.tab ? {} : { dimColor: true }),
-            onPress: () => this.setTab(one.tab),
-          });
-    const rows = packRows(tabs, width, gap);
-    const last = rows[rows.length - 1] ?? [];
-    const lastWidth = last.reduce((sum, one) => sum + one.width, 0) + gap * (last.length - 1);
-    const beside = width - lastWidth - gap >= 20;
+  /** The store and its read time, cut at the view's edge; the nav draws the views beside it. */
+  private drawHeader(ui: PaneUi): RenderElement {
+    const { Box, Text } = ui;
     const resolved = this.store?.ok === true;
     const store = Text({
       wrap: "truncate-end",
@@ -1317,146 +1612,49 @@ export class BeadsPane {
             ]),
       ],
     });
-    return Box({
-      key: "header",
-      flexDirection: "column",
-      children: [
-        ...rows.map((row, i) =>
-          Box({
-            key: `header:${i}`,
-            flexDirection: "row",
-            gap,
-            children: [
-              ...row.map(tab),
-              ...(beside && i === rows.length - 1 ? [Box({ flexGrow: 1, children: [store] })] : []),
-            ],
-          }),
-        ),
-        ...(beside ? [] : [Box({ key: "header:store", children: [store] })]),
-      ],
-    });
+    return Box({ key: "header", children: [store] });
   }
 
   /** D-24's empty state: what the pane looked for, and the line that points it at a store. */
-  private drawNoStore(
-    ui: PaneUi,
-    store: Extract<StoreResolution, { ok: false }>,
-    width: number,
-  ): RenderElement {
+  private drawNoStore(ui: PaneUi, store: Extract<StoreResolution, { ok: false }>): RenderElement[] {
     const { Box, Text } = ui;
-    return Box({
-      flexDirection: "column",
-      children: present<RenderNode>([
-        this.drawHeader(ui, width),
-        ...this.config.problems.map((problem, i) =>
-          this.line(ui, `config:${i}`, problem, "warning"),
-        ),
-        this.notice === undefined
-          ? undefined
-          : this.line(ui, "notice", this.notice.text, this.notice.token),
-        Box({
-          key: "no-store",
-          flexDirection: "column",
-          children: [
-            Text({ bold: true, children: "beads-ui found no Beads store for this session." }),
-            ...store.tried.map((line) => Text({ children: `- ${line}` })),
-            ...store.fix.map((line, i) =>
-              i === 0
-                ? Text({ children: line })
-                : Text({ color: colorOf("accent"), children: `  ${line}` }),
-            ),
-          ],
-        }),
-      ]),
-    });
+    return present<RenderElement>([
+      this.drawHeader(ui),
+      ...this.config.problems.map((problem, i) => this.line(ui, `config:${i}`, problem, "warning")),
+      this.notice === undefined
+        ? undefined
+        : this.line(ui, "notice", this.notice.text, this.notice.token),
+      Box({
+        key: "no-store",
+        flexDirection: "column",
+        children: [
+          Text({ bold: true, children: "beads-ui found no Beads store for this session." }),
+          ...store.tried.map((line) => Text({ children: `- ${line}` })),
+          ...store.fix.map((line, i) =>
+            i === 0
+              ? Text({ children: line })
+              : Text({ color: colorOf("accent"), children: `  ${line}` }),
+          ),
+        ],
+      }),
+    ]);
   }
 
   /**
    * The toolbar's buttons, labelled for the width's tier and packed into rows that each fit it
    * (T-1B.9): full words from 72 columns, a short word from 48, the shortest form below.
    */
-  private drawToolbar(ui: PaneUi, paged: boolean, width: number): RenderElement {
+  private drawToolbar(ui: PaneUi, ctx: ActionContext, width: number): RenderElement {
     const { Box, Button } = ui;
     const tier = tierOf(width);
     const gap = tier === "narrow" ? 1 : 2;
-    const mine = this.scope === "mine";
-    const sort = sortLabel(this.sort);
-    const items = present([
-      {
-        key: "scope",
-        l: labels(mine ? "Showing: mine" : "Showing: all", mine ? "Mine" : "All"),
-        hotkey: "a",
-        press: () => void this.toggleScope(),
-      },
-      {
-        key: "swimlane",
-        l: labels(`Swimlane: ${this.swimlane}`, `Lanes: ${this.swimlane}`, "Lanes"),
-        hotkey: "s",
-        press: () => this.cycleSwimlane(),
-      },
-      {
-        key: "sort",
-        l: labels(`Sort: ${sort}`, `Sort: ${sort}`, "Sort"),
-        hotkey: "o",
-        press: () => this.cycleSort(),
-      },
-      { key: "new", l: labels("New"), hotkey: "n", press: () => void this.focusQuickAdd() },
-      {
-        key: "detail",
-        l: labels("Detail", "Detail", "Dtl"),
-        hotkey: "d",
-        press: () => void this.openDetailFor(),
-      },
-      {
-        key: "move",
-        l: labels("Move to", "Move"),
-        hotkey: "m",
-        press: () => void this.focusMove(),
-      },
-      {
-        key: "delete",
-        l: labels("Delete", "Delete", "Del"),
-        hotkey: "x",
-        press: () => this.requestDelete(),
-      },
-      this.undo === undefined
-        ? undefined
-        : {
-            key: "undo",
-            l: labels("Undo close", "Undo"),
-            hotkey: "u",
-            press: () => void this.undoClose(),
-          },
-      paged
-        ? {
-            key: "page-next",
-            l: labels("Next page", "Next"),
-            hotkey: "p",
-            press: () => void this.stepFocusedPage(1),
-          }
-        : undefined,
-      paged
-        ? {
-            key: "page-back",
-            l: labels("Page back", "Back"),
-            hotkey: "b",
-            press: () => void this.stepFocusedPage(-1),
-          }
-        : undefined,
-      this.bandSettings === undefined
-        ? undefined
-        : {
-            key: "band-settings",
-            l: labels("Band"),
-            hotkey: "g",
-            press: () => this.bandSettings?.toggle(),
-          },
-      { key: "help", l: labels("Help"), hotkey: "h", press: () => this.toggleHelp() },
-    ]).map((item) => ({
-      ...item,
-      label: item.l[tier],
-      width: buttonWidth(item.l[tier], item.hotkey),
-    }));
+    const items = panelActions(ctx)
+      .filter((action) => action.place === "toolbar")
+      .map((action) => {
+        const hotkey = hotkeyOf(action.command);
+        const label = action.labels[tier];
+        return { ...action, label, hotkey, width: buttonWidth(label, hotkey) };
+      });
     return Box({
       key: "toolbar",
       flexDirection: "column",
@@ -1471,7 +1669,7 @@ export class BeadsPane {
               label: item.label,
               hotkey: item.hotkey,
               plain: true,
-              onPress: item.press,
+              onPress: () => this.runCommand(item.command),
             }),
           ),
         }),
@@ -1483,7 +1681,7 @@ export class BeadsPane {
     const filterLine =
       this.filter.error === undefined ? view.filterLine : describeFilterError(this.filter.error);
     const session = this.stores.sessionName;
-    const onBoard = this.tab !== "detail";
+    const onBoard = this.tab === "board" || this.tab === "backlog";
     const ownOpen =
       this.scope === "mine" && session !== undefined && this.board.loaded
         ? this.shown().issues.filter((issue) => issue.status !== "closed").length
@@ -1533,20 +1731,23 @@ export class BeadsPane {
     ]);
   }
 
-  private drawInputs(ui: PaneUi): RenderElement {
+  /** The Filter field (the Board and Backlog only) and the quick-add New field. */
+  private drawInputs(ui: PaneUi, withFilter: boolean): RenderElement {
     const { Box, Input } = ui;
     return Box({
       key: "inputs",
       flexDirection: "column",
-      children: [
-        Input({
-          key: "filter",
-          label: "Filter",
-          placeholder: FILTER_KEYS.map((key) => `${key}:`).join(" "),
-          value: this.filter.text,
-          submitLabel: "filter",
-          onSubmit: (value) => this.submitFilter(value),
-        }),
+      children: present<RenderElement>([
+        withFilter
+          ? Input({
+              key: "filter",
+              label: "Filter",
+              placeholder: FILTER_KEYS.map((key) => `${key}:`).join(" "),
+              value: this.filter.text,
+              submitLabel: "filter",
+              onSubmit: (value) => this.submitFilter(value),
+            })
+          : undefined,
         Input({
           key: "quickadd",
           label: "New",
@@ -1555,7 +1756,7 @@ export class BeadsPane {
           submitLabel: "create",
           onSubmit: (value) => void this.quickAdd(value),
         }),
-      ],
+      ]),
     });
   }
 
@@ -1967,6 +2168,21 @@ export class BeadsPane {
               : [{ value: raw }, ...statuses],
             value: raw,
             onSelect: (value) => void this.edit("status", value),
+          }),
+        );
+      }
+      if (editable === "type") {
+        const types = [
+          ...new Set([raw, ...ISSUE_TYPES, ...this.board.issues.map((one) => one.type)]),
+        ].filter((type) => type !== "");
+        return labelled(
+          editable,
+          field.label,
+          Select({
+            key: "edit:type",
+            options: types.map((value) => ({ value })),
+            value: raw,
+            onSelect: (value) => void this.edit("type", value),
           }),
         );
       }

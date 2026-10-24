@@ -25,6 +25,8 @@ const hotkey = (key: string): KeyBinding => ({ kind: "hotkey", key });
 
 /** Every user action in the MVP, as data. */
 export const COMMANDS: readonly Command[] = [
+  // T-2B.1: the task panel's own views, beside the board's tabs in the nav.
+  { id: "tab.tasks", label: "Tasks", scope: "pane", binding: hotkey("t"), hint: "t Tasks" },
   { id: "tab.board", label: "Board", scope: "pane", binding: hotkey("1"), hint: "1 Board" },
   { id: "tab.backlog", label: "Backlog", scope: "pane", binding: hotkey("2"), hint: "2 Backlog" },
   // D-28: 3 is the Sprint tab Phase 2 builds; until then it is drawn dimmed and says so.
@@ -36,6 +38,35 @@ export const COMMANDS: readonly Command[] = [
     hint: "3 Sprint",
   },
   { id: "tab.detail", label: "Detail", scope: "pane", binding: hotkey("4"), hint: "4 Detail" },
+  {
+    id: "tab.timeline",
+    label: "Timeline (planned, not built yet)",
+    scope: "pane",
+    binding: hotkey("5"),
+    hint: "5 Timeline",
+  },
+  {
+    id: "tab.settings",
+    label: "Settings",
+    scope: "pane",
+    binding: hotkey("6"),
+    hint: "6 Settings",
+  },
+  // T-2B.4: every action this pane draws a key for is also in this menu.
+  {
+    id: "panel.menu",
+    label: "Options menu: every action here, each with its key",
+    scope: "pane",
+    binding: hotkey("k"),
+    hint: "k menu",
+  },
+  {
+    id: "tasks.more",
+    label: "More or fewer tasks: show the collapsed tasks, or collapse them again",
+    scope: "pane",
+    binding: hotkey("r"),
+    hint: "r more tasks",
+  },
   { id: "issue.new", label: "New", scope: "pane", binding: hotkey("n"), hint: "n new" },
   {
     id: "board.swimlane",
@@ -70,6 +101,13 @@ export const COMMANDS: readonly Command[] = [
   { id: "help", label: "Help", scope: "pane", binding: hotkey("h"), hint: "? help" },
   { id: "card.detail", label: "Detail", scope: "card", binding: hotkey("d"), hint: "d detail" },
   { id: "card.move", label: "Move to", scope: "card", binding: hotkey("m"), hint: "m move to" },
+  {
+    id: "card.edit",
+    label: "Edit: open the focused task's detail on its title",
+    scope: "card",
+    binding: hotkey("e"),
+    hint: "e edit",
+  },
   { id: "card.delete", label: "Delete", scope: "card", binding: hotkey("x"), hint: "x delete" },
   {
     id: "page.next",
