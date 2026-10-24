@@ -28,6 +28,8 @@ export interface Host {
   now: () => Promise<number>;
   /** `$.clock.every`. */
   every: (ms: number, fn: () => void) => Timer;
+  /** `$.clock.after`: `fn` once, `ms` from now. */
+  after: (ms: number, fn: () => void) => Timer;
   /** `$.store.get`: view preferences only, never issue data. */
   storeGet: (key: string) => Promise<unknown>;
   /** `$.store.set`. */

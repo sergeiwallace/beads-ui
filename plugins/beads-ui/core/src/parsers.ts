@@ -219,6 +219,24 @@ export function parseBdList(text: string): ParseResult<Issue[]> {
   return run("bd list", text, parseIssues);
 }
 
+/** `bd list` rows already parsed from JSON, as a board snapshot holds them (D-26). */
+export function parseIssueRows(rows: unknown): ParseResult<Issue[]> {
+  try {
+    return { ok: true, value: parseIssues(rows) };
+  } catch (cause) {
+    if (cause instanceof Invalid) {
+      const error = { source: "bd list" as const, path: cause.path, message: cause.message };
+      return { ok: false, error: { kind: "parse-error", ...error } };
+    }
+    throw cause;
+  }
+}
+
+/** `bd statuses --json` already parsed from JSON, as a board snapshot holds it. */
+export function parseStatusesJson(json: unknown): ParseResult<Status[]> {
+  return parseBdStatuses(JSON.stringify(json));
+}
+
 export function parseBdShow(text: string): ParseResult<Issue[]> {
   return run("bd show", text, parseIssues);
 }

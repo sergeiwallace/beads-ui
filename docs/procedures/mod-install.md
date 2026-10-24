@@ -68,7 +68,9 @@ With auto-update on, Claude Code checks the marketplace when a session starts, n
 - The band above the prompt reads `[bd] {T} tasks ({P} in progress, {B} blocked, {O} open, {D} done last {W})`: the issues the session owns (their assignee is the session's name, which `ai c` pins in `CLAUDE_CODE_TASK_LIST_ID`) by status, the ones it closed within the done window `W` (`24h` unless you set another), and `T`, the sum of the counts drawn. It counts them in every store listed in `~/.beads/shared-server/publish-sweep.json`, the machine's store inventory that ai-harness's publish sweep writes, plus the session's own store (see [The store a session reads](#the-store-a-session-reads)) when the inventory does not list it, and in that store alone when there is no inventory. A firstmate session (a name ending `-firstmate-<N>`) draws two lines: `[bd][all]` with every owner's issues in those stores, then `[fm]` with its own, right-aligned under `[all]` so both lines' counts start in the same column. Each store is the copy both hosts of the pair pull, so the totals hold the other host's work as of the last sync; while a store is out of step with the pair, the `[bd][all]` line ends with a marker such as `1 unsynced`, and the pane's header names those stores. A session without a name owns nothing it can count, so its one `[bd]` line counts every owner's issues in the session's own store; when that store does not resolve, the band draws nothing. A line ends with `~` when a store it sums could not be read (it draws from the stores that answered) and with `*` when the session read the counts itself because the host refresher is not running (below). The pane's help explains both.
 - The counts come from one host refresher (below), so the band costs no `bd` call of the session's own. The band redraws from the newest counts once a minute, and once more after a write the session makes. It shows no read time unless `debug = true` is set under `[band]` in `beads-ui.toml`; then each line ends with the time its counts were read, to the second.
 - The pane has the tabs `1` Board, `2` Backlog and `4` Detail. `3` Sprint is drawn dimmed: the Sprint view is planned and not built yet, so pressing it shows a line that says so and leaves you on the tab you were on. The header names the store the pane reads, as `KG (sw-bms-workspace)` (its prefix and directory) or the directory alone, and when the board was last read (`as of HH:MM:SS`, local time).
-- The pane refreshes when you open it, after every write and every 10 seconds while it is open. A failed `bd list` keeps the last board on screen with an error line naming the exit code, and the next refresh tries again.
+- The pane draws its first render from the host refresher's snapshot of the store (below), with that snapshot's read time in the header, then reads `bd` and draws the result. Every 10 seconds it draws the newest snapshot, and reads `bd` itself only when the refresher is not running, its snapshot is older than three minutes, or the store's snapshot was skipped (a line names why). It reads `bd` itself when you open it and after each write it makes. Either way it reads the open issues and the 25 most recently closed (one page of the done column), never every closed issue: `bd list --json --brief --limit 0` and `bd list --json --brief --status closed --sort closed --limit 25`. A failed `bd list` keeps the last board on screen with an error line naming the exit code, and the next refresh tries again.
+- A session opens its board on its own issues (Mine: the issues assigned to its name); `a` switches to every issue (All) and back. A firstmate session, and a session with no name, opens on All. The choice is kept for each session name. With Mine on and no open issue of its own, the board says so and how many open issues `a` shows.
+- The pane reflows to its size. From 72 columns the controls carry their full labels, from 48 a short word, and below 48 the shortest form, each with its key; the controls wrap onto as many rows as they need, and the board's column groups stack when a row of them would not fit, so no line runs past the pane's edge. Above the prompt, or under 12 rows, the pane drops its help and the footer's hints and moves the input fields below the board, so the tabs, the board's header and a card stay in view.
 - If the pane was open when your last session ended, it opens again on its own. On a terminal narrower than 110 columns it stays closed and a toast says so; `/show-beads-ui` opens it anyway.
 
 ## The host refresher
@@ -76,18 +78,22 @@ With auto-update on, Claude Code checks the marketplace when a session starts, n
 One refresher process per machine reads every store's counts once a minute and writes them to a snapshot that every session's band reads, so the number of `bd` calls does not grow with the number of sessions. It is a Node script inside the plugin, `refresher/refresher.mjs`, with no dependencies, so `node` (22.18 or later, which runs TypeScript files by stripping their types) must be on the `PATH` Claude Code runs under. Nothing needs to be installed or enabled: the sessions start it and restart it themselves.
 
 - Each store costs one `bd count --by-assignee --status=<s>` for each of in progress, blocked and open, and one `bd count --by-assignee --status=closed --closed-after=<now less the window>` for each done window a session asks for: four calls a store a minute with the default window, whatever the number of sessions.
+- For each store a live session's pane reads, it also keeps a board snapshot. Each minute it runs `bd vc status --json`, whose `commit` is the store's Dolt head and changes with every write; only when the head moved does it read the board again (`bd statuses` and the two `bd list` reads the pane makes). On the ai-harness store, measured on sem-kg-ec2 on 2026-10-24, the head check took 0.46 to 0.65 s and 94 bytes, and the board reads 2,080,860 bytes of open issues and 54,389 of the closed page, against 7,247,493 for every issue.
+- After a session writes, it drops a marker naming the store in `wake/`; the refresher, which looks every second, reads that store again and writes the snapshot, and the session draws it a few seconds later. If no read of the store after the write has arrived 9 seconds on, the session reads that store's counts itself, so a write shows within 10 seconds.
 - Every minute each session writes a small registry file with its done window and any store it reads that the inventory does not list, so the refresher counts that store too. The refresher counts only for sessions whose file is under three minutes old, and stops when no session has written one for five minutes.
-- At its minute check a session reads the snapshot. When the snapshot is older than three minutes, or the last refresher stopped on purpose, the session takes a lease in Claude Code's plugin store (it writes its own token, reads it back and goes on only if the token is still its own) and starts the refresher with that token. A second session finding a lease younger than two minutes starts nothing, so a refresher that never comes up is started again within two minutes.
-- The refresher runs detached from the session that started it, so it outlives that session; Claude Code ends a child it started directly when the session ends (measured with Claude Code 2.1.310). It holds a second lease, `lease.json` in the state directory, which it takes only when no live refresher holds it and checks before every read and write: when two start at once, one wins and the other exits without reading anything.
-- If the snapshot is stale and no refresher can be started, or none has written a snapshot 90 seconds after a session started it, the session reads its own counts directly, once a minute, and the band marks them with `*`.
+- At its minute check a session reads the snapshot and the refresher's lease, `lease.json`, which the refresher renews every 20 seconds. A lease not renewed for 50 seconds, or no lease at all, means no refresher is running: the session takes a lease in Claude Code's plugin store (it writes its own token, reads it back and goes on only if the token is still its own) and starts the refresher with that token. So a killed refresher is replaced at the first minute check after its lease goes stale, within two minutes of its last renewal. A second session finding a plugin-store lease younger than two minutes whose refresher never came up starts nothing, so a refresher that never comes up is started again within two minutes.
+- The refresher runs detached from the session that started it, so it outlives that session; Claude Code ends a child it started directly when the session ends (measured with Claude Code 2.1.310). It takes `lease.json` only when no refresher has renewed it in the last 50 seconds, and checks it before every read and write: when two start at once, one wins and the other exits without reading anything.
+- When the refresher runs but its counts are older than three minutes, when no refresher can be started, or when none has written a snapshot 90 seconds after a session started it, the session reads its own counts directly, once a minute, and the band marks them with `*`.
 
 Its files live in the state directory, `$XDG_STATE_HOME/beads-ui`, or `~/.local/state/beads-ui` when `XDG_STATE_HOME` is unset:
 
 | File | What it holds |
 |---|---|
 | `counts.json` | The snapshot: each store's counts by owner, the refresher's token and pid, and its heartbeat (`beatAt`); `stoppedAt` when it stopped on purpose. Written whole, by a write to a temporary file and a rename. |
-| `lease.json` | The refresher's lease: its token, pid and the time it last renewed it. |
-| `sessions/<session>.json` | Each session's registry file: its done window and the stores it reads that the inventory does not list. |
+| `lease.json` | The refresher's lease: its token, pid and the time it last renewed it. It is a hard link to the holder's own `lease-<token>.json`, which is the only file a refresher renews, so a refresher that stalls and loses the lease can never overwrite or remove the newer holder's. |
+| `sessions/<session>.json` | Each session's registry file: its done window, the stores it reads that the inventory does not list, and the store its pane reads. |
+| `boards/<store>.json` | The board snapshot of a store a session's pane reads: `bd statuses`, and the open issues and the 25 most recently closed with only the fields the board and backlog draw, as of the store's Dolt head. `counts.json` lists each under `boards`, with its head, when it was read and when its head was last checked; a store whose snapshot would pass 4 MiB, the most a session can read from a file, is listed there with the reason instead, and its pane reads `bd` itself. |
+| `wake/<store>.json` | A marker a session drops after a write; the refresher reads that store again within a second or two and removes it. |
 
 To stop the refresher, end it by its pid (`counts.json` names it); the next session's minute check starts another.
 
@@ -110,14 +116,39 @@ bms-semantic-knowledge-graph = "~/projects/sw-bms-workspace"
 
 When no store resolves, the pane draws no board and runs no `bd` read. It lists what it checked (the session's directory, the config files, the inventory and the prefix it took from the session name) and the `[directory_stores]` line to add, and picks the store up on the next refresh after you add it.
 
+## Using the pane
+
+How focus reaches the pane and leaves it, and how to close and reopen it. The pane's help (`h`) shows the same.
+
+- Focus enters the pane: Ctrl+X then Tab (again for the next pane, then back to the prompt), a click on it (fullscreen rendering), or the band's beads button (click it, or Ctrl+X then Tab to the band and Enter).
+- Focus leaves: Esc returns it to the prompt and closes the pane.
+- Close: Esc, Ctrl+X then X, or /bu (also /show-beads-ui).
+- Reopen: /bu, the band's beads button, or a key chord bound to command:bu in ~/.claude/keybindings.json, such as this one for Meta+B:
+
+```json
+{
+  "bindings": [
+    {
+      "context": "Chat",
+      "bindings": {
+        "meta+b": "command:bu"
+      }
+    }
+  ]
+}
+```
+
+If `~/.claude/keybindings.json` already exists, add the `Chat` entry to its `bindings` list rather than replacing the file. The chord opens the pane when it is closed and closes it when it is open; it cannot move the focus into a pane that is already open, which Ctrl+X then Tab and the beads button do. Claude Code has no way to hide a pane and keep it open, so hiding it is closing it, and `/bu` brings it back on the same tab.
+
 ## Keys
 
-The pane takes these keys while it has the keyboard (`/show-beads-ui` gives it the keyboard when the prompt is empty; otherwise click the pane or press ctrl+x tab). Tab walks the controls.
+The pane takes these keys while it has the keyboard (`/show-beads-ui` gives it the keyboard when the prompt is empty; otherwise see [Using the pane](#using-the-pane)). Tab walks the controls. A key is a letter or digit only, so the help opens with `h`; Claude Code does not allow `?` as a key.
 
 | Key | Action |
 |---|---|
 | `1`, `2`, `4` | Board, Backlog, Detail tab |
 | `3` | Sprint: planned, not built yet; shows a line saying so |
+| `a` | Mine or All: this session's own issues, or every issue |
 | `n` | Focus the quick-add field |
 | `s` | Next swimlane: none, assignee, epic |
 | `o` | Next sort: priority, newest created, recently updated, due date, assignee |
@@ -208,7 +239,7 @@ debug = false         # true: each band line ends with the time its counts were 
 
 The pane's band settings (`g`, or the `Band` button) change the same settings at once: add or remove a part, move one with the arrows, and set the `Done window` field. The change is kept in Claude Code's plugin store, under the key `band-settings`, so every session on the machine draws it at its next minute. `Save to file` writes the settings into the `beads-ui.toml` the mod read, or `~/.config/beads-ui/beads-ui.toml` when there is none, replacing its `[band]` table and keeping every other line, and then clears the held change.
 
-The mod keeps your view choices (the open tab, filter, swimlane, sort and whether the pane was open) in Claude Code's plugin store, under the key `view`. It never stores issue data. The key `refresher-lease` holds the lease a session takes before it starts the host refresher, and `band-settings` the band settings changed in the pane until they are saved. The one other key, `pending-display-ids`, holds a display id the mod minted for an issue it created but could not write yet: the issue's id and the display id, nothing else.
+The mod keeps your view choices (the open tab, filter, swimlane, sort and whether the pane was open) in Claude Code's plugin store, under the key `view`, and each session's Mine or All choice under `view-scope`, by session name. It never stores issue data there. The key `refresher-lease` holds the lease a session takes before it starts the host refresher, and `band-settings` the band settings changed in the pane until they are saved. The one other key, `pending-display-ids`, holds a display id the mod minted for an issue it created but could not write yet: the issue's id and the display id, nothing else.
 
 ## Report a bug
 

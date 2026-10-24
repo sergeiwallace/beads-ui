@@ -243,8 +243,8 @@ const COUNT_PARTS: readonly { part: BandPart; token: Token }[] = [
 
 /**
  * A band line (T-1B.10, T-1B.11): `[bd] {T} tasks ({P} in progress, {B} blocked, {O} open, {D}
- * done last {W})` in the configured part order, T the sum of the counts drawn. The counts follow
- * the total in brackets when the total is drawn. The drift marker (`1 unsynced`) and the
+ * done last {W})` in the configured part order, T the sum of the counts drawn (`1 task` for one).
+ * The counts follow the total in brackets when the total is drawn. The drift marker (`1 unsynced`) and the
  * unpublished-edit count draw only while above zero. The line ends with PARTIAL_GLYPH when a
  * store did not answer, DIRECT_GLYPH when the session read the counts itself, and in debug mode
  * the read time.
@@ -282,7 +282,7 @@ export function bandLine(
   let listed = false;
   for (const part of parts) {
     if (part === "total") {
-      const group: BandSegment[] = [{ text: `${sum} tasks` }];
+      const group: BandSegment[] = [{ text: `${sum} ${sum === 1 ? "task" : "tasks"}` }];
       if (counts.length > 0) {
         group.push({ text: " (" });
         list(group);

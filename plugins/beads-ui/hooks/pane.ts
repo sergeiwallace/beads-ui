@@ -5,11 +5,16 @@ import {
   BACKLOG_PAGE_SIZE,
   type BacklogView,
   BOARD_PAGE_LIMIT,
+  BOARDS_DIR,
+  type BoardEntry,
   type BoardEvent,
   type BoardState,
   type BoardView,
   backlogView,
+  boardFileName,
+  boardReadArgvs,
   boardView,
+  buttonWidth,
   type CardView,
   COMMANDS,
   clockStamp,
@@ -26,25 +31,36 @@ import {
   FILTER_KEYS,
   type FilterState,
   footerHints,
+  groupLayout,
   historyArgv,
   INITIAL_BOARD_STATE,
   type Issue,
-  listArgv,
+  isFirstmate,
+  isShort,
+  type Labels,
+  LEASE_FILE,
+  labels,
   nextSort,
   nextSwimlaneMode,
   openDetail,
   PARTIAL_GLYPH,
   type PageView,
   type PendingDisplayId,
+  packRows,
   parseBdCreatedId,
   parseBdHistoryEvents,
   parseBdList,
   parseBdReady,
   parseBdShow,
   parseBdStatuses,
+  parseBoardSnapshot,
   parseFieldEdit,
+  parseFileLease,
+  parseIssueRows,
   parseQuickAdd,
+  parseSnapshot,
   parseSort,
+  parseStatusesJson,
   parseSwimlaneMode,
   pendingDisplayIdStep,
   planDisplayId,
@@ -54,20 +70,26 @@ import {
   readyArgv,
   reduceBoard,
   reduceDetail,
+  refresherRunning,
   resolveConfig,
+  SNAPSHOT_FILE,
   type SortSpec,
+  STALE_MS,
   STATUS_CATEGORIES,
   type StoreResolution,
   type SwimlaneMode,
   showArgv,
   slugBudgets,
   sortLabel,
+  stateDirOf,
   statusesArgv,
   stepPage,
   storeLabel,
   submitFilter,
   TERMINAL_THEME,
   type Token,
+  textWidth,
+  tierOf,
   truncate,
   type UndoClose,
   undoArgv,
@@ -92,6 +114,14 @@ export const PREFS_KEY = "view";
  * a pane reopen or a new session retries the same id instead of leaving the issue without one.
  */
 export const PENDING_IDS_KEY = "pending-display-ids";
+/**
+ * Where each session's Mine or All choice lives in `$.store` (D-29), by session name, so one
+ * session's choice never changes another's default.
+ */
+export const SCOPE_KEY = "view-scope";
+
+/** Mine draws the issues assigned to the session; All draws every issue (D-29). */
+export type Scope = "mine" | "all";
 
 /** The body the pane asks for, docked and inline; the person's own size wins. */
 const WANTED_COLUMNS = 80;
@@ -106,11 +136,20 @@ export type Tab = "board" | "backlog" | "detail";
 /** D-28: tab 3 is the Sprint view Phase 2 builds; until then pressing it says so and stays put. */
 export const SPRINT_PLANNED_TEXT =
   "3 Sprint: the Sprint view is planned and not built yet; staying on this tab";
-const TABS: readonly { tab: Tab; label: string; hotkey: string }[] = [
-  { tab: "board", label: "Board", hotkey: "1" },
-  { tab: "backlog", label: "Backlog", hotkey: "2" },
-  { tab: "detail", label: "Detail", hotkey: "4" },
+/** Each tab's label in the wide, medium and narrow tiers (T-1B.9). */
+const TABS: readonly { tab: Tab; labels: Labels; hotkey: string }[] = [
+  { tab: "board", labels: labels("Board", "Board", "Brd"), hotkey: "1" },
+  { tab: "backlog", labels: labels("Backlog", "Backlog", "Bklg"), hotkey: "2" },
+  { tab: "detail", labels: labels("Detail", "Detail", "Dtl"), hotkey: "4" },
 ];
+const SPRINT_LABELS = labels("Sprint", "Sprint", "Spr");
+
+/** What the pane is drawn into: its body's width and rows, and where it sits (T-1B.9). */
+export interface PaneFrame {
+  width: number;
+  placement: string;
+  bodyRows?: number;
+}
 
 /** The elements the pane draws with: every surface but mobile has them all. */
 export type PaneUi = Pick<
@@ -134,6 +173,34 @@ type Ran =
 type Notice = { text: string; token: Token; hint?: true };
 
 const FOCUS_HINT = "focus a card first: Tab moves between cards";
+const MOVE_LABEL = "Move to";
+/** What a `Select` draws beside its value: the open mark and a space. */
+export const SELECT_CHROME = 2;
+/**
+ * How focus reaches the pane and leaves it, and how to close and reopen it (D-27, T-1B.6): the
+ * help draws these lines, and README.md and docs/procedures/mod-install.md carry the same.
+ */
+export const USAGE_LINES: readonly string[] = [
+  "Focus enters the pane: Ctrl+X then Tab (again for the next pane, then back to the prompt), a click on it (fullscreen rendering), or the band's beads button (click it, or Ctrl+X then Tab to the band and Enter).",
+  "Focus leaves: Esc returns it to the prompt and closes the pane.",
+  "Close: Esc, Ctrl+X then X, or /bu (also /show-beads-ui).",
+  "Reopen: /bu, the band's beads button, or a key chord bound to command:bu in ~/.claude/keybindings.json, such as this one for Meta+B:",
+];
+export const KEYBINDINGS_BLOCK = `{
+  "bindings": [
+    {
+      "context": "Chat",
+      "bindings": {
+        "meta+b": "command:bu"
+      }
+    }
+  ]
+}`;
+/** Short height drops the help (T-1B.9); pressing h then says how to get room for it. */
+export const SHORT_HELP_TEXT =
+  "Help needs a docked pane 12 rows or taller: Ctrl+X then an arrow resizes the pane.";
+export const NO_NAME_TEXT =
+  "Mine needs the session's name, which ai c sets in CLAUDE_CODE_TASK_LIST_ID; this session has none, so the board shows all issues";
 
 const messageOf = (reason: unknown): string =>
   reason instanceof Error ? reason.message : String(reason);
@@ -191,6 +258,14 @@ export class BeadsPane {
   backlogPage = 0;
   /** The body width the pane last drew at, for the page steps that run between draws. */
   private width = WANTED_COLUMNS;
+  /** Mine or All (D-29): a firstmate, or a session with no name, starts on All. */
+  scope: Scope = "all";
+  /** The Dolt head of the board snapshot drawn; undefined when bd was read directly. */
+  private boardHead: string | undefined;
+  /** When the pane last wrote: a snapshot read before it is not drawn, bd is read instead. */
+  private wroteAt = 0;
+  /** Why the store's board snapshot cannot be drawn, as the refresher named it. */
+  boardSkipped: string | undefined;
 
   /** The store the pane reads (D-24), from the last refresh; undefined before the first. */
   store: StoreResolution | undefined;
@@ -198,6 +273,7 @@ export class BeadsPane {
   private suspended = false;
   private refreshing = false;
   private queued = false;
+  private queuedDirect = false;
   private timer: Timer | undefined;
   private timerMs = 0;
 
@@ -216,6 +292,18 @@ export class BeadsPane {
     void this.refresh();
   }
 
+  /** A write the pane made landed: a snapshot read before now is not drawn. */
+  private async markWrite(): Promise<void> {
+    const now = await this.host?.now().catch(() => undefined);
+    if (now !== undefined) this.wroteAt = now;
+  }
+
+  /** As markWrite, and the band hears of it (T-1B.5). */
+  private async wrote(): Promise<void> {
+    await this.markWrite();
+    this.onWrite?.();
+  }
+
   // ---- view preferences -------------------------------------------------------------------
 
   private async loadPrefs(): Promise<void> {
@@ -223,6 +311,11 @@ export class BeadsPane {
     for (const entry of readPendingDisplayIds(pending)) {
       if (!this.pendingIds.some((known) => known.id === entry.id)) this.pendingIds.push(entry);
     }
+    const session = this.stores.sessionName;
+    this.scope = session !== undefined && !isFirstmate(session) ? "mine" : "all";
+    const scopes = await this.host?.storeGet(SCOPE_KEY).catch(() => undefined);
+    const chosen = isRecord(scopes) ? scopes[session ?? ""] : undefined;
+    if (chosen === "mine" || chosen === "all") this.scope = chosen;
     const stored = await this.host?.storeGet(PREFS_KEY).catch(() => undefined);
     if (!isRecord(stored)) return;
     const tab = TABS.find((candidate) => candidate.tab === stored.tab)?.tab;
@@ -395,14 +488,18 @@ export class BeadsPane {
   }
 
   /**
-   * One read set: `bd statuses` and `bd list`, plus `bd ready` and the open Detail's `bd show` and
-   * `bd history --events` while the pane is open. A failed or timed-out read keeps the last good
+   * One read set. The board comes from the host refresher's snapshot of the store while one is
+   * running and current (D-26, D-29), else from bd: `bd statuses`, the open issues and the newest
+   * closed page, never every closed issue (T-1B.8). `direct` always reads bd, as after a write
+   * and when the pane opens. While the pane is open it also reads `bd ready` and the open
+   * Detail's `bd show` and `bd history --events`. A failed or timed-out read keeps the last good
    * board, and the next refresh tries again.
    */
-  async refresh(): Promise<void> {
+  async refresh(options: { direct?: boolean } = {}): Promise<void> {
     if (this.host === undefined) return;
     if (this.refreshing) {
       this.queued = true;
+      if (options.direct === true) this.queuedDirect = true;
       return;
     }
     this.refreshing = true;
@@ -412,15 +509,23 @@ export class BeadsPane {
       // No store resolved: the pane says what it tried, and no bd read runs until one does.
       if (this.store?.ok !== true) return;
       const full = this.isOpen;
-      const [statuses, list, ready] = await Promise.all([
-        this.run(statusesArgv(), READ_TIMEOUT_MS),
-        this.run(listArgv(), READ_TIMEOUT_MS, { streamed: true }),
-        full ? this.run(readyArgv(), READ_TIMEOUT_MS) : Promise.resolve(undefined),
-      ]);
-      const loaded = this.applyReads(statuses, list, await this.stamp());
+      const snapshot = options.direct === true ? false : await this.fromSnapshot(true);
+      let loaded = snapshot;
+      const ready = full ? this.run(readyArgv(), READ_TIMEOUT_MS) : undefined;
+      if (!snapshot) {
+        const [open, closed] = boardReadArgvs();
+        const [statuses, opened, closedPage] = await Promise.all([
+          this.run(statusesArgv(), READ_TIMEOUT_MS),
+          this.run(open, READ_TIMEOUT_MS, { streamed: true }),
+          this.run(closed, READ_TIMEOUT_MS),
+        ]);
+        loaded = this.applyReads(statuses, [opened, closedPage], await this.stamp());
+        if (loaded) this.boardHead = undefined;
+      }
       if (loaded) await this.retryPendingIds();
-      if (ready?.ok === true) {
-        const parsed = parseBdReady(ready.stdout);
+      const readied = await ready;
+      if (readied?.ok === true) {
+        const parsed = parseBdReady(readied.stdout);
         if (parsed.ok) this.readyIds = new Set(parsed.value.map((issue) => issue.id));
       }
       for (const id of this.board.refresh) {
@@ -438,26 +543,102 @@ export class BeadsPane {
       this.refreshing = false;
       this.host?.invalidate();
       if (this.queued) {
+        const direct = this.queuedDirect;
         this.queued = false;
-        void this.refresh();
+        this.queuedDirect = false;
+        void this.refresh({ direct });
       }
     }
   }
 
-  /** Applies one read set; true when the store's issues loaded. */
-  private applyReads(statuses: Ran, list: Ran, at: string): boolean {
-    if (!list.ok) {
-      this.dispatch({ type: "load-failed", exitCode: list.exitCode, message: list.message });
-      return false;
+  /** The host refresher's state directory, where the board snapshots live. */
+  private async stateDir(): Promise<string | undefined> {
+    const xdgStateHome = await this.host?.stateHome().catch(() => undefined);
+    return stateDirOf({ xdgStateHome, home: this.stores.home });
+  }
+
+  /**
+   * Draws the board from the refresher's snapshot of the store (D-29); true when the board now
+   * shows it, or already shows that snapshot. With `current`, only while a refresher runs and has
+   * confirmed the snapshot within STALE_MS, and never over a read of bd made after it: so a
+   * periodic refresh costs no bd call. Without it, any snapshot of the store will do, as when the
+   * pane opens and the board has nothing yet to draw (T-1B.8). A store the refresher skipped is
+   * named on the pane and read directly.
+   */
+  private async fromSnapshot(current: boolean): Promise<boolean> {
+    const host = this.host;
+    const dir = await this.stateDir();
+    if (host === undefined || dir === undefined || this.store?.ok !== true) return false;
+    const path = this.store.path.replace(/\/+$/, "");
+    const [countsText, leaseText, now] = await Promise.all([
+      host.readFile(`${dir}/${SNAPSHOT_FILE}`).catch(() => undefined),
+      host.readFile(`${dir}/${LEASE_FILE}`).catch(() => undefined),
+      host.now().catch(() => 0),
+    ]);
+    const counts = countsText === undefined ? undefined : parseSnapshot(countsText);
+    const entry: BoardEntry | undefined =
+      counts?.ok === true
+        ? counts.value.boards?.find((one) => one.path.replace(/\/+$/, "") === path)
+        : undefined;
+    this.boardSkipped = entry?.ok === false ? entry.error : undefined;
+    if (current) {
+      const lease = leaseText === undefined ? undefined : parseFileLease(leaseText);
+      if (entry?.ok !== true || !refresherRunning(lease, now)) return false;
+      if (now - entry.checkedAt > STALE_MS || entry.readAt < this.wroteAt) return false;
+      // The board already draws this head: nothing to read.
+      if (entry.head === this.boardHead && this.board.loaded) return true;
     }
-    const issues = parseBdList(list.stdout);
-    if (!issues.ok) {
-      this.dispatch({
-        type: "load-failed",
-        exitCode: list.exitCode,
-        message: `${issues.error.message} at ${issues.error.path}`,
-      });
-      return false;
+    if (entry?.ok === false) return false;
+    const file = entry?.ok === true ? entry.file : boardFileName(path);
+    const text = await host.readFile(`${dir}/${BOARDS_DIR}/${file}`).catch(() => undefined);
+    const board = text === undefined ? undefined : parseBoardSnapshot(text);
+    if (board?.ok !== true || board.value.path.replace(/\/+$/, "") !== path) return false;
+    const issues = parseIssueRows(board.value.issues);
+    const statuses = parseStatusesJson(board.value.statuses);
+    if (!issues.ok || !statuses.ok || statuses.value.length === 0) return false;
+    const confirmed =
+      entry?.ok === true && entry.head === board.value.head ? entry.checkedAt : board.value.readAt;
+    this.dispatch({
+      type: "load-succeeded",
+      issues: issues.value,
+      statuses: statuses.value,
+      at: this.stampOf(confirmed),
+    });
+    this.boardHead = board.value.head;
+    return true;
+  }
+
+  private stampOf(ms: number): string {
+    return clockStamp(ms, new Date(ms).getTimezoneOffset());
+  }
+
+  /**
+   * Applies one read set, `bd statuses` and the board's lists (the open issues and the closed
+   * page); true when the store's issues loaded.
+   */
+  private applyReads(statuses: Ran, lists: readonly Ran[], at: string): boolean {
+    const issues: Issue[] = [];
+    const seen = new Set<string>();
+    for (const list of lists) {
+      if (!list.ok) {
+        this.dispatch({ type: "load-failed", exitCode: list.exitCode, message: list.message });
+        return false;
+      }
+      const parsed = parseBdList(list.stdout);
+      if (!parsed.ok) {
+        this.dispatch({
+          type: "load-failed",
+          exitCode: list.exitCode,
+          message: `${parsed.error.message} at ${parsed.error.path}`,
+        });
+        return false;
+      }
+      // An issue closed between the two reads is in both: the first read's copy is kept.
+      for (const issue of parsed.value) {
+        if (seen.has(issue.id)) continue;
+        seen.add(issue.id);
+        issues.push(issue);
+      }
     }
     const parsedStatuses = statuses.ok ? parseBdStatuses(statuses.stdout) : undefined;
     const known = parsedStatuses?.ok === true ? parsedStatuses.value : this.board.statuses;
@@ -474,7 +655,7 @@ export class BeadsPane {
       });
       return false;
     }
-    this.dispatch({ type: "load-succeeded", issues: issues.value, statuses: known, at });
+    this.dispatch({ type: "load-succeeded", issues, statuses: known, at });
     return true;
   }
 
@@ -490,12 +671,29 @@ export class BeadsPane {
   }
 
   /**
+   * The band's beads button (D-27, T-1B.6): opens the pane focused when it is closed, and moves
+   * the focus ring into it, onto its open tab, when it is open.
+   */
+  async openOrFocus(): Promise<void> {
+    if (!this.isOpen) {
+      await this.open(true);
+      return;
+    }
+    await this.host?.focus(PANE_ID, `tab:${this.tab}`).catch(() => undefined);
+  }
+
+  /**
    * Opens the pane. One the person asked for follows Claude Code's placement; one the mod opens
    * on its own (`asked` false) is withdrawn with a toast when the engine holds it unplaced.
    */
   async open(asked: boolean): Promise<void> {
     const host = this.host;
     if (host === undefined) throw new Error("beads-ui has no session yet");
+    // T-1B.8: a board with nothing to draw yet takes the store's snapshot before the pane opens,
+    // so the first render draws cards; the bd read below then replaces it.
+    if (!this.board.loaded && this.store?.ok === true) {
+      await this.fromSnapshot(false).catch(() => false);
+    }
     const opened = await host.openPane({
       id: PANE_ID,
       title: PANE_TITLE,
@@ -511,7 +709,7 @@ export class BeadsPane {
     }
     this.isOpen = true;
     this.savePrefs();
-    void this.refresh();
+    void this.refresh({ direct: true });
   }
 
   async close(): Promise<void> {
@@ -572,7 +770,7 @@ export class BeadsPane {
     this.host?.invalidate();
     const ran = await this.run(plan.value.argv, WRITE_TIMEOUT_MS);
     if (ran.ok) {
-      this.onWrite?.();
+      await this.wrote();
       this.dispatch({ type: "move-succeeded", id });
       this.undo = undoForMove(this.board.statuses, {
         id,
@@ -588,7 +786,7 @@ export class BeadsPane {
         message: ran.message,
       });
     }
-    await this.refresh();
+    await this.refresh({ direct: true });
   }
 
   /** Quick-add (T-1.4): `bd create`, then the display id when the store uses them. */
@@ -611,18 +809,18 @@ export class BeadsPane {
     if (!created.ok) {
       this.quickAddText = line;
       this.note(this.failure("bd create", created), "error");
-      await this.refresh();
+      await this.refresh({ direct: true });
       return;
     }
     this.quickAddText = "";
-    this.onWrite?.();
+    await this.wrote();
     const id = parseBdCreatedId(created.stdout);
     if (!id.ok) {
       this.note(
         `bd create succeeded but its output was unreadable: ${id.error.message}`,
         "warning",
       );
-      await this.refresh();
+      await this.refresh({ direct: true });
       return;
     }
     const budgetEnv = await this.host
@@ -656,7 +854,7 @@ export class BeadsPane {
     } else {
       this.note(`created ${id.value}`, "success");
     }
-    await this.refresh();
+    await this.refresh({ direct: true });
   }
 
   submitFilter(text: string): void {
@@ -757,6 +955,36 @@ export class BeadsPane {
     this.resetPages();
     this.savePrefs();
     this.host?.invalidate();
+  }
+
+  /** The board as drawn: on Mine, only the issues assigned to this session (D-29). */
+  shown(): BoardState {
+    const session = this.stores.sessionName;
+    if (this.scope === "all" || session === undefined) return this.board;
+    return { ...this.board, issues: this.board.issues.filter((one) => one.assignee === session) };
+  }
+
+  /**
+   * `a`: Mine and All. The choice is kept in `$.store` under this session's name, read back and
+   * merged so another session's choice is kept.
+   */
+  async toggleScope(): Promise<void> {
+    if (this.stores.sessionName === undefined) {
+      this.hint(NO_NAME_TEXT);
+      this.host?.invalidate();
+      return;
+    }
+    this.scope = this.scope === "mine" ? "all" : "mine";
+    this.clearHint();
+    this.resetPages();
+    this.host?.invalidate();
+    const host = this.host;
+    if (host === undefined) return;
+    const held = await host.storeGet(SCOPE_KEY).catch(() => undefined);
+    const scopes = isRecord(held) ? held : {};
+    await host
+      .storeSet(SCOPE_KEY, { ...scopes, [this.stores.sessionName ?? ""]: this.scope })
+      .catch(() => undefined);
   }
 
   cycleSort(): void {
@@ -876,9 +1104,9 @@ export class BeadsPane {
       return;
     }
     this.detail = reduceDetail(this.detail, { type: "edit-succeeded" });
-    this.onWrite?.();
+    await this.wrote();
     await this.loadDetail(detail.issue.id);
-    await this.refresh();
+    await this.refresh({ direct: true });
   }
 
   requestDelete(): void {
@@ -919,7 +1147,7 @@ export class BeadsPane {
     this.note(text, "success");
     this.undo = undo;
     if (this.suspended) void this.resume();
-    else void this.refresh();
+    else void this.markWrite().then(() => this.refresh({ direct: true }));
   }
 
   async undoClose(): Promise<void> {
@@ -927,7 +1155,7 @@ export class BeadsPane {
     if (undo === undefined) return;
     this.undo = undefined;
     const ran = await this.run(undoArgv(undo), WRITE_TIMEOUT_MS);
-    if (ran.ok) this.onWrite?.();
+    if (ran.ok) await this.wrote();
     this.note(
       ran.ok
         ? `${undo.label} is back to ${undo.previous}`
@@ -936,23 +1164,30 @@ export class BeadsPane {
           : this.failure("the undo", ran),
       ran.ok ? "success" : "warning",
     );
-    await this.refresh();
+    await this.refresh({ direct: true });
   }
 
   // ---- drawing ----------------------------------------------------------------------------
 
-  draw(ui: PaneUi, width: number, helpRegion?: RenderElement): RenderElement {
+  /**
+   * The pane at its body size (T-1B.9): `width` picks the layout tier, and above the prompt or
+   * under 12 rows the help, the band settings and the footer's hints are dropped and the inputs
+   * move below the board, so the tabs, the board's header and a card come first.
+   */
+  draw(ui: PaneUi, frame: PaneFrame, helpRegion?: RenderElement): RenderElement {
     const { Box, Text } = ui;
     if (this.host === undefined) {
       return Box({ children: [Text({ children: "beads-ui starts with the session." })] });
     }
+    const { width } = frame;
     this.width = width;
-    if (this.store?.ok === false) return this.drawNoStore(ui, this.store);
-    const { groups, groupWidth } = this.layout(width);
+    if (this.store?.ok === false) return this.drawNoStore(ui, this.store, width);
+    const short = isShort(frame.placement, frame.bodyRows);
+    const { groups, perRow, groupWidth } = this.layout(width);
     const view = this.boardViewAt(width);
     const body =
       this.tab === "board"
-        ? this.drawBoard(ui, view, groups, groupWidth)
+        ? this.drawBoard(ui, view, groups, perRow, groupWidth)
         : this.tab === "backlog"
           ? this.drawBacklog(ui, width)
           : this.drawDetail(ui, width);
@@ -962,37 +1197,42 @@ export class BeadsPane {
         : this.tab === "board" &&
           (view.unplacedPage.pages > 1 ||
             view.lanes.some((lane) => lane.pages.some((page) => page.pages > 1)));
+    const inputs = this.tab === "detail" ? undefined : this.drawInputs(ui);
+    const settings =
+      this.bandSettings?.isOpen === true ? this.bandSettings.draw(ui, colorOf) : undefined;
     return Box({
       flexDirection: "column",
       children: present<RenderNode>([
-        this.drawHeader(ui),
-        this.drawToolbar(ui, paged),
-        ...this.drawLines(ui, width, view),
-        this.help ? this.drawHelp(ui, helpRegion) : undefined,
-        this.bandSettings?.isOpen === true ? this.bandSettings.draw(ui, colorOf) : undefined,
-        this.tab === "detail" ? undefined : this.drawInputs(ui),
+        this.drawHeader(ui, width),
+        this.drawToolbar(ui, paged, width),
+        ...this.drawLines(ui, width, view, short),
+        !short && this.help ? this.drawHelp(ui, helpRegion) : undefined,
+        short ? undefined : settings,
+        short ? undefined : inputs,
         body,
-        Box({
-          key: "footer",
-          children: [Text({ dimColor: true, children: footerHints("card").join(" · ") })],
-        }),
+        short ? settings : undefined,
+        short ? inputs : undefined,
+        short
+          ? undefined
+          : Box({
+              key: "footer",
+              children: [Text({ dimColor: true, children: footerHints("card").join(" · ") })],
+            }),
       ]),
     });
   }
 
-  /** The board's column groups and the width each gets. */
-  private layout(width: number): { groups: string[]; groupWidth: number } {
+  /** The board's column groups, how many sit on a row, and the width each gets. */
+  private layout(width: number): { groups: string[]; perRow: number; groupWidth: number } {
     const groups = STATUS_CATEGORIES.filter((category) =>
       this.board.statuses.some((status) => status.category === category),
     );
-    const gaps = Math.max(0, groups.length - 1);
-    const groupWidth = Math.max(12, Math.floor((width - gaps) / Math.max(1, groups.length)));
-    return { groups, groupWidth };
+    return { groups, ...groupLayout(width, groups.length) };
   }
 
   /** The board as core pages it, at the pages the person stepped to. */
   private boardViewAt(width: number): BoardView {
-    return boardView(this.board, {
+    return boardView(this.shown(), {
       columnWidth: this.layout(width).groupWidth - 1,
       swimlane: this.swimlane,
       softWipLimit: this.config.config.softWipLimit,
@@ -1010,73 +1250,104 @@ export class BeadsPane {
     return ui.Box({ key, children: [ui.Text({ color: colorOf(token), children: text })] });
   }
 
-  private drawHeader(ui: PaneUi): RenderElement {
+  /**
+   * The tabs, then the store and its read time: on the tabs' row when 20 columns are left beside
+   * them, else on a row of its own, cut at the pane's edge.
+   */
+  private drawHeader(ui: PaneUi, width: number): RenderElement {
     const { Box, Text, Button } = ui;
-    const tab = (one: (typeof TABS)[number]) =>
-      Button({
-        key: `tab:${one.tab}`,
-        label: one.label,
-        hotkey: one.hotkey,
-        plain: true,
-        ...(this.tab === one.tab ? {} : { dimColor: true }),
-        onPress: () => this.setTab(one.tab),
-      });
-    const [board, backlog, detail] = TABS;
+    const tier = tierOf(width);
+    const gap = tier === "narrow" ? 1 : 2;
+    const tabs = [
+      ...TABS.slice(0, 2),
+      { tab: "sprint" as const, labels: SPRINT_LABELS, hotkey: "3" },
+      ...TABS.slice(2),
+    ].map((one) => ({
+      ...one,
+      label: one.labels[tier],
+      width: buttonWidth(one.labels[tier], one.hotkey),
+    }));
+    const tab = (one: (typeof tabs)[number]) =>
+      one.tab === "sprint"
+        ? Button({
+            key: "tab:sprint",
+            label: one.label,
+            hotkey: one.hotkey,
+            plain: true,
+            dimColor: true,
+            onPress: () => this.pressSprint(),
+          })
+        : Button({
+            key: `tab:${one.tab}`,
+            label: one.label,
+            hotkey: one.hotkey,
+            plain: true,
+            ...(this.tab === one.tab ? {} : { dimColor: true }),
+            onPress: () => this.setTab(one.tab),
+          });
+    const rows = packRows(tabs, width, gap);
+    const last = rows[rows.length - 1] ?? [];
+    const lastWidth = last.reduce((sum, one) => sum + one.width, 0) + gap * (last.length - 1);
+    const beside = width - lastWidth - gap >= 20;
     const resolved = this.store?.ok === true;
+    const store = Text({
+      wrap: "truncate-end",
+      children: [
+        Text({
+          bold: true,
+          children: truncate(this.store === undefined ? "" : storeLabel(this.store), 40),
+        }),
+        "  ",
+        Text({
+          dimColor: true,
+          children: !resolved
+            ? ""
+            : this.board.loadedAt === undefined
+              ? "loading…"
+              : asOf(this.board.loadedAt),
+        }),
+        ...(this.unsynced.length === 0
+          ? []
+          : [
+              "  ",
+              Text({
+                color: colorOf("warning"),
+                children: `unsynced with the pair: ${this.unsynced.join(", ")}`,
+              }),
+            ]),
+      ],
+    });
     return Box({
       key: "header",
-      flexDirection: "row",
-      gap: 2,
-      children: present<RenderNode>([
-        board === undefined ? undefined : tab(board),
-        backlog === undefined ? undefined : tab(backlog),
-        Button({
-          key: "tab:sprint",
-          label: "Sprint",
-          hotkey: "3",
-          plain: true,
-          dimColor: true,
-          onPress: () => this.pressSprint(),
-        }),
-        detail === undefined ? undefined : tab(detail),
-        Text({
-          wrap: "truncate-end",
-          children: [
-            Text({
-              bold: true,
-              children: truncate(this.store === undefined ? "" : storeLabel(this.store), 40),
-            }),
-            "  ",
-            Text({
-              dimColor: true,
-              children: !resolved
-                ? ""
-                : this.board.loadedAt === undefined
-                  ? "loading…"
-                  : asOf(this.board.loadedAt),
-            }),
-            ...(this.unsynced.length === 0
-              ? []
-              : [
-                  "  ",
-                  Text({
-                    color: colorOf("warning"),
-                    children: `unsynced with the pair: ${this.unsynced.join(", ")}`,
-                  }),
-                ]),
-          ],
-        }),
-      ]),
+      flexDirection: "column",
+      children: [
+        ...rows.map((row, i) =>
+          Box({
+            key: `header:${i}`,
+            flexDirection: "row",
+            gap,
+            children: [
+              ...row.map(tab),
+              ...(beside && i === rows.length - 1 ? [Box({ flexGrow: 1, children: [store] })] : []),
+            ],
+          }),
+        ),
+        ...(beside ? [] : [Box({ key: "header:store", children: [store] })]),
+      ],
     });
   }
 
   /** D-24's empty state: what the pane looked for, and the line that points it at a store. */
-  private drawNoStore(ui: PaneUi, store: Extract<StoreResolution, { ok: false }>): RenderElement {
+  private drawNoStore(
+    ui: PaneUi,
+    store: Extract<StoreResolution, { ok: false }>,
+    width: number,
+  ): RenderElement {
     const { Box, Text } = ui;
     return Box({
       flexDirection: "column",
       children: present<RenderNode>([
-        this.drawHeader(ui),
+        this.drawHeader(ui, width),
         ...this.config.problems.map((problem, i) =>
           this.line(ui, `config:${i}`, problem, "warning"),
         ),
@@ -1100,44 +1371,143 @@ export class BeadsPane {
     });
   }
 
-  private drawToolbar(ui: PaneUi, paged: boolean): RenderElement {
+  /**
+   * The toolbar's buttons, labelled for the width's tier and packed into rows that each fit it
+   * (T-1B.9): full words from 72 columns, a short word from 48, the shortest form below.
+   */
+  private drawToolbar(ui: PaneUi, paged: boolean, width: number): RenderElement {
     const { Box, Button } = ui;
-    const button = (key: string, label: string, hotkey: string, onPress: () => void) =>
-      Button({ key, label, hotkey, plain: true, onPress });
+    const tier = tierOf(width);
+    const gap = tier === "narrow" ? 1 : 2;
+    const mine = this.scope === "mine";
+    const sort = sortLabel(this.sort);
+    const items = present([
+      {
+        key: "scope",
+        l: labels(mine ? "Showing: mine" : "Showing: all", mine ? "Mine" : "All"),
+        hotkey: "a",
+        press: () => void this.toggleScope(),
+      },
+      {
+        key: "swimlane",
+        l: labels(`Swimlane: ${this.swimlane}`, `Lanes: ${this.swimlane}`, "Lanes"),
+        hotkey: "s",
+        press: () => this.cycleSwimlane(),
+      },
+      {
+        key: "sort",
+        l: labels(`Sort: ${sort}`, `Sort: ${sort}`, "Sort"),
+        hotkey: "o",
+        press: () => this.cycleSort(),
+      },
+      { key: "new", l: labels("New"), hotkey: "n", press: () => void this.focusQuickAdd() },
+      {
+        key: "detail",
+        l: labels("Detail", "Detail", "Dtl"),
+        hotkey: "d",
+        press: () => void this.openDetailFor(),
+      },
+      {
+        key: "move",
+        l: labels("Move to", "Move"),
+        hotkey: "m",
+        press: () => void this.focusMove(),
+      },
+      {
+        key: "delete",
+        l: labels("Delete", "Delete", "Del"),
+        hotkey: "x",
+        press: () => this.requestDelete(),
+      },
+      this.undo === undefined
+        ? undefined
+        : {
+            key: "undo",
+            l: labels("Undo close", "Undo"),
+            hotkey: "u",
+            press: () => void this.undoClose(),
+          },
+      paged
+        ? {
+            key: "page-next",
+            l: labels("Next page", "Next"),
+            hotkey: "p",
+            press: () => void this.stepFocusedPage(1),
+          }
+        : undefined,
+      paged
+        ? {
+            key: "page-back",
+            l: labels("Page back", "Back"),
+            hotkey: "b",
+            press: () => void this.stepFocusedPage(-1),
+          }
+        : undefined,
+      this.bandSettings === undefined
+        ? undefined
+        : {
+            key: "band-settings",
+            l: labels("Band"),
+            hotkey: "g",
+            press: () => this.bandSettings?.toggle(),
+          },
+      { key: "help", l: labels("Help"), hotkey: "h", press: () => this.toggleHelp() },
+    ]).map((item) => ({
+      ...item,
+      label: item.l[tier],
+      width: buttonWidth(item.l[tier], item.hotkey),
+    }));
     return Box({
       key: "toolbar",
-      flexDirection: "row",
-      flexWrap: "wrap",
-      columnGap: 2,
-      children: present([
-        button("swimlane", `Swimlane: ${this.swimlane}`, "s", () => this.cycleSwimlane()),
-        button("sort", `Sort: ${sortLabel(this.sort)}`, "o", () => this.cycleSort()),
-        button("new", "New", "n", () => void this.focusQuickAdd()),
-        button("detail", "Detail", "d", () => void this.openDetailFor()),
-        button("move", "Move to", "m", () => void this.focusMove()),
-        button("delete", "Delete", "x", () => this.requestDelete()),
-        this.undo === undefined
-          ? undefined
-          : button("undo", "Undo close", "u", () => void this.undoClose()),
-        paged
-          ? button("page-next", "Next page", "p", () => void this.stepFocusedPage(1))
-          : undefined,
-        paged
-          ? button("page-back", "Page back", "b", () => void this.stepFocusedPage(-1))
-          : undefined,
-        this.bandSettings === undefined
-          ? undefined
-          : button("band-settings", "Band", "g", () => this.bandSettings?.toggle()),
-        button("help", "Help", "h", () => this.toggleHelp()),
-      ]),
+      flexDirection: "column",
+      children: packRows(items, width, gap).map((row, i) =>
+        Box({
+          key: `toolbar:${i}`,
+          flexDirection: "row",
+          columnGap: gap,
+          children: row.map((item) =>
+            Button({
+              key: item.key,
+              label: item.label,
+              hotkey: item.hotkey,
+              plain: true,
+              onPress: item.press,
+            }),
+          ),
+        }),
+      ),
     });
   }
 
-  private drawLines(ui: PaneUi, width: number, view: BoardView): RenderElement[] {
+  private drawLines(ui: PaneUi, width: number, view: BoardView, short: boolean): RenderElement[] {
     const filterLine =
       this.filter.error === undefined ? view.filterLine : describeFilterError(this.filter.error);
+    const session = this.stores.sessionName;
+    const onBoard = this.tab !== "detail";
+    const ownOpen =
+      this.scope === "mine" && session !== undefined && this.board.loaded
+        ? this.shown().issues.filter((issue) => issue.status !== "closed").length
+        : undefined;
+    const allOpen = this.board.issues.filter((issue) => issue.status !== "closed").length;
     return present([
       ...this.config.problems.map((problem, i) => this.line(ui, `config:${i}`, problem, "warning")),
+      onBoard && ownOpen === 0
+        ? this.line(
+            ui,
+            "mine-empty",
+            `No open issues are assigned to ${session}; a shows all ${allOpen} open.`,
+            "text.dim",
+          )
+        : undefined,
+      short && this.help ? this.line(ui, "help-short", SHORT_HELP_TEXT, "text.dim") : undefined,
+      onBoard && !short && this.boardSkipped !== undefined
+        ? this.line(
+            ui,
+            "board-skipped",
+            `Read from bd, not the host snapshot: ${this.boardSkipped}`,
+            "text.dim",
+          )
+        : undefined,
       view.errorLine === undefined
         ? undefined
         : this.line(ui, "error-line", view.errorLine, "error"),
@@ -1190,7 +1560,7 @@ export class BeadsPane {
   }
 
   private drawHelp(ui: PaneUi, helpRegion: RenderElement | undefined): RenderElement {
-    const { Box, Text } = ui;
+    const { Box, Text, Code } = ui;
     const keys = COMMANDS.map((command) => {
       const { binding } = command;
       const key =
@@ -1219,6 +1589,9 @@ export class BeadsPane {
           children: "Quick-add: title words plus p0-p4, type:, @assignee, +label, due:, sprint:",
         }),
         Text({ children: `Filter keys: ${FILTER_KEYS.join(", ")}` }),
+        Text({ bold: true, children: "Focus, hide and show" }),
+        ...USAGE_LINES.map((text) => Text({ children: text })),
+        Code({ source: KEYBINDINGS_BLOCK }),
         Text({
           children: `The band above the prompt: [bd] counts your own issues in every store; a firstmate's [bd][all] counts every owner's, with [fm] its own. "N unsynced" means N stores are out of step with the pair, named in the header. A line ending ${PARTIAL_GLYPH} is partial: a store could not be read. ${DIRECT_GLYPH} means this session read the counts itself because the host refresher is not running. g opens the band settings.`,
         }),
@@ -1231,9 +1604,20 @@ export class BeadsPane {
     });
   }
 
-  private drawCard(ui: PaneUi, card: CardView): RenderElement {
+  /**
+   * One card in a column `width` wide. Its Move to keeps its label while the label and the longest
+   * status fit beside each other; a status too long for the column is cut in its option label.
+   */
+  private drawCard(ui: PaneUi, card: CardView, width: number): RenderElement {
     const status = this.board.issues.find((issue) => issue.id === card.id)?.status ?? "";
     const { Box, Text, Select, Button } = ui;
+    const values = [status, ...card.moveTargets];
+    const room = Math.max(1, width - SELECT_CHROME);
+    const longest = Math.max(0, ...values.map(textWidth));
+    const labelled = width >= textWidth(MOVE_LABEL) + 2 + Math.min(longest, room) + SELECT_CHROME;
+    const options = values.map((value) =>
+      textWidth(value) <= room ? { value } : { value, label: truncate(value, room) },
+    );
     return Box({
       key: `card:${card.id}`,
       flexDirection: "column",
@@ -1247,8 +1631,8 @@ export class BeadsPane {
         }),
         Select({
           key: `move:${card.id}`,
-          label: "Move to",
-          options: [status, ...card.moveTargets].map((value) => ({ value })),
+          ...(labelled ? { label: MOVE_LABEL } : {}),
+          options,
           value: status,
           onSelect: (value) => void this.move(card.id, value),
         }),
@@ -1267,6 +1651,7 @@ export class BeadsPane {
     ui: PaneUi,
     view: BoardView,
     groups: readonly string[],
+    perRow: number,
     groupWidth: number,
   ): RenderElement {
     const { Box, Text, Button } = ui;
@@ -1284,32 +1669,39 @@ export class BeadsPane {
           lane.label === ""
             ? undefined
             : Text({ bold: true, underline: true, children: lane.label }),
-          Box({
-            flexDirection: "row",
-            gap: 1,
-            children: groups.map((category) =>
-              Box({
-                key: `group:${lane.key}:${category}`,
-                flexDirection: "column",
-                width: groupWidth,
-                children: view.columns.flatMap((column, i) => {
-                  if (column.category !== category) return [];
-                  const cards = lane.cells[i] ?? [];
-                  const page = lane.pages[i];
-                  return present<RenderNode>([
-                    Box({
-                      key: `column:${lane.key}:${column.status}`,
-                      children: [
-                        Text({ bold: true, color: colorOf(column.token), children: column.label }),
-                      ],
-                    }),
-                    ...cards.map((card) => this.drawCard(ui, card)),
-                    page === undefined ? undefined : this.drawPager(ui, page),
-                  ]);
+          // perRow groups to a row; a narrow pane stacks the rest below (T-1B.9).
+          ...Array.from({ length: Math.ceil(groups.length / perRow) }, (_, row) =>
+            Box({
+              flexDirection: "row",
+              gap: 1,
+              children: groups.slice(row * perRow, (row + 1) * perRow).map((category) =>
+                Box({
+                  key: `group:${lane.key}:${category}`,
+                  flexDirection: "column",
+                  width: groupWidth,
+                  children: view.columns.flatMap((column, i) => {
+                    if (column.category !== category) return [];
+                    const cards = lane.cells[i] ?? [];
+                    const page = lane.pages[i];
+                    return present<RenderNode>([
+                      Box({
+                        key: `column:${lane.key}:${column.status}`,
+                        children: [
+                          Text({
+                            bold: true,
+                            color: colorOf(column.token),
+                            children: column.label,
+                          }),
+                        ],
+                      }),
+                      ...cards.map((card) => this.drawCard(ui, card, groupWidth)),
+                      page === undefined ? undefined : this.drawPager(ui, page),
+                    ]);
+                  }),
                 }),
-              }),
-            ),
-          }),
+              ),
+            }),
+          ),
         ]),
       }),
     );
@@ -1321,7 +1713,7 @@ export class BeadsPane {
             flexDirection: "column",
             children: present<RenderNode>([
               Text({ bold: true, children: "Statuses bd statuses did not list" }),
-              ...view.unplaced.map((card) => this.drawCard(ui, card)),
+              ...view.unplaced.map((card) => this.drawCard(ui, card, this.width)),
               this.drawPager(ui, view.unplacedPage),
             ]),
           });
@@ -1406,7 +1798,7 @@ export class BeadsPane {
   /** The Backlog as core pages it, at the page the person stepped to. */
   private backlogViewAt(width: number): BacklogView {
     const { idWidth, titleWidth } = this.backlogLayout(width);
-    return backlogView(this.board.issues, {
+    return backlogView(this.shown().issues, {
       statuses: this.board.statuses,
       filter: this.filter,
       sort: this.sort,

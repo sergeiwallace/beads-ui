@@ -68,6 +68,7 @@ export function register(on: On) {
         ),
       now: () => $.clock.now(),
       every: (ms, fn) => $.clock.every(ms, fn),
+      after: (ms, fn) => $.clock.after(ms, fn),
       storeGet: (key) => $.store.get(key),
       storeSet: (key, value) => $.store.set(key, value),
       readFile: (path) => $.fs.read(path),
@@ -123,8 +124,8 @@ export function register(on: On) {
   on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
     if (e.surface !== "terminal" || e.props.hasSurvey) return next(e);
     if (e.viewport !== undefined) pane.measured(e.viewport.columns);
-    const { Box, Text } = await $.ui.resolve(e);
-    const band = drawBand({ Box, Text }, tally);
+    const { Box, Text, Button } = await $.ui.resolve(e);
+    const band = drawBand({ Box, Text, Button }, tally, () => void pane.openOrFocus());
     if (band === undefined) return next(e);
 
     return Box({ flexDirection: "column", children: [band, await next(e)] });
@@ -150,6 +151,13 @@ export function register(on: On) {
       e.surface === "terminal" || e.surface === "desktop"
         ? (await $.ui.resolve(e)).Client({ key: "hello", module: "../client/hello.ts" })
         : undefined;
-    return pane.draw(ui, width, help);
+    // The tier and the short-height rule come from the props, which Claude Code redraws with on
+    // every resize (T-1B.9).
+    const frame = {
+      width,
+      placement: e.props.placement,
+      ...(e.props.scroll === undefined ? {} : { bodyRows: e.props.scroll.bodyRows }),
+    };
+    return pane.draw(ui, frame, help);
   });
 }

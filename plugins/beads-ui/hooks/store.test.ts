@@ -2,7 +2,7 @@ import type { On } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect, test } from "claude-code/testing";
 import { BEAT_MS } from "../core/src/index.ts";
-import { SPRINT_PLANNED_TEXT } from "./pane.ts";
+import { SCOPE_KEY, SPRINT_PLANNED_TEXT } from "./pane.ts";
 import { PANE_ID, PLUGIN_NAME } from "./register.ts";
 import {
   BAND_PROPS,
@@ -13,6 +13,7 @@ import {
   inventoryOf,
   NO_STORE_STDERR,
   NO_STORE_WHERE,
+  OPEN_LIST,
   PANE_PROPS,
   type Script,
   SESSION,
@@ -22,7 +23,7 @@ import {
   world,
 } from "./tests/world.ts";
 
-const LIST = "bd list --all --brief --limit 0";
+const LIST = OPEN_LIST;
 /** A kg session's directory: a repository that holds no Beads store, and must never get one. */
 const KG_CWD = "/work/bms-semantic-knowledge-graph";
 /** The repository whose store holds the kg sessions' work. */
@@ -79,8 +80,10 @@ const band = ($: Engine) =>
     viewport: VIEWPORT,
   });
 
+/** A named session whose board shows All, as these tests count the whole store it reads. */
 const named = (session: string, options: WorldOptions): WorldOptions => ({
   ...options,
+  stored: { ...options.stored, [SCOPE_KEY]: { [session]: "all" } },
   env: { HOME: "/home/me", CLAUDE_CODE_TASK_LIST_ID: session },
 });
 
@@ -122,7 +125,7 @@ describe("the store a session reads", () => {
     expect(new Set(cwdsOf(w, "bd count "))).toEqual(new Set([mapped]));
     expect((await ui.find({ key: "header" }))?.text).toContain("kg-store");
     expect((await (await band($)).find({ key: "beads-band:own" }))?.text).toBe(
-      "[bd] 1 tasks (0 in progress, 0 blocked, 1 open, 0 done last 24h) *",
+      "[bd] 1 task (0 in progress, 0 blocked, 1 open, 0 done last 24h) *",
     );
   });
 

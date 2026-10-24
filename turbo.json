@@ -6,7 +6,11 @@
       "outputs": []
     },
     "typecheck": {
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.base.json"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.base.json",
+        "$TURBO_ROOT$/plugins/beads-ui/core/src/**"
+      ],
       "outputs": []
     },
     "test": {

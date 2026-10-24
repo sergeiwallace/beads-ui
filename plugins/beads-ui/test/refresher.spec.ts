@@ -25,6 +25,32 @@ const args = process.argv.slice(2);
 fs.appendFileSync(process.env.STUB_LOG, JSON.stringify({ cwd: process.cwd(), args, ppid: process.ppid }) + "\\n");
 if (fs.existsSync("fail")) { process.stderr.write("Error: database is locked\\n"); process.exit(1); }
 const issues = JSON.parse(fs.readFileSync("issues.json", "utf8"));
+if (args[0] === "vc") {
+  const commit = fs.existsSync("head") ? fs.readFileSync("head", "utf8").trim() : "head-1";
+  process.stdout.write(JSON.stringify({ branch: "main", commit, schema_version: 1 }) + "\\n");
+  process.exit(0);
+}
+if (args[0] === "statuses") {
+  process.stdout.write(JSON.stringify({ built_in_statuses: [{ name: "open", category: "active" }, { name: "closed", category: "done" }] }) + "\\n");
+  process.exit(0);
+}
+if (args[0] === "list") {
+  const at = new Date(Date.UTC(2026, 9, 1)).toISOString();
+  const rows = issues.map((issue, i) => ({
+    id: "S-" + i, title: issue.title ?? "issue " + i, status: issue.status, priority: 2,
+    issue_type: "task", assignee: issue.assignee, owner: "someone@example.com",
+    created_at: at, updated_at: at, created_by: "someone", dependency_count: 0,
+    ...(issue.closedAt === undefined ? {} : { closed_at: new Date(issue.closedAt).toISOString() }),
+    metadata: { display_id: "S-issue-" + i, other: "dropped" }, labels: ["id:S-issue-" + i],
+  }));
+  const closed = args.includes("closed");
+  const limit = Number(args[args.indexOf("--limit") + 1]);
+  const picked = closed
+    ? rows.filter((row) => row.status === "closed").sort((a, b) => (a.closed_at < b.closed_at ? 1 : -1))
+    : rows.filter((row) => row.status !== "closed");
+  fs.writeSync(1, JSON.stringify(limit > 0 ? picked.slice(0, limit) : picked) + "\\n");
+  process.exit(0);
+}
 const flag = (name) => args.find((arg) => arg.startsWith(name + "="))?.slice(name.length + 1);
 const status = flag("--status");
 const after = flag("--closed-after");
@@ -43,6 +69,7 @@ interface Issue {
   status: string;
   assignee?: string;
   closedAt?: number;
+  title?: string;
 }
 
 const scratch: string[] = [];
@@ -102,7 +129,15 @@ function host(stores: Record<string, Issue[]>, unsynced: string[] = []) {
 
 type Host = ReturnType<typeof host>;
 
-function register(h: Host, id: string, extra: Partial<{ seenAt: number; windows: string[] }> = {}) {
+function register(
+  h: Host,
+  id: string,
+  extra: Partial<{
+    seenAt: number;
+    windows: string[];
+    boards: { name: string; path: string }[];
+  }> = {},
+) {
   const entry = { id, seenAt: Date.now(), windows: ["24h"], stores: [], ...extra };
   writeFileSync(join(h.state, "sessions", `${id}.json`), JSON.stringify(entry));
 }
@@ -241,24 +276,72 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     expect(lease(h).token).toBe("token-takeover");
   });
 
-  it("should stop reading and writing and exit when another refresher takes its lease", async () => {
+  it("should take over, by default, the lease of a killed refresher once it is 50 seconds unrenewed and not before", async () => {
+    const DEFAULT_STALE = ["--beat-ms", "300", "--renew-ms", "100", "--idle-ms", "4000"];
+    const fresh = host(STORES);
+    register(fresh, "aih-ec2-3");
+    writeFileSync(
+      join(fresh.state, "lease.json"),
+      JSON.stringify({ token: "killed-refresher", pid: 1, beatAt: Date.now() - 40_000 }),
+    );
+    const refused = launch(fresh, "token-tooearly", DEFAULT_STALE);
+    await until(() => (alive(refused) ? undefined : true));
+    expect(lease(fresh).token).toBe("killed-refresher");
+
+    const dead = host(STORES);
+    register(dead, "aih-ec2-3");
+    writeFileSync(
+      join(dead.state, "lease.json"),
+      JSON.stringify({ token: "killed-refresher", pid: 1, beatAt: Date.now() - 55_000 }),
+    );
+    launch(dead, "token-replaces", DEFAULT_STALE);
+    const written = await until(() => snapshot(dead));
+
+    expect(written.token).toBe("token-replaces");
+    expect(lease(dead).token).toBe("token-replaces");
+  });
+
+  it("should stop reading and writing and exit, leaving the new holder's lease, when another refresher takes its lease while it is stopped", async () => {
     const h = host(STORES);
     register(h, "aih-ec2-3");
-    const pid = launch(h, "token-ousted11");
+    const ousted = launch(h, "token-ousted11");
     await until(() => snapshot(h));
 
-    writeFileSync(
-      join(h.state, "lease.json"),
-      JSON.stringify({ token: "new-holder111", pid: 1, beatAt: Date.now() }),
-    );
-    await until(() => (alive(pid) ? undefined : true));
-    const before = calls(h).length;
-    const last = snapshot(h);
+    // Stalled past the lease's staleness (1.5 s here), as swap or load stalls a real one.
+    process.kill(ousted, "SIGSTOP");
+    await new Promise((done) => setTimeout(done, 2_000));
+    const holder = launch(h, "token-newhold1");
+    await until(() => (lease(h)?.token === "token-newhold1" ? true : undefined));
+    const held = lease(h);
+    process.kill(ousted, "SIGCONT");
+    await until(() => (alive(ousted) ? undefined : true));
+    const fromOusted = () => calls(h).filter((call) => call.ppid === ousted).length;
+    const before = fromOusted();
     await new Promise((done) => setTimeout(done, 700));
 
-    expect(calls(h).length).toBe(before);
-    expect(snapshot(h)).toEqual(last);
-    expect(lease(h).token).toBe("new-holder111");
+    expect(fromOusted()).toBe(before);
+    expect(alive(holder)).toBe(true);
+    expect(lease(h)?.token).toBe("token-newhold1");
+    expect(lease(h)?.pid).toBe(held.pid);
+    expect(existsSync(join(h.state, "lease-token-ousted11.json"))).toBe(false);
+  });
+
+  it("should leave a newer holder's lease alone when it is stopped on purpose after losing it", async () => {
+    const h = host(STORES);
+    register(h, "aih-ec2-3");
+    const ousted = launch(h, "token-ousted22");
+    await until(() => snapshot(h));
+
+    process.kill(ousted, "SIGSTOP");
+    await new Promise((done) => setTimeout(done, 2_000));
+    launch(h, "token-newhold2");
+    await until(() => (lease(h)?.token === "token-newhold2" ? true : undefined));
+    // SIGTERM is queued while it is stopped, so it runs the stop path the moment it resumes.
+    process.kill(ousted, "SIGTERM");
+    process.kill(ousted, "SIGCONT");
+    await until(() => (alive(ousted) ? undefined : true));
+
+    expect(lease(h)?.token).toBe("token-newhold2");
   });
 
   it("should run the same bd calls a beat whatever the number of sessions, and count their windows and stores", async () => {
@@ -346,6 +429,140 @@ describe("the host refresher", { timeout: 30_000 }, () => {
 
     expect(snapshot(h).stoppedAt).toEqual(expect.any(Number));
     expect(existsSync(join(h.state, "lease.json"))).toBe(false);
+  });
+
+  describe("board snapshots (T-1B.4, T-1B.8)", () => {
+    const boardOf = (h: Host, store: string) =>
+      readJson(
+        join(h.state, "boards", `${join(h.root, store).replace(/[^A-Za-z0-9._-]/g, "_")}.json`),
+      );
+    const entryOf = (h: Host, store: string) =>
+      snapshot(h)?.boards?.find((entry: { path: string }) => entry.path === join(h.root, store));
+    const lists = (h: Host) => calls(h).filter((call) => call.args[0] === "list");
+    const closedAt = (n: number) => Date.now() - n * HOUR;
+    const MANY: Record<string, Issue[]> = {
+      AIH: [
+        { status: "open", assignee: "aih-ec2-3" },
+        { status: "in_progress" },
+        ...Array.from({ length: 40 }, (_, i) => ({ status: "closed", closedAt: closedAt(i + 1) })),
+      ],
+      BU: [{ status: "open" }],
+    };
+
+    it("should keep a board of the drawn fields for each store a pane reads: the open issues and the newest closed page", async () => {
+      const h = host(MANY);
+      register(h, "aih-ec2-3", { boards: [{ name: "AIH", path: join(h.root, "AIH") }] });
+
+      launch(h, "token-boards11");
+      const entry = await until(() => entryOf(h, "AIH"));
+      const board = boardOf(h, "AIH");
+
+      expect(entry).toMatchObject({ ok: true, head: "head-1", file: expect.any(String) });
+      expect(board.head).toBe("head-1");
+      expect(board.statuses).toEqual({
+        built_in_statuses: [
+          { name: "open", category: "active" },
+          { name: "closed", category: "done" },
+        ],
+      });
+      const statuses = board.issues.map((row: { status: string }) => row.status);
+      expect(statuses.filter((status: string) => status !== "closed")).toEqual([
+        "open",
+        "in_progress",
+      ]);
+      // 40 closed in the store, 25 drawn: the newest first.
+      const closed = board.issues.filter((row: { status: string }) => row.status === "closed");
+      expect(closed).toHaveLength(25);
+      expect(closed[0].closed_at > closed[24].closed_at).toBe(true);
+      expect(Object.keys(board.issues[0]).sort()).toEqual(
+        [
+          "assignee",
+          "created_at",
+          "id",
+          "issue_type",
+          "labels",
+          "metadata",
+          "priority",
+          "status",
+          "title",
+          "updated_at",
+        ].sort(),
+      );
+      expect(board.issues[0].metadata).toEqual({ display_id: "S-issue-0" });
+      // BU has no pane reading it: counted, but no board kept.
+      expect(entryOf(h, "BU")).toBeUndefined();
+      expect(
+        lists(h).some((call) => call.args.includes("--all")),
+        "no read of every closed issue",
+      ).toBe(false);
+    });
+
+    it("should not re-read a store's issues while its head has not moved, and re-read them once it moves", async () => {
+      const h = host(MANY);
+      register(h, "aih-ec2-3", { boards: [{ name: "AIH", path: join(h.root, "AIH") }] });
+
+      launch(h, "token-unchang1");
+      await until(() => entryOf(h, "AIH"));
+      const heads = () => calls(h).filter((call) => call.args[0] === "vc").length;
+      await until(() => (heads() >= 3 ? true : undefined));
+
+      // Three beats, one head each, and the issues read at the first only.
+      expect(lists(h)).toHaveLength(2);
+      const first = entryOf(h, "AIH");
+      expect(first.checkedAt).toBeGreaterThanOrEqual(first.readAt);
+
+      writeFileSync(join(h.root, "AIH", "head"), "head-2");
+      const moved = await until(() => (entryOf(h, "AIH")?.head === "head-2" ? true : undefined));
+
+      expect(moved).toBe(true);
+      expect(lists(h)).toHaveLength(4);
+      expect(boardOf(h, "AIH").head).toBe("head-2");
+    });
+
+    it("should write no board and name the store when its snapshot would pass 4 MiB", async () => {
+      const long = "x".repeat(5_000);
+      const h = host({
+        AIH: Array.from({ length: 1_000 }, () => ({ status: "open", title: long })),
+      });
+      register(h, "aih-ec2-3", { boards: [{ name: "AIH", path: join(h.root, "AIH") }] });
+
+      launch(h, "token-toobig11");
+      const entry = await until(() => entryOf(h, "AIH"));
+
+      expect(entry.ok).toBe(false);
+      expect(entry.error).toMatch(
+        /^its board snapshot would be 5\.\d MiB, past the 4 MiB a session can read; the pane reads this store itself$/,
+      );
+      expect(boardOf(h, "AIH")).toBeUndefined();
+    });
+
+    it("should read a store again within a few seconds of a session's wake marker, not at the next beat", async () => {
+      const h = host(STORES);
+      register(h, "aih-ec2-3", { boards: [{ name: "AIH", path: join(h.root, "AIH") }] });
+      // The default minute beat: only the marker can bring a read sooner.
+      launch(h, "token-wakeup11", ["--renew-ms", "100", "--idle-ms", "60000"]);
+      await until(() => entryOf(h, "AIH"));
+
+      writeFileSync(
+        join(h.root, "AIH", "issues.json"),
+        JSON.stringify([...(STORES.AIH ?? []), { status: "open", assignee: "aih-ec2-3" }]),
+      );
+      writeFileSync(join(h.root, "AIH", "head"), "head-2");
+      const wrote = Date.now();
+      writeFileSync(
+        join(h.state, "wake", "_marker.json"),
+        JSON.stringify({ path: join(h.root, "AIH"), at: wrote }),
+      );
+      await until(() => (entryOf(h, "AIH")?.head === "head-2" ? true : undefined));
+      const took = Date.now() - wrote;
+
+      expect(took).toBeLessThan(10_000);
+      const aih = snapshot(h).stores.find((store: { name: string }) => store.name === "AIH");
+      expect(aih.statuses.open).toEqual({ "aih-ec2-3": 2 });
+      expect(existsSync(join(h.state, "wake", "_marker.json"))).toBe(false);
+      // BU was not woken: its counts are still the first beat's.
+      expect(calls(h).filter((call) => call.cwd === join(h.root, "BU"))).toHaveLength(4);
+    });
   });
 
   it("should refuse to start without a state directory, a home and a token", () => {

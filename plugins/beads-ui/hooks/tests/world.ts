@@ -64,10 +64,41 @@ export const NO_STORE_WHERE: ProcessRunResult = exit(
 export const NO_STORE_STDERR =
   "Error: no beads database found\nHint: run 'bd where' to inspect the resolved workspace, or 'bd init' to create a new database\n      or set BEADS_DIR to point to your .beads directory\n";
 
+/**
+ * The board's two reads (D-29): the open issues, and the newest page of closed ones. A script
+ * answers either by its own key, or once for both by STORE_LIST, a list of every issue in the
+ * store, `bd list --all`'s shape: the world then answers each read with its part of that list,
+ * as bd would, and passes a failure, a hang or output that is not a list to both.
+ */
+export const OPEN_LIST = "bd list --brief --limit 0";
+export const CLOSED_PAGE = "bd list --brief --status closed --sort closed --limit 25";
+export const STORE_LIST = "bd list --all --brief --limit 0";
+
+function partOf(answer: ReturnType<Script>, closed: boolean): ReturnType<Script> {
+  if (answer === undefined || answer instanceof Error || answer === HANG) return answer;
+  if (answer instanceof Killed || answer.exitCode !== 0) return answer;
+  let rows: unknown;
+  try {
+    rows = JSON.parse(answer.stdout);
+  } catch {
+    return answer;
+  }
+  if (!Array.isArray(rows)) return answer;
+  const status = (row: unknown) => (row as { status?: unknown }).status;
+  const at = (row: unknown) => String((row as { closed_at?: unknown }).closed_at ?? "");
+  const part = closed
+    ? rows
+        .filter((row) => status(row) === "closed")
+        .sort((a, b) => (at(a) < at(b) ? 1 : at(a) > at(b) ? -1 : 0))
+        .slice(0, 25)
+    : rows.filter((row) => status(row) !== "closed");
+  return { ...answer, stdout: JSON.stringify(part) };
+}
+
 const READS: Readonly<Record<string, ProcessRunResult>> = {
   "bd where": whereOf(CWD),
   "bd statuses": ok(statuses),
-  "bd list --all --brief --limit 0": ok(list),
+  [STORE_LIST]: ok(list),
   "bd ready --brief --limit 0": ok(ready),
   "bd show BU-mg2.3": ok(show),
   "bd show BU-mg2.3.5": ok(show5),
@@ -126,7 +157,18 @@ export interface WorldOptions {
   openAnswer?: unknown;
   /** Runs after each `$.store.set`, so a test can play another session writing meanwhile. */
   afterStoreSet?: (key: string, store: Map<string, unknown>) => void;
+  /**
+   * Plays a host refresher that is running: its file lease, `REFRESHER_LEASE`, renewed every
+   * RENEW_MS on the clock until the test calls `killRefresher`, after which it goes stale.
+   */
+  refresher?: boolean;
 }
+
+/** The host refresher's state directory under the world's HOME, and the files in it. */
+export const STATE_DIR = "/home/me/.local/state/beads-ui";
+export const REFRESHER_LEASE = `${STATE_DIR}/lease.json`;
+export const REFRESHER_TOKEN = "refresher-token-1";
+const RENEW_EVERY_MS = 20_000;
 
 export function world(on: On, options: WorldOptions = {}) {
   const runs: string[][] = [];
@@ -161,7 +203,17 @@ export function world(on: On, options: WorldOptions = {}) {
   mock.env(on, options.env ?? { HOME: "/home/me" });
   // The files the session reads and writes, by absolute path; a write is read back.
   const files = new Map<string, string>(Object.entries(options.files ?? {}));
-  on("fs.read", (_engine, e) => {
+  // The refresher renews at START_MS and every RENEW_EVERY_MS after, until it is killed.
+  let killedAt: number | undefined;
+  const renewedAt = (now: number) => {
+    const until = killedAt ?? now;
+    return START_MS + Math.floor((until - START_MS) / RENEW_EVERY_MS) * RENEW_EVERY_MS;
+  };
+  on("fs.read", async (_engine, e) => {
+    if (options.refresher === true && e.path === REFRESHER_LEASE && !files.has(e.path)) {
+      const beatAt = renewedAt(await clock.now());
+      return { value: JSON.stringify({ token: REFRESHER_TOKEN, pid: 4242, beatAt }) };
+    }
     const text = files.get(e.path);
     return text === undefined ? { deny: `ENOENT: ${e.path}` } : { value: text };
   });
@@ -173,6 +225,12 @@ export function world(on: On, options: WorldOptions = {}) {
     runs.push([...argv]);
     cwds.push(cwd);
     const key = keyOf(argv);
+    if (key === OPEN_LIST || key === CLOSED_PAGE) {
+      return (
+        options.script?.(key, argv, cwd) ??
+        partOf(options.script?.(STORE_LIST, argv, cwd) ?? READS[STORE_LIST], key === CLOSED_PAGE)
+      );
+    }
     return (
       options.script?.(key, argv, cwd) ??
       READS[key] ??
@@ -220,14 +278,31 @@ export function world(on: On, options: WorldOptions = {}) {
   on("ui.render", { component: "AbovePrompt" }, () => ({ type: "Box", children: [] }));
 
   const keys = () => runs.map(keyOf);
-  return { runs, cwds, keys, registered, opened, closed, toasts, focused, clock, store, files };
+  /** The played refresher dies now: its lease keeps its last renewal and goes stale. */
+  const killRefresher = async () => {
+    killedAt = await clock.now();
+  };
+  return {
+    runs,
+    cwds,
+    keys,
+    registered,
+    opened,
+    closed,
+    toasts,
+    focused,
+    clock,
+    store,
+    files,
+    killRefresher,
+  };
 }
 
 export const PANE_PROPS: RenderPropsOf["Pane"] = {
   title: "Beads",
   isFocused: true,
   bodyColumns: 118,
-  placement: "inline",
+  placement: "dock",
   scroll: { offset: 0, bodyRows: 28 },
   view: {},
 };

@@ -1,4 +1,4 @@
-import { moveArgv } from "../argv.ts";
+import { CLOSED_PAGE_SIZE, moveArgv } from "../argv.ts";
 import { buildColumns, buildSwimlanes, type SwimlaneMode } from "../columns.ts";
 import { applyFilter, type Filter } from "../filter.ts";
 import type { BdArgv, Issue, Result, Status, StatusCategory } from "../model.ts";
@@ -294,7 +294,7 @@ export interface BoardPageLimit {
  * with the rest of the pane; the 80,000 leaves room for the header, toolbar and lines.
  */
 export const BOARD_PAGE_LIMIT: BoardPageLimit = {
-  perCell: 25,
+  perCell: CLOSED_PAGE_SIZE,
   minPerCell: 5,
   budget: 80_000,
   card: 700,

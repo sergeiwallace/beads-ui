@@ -6,13 +6,15 @@ import {
   asOf,
   BEAT_MS,
   clockStamp,
+  LEASE_DEAD_MS,
   LEASE_KEY,
   type StoreSnapshot,
   storeReads,
   storeSnapshotOf,
+  wakeFileName,
 } from "../core/src/index.ts";
 import { BAND_SETTINGS_KEY } from "./bandSettings.ts";
-import { NARROW_TEXT } from "./pane.ts";
+import { NARROW_TEXT, SCOPE_KEY } from "./pane.ts";
 import { PANE_ID, PLUGIN_NAME } from "./register.ts";
 import {
   BAND_PROPS,
@@ -24,8 +26,10 @@ import {
   INVENTORY_PATH,
   inventoryOf,
   keyOf,
+  OPEN_LIST,
   ok,
   PANE_PROPS,
+  REFRESHER_TOKEN,
   type Script,
   SESSION,
   SHOW,
@@ -35,7 +39,7 @@ import {
   world,
 } from "./tests/world.ts";
 
-const LIST = "bd list --all --brief --limit 0";
+const LIST = OPEN_LIST;
 const HOUR = 3_600_000;
 const STATE = "/home/me/.local/state/beads-ui";
 const SNAPSHOT = `${STATE}/counts.json`;
@@ -153,7 +157,7 @@ const FM = "     [fm] 2 tasks (1 in progress, 0 blocked, 0 open, 1 done last 24h
 
 describe("the band's format (T-1B.10)", () => {
   test("should read [bd] and the session's own counts with no session name or store count when a non-firstmate session draws", async ($, on) => {
-    const w = await started($, on, named("aih-ec2-3", { files: LIVE }));
+    const w = await started($, on, named("aih-ec2-3", { refresher: true, files: LIVE }));
 
     expect(await line($, "own")).toBe(OWN);
     expect(await line($, "all")).toBeUndefined();
@@ -161,7 +165,7 @@ describe("the band's format (T-1B.10)", () => {
   });
 
   test("should draw [bd][all] over every owner and [fm] right-aligned beneath it when the firstmate draws", async ($, on) => {
-    await started($, on, named("aih-ec2-firstmate-1", { files: LIVE }));
+    await started($, on, named("aih-ec2-firstmate-1", { refresher: true, files: LIVE }));
 
     const all = await line($, "all");
     const fm = await line($, "own");
@@ -178,7 +182,7 @@ describe("the band's format (T-1B.10)", () => {
       ...LIVE,
       [INVENTORY_PATH]: inventoryOf({ BU: { repo: CWD }, AIH: { repo: HARNESS, synced: false } }),
     };
-    await started($, on, named("aih-ec2-firstmate-1", { files }));
+    await started($, on, named("aih-ec2-firstmate-1", { refresher: true, files }));
     await $.command.run(SHOW);
 
     expect(await line($, "all")).toBe(`${ALL} 1 unsynced`);
@@ -189,14 +193,14 @@ describe("the band's format (T-1B.10)", () => {
   });
 
   test("should show no drift marker when every store is in step", async ($, on) => {
-    await started($, on, named("aih-ec2-firstmate-1", { files: LIVE }));
+    await started($, on, named("aih-ec2-firstmate-1", { refresher: true, files: LIVE }));
 
     expect(await line($, "all")).not.toContain("unsynced");
   });
 
   test("should draw from the stores that answered and end the line with ~ when a store cannot be read", async ($, on) => {
     const files = { ...LIVE, [SNAPSHOT]: snapshotOf(STORES, { failed: [HARNESS] }) };
-    await started($, on, named("aih-ec2-firstmate-1", { files }));
+    await started($, on, named("aih-ec2-firstmate-1", { refresher: true, files }));
 
     expect(await line($, "all")).toBe(
       "[bd][all] 6 tasks (1 in progress, 1 blocked, 3 open, 1 done last 24h) ~",
@@ -207,7 +211,7 @@ describe("the band's format (T-1B.10)", () => {
   });
 
   test("should count every owner's issues in the session's store when the session has no name", async ($, on) => {
-    await started($, on, { files: LIVE });
+    await started($, on, { refresher: true, files: LIVE });
 
     expect(await line($, "store")).toBe(
       "[bd] 6 tasks (1 in progress, 1 blocked, 3 open, 1 done last 24h)",
@@ -216,7 +220,7 @@ describe("the band's format (T-1B.10)", () => {
   });
 
   test("should explain the band's glyphs in the pane's help", async ($, on) => {
-    await started($, on, named("aih-ec2-3", { files: LIVE }));
+    await started($, on, named("aih-ec2-3", { refresher: true, files: LIVE }));
     await $.command.run(SHOW);
     const ui = await pane($);
 
@@ -229,7 +233,7 @@ describe("the band's format (T-1B.10)", () => {
   });
 
   test("should yield the band when a survey holds it", async ($, on) => {
-    await started($, on, named("aih-ec2-3", { files: LIVE }));
+    await started($, on, named("aih-ec2-3", { refresher: true, files: LIVE }));
 
     expect(await (await band($, 120, true)).find({ key: "beads-band" })).toBeUndefined();
   });
@@ -248,6 +252,7 @@ describe("the store a session sums (T-1B.1)", () => {
     const w = world(
       on,
       named("kg-ec2-3", {
+        refresher: true,
         files: {
           [USER_CONFIG]: MAPPING,
           [INVENTORY_PATH]: INVENTORY,
@@ -267,6 +272,8 @@ describe("the store a session sums (T-1B.1)", () => {
       seenAt: START_MS,
       windows: ["24h"],
       stores: [{ name: "kg-store", path: MAPPED }],
+      // The store its pane reads, whose board snapshot the refresher keeps (T-1B.8).
+      boards: [{ name: "kg-store", path: MAPPED }],
     });
   });
 
@@ -375,6 +382,62 @@ describe("one refresher for the host (T-1B.4)", () => {
     expect(spawned(w)).toHaveLength(1);
   });
 
+  test("should start a new refresher within two minutes when the running one is killed before its snapshot is three minutes old", async ($, on) => {
+    const w = await started(
+      $,
+      on,
+      named("aih-ec2-3", {
+        refresher: true,
+        files: LIVE,
+        script: starts,
+        // The session that started the killed refresher took the lease 30 s ago, with its token.
+        stored: { [LEASE_KEY]: { token: REFRESHER_TOKEN, at: START_MS - 30_000 } },
+      }),
+    );
+    expect(spawned(w)).toEqual([]);
+
+    await w.clock.advance(5_000);
+    await w.killRefresher();
+    await w.clock.advance(BEAT_MS - 5_000);
+    // Its lease was last renewed at the clock's start, 60 s ago: past LEASE_DEAD_MS.
+    expect(BEAT_MS).toBeGreaterThan(LEASE_DEAD_MS);
+    expect(spawned(w)).toHaveLength(1);
+    // The snapshot is 70 s old, under three minutes: the band still draws it, unmarked.
+    expect(await line($, "own")).toBe(OWN);
+    expect(w.keys().filter(isCount)).toEqual([]);
+  });
+
+  for (const offset of [0, 20_001, 59_999]) {
+    test(`should start a new refresher within two minutes when the running one is killed ${offset} ms into the session`, async ($, on) => {
+      const w = await started(
+        $,
+        on,
+        named("aih-ec2-3", { refresher: true, files: LIVE, script: starts }),
+      );
+      await w.clock.advance(offset);
+      await w.killRefresher();
+      let waited = 0;
+      while (spawned(w).length === 0 && waited < 3 * BEAT_MS) {
+        await w.clock.advance(1_000);
+        waited += 1_000;
+      }
+
+      expect(spawned(w)).toHaveLength(1);
+      expect(waited).toBeLessThanOrEqual(120_000);
+    });
+  }
+
+  test("should mark the counts as read by this session when the refresher runs but its snapshot is older than three minutes", async ($, on) => {
+    const w = await started(
+      $,
+      on,
+      named("aih-ec2-3", { refresher: true, files: STALE, script: countScript(STORES) }),
+    );
+
+    expect(await line($, "own")).toBe(`${OWN} *`);
+    expect(spawned(w)).toEqual([]);
+  });
+
   test("should start the next refresher at its next minute check when the last one stopped on purpose", async ($, on) => {
     const files = {
       [INVENTORY_PATH]: INVENTORY,
@@ -430,7 +493,7 @@ describe("one refresher for the host (T-1B.4)", () => {
   });
 
   test("should run no bd count of its own across five minutes while the refresher's snapshot is live", async ($, on) => {
-    const w = world(on, named("aih-ec2-3", { files: LIVE, script: starts }));
+    const w = world(on, named("aih-ec2-3", { refresher: true, files: LIVE, script: starts }));
     await $.session.start(SESSION);
     await w.clock.settle();
 
@@ -451,7 +514,7 @@ describe("the band's cadence and stamp (T-1B.5)", () => {
   };
 
   test("should redraw from the newest snapshot at the next minute and not sooner", async ($, on) => {
-    const w = await started($, on, named("aih-ec2-3", { files: LIVE }));
+    const w = await started($, on, named("aih-ec2-3", { refresher: true, files: LIVE }));
 
     w.files.set(SNAPSHOT, snapshotOf(MORE, { beatAt: START_MS + 20_000 }));
     await w.clock.advance(BEAT_MS - 1);
@@ -464,7 +527,15 @@ describe("the band's cadence and stamp (T-1B.5)", () => {
   });
 
   test("should redraw once after a write the session makes", async ($, on) => {
-    const w = await started($, on, named("aih-ec2-3", { files: LIVE }));
+    const w = await started(
+      $,
+      on,
+      named("aih-ec2-3", {
+        refresher: true,
+        files: LIVE,
+        stored: { [SCOPE_KEY]: { "aih-ec2-3": "all" } },
+      }),
+    );
     await $.command.run(SHOW);
     await w.clock.settle();
     const ui = await pane($);
@@ -478,15 +549,89 @@ describe("the band's cadence and stamp (T-1B.5)", () => {
     );
   });
 
+  const ALL_VIEW = { [SCOPE_KEY]: { "aih-ec2-3": "all" } };
+  const MORE_LINE = "[bd] 6 tasks (1 in progress, 1 blocked, 3 open, 1 done last 24h)";
+
+  test("should drop a wake marker for its store after a write and draw the refresher's read of it within 10 seconds", async ($, on) => {
+    const w = await started(
+      $,
+      on,
+      named("aih-ec2-3", { refresher: true, files: LIVE, stored: ALL_VIEW }),
+    );
+    await $.command.run(SHOW);
+    await w.clock.settle();
+    const ui = await pane($);
+
+    await ui.select({ key: "move:BU-2zw", value: "in_progress" });
+    await w.clock.settle();
+
+    const marker = JSON.parse(w.files.get(`${STATE}/wake/${wakeFileName(CWD)}`) ?? "{}");
+    expect(marker).toEqual({ path: CWD, at: START_MS });
+    // The snapshot holds no read of the store since the write yet: the band keeps its line.
+    expect(await line($, "own")).toBe(OWN);
+    // The refresher answers the marker two seconds on.
+    await w.clock.advance(2_000);
+    w.files.set(SNAPSHOT, snapshotOf(MORE, { beatAt: START_MS + 2_000 }));
+    await w.clock.advance(1_000);
+
+    expect(await line($, "own")).toBe(MORE_LINE);
+    expect(w.keys().filter(isCount)).toEqual([]);
+  });
+
+  test("should read its store's counts itself 9 seconds after a write the refresher has not read", async ($, on) => {
+    const w = await started(
+      $,
+      on,
+      named("aih-ec2-3", {
+        refresher: true,
+        files: LIVE,
+        stored: ALL_VIEW,
+        script: countScript(MORE),
+      }),
+    );
+    await $.command.run(SHOW);
+    await w.clock.settle();
+    const ui = await pane($);
+
+    await ui.select({ key: "move:BU-2zw", value: "in_progress" });
+    await w.clock.advance(8_999);
+    expect(w.keys().filter(isCount)).toEqual([]);
+    expect(await line($, "own")).toBe(OWN);
+
+    await w.clock.advance(1);
+
+    expect(await line($, "own")).toBe(MORE_LINE);
+    expect(new Set(w.keys().flatMap((key, i) => (isCount(key) ? [w.cwds[i]] : [])))).toEqual(
+      new Set([CWD]),
+    );
+  });
+
+  test("should read bd for the pane at once after its own write, not wait for the snapshot", async ($, on) => {
+    const w = await started(
+      $,
+      on,
+      named("aih-ec2-3", { refresher: true, files: LIVE, stored: ALL_VIEW }),
+    );
+    await $.command.run(SHOW);
+    await w.clock.settle();
+    const ui = await pane($);
+    const before = w.keys().length;
+
+    await ui.select({ key: "move:BU-2zw", value: "in_progress" });
+    await w.clock.settle();
+
+    expect(w.keys().slice(before)).toContain(LIST);
+  });
+
   test("should show no read time when debug mode is off", async ($, on) => {
-    await started($, on, named("aih-ec2-3", { files: LIVE }));
+    await started($, on, named("aih-ec2-3", { refresher: true, files: LIVE }));
 
     expect(await line($, "own")).not.toContain("as of");
   });
 
   test("should end each line with the read time to the second when beads-ui.toml sets debug on", async ($, on) => {
     const files = { ...LIVE, [USER_CONFIG]: "[band]\ndebug = true\n" };
-    await started($, on, named("aih-ec2-firstmate-1", { files }));
+    await started($, on, named("aih-ec2-firstmate-1", { refresher: true, files }));
     const at = START_MS - 10_000;
     const stamp = asOf(clockStamp(at, new Date(at).getTimezoneOffset()));
 
@@ -498,7 +643,7 @@ describe("the band's cadence and stamp (T-1B.5)", () => {
 
 describe("the band's parts (T-1B.11)", () => {
   test("should draw the parts in the order beads-ui.toml sets, at the next redraw without a restart", async ($, on) => {
-    const w = await started($, on, named("aih-ec2-3", { files: LIVE }));
+    const w = await started($, on, named("aih-ec2-3", { refresher: true, files: LIVE }));
     expect(await line($, "own")).toBe(OWN);
 
     w.files.set(USER_CONFIG, '[band]\nparts = ["total", "open", "done", "in_progress"]\n');
@@ -509,14 +654,18 @@ describe("the band's parts (T-1B.11)", () => {
 
   test("should draw the counts alone when the file removes the total", async ($, on) => {
     const files = { ...LIVE, [USER_CONFIG]: '[band]\nparts = ["blocked", "in_progress"]\n' };
-    await started($, on, named("aih-ec2-3", { files }));
+    await started($, on, named("aih-ec2-3", { refresher: true, files }));
 
     expect(await line($, "own")).toBe("[bd] 1 blocked, 1 in progress");
   });
 
   test("should count the done window beads-ui.toml sets, reading it itself until the snapshot holds it", async ($, on) => {
     const files = { ...LIVE, [USER_CONFIG]: '[band]\ndone_window = "7d"\n' };
-    const w = await started($, on, named("aih-ec2-3", { files, script: countScript(STORES) }));
+    const w = await started(
+      $,
+      on,
+      named("aih-ec2-3", { refresher: true, files, script: countScript(STORES) }),
+    );
 
     expect(await line($, "own")).toBe(
       "[bd] 6 tasks (1 in progress, 1 blocked, 2 open, 2 done last 7d)",
@@ -532,7 +681,7 @@ describe("the band's parts (T-1B.11)", () => {
 
   test("should name a part the file gets wrong in the band settings and draw the rest", async ($, on) => {
     const files = { ...LIVE, [USER_CONFIG]: '[band]\nparts = ["total", "sparkline"]\n' };
-    await started($, on, named("aih-ec2-3", { files }));
+    await started($, on, named("aih-ec2-3", { refresher: true, files }));
     await $.command.run(SHOW);
     const ui = await pane($);
 
@@ -546,7 +695,7 @@ describe("the band's parts (T-1B.11)", () => {
 
   test("should offer every part, the four counts, the total, the done count, the drift marker and the unpublished-edit count, each addable and removable", async ($, on) => {
     const files = { ...LIVE, [USER_CONFIG]: '[band]\nparts = ["open"]\n' };
-    await started($, on, named("aih-ec2-3", { files }));
+    await started($, on, named("aih-ec2-3", { refresher: true, files }));
     await $.command.run(SHOW);
     const ui = await pane($);
 
@@ -567,7 +716,7 @@ describe("the band's parts (T-1B.11)", () => {
   });
 
   test("should apply a part removed, added or moved in the pane at once and keep it in $.store", async ($, on) => {
-    const w = await started($, on, named("aih-ec2-3", { files: LIVE }));
+    const w = await started($, on, named("aih-ec2-3", { refresher: true, files: LIVE }));
     await $.command.run(SHOW);
     const ui = await pane($);
     await ui.press({ key: "band-settings" });
@@ -593,7 +742,7 @@ describe("the band's parts (T-1B.11)", () => {
     const w = await started(
       $,
       on,
-      named("aih-ec2-3", { files: LIVE, script: countScript(STORES) }),
+      named("aih-ec2-3", { refresher: true, files: LIVE, script: countScript(STORES) }),
     );
     await $.command.run(SHOW);
     const ui = await pane($);
@@ -619,6 +768,7 @@ describe("the band's parts (T-1B.11)", () => {
       $,
       on,
       named("aih-ec2-3", {
+        refresher: true,
         files: { ...LIVE, [USER_CONFIG]: kept },
         script: countScript(STORES),
       }),

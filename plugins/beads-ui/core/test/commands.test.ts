@@ -50,6 +50,7 @@ describe("COMMANDS", () => {
       "issue.new": "n",
       "board.swimlane": "s",
       "view.sort": "o",
+      "view.scope": "a",
       "band.settings": "g",
       help: "h",
       "card.detail": "d",
