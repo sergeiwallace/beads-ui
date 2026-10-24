@@ -12,7 +12,7 @@ import {
   userConfigPath,
   whereArgv,
 } from "../core/src/index.ts";
-import type { Host } from "./host.ts";
+import type { Host, SessionEnv } from "./host.ts";
 
 const WHERE_TIMEOUT_MS = 8_000;
 
@@ -30,6 +30,20 @@ const blank = (value: string | undefined) =>
   value === undefined || value.trim() === "" ? undefined : value.trim();
 
 /**
+ * The session's name, the assignee of the beads it owns (D-17). `ai c` pins it in
+ * `CLAUDE_CODE_TASK_LIST_ID`. A session Claude Code's daemon hosts (moved to the background, or
+ * reached by `claude attach`) runs in a worker whose environment is the daemon's, so that
+ * variable there names whichever session started the daemon, often the firstmate; the worker's
+ * own session is the name Claude Code sets in `CLAUDE_CODE_SESSION_NAME`, less the ` (N)` Claude
+ * Code adds when an older copy already holds the bare name. A worker with no such name has none
+ * this session can prove, so it counts as unnamed and never takes the firstmate's form.
+ */
+function sessionNameOf(env: SessionEnv): string | undefined {
+  const hosted = env.kind === "bg" || env.backend === "daemon";
+  return blank(hosted ? env.name?.replace(/ \(\d+\)$/, "") : env.taskListId);
+}
+
+/**
  * The store the session's pane and band read (D-24), worked out by core's resolveStore from the
  * config file and the store inventory, both read on every call, and from one `bd where` in the
  * session's directory, asked once a session: a directory does not gain or lose a store while a
@@ -44,7 +58,8 @@ export class StoreResolver {
   async bind(host: Host): Promise<void> {
     this.host = host;
     this.where = undefined;
-    this.session = blank(await host.sessionName().catch(() => undefined));
+    const env = await host.sessionEnv().catch(() => undefined);
+    this.session = env === undefined ? undefined : sessionNameOf(env);
     const { xdgConfigHome, home } = await host
       .configEnv()
       .catch(() => ({ xdgConfigHome: undefined, home: undefined }));
@@ -56,7 +71,7 @@ export class StoreResolver {
     };
   }
 
-  /** The session's name, which `ai c` pins in `CLAUDE_CODE_TASK_LIST_ID`. */
+  /** The session's name (sessionNameOf). */
   get sessionName(): string | undefined {
     return this.session;
   }

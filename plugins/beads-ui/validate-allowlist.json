@@ -37,6 +37,9 @@
       "env reads": [
         "AIH_SLUG_BODY_MAX_CHARS",
         "AIH_SLUG_BODY_MAX_CHARS_CHILD",
+        "CLAUDE_BG_BACKEND",
+        "CLAUDE_CODE_SESSION_KIND",
+        "CLAUDE_CODE_SESSION_NAME",
         "CLAUDE_CODE_TASK_LIST_ID",
         "HOME",
         "XDG_CONFIG_HOME",
