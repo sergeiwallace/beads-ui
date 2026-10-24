@@ -99,3 +99,8 @@ dolt-server-config.yaml
 # machine's state stand in for every other clone's.
 .displayid-pending/
 .displayid-sweep-heartbeat.json
+
+# bd's import stat cache: machine-local, never shared (AIH-0dwsih). bd 1.3.x still writes
+# it but no longer ignores it in the file it generates, so an unignored copy is
+# one `git add -A` away from being published as though it were this repo's state.
+.auto-import-issues.jsonl
