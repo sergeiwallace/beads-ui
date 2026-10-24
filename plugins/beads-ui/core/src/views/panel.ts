@@ -44,6 +44,24 @@ export const isPanelMode = (value: unknown): value is PanelMode =>
 export const isShownCount = (value: unknown): value is number =>
   typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= MAX_SHOWN;
 
+/** T-2B.7: every mode but `native` opens the panel at session start and draws the Tasks view. */
+export const showsTasks = (mode: PanelMode): boolean => mode !== "native";
+
+/**
+ * The tool whose bare-name deny rule says Claude Code's task panel is retired (D-21, T-5.2). The
+ * switch denies TaskCreate, TaskGet, TaskList, TaskUpdate and TodoWrite and drops
+ * `CLAUDE_CODE_ENABLE_TODO_TOOLS` from `env`. The deny rule is the one read: it is only ever set
+ * on purpose, where an absent env line is also every session that never turned the panel on.
+ */
+export const RETIRED_PANEL_TOOL = "TaskCreate";
+
+/** True when a settings `permissions` value denies RETIRED_PANEL_TOOL by its bare name. */
+export function isTaskPanelRetired(permissions: unknown): boolean {
+  if (typeof permissions !== "object" || permissions === null) return false;
+  const deny = (permissions as { deny?: unknown }).deny;
+  return Array.isArray(deny) && deny.includes(RETIRED_PANEL_TOOL);
+}
+
 export type TaskGroup = "in_progress" | "blocked" | "open";
 export const TASK_GROUPS: readonly TaskGroup[] = ["in_progress", "blocked", "open"];
 

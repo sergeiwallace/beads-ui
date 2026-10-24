@@ -73,7 +73,7 @@ export function settingsView(
         kind: "choice",
         value: panel.mode,
         options: options(PANEL_MODES, PANEL_MODE_LABELS, room),
-        hint: "kept now; a later release opens the panel by it",
+        hint: "both and beads open the panel at session start; native opens none and hides Tasks",
       },
       {
         key: "settings:debug",

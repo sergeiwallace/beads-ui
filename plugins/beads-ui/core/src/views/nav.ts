@@ -89,6 +89,10 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
   },
 ];
 
+/** The nav's entries; `hideTasks` leaves out Tasks, as `panel.mode = native` does (T-2B.7). */
+export const navEntries = (hideTasks = false): readonly NavEntry[] =>
+  hideTasks ? NAV_ENTRIES.filter((entry) => entry.view !== "tasks") : NAV_ENTRIES;
+
 export const isPanelView = (value: unknown): value is PanelView =>
   typeof value === "string" && (PANEL_VIEWS as readonly string[]).includes(value);
 
@@ -145,6 +149,7 @@ export interface NavLayout {
 /**
  * The nav in a body `columns` wide, with `active` the view now drawn. `bodyColumns`, the pane's
  * own width when the surface draws a column narrower than it, picks the tier T-2B.1 names.
+ * `hideTasks` draws no Tasks entry (T-2B.7).
  */
 export function navLayout(
   columns: number,
@@ -152,9 +157,10 @@ export function navLayout(
   bodyRows: number | undefined,
   active: PanelView,
   bodyColumns: number = columns,
+  hideTasks = false,
 ): NavLayout {
   const kind = navKind(bodyColumns, placement, bodyRows);
-  const items = NAV_ENTRIES.map((entry): NavItem => {
+  const items = navEntries(hideTasks).map((entry): NavItem => {
     const label =
       kind === "side" ? entry.labels.wide : kind === "top" ? entry.labels.medium : entry.glyph;
     const hotkey = hotkeyOf(entry.command);
