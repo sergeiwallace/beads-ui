@@ -10,7 +10,7 @@
     {
       "name": "beads-ui",
       "source": "./plugins/beads-ui",
-      "description": "A Beads task board for the Claude Code TUI: /show-beads-ui opens a pane over the current repository's Beads store."
+      "description": "A Beads task board for the Claude Code TUI: /show-beads-ui opens a pane over the Beads store the session's work lives in, and a band above the prompt counts the session's tasks."
     }
   ]
 }
