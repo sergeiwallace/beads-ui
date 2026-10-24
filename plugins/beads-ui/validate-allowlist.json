@@ -5,7 +5,9 @@
         "session.start",
         "command.run{command=show-beads-ui|bu}",
         "ui.close{id=beads|beads-confirm}",
+        "ui.fault{requestId=beads}",
         "ui.focus{requestId=beads}",
+        "ui.message{requestId=beads}",
         "ui.render{component=AbovePrompt}",
         "ui.render{component=Pane}"
       ],
@@ -37,7 +39,7 @@
         "XDG_STATE_HOME"
       ],
       "env writes": [],
-      "surface modules": ["client/hello.ts"],
+      "surface modules": ["client/hello.ts", "client/tasks.ts"],
       "gating hook with .catch": [
         "command.run{command=show-beads-ui|bu}",
         "ui.close{id=beads|beads-confirm}",
