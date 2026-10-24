@@ -66,7 +66,7 @@ With auto-update on, Claude Code checks the marketplace when a session starts, n
 
 - `/show-beads-ui` opens the pane, and runs again to close it. `/bu` is the same command under a short name.
 - The band above the prompt shows open, in-progress and blocked counts of the issues the session owns: those whose assignee is the session's name, which `ai c` pins in `CLAUDE_CODE_TASK_LIST_ID`. It counts them in every store listed in `~/.beads/shared-server/publish-sweep.json`, the machine's store inventory that ai-harness's publish sweep writes, and in the session's own store (see [The store a session reads](#the-store-a-session-reads)) alone when there is no inventory; the row's label says which. A firstmate session (a name ending `-firstmate-<N>`) draws a second row above it, `beads host pair, all <N> stores`, totalling every issue in those stores. Each store is the copy both hosts of the pair pull, so the totals hold the other host's work as of the last sync, and the label names any store not in step. A session without a name owns nothing it can count, so its band counts the session's own store and says `all owners (session name unknown)`; when that store does not resolve, the band draws nothing. A store that cannot be read is named on its row, and the other rows still draw. The counts are read at session start and every 30 seconds, with up to two `bd count` calls a store. The band draws nothing until some store has answered.
-- The pane has three tabs: `1` Board, `2` Backlog and `4` Detail. `3` is held for the Sprint tab of a later release. The header names the store the pane reads, as `KG (sw-bms-workspace)` (its prefix and directory) or the directory alone, and when the board was last read (`as of HH:MM:SS`, local time).
+- The pane has the tabs `1` Board, `2` Backlog and `4` Detail. `3` Sprint is drawn dimmed: the Sprint view is planned and not built yet, so pressing it shows a line that says so and leaves you on the tab you were on. The header names the store the pane reads, as `KG (sw-bms-workspace)` (its prefix and directory) or the directory alone, and when the board was last read (`as of HH:MM:SS`, local time).
 - The pane refreshes when you open it, after every write and every 10 seconds while it is open. A failed `bd list` keeps the last board on screen with an error line naming the exit code, and the next refresh tries again.
 - If the pane was open when your last session ended, it opens again on its own. On a terminal narrower than 110 columns it stays closed and a toast says so; `/show-beads-ui` opens it anyway.
 
@@ -96,6 +96,7 @@ The pane takes these keys while it has the keyboard (`/show-beads-ui` gives it t
 | Key | Action |
 |---|---|
 | `1`, `2`, `4` | Board, Backlog, Detail tab |
+| `3` | Sprint: planned, not built yet; shows a line saying so |
 | `n` | Focus the quick-add field |
 | `s` | Next swimlane: none, assignee, epic |
 | `o` | Next sort: priority, newest created, recently updated, due date, assignee |

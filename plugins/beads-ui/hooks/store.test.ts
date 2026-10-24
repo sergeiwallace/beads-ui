@@ -2,6 +2,7 @@ import type { On } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect, test } from "claude-code/testing";
 
+import { SPRINT_PLANNED_TEXT } from "./pane.ts";
 import { PANE_ID, PLUGIN_NAME } from "./register.ts";
 import { TALLY_REFRESH_MS } from "./tally.ts";
 import {
@@ -198,5 +199,29 @@ describe("the store a session reads", () => {
 
     expect(await (await band($)).find({ key: "beads-band" })).toBeUndefined();
     expect(w.keys().some((key) => key.startsWith("bd count "))).toBe(false);
+  });
+});
+
+describe("tab 3", () => {
+  test("should draw 3 Sprint dimmed and say it is planned without leaving the tab when it is pressed", async ($, on) => {
+    const { ui } = await openIn($, on, CWD, { script: stores([CWD]) });
+
+    const sprint = await ui.find({ key: "tab:sprint" });
+    expect(sprint?.props).toMatchObject({ hotkey: "3", dimColor: true, label: "Sprint" });
+
+    await ui.press({ key: "tab:sprint" });
+
+    expect((await ui.find({ key: "notice" }))?.text).toBe(SPRINT_PLANNED_TEXT);
+    expect((await ui.find({ key: "column::open" }))?.text).toBe("open 20");
+    expect((await ui.find({ key: "tab:board" }))?.props).not.toHaveProperty("dimColor");
+  });
+
+  test("should list 3 for the planned Sprint view in the help when it is open", async ($, on) => {
+    const { ui } = await openIn($, on, CWD, { script: stores([CWD]) });
+
+    await ui.press({ key: "help" });
+
+    const help = (await ui.findAll({ type: "Box" })).find((element) => element.key === "help");
+    expect(help?.text).toContain("3: Sprint (planned, not built yet)");
   });
 });

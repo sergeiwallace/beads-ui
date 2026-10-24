@@ -100,6 +100,9 @@ const RUN_OUTPUT_LIMIT = "4 MiB";
 const WRITE_TIMEOUT_MS = 15_000;
 
 export type Tab = "board" | "backlog" | "detail";
+/** D-28: tab 3 is the Sprint view Phase 2 builds; until then pressing it says so and stays put. */
+export const SPRINT_PLANNED_TEXT =
+  "3 Sprint: the Sprint view is planned and not built yet; staying on this tab";
 const TABS: readonly { tab: Tab; label: string; hotkey: string }[] = [
   { tab: "board", label: "Board", hotkey: "1" },
   { tab: "backlog", label: "Backlog", hotkey: "2" },
@@ -746,6 +749,12 @@ export class BeadsPane {
     this.host?.invalidate();
   }
 
+  /** Tab 3 (D-28): a notice that the Sprint view is planned; the tab does not change. */
+  pressSprint(): void {
+    this.note(SPRINT_PLANNED_TEXT, "warning");
+    this.host?.invalidate();
+  }
+
   toggleHelp(): void {
     this.help = !this.help;
     this.clearHint();
@@ -982,22 +991,33 @@ export class BeadsPane {
 
   private drawHeader(ui: PaneUi): RenderElement {
     const { Box, Text, Button } = ui;
+    const tab = (one: (typeof TABS)[number]) =>
+      Button({
+        key: `tab:${one.tab}`,
+        label: one.label,
+        hotkey: one.hotkey,
+        plain: true,
+        ...(this.tab === one.tab ? {} : { dimColor: true }),
+        onPress: () => this.setTab(one.tab),
+      });
+    const [board, backlog, detail] = TABS;
     const resolved = this.store?.ok === true;
     return Box({
       key: "header",
       flexDirection: "row",
       gap: 2,
-      children: [
-        ...TABS.map(({ tab, label, hotkey }) =>
-          Button({
-            key: `tab:${tab}`,
-            label,
-            hotkey,
-            plain: true,
-            ...(this.tab === tab ? {} : { dimColor: true }),
-            onPress: () => this.setTab(tab),
-          }),
-        ),
+      children: present<RenderNode>([
+        board === undefined ? undefined : tab(board),
+        backlog === undefined ? undefined : tab(backlog),
+        Button({
+          key: "tab:sprint",
+          label: "Sprint",
+          hotkey: "3",
+          plain: true,
+          dimColor: true,
+          onPress: () => this.pressSprint(),
+        }),
+        detail === undefined ? undefined : tab(detail),
         Text({
           wrap: "truncate-end",
           children: [
@@ -1016,7 +1036,7 @@ export class BeadsPane {
             }),
           ],
         }),
-      ],
+      ]),
     });
   }
 

@@ -36,7 +36,6 @@ export {
   commandById,
   commandForKey,
   footerHints,
-  RESERVED_KEYS,
 } from "./commands.ts";
 export type {
   BeadsUiConfig,
