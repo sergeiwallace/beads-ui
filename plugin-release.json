@@ -7,7 +7,7 @@
       "name": "beads-ui",
       "manifest": "plugins/beads-ui/.claude-plugin/plugin.json",
       "paths": ["plugins/beads-ui/"],
-      "ignore": ["*.test.ts", "*/test/*", "plugins/beads-ui/vitest.config.ts"]
+      "ignore": ["*.test.ts", "*/test/*", "*/tests/*", "plugins/beads-ui/vitest.config.ts"]
     }
   ]
 }
