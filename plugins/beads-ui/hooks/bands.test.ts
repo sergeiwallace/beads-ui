@@ -982,3 +982,74 @@ describe("the unpublished-edit count (T-2B.6)", () => {
     expect(await line($, "own")).toBe(OWN);
   });
 });
+
+describe("the session a daemon-hosted session draws for (BU-ylx.6.9)", () => {
+  // A session Claude Code's daemon hosts runs in a worker whose environment is the daemon's, so
+  // CLAUDE_CODE_TASK_LIST_ID names whoever started the daemon, here the firstmate; Claude Code
+  // names the worker's own session in CLAUDE_CODE_SESSION_NAME.
+  const DAEMON_STORES: Readonly<Record<string, readonly Counted[]>> = {
+    ...STORES,
+    [CWD]: [
+      ...(STORES[CWD] ?? []),
+      { status: "open", assignee: "aih-ec2-2" },
+      { status: "in_progress", assignee: "aih-ec2-2" },
+    ],
+  };
+  const DAEMON_LIVE = { [INVENTORY_PATH]: INVENTORY, [SNAPSHOT]: snapshotOf(DAEMON_STORES) };
+  const DAEMON_ALL = "[bd][all] 13 tasks (3 in progress, 2 blocked, 6 open, 2 done last 24h)";
+  const hosted = (sessionName?: string): WorldOptions => ({
+    refresher: true,
+    files: DAEMON_LIVE,
+    env: {
+      HOME: "/home/me",
+      CLAUDE_CODE_TASK_LIST_ID: "aih-ec2-firstmate-1",
+      CLAUDE_CODE_SESSION_KIND: "bg",
+      CLAUDE_BG_BACKEND: "daemon",
+      ...(sessionName === undefined ? {} : { CLAUDE_CODE_SESSION_NAME: sessionName }),
+    },
+  });
+  const registry = (id: string) => `${STATE}/sessions/${id}.json`;
+
+  test("should draw its own single [bd] line and register under its own name when a daemon the firstmate started hosts aih-ec2-2", async ($, on) => {
+    const w = await started($, on, hosted("aih-ec2-2"));
+
+    expect(await line($, "all")).toBeUndefined();
+    expect(await line($, "own")).toBe(
+      "[bd] 2 tasks (1 in progress, 0 blocked, 1 open, 0 done last 24h)",
+    );
+    expect(w.files.has(registry("aih-ec2-2"))).toBe(true);
+    expect(w.files.has(registry("aih-ec2-firstmate-1"))).toBe(false);
+  });
+
+  test("should count for aih-ec2-2 when Claude Code numbered its background copy aih-ec2-2 (2)", async ($, on) => {
+    const w = await started($, on, hosted("aih-ec2-2 (2)"));
+
+    expect(await line($, "all")).toBeUndefined();
+    expect(await line($, "own")).toBe(
+      "[bd] 2 tasks (1 in progress, 0 blocked, 1 open, 0 done last 24h)",
+    );
+    expect(w.files.has(registry("aih-ec2-2"))).toBe(true);
+  });
+
+  test("should draw the single [bd] line and never the firstmate's form when a daemon-hosted session has no name of its own", async ($, on) => {
+    await started($, on, hosted());
+
+    expect(await line($, "all")).toBeUndefined();
+    expect(await line($, "own")).toBeUndefined();
+    expect(await line($, "store")).toMatch(/^\[bd\] \d+ tasks /);
+  });
+
+  test("should draw [bd][all] over [fm] when the daemon hosts the firstmate itself", async ($, on) => {
+    await started($, on, hosted("aih-ec2-firstmate-1"));
+
+    expect(await line($, "all")).toBe(DAEMON_ALL);
+    expect(await line($, "own")).toBe(FM);
+  });
+
+  test("should draw [bd][all] over [fm] when the firstmate runs in its own process", async ($, on) => {
+    await started($, on, named("aih-ec2-firstmate-1", { refresher: true, files: DAEMON_LIVE }));
+
+    expect(await line($, "all")).toBe(DAEMON_ALL);
+    expect(await line($, "own")).toBe(FM);
+  });
+});
