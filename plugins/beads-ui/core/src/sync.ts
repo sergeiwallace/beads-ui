@@ -261,6 +261,8 @@ export class SyncState {
       state.covering = 0;
       state.failed = false;
       state.synced++;
+      // The store publishes now: a failure turn the session refused for it is resolved.
+      this.pending = this.pending.filter((one) => one.store !== store);
       return { kind: "synced", text: syncedText(store) };
     }
     state.covering = 0;
