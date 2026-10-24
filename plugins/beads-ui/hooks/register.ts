@@ -70,8 +70,12 @@ export function register(on: On) {
         $.process.run(argv, { cwd: e.cwd, timeoutMs, env: { NO_COLOR: "1" } }),
       runIn: (cwd, argv, timeoutMs) =>
         $.process.run(argv, { cwd, timeoutMs, env: { NO_COLOR: "1" } }),
-      // `ai c` pins the session's name here, and it is the assignee of the beads it owns (D-17).
-      sessionName: () => $.env.get("CLAUDE_CODE_TASK_LIST_ID"),
+      sessionEnv: async () => ({
+        taskListId: await $.env.get("CLAUDE_CODE_TASK_LIST_ID"),
+        kind: await $.env.get("CLAUDE_CODE_SESSION_KIND"),
+        backend: await $.env.get("CLAUDE_BG_BACKEND"),
+        name: await $.env.get("CLAUDE_CODE_SESSION_NAME"),
+      }),
       stream: (cwd, argv, timeoutMs) =>
         readStream($.process.spawn({ argv, cwd, env: { NO_COLOR: "1" } }), timeoutMs, (ms, fn) =>
           $.clock.after(ms, fn),
