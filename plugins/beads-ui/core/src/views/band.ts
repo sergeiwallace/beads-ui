@@ -282,7 +282,7 @@ export function bandLine(
   let listed = false;
   for (const part of parts) {
     if (part === "total") {
-      const group: BandSegment[] = [{ text: `${sum} ${sum === 1 ? "task" : "tasks"}` }];
+      const group: BandSegment[] = [{ text: `${sum} tasks` }];
       if (counts.length > 0) {
         group.push({ text: " (" });
         list(group);
