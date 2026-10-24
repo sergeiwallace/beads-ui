@@ -23,6 +23,7 @@ import {
   HANG,
   Killed,
   ok,
+  onBoard,
   PANE_PROPS,
   RUN_OUTPUT_LIMIT,
   SESSION,
@@ -63,14 +64,16 @@ async function openPane(
   await $.session.start(SESSION);
   await $.command.run(SHOW);
   await w.clock.settle();
-  const ui = await $.ui.mount({
-    plugin: PLUGIN_NAME,
-    surface,
-    component: "Pane",
-    props: PANE_PROPS,
-    requestId: PANE_ID,
-    viewport: VIEWPORT,
-  });
+  const ui = await $.ui
+    .mount({
+      plugin: PLUGIN_NAME,
+      surface,
+      component: "Pane",
+      props: PANE_PROPS,
+      requestId: PANE_ID,
+      viewport: VIEWPORT,
+    })
+    .then(onBoard);
   return { w, ui };
 }
 
@@ -177,7 +180,8 @@ describe("the Board tab", () => {
     await w.clock.settle();
 
     expect((await ui.find({ key: "move:BU-mg2.3" }))?.props.value).toBe("in_progress");
-    expect((await ui.find({ key: "group::wip" }))?.text).toContain("BU-beads-ui-claude-code-ae");
+    // The side nav takes 14 of the 117 columns, so the card's display id is cut in its column.
+    expect((await ui.find({ key: "group::wip" }))?.text).toContain("BU-beads-ui-claude-code");
     expect((await ui.find({ key: "conflict-line" }))?.text).toBe(
       "BU-mg2.3 changed elsewhere before the move to review; restored to in_progress and refreshed",
     );

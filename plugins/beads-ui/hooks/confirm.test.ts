@@ -10,6 +10,7 @@ import {
   DEPENDENTS_STDERR,
   exit,
   ok,
+  onBoard,
   PANE_PROPS,
   SESSION,
   SHOW,
@@ -20,14 +21,16 @@ import {
 } from "./tests/world.ts";
 
 const mount = ($: Engine, requestId: string, surface: "terminal" | "desktop" = "terminal") =>
-  $.ui.mount({
-    plugin: PLUGIN_NAME,
-    surface,
-    component: "Pane",
-    props: PANE_PROPS,
-    requestId,
-    viewport: VIEWPORT,
-  });
+  $.ui
+    .mount({
+      plugin: PLUGIN_NAME,
+      surface,
+      component: "Pane",
+      props: PANE_PROPS,
+      requestId,
+      viewport: VIEWPORT,
+    })
+    .then((ui) => (requestId === PANE_ID ? onBoard(ui) : ui));
 
 // The person's Tab onto an element, as the engine raises it: ui.focus with the element's key.
 // The kit passes a test's call through as written, so the test spells the engine's input.

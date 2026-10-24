@@ -109,14 +109,25 @@ export class BandSettingsPanel {
     await this.change({ doneWindow: window });
   }
 
+  /** Debug mode (T-1B.5, T-2B.8): the band shows its read time. */
+  async setDebug(on: boolean): Promise<void> {
+    await this.change({ debug: on });
+  }
+
+  /** The band's settings as last drawn, before the band has drawn them the defaults. */
+  get settings(): BandSettings | undefined {
+    return this.shown;
+  }
+
   /**
    * Save to file: writes the band's settings as they draw into the config file the mod reads
    * (the user's own when there is none yet), keeping every other line of it, then clears the
-   * changes held in `$.store`.
+   * changes held in `$.store`. `also` rewrites the same text first, as the Settings view does to
+   * save the panel's table in the same write; true when the file was written.
    */
-  async save(): Promise<void> {
+  async save(also?: (text: string | undefined) => string): Promise<boolean> {
     const host = this.host;
-    if (host === undefined) return;
+    if (host === undefined) return false;
     const { config } = await this.stores.resolve();
     const settings = await this.current(config.text);
     const path =
@@ -128,25 +139,38 @@ export class BandSettingsPanel {
     if (path === undefined) {
       this.notice = { text: "no config file to save to: HOME is not set", token: "error" };
       host.invalidate();
-      return;
+      return false;
     }
     const text = await host.readFile(path).catch(() => undefined);
+    const base = also === undefined ? text : also(text);
     try {
-      await host.writeFile(path, withBandTable(text, settings));
+      await host.writeFile(path, withBandTable(base, settings));
     } catch (reason) {
       const why = reason instanceof Error ? reason.message : String(reason);
       this.notice = { text: `could not write ${path}: ${why}`, token: "error" };
       host.invalidate();
-      return;
+      return false;
     }
     this.overrides = {};
     await host.storeSet(BAND_SETTINGS_KEY, {}).catch(() => undefined);
-    this.notice = { text: `saved the band settings to ${path}`, token: "success" };
+    this.notice = {
+      text: `saved the ${also === undefined ? "band" : "panel and band"} settings to ${path}`,
+      token: "success",
+    };
     this.onChange?.();
     host.invalidate();
+    return true;
   }
 
-  draw(ui: PaneUi, color: (token: Token) => string): RenderElement {
+  /**
+   * The band's settings as controls. `saveButton` false leaves out Save to file, for the Settings
+   * view, whose own Save to file writes these with the panel's.
+   */
+  draw(
+    ui: PaneUi,
+    color: (token: Token) => string,
+    { saveButton = true }: { saveButton?: boolean } = {},
+  ): RenderElement {
     const { Box, Text, Button, Input } = ui;
     const settings = this.shown;
     const parts = settings?.parts ?? [];
@@ -211,12 +235,14 @@ export class BandSettingsPanel {
         ...parts.map((part) => row(part, true)),
         hidden.length === 0 ? undefined : Text({ children: "Not drawn:" }),
         ...hidden.map((part) => row(part, false)),
-        Button({
-          key: "band:save",
-          label: "Save to file",
-          plain: true,
-          onPress: () => void this.save(),
-        }),
+        saveButton
+          ? Button({
+              key: "band:save",
+              label: "Save to file",
+              plain: true,
+              onPress: () => void this.save(),
+            })
+          : undefined,
       ]),
     });
   }

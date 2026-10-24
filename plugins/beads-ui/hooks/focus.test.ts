@@ -10,6 +10,7 @@ import {
   BU,
   CWD,
   countScript,
+  onBoard,
   PANE_PROPS,
   SESSION,
   SHOW,
@@ -33,14 +34,16 @@ const band = ($: Engine) =>
   });
 
 const pane = ($: Engine) =>
-  $.ui.mount({
-    plugin: PLUGIN_NAME,
-    surface: "terminal",
-    component: "Pane",
-    props: PANE_PROPS,
-    requestId: PANE_ID,
-    viewport: VIEWPORT,
-  });
+  $.ui
+    .mount({
+      plugin: PLUGIN_NAME,
+      surface: "terminal",
+      component: "Pane",
+      props: PANE_PROPS,
+      requestId: PANE_ID,
+      viewport: VIEWPORT,
+    })
+    .then(onBoard);
 
 describe("show and hide (T-1B.6)", () => {
   test("should open the pane focused when /bu runs while it is closed, and close it when /bu runs again", async ($, on) => {

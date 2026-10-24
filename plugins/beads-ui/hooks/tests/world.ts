@@ -298,6 +298,17 @@ export function world(on: On, options: WorldOptions = {}) {
   };
 }
 
+/**
+ * The pane opens on the Tasks view (T-2B.2); the Board's own suites press its nav entry first,
+ * as a person does, then test the board.
+ */
+export async function onBoard<T extends { press: (target: { key: string }) => Promise<unknown> }>(
+  ui: T,
+): Promise<T> {
+  await ui.press({ key: "tab:board" });
+  return ui;
+}
+
 export const PANE_PROPS: RenderPropsOf["Pane"] = {
   title: "Beads",
   isFocused: true,

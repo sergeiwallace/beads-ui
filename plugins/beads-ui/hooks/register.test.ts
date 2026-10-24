@@ -60,10 +60,10 @@ describe("register", () => {
     expect(await $.command.run(SHOW)).toEqual({ text: OPEN_FAILED_TEXT });
   });
 
-  test("should restore the tab, filter, swimlane and sort it stored when the pane opens", async ($, on) => {
+  test("should restore the view, filter, swimlane and sort it stored when the pane opens", async ($, on) => {
     const w = world(on, {
       stored: {
-        view: { tab: "backlog", filter: "type:epic", swimlane: "assignee", sort: "created:desc" },
+        view: { view: "backlog", filter: "type:epic", swimlane: "assignee", sort: "created:desc" },
       },
     });
     await $.session.start(SESSION);
@@ -85,7 +85,7 @@ describe("register", () => {
   });
 
   test("should keep the stored preferences and read nothing else when the store holds junk", async ($, on) => {
-    const w = world(on, { stored: { view: { tab: "kanban", swimlane: 7, sort: "rank" } } });
+    const w = world(on, { stored: { view: { view: "kanban", swimlane: 7, sort: "rank" } } });
     await $.session.start(SESSION);
     await $.command.run(SHOW);
     await w.clock.settle();
@@ -99,6 +99,8 @@ describe("register", () => {
       viewport: VIEWPORT,
     });
 
+    expect(await ui.find({ key: "tasks-count" })).toBeDefined();
+    await ui.press({ key: "tab:board" });
     expect((await ui.find({ key: "column::open" }))?.text).toBe("open 20");
     expect((await ui.find({ key: "sort" }))?.props.label).toBe("Sort: priority");
   });

@@ -8,6 +8,16 @@ import {
   DEFAULT_BAND_SETTINGS,
   isBandPart,
 } from "./views/band.ts";
+import {
+  COLLAPSE_RULES,
+  DEFAULT_PANEL_SETTINGS,
+  isCollapseRule,
+  isPanelMode,
+  isShownCount,
+  MAX_SHOWN,
+  PANEL_MODES,
+  type PanelSettings,
+} from "./views/panel.ts";
 
 /** The settings the mod reads from `beads-ui.toml` (design, Configuration), at call time. */
 export interface BeadsUiConfig {
@@ -374,6 +384,7 @@ export function resolveBand(text: string | undefined): ResolvedBand {
 export interface BandOverrides {
   doneWindow?: string;
   parts?: BandPart[];
+  debug?: boolean;
 }
 
 /** Reads the pane's stored band settings, dropping anything malformed. */
@@ -390,6 +401,7 @@ export function bandOverridesOf(value: unknown): BandOverrides {
     const parts = partsOf(record.parts, ignored, "parts");
     if (parts !== undefined) overrides.parts = parts;
   }
+  if (typeof record.debug === "boolean") overrides.debug = record.debug;
   return overrides;
 }
 
@@ -397,28 +409,88 @@ export const withOverrides = (settings: BandSettings, overrides: BandOverrides):
   ...settings,
   ...(overrides.doneWindow === undefined ? {} : { doneWindow: overrides.doneWindow }),
   ...(overrides.parts === undefined ? {} : { parts: [...overrides.parts] }),
+  ...(overrides.debug === undefined ? {} : { debug: overrides.debug }),
 });
 
 const HEADER = /^\s*\[([^\]]*)\]\s*(?:#.*)?$/;
 
 /**
- * `text` with its `[band]` table replaced by `settings` (appended when it has none), every other
+ * `text` with its `[name]` table replaced by `lines` (appended when it has none), every other
  * line kept as written; a file that does not exist yet (`undefined`) becomes the table alone.
  */
+function withTable(text: string | undefined, name: string, lines: readonly string[]): string {
+  const table = [`[${name}]`, ...lines];
+  if (text === undefined || text.trim() === "") return `${table.join("\n")}\n`;
+  const all = text.replace(/\n$/, "").split("\n");
+  const start = all.findIndex((line) => HEADER.exec(line)?.[1]?.trim() === name);
+  if (start === -1) return `${[...all, "", ...table].join("\n")}\n`;
+  let end = start + 1;
+  while (end < all.length && !HEADER.test(all[end] ?? "")) end++;
+  // Blank lines before the next table stay where they were.
+  while (end > start + 1 && (all[end - 1] ?? "").trim() === "") end--;
+  return `${[...all.slice(0, start), ...table, ...all.slice(end)].join("\n")}\n`;
+}
+
+/** `text` with its `[band]` table replaced by `settings`, every other line kept as written. */
 export function withBandTable(text: string | undefined, settings: BandSettings): string {
-  const table = [
-    `[${BAND_TABLE}]`,
+  return withTable(text, BAND_TABLE, [
     `done_window = ${JSON.stringify(settings.doneWindow)}`,
     `parts = [${settings.parts.map((part) => JSON.stringify(part)).join(", ")}]`,
     `debug = ${settings.debug ? "true" : "false"}`,
-  ];
-  if (text === undefined || text.trim() === "") return `${table.join("\n")}\n`;
-  const lines = text.replace(/\n$/, "").split("\n");
-  const start = lines.findIndex((line) => HEADER.exec(line)?.[1]?.trim() === BAND_TABLE);
-  if (start === -1) return `${[...lines, "", ...table].join("\n")}\n`;
-  let end = start + 1;
-  while (end < lines.length && !HEADER.test(lines[end] ?? "")) end++;
-  // Blank lines before the next table stay where they were.
-  while (end > start + 1 && (lines[end - 1] ?? "").trim() === "") end--;
-  return `${[...lines.slice(0, start), ...table, ...lines.slice(end)].join("\n")}\n`;
+  ]);
+}
+
+/** The `beads-ui.toml` table of the task panel's settings (T-2B.2, T-2B.8). */
+export const PANEL_TABLE = "panel";
+
+export interface ResolvedPanel {
+  settings: PanelSettings;
+  /** One line per panel setting the file got wrong; the default stands for each. */
+  problems: string[];
+}
+
+/** The task panel's settings from `[panel]`: `shown`, `collapse` and `mode`, read at call time. */
+export function resolvePanel(text: string | undefined): ResolvedPanel {
+  const settings: PanelSettings = { ...DEFAULT_PANEL_SETTINGS };
+  const problems: string[] = [];
+  if (text === undefined) return { settings, problems };
+  const parsed = parseToml(text);
+  if (!parsed.ok) return { settings, problems };
+  const panel = parsed.value[PANEL_TABLE];
+  if (panel === undefined) return { settings, problems };
+  if (!isTable(panel)) {
+    problems.push(`${PANEL_TABLE} must be a table; using the panel's defaults`);
+    return { settings, problems };
+  }
+  if (panel.shown !== undefined) {
+    if (isShownCount(panel.shown)) settings.shown = panel.shown;
+    else
+      problems.push(
+        `panel.shown must be a whole number from 1 to ${MAX_SHOWN}; using ${DEFAULT_PANEL_SETTINGS.shown}`,
+      );
+  }
+  if (panel.collapse !== undefined) {
+    if (isCollapseRule(panel.collapse)) settings.collapse = panel.collapse;
+    else
+      problems.push(
+        `panel.collapse ${JSON.stringify(panel.collapse)} is not one of ${COLLAPSE_RULES.join(", ")}; using ${DEFAULT_PANEL_SETTINGS.collapse}`,
+      );
+  }
+  if (panel.mode !== undefined) {
+    if (isPanelMode(panel.mode)) settings.mode = panel.mode;
+    else
+      problems.push(
+        `panel.mode ${JSON.stringify(panel.mode)} is not one of ${PANEL_MODES.join(", ")}; using ${DEFAULT_PANEL_SETTINGS.mode}`,
+      );
+  }
+  return { settings, problems };
+}
+
+/** `text` with its `[panel]` table replaced by `settings`, every other line kept as written. */
+export function withPanelTable(text: string | undefined, settings: PanelSettings): string {
+  return withTable(text, PANEL_TABLE, [
+    `shown = ${settings.shown}`,
+    `collapse = ${JSON.stringify(settings.collapse)}`,
+    `mode = ${JSON.stringify(settings.mode)}`,
+  ]);
 }

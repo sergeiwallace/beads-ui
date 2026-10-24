@@ -44,6 +44,7 @@ export type {
   BeadsUiConfig,
   ResolvedBand,
   ResolvedConfig,
+  ResolvedPanel,
   TomlError,
   TomlTable,
   TomlValue,
@@ -55,11 +56,14 @@ export {
   configCandidates,
   DEFAULT_CONFIG,
   MIN_REFRESH_SECONDS,
+  PANEL_TABLE,
   parseToml,
   resolveBand,
   resolveConfig,
+  resolvePanel,
   withBandTable,
   withOverrides,
+  withPanelTable,
 } from "./config.ts";
 export type {
   Filter,
@@ -320,6 +324,58 @@ export {
   reduceDetail,
   toOneLine,
 } from "./views/detail.ts";
+export type { ActionContext, MenuItem, MenuSection, MenuView, PanelAction } from "./views/menu.ts";
+export { menuItemText, menuView, panelActions } from "./views/menu.ts";
+export type {
+  NavEntry,
+  NavItem,
+  NavKind,
+  NavLayout,
+  PanelView,
+  PlannedView,
+} from "./views/nav.ts";
+export {
+  hotkeyOf,
+  isPanelView,
+  NAV_ENTRIES,
+  navKind,
+  navLayout,
+  PANEL_VIEWS,
+  plannedText,
+  SIDE_NAV_COLUMNS,
+  SIDE_NAV_GAP,
+} from "./views/nav.ts";
+export type {
+  CollapseRule,
+  PanelMode,
+  PanelOverrides,
+  PanelSettings,
+  TaskGroup,
+  TaskListOptions,
+  TaskListView,
+  TaskRowView,
+} from "./views/panel.ts";
+export {
+  COLLAPSE_LABELS,
+  COLLAPSE_RULES,
+  DEFAULT_PANEL_SETTINGS,
+  isCollapseRule,
+  isPanelMode,
+  isShownCount,
+  MAX_SHOWN,
+  PANEL_MODE_LABELS,
+  PANEL_MODES,
+  panelOverridesOf,
+  panelTasks,
+  parseShownCount,
+  TASK_GLYPHS,
+  TASK_GROUPS,
+  taskGroupOf,
+  taskListView,
+  withPanelOverrides,
+} from "./views/panel.ts";
+export type { SettingOption, SettingRow, SettingsView } from "./views/settings.ts";
+export { settingsView } from "./views/settings.ts";
 export {
   asOf,
   BLOCK_MAX_CHARS,

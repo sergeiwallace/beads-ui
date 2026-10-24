@@ -28,6 +28,7 @@ import {
   keyOf,
   OPEN_LIST,
   ok,
+  onBoard,
   PANE_PROPS,
   REFRESHER_TOKEN,
   type Script,
@@ -58,14 +59,16 @@ const line = async ($: Engine, key: string) =>
   (await (await band($)).find({ key: `beads-band:${key}` }))?.text;
 
 const pane = ($: Engine) =>
-  $.ui.mount({
-    plugin: PLUGIN_NAME,
-    surface: "terminal",
-    component: "Pane",
-    props: PANE_PROPS,
-    requestId: PANE_ID,
-    viewport: VIEWPORT,
-  });
+  $.ui
+    .mount({
+      plugin: PLUGIN_NAME,
+      surface: "terminal",
+      component: "Pane",
+      props: PANE_PROPS,
+      requestId: PANE_ID,
+      viewport: VIEWPORT,
+    })
+    .then(onBoard);
 
 /** A session `ai c` named, so `CLAUDE_CODE_TASK_LIST_ID` holds its name. */
 const named = (session: string, options: WorldOptions = {}): WorldOptions => ({
