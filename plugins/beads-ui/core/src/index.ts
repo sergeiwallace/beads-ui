@@ -64,6 +64,7 @@ export {
   resolvePanel,
   resolveSync,
   SYNC_TABLE,
+  userConfigPath,
   withBandTable,
   withOverrides,
   withPanelTable,

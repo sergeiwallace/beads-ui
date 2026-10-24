@@ -23,7 +23,9 @@ import {
 const PROGRAM = "/opt/fleet/bin/publish-store";
 const COMMAND = [PROGRAM, "--repo", "{store}", "--attest", "--json"];
 const PUBLISH = [PROGRAM, "--repo", CWD, "--attest", "--json"];
-const CONFIG = `${CWD}/beads-ui.toml`;
+/** The user's beads-ui.toml under the world's HOME: the only file `[sync]` is read from. */
+const CONFIG = "/home/me/.config/beads-ui/beads-ui.toml";
+const REPO_CONFIG = `${CWD}/beads-ui.toml`;
 const SYNC_CONFIG = `[sync]\ncommand = [${COMMAND.map((arg) => JSON.stringify(arg)).join(", ")}]\n`;
 
 const isPublish = (argv: readonly string[]) => argv[0] === PROGRAM;
@@ -48,6 +50,7 @@ async function session(
   on: On,
   options: {
     config?: string;
+    repoConfig?: string;
     publish?: () => ReturnType<Script>;
     notifySent?: boolean;
     drop?: (n: number) => boolean;
@@ -57,7 +60,10 @@ async function session(
   const notified: string[] = [];
   const submitted: string[] = [];
   const w = world(on, {
-    files: options.config === undefined ? {} : { [CONFIG]: options.config },
+    files: {
+      ...(options.config === undefined ? {} : { [CONFIG]: options.config }),
+      ...(options.repoConfig === undefined ? {} : { [REPO_CONFIG]: options.repoConfig }),
+    },
     script: publishes(options.publish ?? (() => ok('{"published":true}\n'))),
   });
   on("ui.notify", (_engine, e) => {
@@ -136,6 +142,32 @@ describe("edits that publish themselves (T-2B.6)", () => {
     await s.w.clock.settle();
 
     expect(publishRuns(s)).toEqual([PUBLISH]);
+  });
+
+  test("should run no publish when only the repository's beads-ui.toml sets sync.command", async ($, on) => {
+    const s = await session($, on, { repoConfig: SYNC_CONFIG });
+
+    await move(s);
+    await s.w.clock.advance(120_000);
+    await s.w.clock.settle();
+
+    expect(publishRuns(s)).toEqual([]);
+    expect(s.w.toasts.filter((text) => text.startsWith("synced"))).toEqual([]);
+    expect(s.calls).toEqual([]);
+  });
+
+  test("should publish with the user's sync.command when the repository has a beads-ui.toml of its own", async ($, on) => {
+    const s = await session($, on, {
+      config: SYNC_CONFIG,
+      repoConfig: '[sync]\ncommand = ["/tmp/planted", "{store}"]\n[band]\ndebug = true\n',
+    });
+
+    await move(s);
+    await s.w.clock.advance(10_000);
+    await s.w.clock.settle();
+
+    expect(publishRuns(s)).toEqual([PUBLISH]);
+    expect(s.w.runs.some((argv) => argv[0] === "/tmp/planted")).toBe(false);
   });
 
   for (const config of [undefined, "[sync]\ncommand = []\n", "[band]\ndebug = false\n"]) {

@@ -915,7 +915,7 @@ describe("the unpublished-edit count (T-2B.6)", () => {
       on,
       named("aih-ec2-3", {
         refresher: true,
-        files: { ...LIVE, [`${CWD}/beads-ui.toml`]: SYNC },
+        files: { ...LIVE, [USER_CONFIG]: SYNC },
         stored: ALL_VIEW,
         script: (_key, argv) =>
           argv[0] === PUBLISH ? exit(code(), code() === 0 ? "" : "conflict\n") : undefined,

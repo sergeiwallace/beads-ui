@@ -239,6 +239,8 @@ The mod reads `beads-ui.toml` each time it refreshes. It uses the first of these
 1. `beads-ui.toml` in the directory the session runs in (the repository root);
 2. `$XDG_CONFIG_HOME/beads-ui/beads-ui.toml`, or `~/.config/beads-ui/beads-ui.toml` when `XDG_CONFIG_HOME` is unset.
 
+`[sync]` is the exception: it is read from the user's file (2) only, never from the repository's ([Publishing edits](#publishing-edits)).
+
 With no file, these defaults apply:
 
 ```toml
@@ -293,7 +295,7 @@ quiet_seconds = 10      # how long after the last write the publish runs
 timeout_seconds = 300   # how long the command may run, 1 to 600
 ```
 
-The mod reads only the first `beads-ui.toml` it finds ([Configuration](#configuration)), so a repository with its own file publishes only when that file carries a `[sync]` table too.
+The mod reads `[sync]` from the user's file alone: `$XDG_CONFIG_HOME/beads-ui/beads-ui.toml`, or `~/.config/beads-ui/beads-ui.toml` when `XDG_CONFIG_HOME` is unset. A `[sync]` table in a repository's own `beads-ui.toml` is ignored, so a checkout can never name a command the mod runs; the repository's file still sets every other table ([Configuration](#configuration)).
 
 After every write the pane or the delete confirmation makes (a move, a field edit, a create, a close, an undo, a delete, a display id written late), the mod waits `quiet_seconds` with no further write and then runs `command` once for the store written, in that store's directory, with `{store}` replaced wherever it appears in an argument. It runs the argument list directly, never through a shell. A session runs one publish at a time; a write made during a publish starts a new quiet period that runs once that publish ends. The setting is read at each write and again when the publish starts, so a change in the file applies without a restart.
 

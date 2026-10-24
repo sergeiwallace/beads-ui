@@ -484,7 +484,8 @@ const messageOf = (reason: unknown): string =>
  * sends a terminal notification (a toast when none is sent) and starts a turn in the session
  * from core's template, unless the same store, step and exit code failed within 10 minutes; a
  * refused or dropped turn is sent again from `turn.complete`, at most 3 times. With no
- * `sync.command` in beads-ui.toml, read at each call, it does nothing.
+ * `sync.command` in the user's beads-ui.toml, read at each call, it does nothing; a
+ * repository's own beads-ui.toml never sets it.
  */
 export class EditSync {
   host: Host | undefined;
@@ -500,8 +501,7 @@ export class EditSync {
   }
 
   private async settings(): Promise<SyncSettings | undefined> {
-    const { config } = await this.stores.resolve();
-    return resolveSync(config.text).settings;
+    return resolveSync(await this.stores.userConfigText()).settings;
   }
 
   /** A write to the store at `store` succeeded. */
