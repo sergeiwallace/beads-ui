@@ -125,6 +125,7 @@ test("test-only, doc-only and unshipped changes need no bump", () => {
   const cwd = repo();
   commit(cwd, "test: more", {
     "plugins/beads-ui/hooks/pane.test.ts": "x\n",
+    "plugins/beads-ui/hooks/tests/kit.ts": "x\n",
     "plugins/beads-ui/core/test/fixture.json": "{}\n",
     "README.md": "more\n",
   });
