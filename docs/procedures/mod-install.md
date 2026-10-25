@@ -7,7 +7,7 @@ Load the mod for one session from a checkout with `claude --plugin-dir <checkout
 - Claude Code 2.1.299 or later. The design sets that floor because 2.1.299 is the first release that lets a hooks module's helpers live in other files. The mod's gate ran on 2.1.306. Check yours with `claude --version`.
 - `bd` 1.3.x on your `PATH`. The mod runs `bd ... --json` in the session's directory and nothing else.
 - A repository with a Beads store (`bd list` works there). In a directory without one, the pane shows bd's error line, and the band draws only if the session has a name and the machine's store inventory lists other stores (see the band below).
-- For the task panel to open on its own at session start, a terminal at least 144 columns wide, or 110 once you have opened the pane yourself: that is where Claude Code places a pane nobody asked for. A pane you open with `/show-beads-ui` opens at any width.
+- Only if you turn on `open_at_start` (below): for the task panel to open on its own at session start, a terminal at least 144 columns wide, or 110 once you have opened the pane yourself, since that is where Claude Code places a pane nobody asked for. A pane you open with `/show-beads-ui` or the band's button opens at any width.
 
 ## Load it from a checkout
 
@@ -71,7 +71,7 @@ With auto-update on, Claude Code checks the marketplace when a session starts, n
 - The pane draws its first render from the host refresher's snapshot of the store (below), with that snapshot's read time in the header, then reads `bd` and draws the result. Every 10 seconds it draws the newest snapshot, and reads `bd` itself only when the refresher is not running, its snapshot is older than three minutes, or the store's snapshot was skipped (a line names why). It reads `bd` itself when you open it and after each write it makes. Either way it reads the open issues and the 25 most recently closed (one page of the done column), never every closed issue: `bd list --json --brief --limit 0` and `bd list --json --brief --status closed --sort closed --limit 25`. A failed `bd list` keeps the last board on screen with an error line naming the exit code, and the next refresh tries again.
 - A session opens its board on its own issues (Mine: the issues assigned to its name); `a` switches to every issue (All) and back. A firstmate session, and a session with no name, opens on All. The choice is kept for each session name. With Mine on and no open issue of its own, the board says so and how many open issues `a` shows.
 - The pane reflows to its size. From 72 columns the nav is a framed side nav beside the view, from 48 a bar of short labels above it, and below 48 a bar of each view's key and a glyph (`✓` Tasks, `▦` Board, `☰` Backlog, `»` Sprint, `◉` Detail, `⇢` Timeline, `⚙` Settings); above the prompt, or under 12 rows, the side nav becomes the bar. The view's own controls carry their full labels from 72 columns, a short word from 48, and below 48 the shortest form, each with its key; the controls wrap onto as many rows as they need, and the board's column groups stack when a row of them would not fit, so no line runs past the pane's edge. Above the prompt, or under 12 rows, the pane drops its help and the footer's hints and moves the input fields below the board, so the tabs, the board's header and a card stay in view.
-- At session start the pane opens on its own on the Tasks view, as the task panel, unless `panel.mode` is `native` (see [Beside Claude Code's task panel](#beside-claude-codes-task-panel)). It leaves the keyboard on the prompt. When Claude Code will not place it (a terminal narrower than 144 columns, or 110 once you have opened the pane), the mod withdraws the open and a toast names the width; the band stays and `/bu` opens the pane anyway.
+- The pane opens only when you ask: `/bu`, `/show-beads-ui` or the band's button. Nothing opens at session start or when the plugin reloads (`/reload-plugins`). To have it open on its own on the Tasks view at session start, set `open_at_start = true` under `[panel]`, or `Open at start` in Settings; `panel.mode` `native` still opens nothing (see [Beside Claude Code's task panel](#beside-claude-codes-task-panel)). That open leaves the keyboard on the prompt, and when Claude Code will not place it (a terminal narrower than 144 columns, or 110 once you have opened the pane), the mod withdraws the open and a toast names the width; the band stays and `/bu` opens the pane anyway.
 
 ## The host refresher
 
@@ -195,13 +195,13 @@ The pane opens on the Tasks view, which lists the session's own tasks (Mine; `a`
 
 ### Beside Claude Code's task panel
 
-A mod cannot draw inside Claude Code's own task panel, so the beads-ui task panel is the pane, opened at session start in the space Claude Code gives a docked pane. `panel.mode` (Settings `Panel mode`, or `mode` under `[panel]` in `beads-ui.toml`) says which task panels a session has. The mod reads it at session start, so a change applies from the next session; in the pane, `native` hides the Tasks view at once.
+A mod cannot draw inside Claude Code's own task panel, so the beads-ui task panel is the pane, docked in the space Claude Code gives it, and the band above the prompt. `panel.mode` (Settings `Panel mode`, or `mode` under `[panel]` in `beads-ui.toml`) says which task panels a session has. The mod reads it at session start, so a change applies from the next session; in the pane, `native` hides the Tasks view at once.
 
-- `both`, the default: the beads-ui panel opens at session start beside Claude Code's task panel, which stays as it is (Ctrl+T shows or hides it).
-- `beads`: the beads-ui panel is the session's task panel. The mod opens it as for `both`; Claude Code's own panel goes away only when the machine's profile retires it (below).
+- `both`, the default: the beads-ui panel sits beside Claude Code's task panel, which stays as it is (Ctrl+T shows or hides it).
+- `beads`: the beads-ui panel is the session's task panel; Claude Code's own panel goes away only when the machine's profile retires it (below).
 - `native`: Claude Code's task panel only. Nothing opens unasked, and the pane draws no Tasks view: its nav and its options menu have no Tasks entry, and it opens on the Board. The band and `/bu` stay.
 
-The panel opens once a session, unfocused, and only in an interactive session; `claude -p` opens nothing. If you open the pane yourself before the mod has read its settings, the mod leaves it to you.
+With `open_at_start` on, the panel opens once a session, unfocused, and only in an interactive session; `claude -p` opens nothing. If you open the pane yourself before the mod has read its settings, the mod leaves it to you. With it off, the default, the mod never opens the pane by itself.
 
 Claude Code's task panel exists on the fleet's machines only because ai-harness sets `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` in `~/.claude/settings.json`. ai-harness's per-profile task-panel switch retires it on a profile by dropping that line and adding `TaskCreate`, `TaskGet`, `TaskList`, `TaskUpdate` and `TodoWrite` to `permissions.deny`. The mod reads the retirement from the settings through `$.settings.read`: the panel is retired when the merged settings' `permissions.deny` holds the bare name `TaskCreate`. It reads the deny rule rather than the missing env line because nothing adds that rule by accident, whereas the env line is also missing from every session that never turned the panel on. A rule with a pattern, such as `TaskCreate(*)`, does not count. With the panel retired, `beads` and `both` both open the beads-ui panel as the only task panel, and `native` opens nothing and shows one toast at session start saying no task panel is enabled and naming the setting to change.
 
@@ -282,13 +282,14 @@ debug = false         # true: each band line ends with the time its counts were 
 
 ### The task panel's settings
 
-The `[panel]` table sets the Tasks view's shown count and collapse rule, and the panel mode:
+The `[panel]` table sets the Tasks view's shown count and collapse rule, the panel mode, and whether the pane opens by itself:
 
 ```toml
 [panel]
 shown = 10          # tasks drawn before the rest collapse, 1 to 200
 collapse = "rest"   # rest: past the count; open: only open tasks collapse; none: never collapse
 mode = "both"       # both, beads or native: which task panels a session has, read at session start
+open_at_start = false  # true: the pane opens by itself at session start and at each plugin reload
 ```
 
 A change in the file shows at the pane's next refresh, with no restart. The Settings view changes the same settings, and the band's, at once ([The task panel](#the-task-panel)).
