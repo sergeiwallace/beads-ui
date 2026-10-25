@@ -667,6 +667,7 @@ async function run(options) {
   let storeList = [];
   let boardList = [];
   let windows = [];
+  let liveIds = [];
 
   const quit = () => {
     stopped = true;
@@ -699,6 +700,7 @@ async function run(options) {
       beatAt: Date.now(),
       stores: values(counts, storeList),
       boards: values(boards, boardList),
+      sessions: liveIds,
     };
     const text = `${JSON.stringify(last)}\n`;
     writeWhole(ownPath, text, token);
@@ -752,6 +754,7 @@ async function run(options) {
     windows = [...new Set(sessions.flatMap((session) => session.windows))];
     storeList = storesToRead(options.home, sessions);
     boardList = unique(sessions.flatMap((session) => session.boards));
+    liveIds = [...new Set(sessions.map((session) => session.id))].sort();
     // CONCURRENT_STORES stores at a time, every read ending by the deadline: then the snapshot
     // is written with what answered, and a store still unanswered is marked unread.
     const deadline = began + cycleMs;

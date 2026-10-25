@@ -79,6 +79,7 @@ export {
   THEME_TABLE,
   userConfigPath,
   withBandTable,
+  withIndicatorsTable,
   withOverrides,
   withPanelTable,
   withSurfacesTable,
@@ -102,6 +103,35 @@ export {
 } from "./filter.ts";
 export type { Glyph, GlyphId, GlyphKind } from "./glyphs.ts";
 export { asciiOf, GLYPHS, glyphOf, isTableGlyph } from "./glyphs.ts";
+export type {
+  GutterCell,
+  Indicator,
+  IndicatorContext,
+  IndicatorRead,
+  IndicatorState,
+  LegendLine,
+} from "./indicators.ts";
+export {
+  AGENT_LABEL,
+  AGENT_TITLE,
+  BLANK_CELL,
+  DEFAULT_INDICATORS,
+  detectAgent,
+  detectBlocked,
+  EMPTY_READ,
+  GUTTER_TREE_CHARS,
+  gutterCells,
+  gutterColumns,
+  gutterOf,
+  gutterText,
+  INDICATORS,
+  IndicatorRegistry,
+  indicatorRead,
+  isAgentRow,
+  legendOf,
+  legendText,
+  NARROW_GUTTER_COLUMNS,
+} from "./indicators.ts";
 export type { Labels, Tier } from "./layout.ts";
 export {
   buttonWidth,
@@ -437,6 +467,7 @@ export type {
   TaskClientMessage,
   TaskClientProps,
   TaskClientRow,
+  TaskClientSpan,
 } from "./views/menu.ts";
 export {
   clientKeys,
@@ -500,12 +531,13 @@ export {
   withPanelOverrides,
 } from "./views/panel.ts";
 export type {
+  IndicatorRow,
   SettingOption,
   SettingRow,
   SettingsView,
   SurfaceRow,
 } from "./views/settings.ts";
-export { SURFACE_ROW_PREFIX, settingsView } from "./views/settings.ts";
+export { INDICATOR_ROW_PREFIX, SURFACE_ROW_PREFIX, settingsView } from "./views/settings.ts";
 export type { SurfaceId, SurfaceOverrides, SurfaceSetting } from "./views/surfaces.ts";
 export {
   drawsOn,

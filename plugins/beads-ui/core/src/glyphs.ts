@@ -1,6 +1,7 @@
 // The one glyph table (D-41, D-43, T-2C.10): every status, control, view, indicator and text
 // glyph the band and the pane draw, each with the ASCII form `[indicators] ascii` draws instead.
-// The indicator registry (D-41, T-2C.3) adds its entries here. Every glyph is one code point
+// The indicator registry (D-41, T-2C.3, core/src/indicators.ts) draws its `indicator.*`
+// entries from here. Every glyph is one code point
 // that is neither East Asian wide nor ambiguous nor emoji, so it takes one cell on any
 // terminal; the table's test checks each one.
 
@@ -43,6 +44,9 @@ export const GLYPHS = {
   "view.detail": entry("⊡", "i", "view", "the Detail view"),
   "view.timeline": entry("⇢", "-", "view", "the Timeline view"),
   "view.settings": entry("⊛", "*", "view", "the Settings view"),
+  "indicator.agent": entry("⟳", "*", "indicator", "an agent is working on it"),
+  "indicator.blocked": entry("⊘", "!", "indicator", "blocked"),
+  "indicator.review": entry("✎", "?", "indicator", "it has review items"),
   "text.more": entry("⋯", ".", "text", "text cut short, or a read still running"),
   "text.separator": entry("⋅", "|", "text", "between two hints"),
   "text.becomes": entry("⇾", ">", "text", "a field's new value"),

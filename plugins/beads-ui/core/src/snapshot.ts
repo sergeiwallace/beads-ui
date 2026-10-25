@@ -232,6 +232,8 @@ export interface HostSnapshot {
   stores: StoreSnapshot[];
   /** The board snapshot of each store a live session's pane reads. */
   boards?: BoardEntry[];
+  /** The ids of the sessions the session registry held live at the last beat (D-42). */
+  sessions?: string[];
 }
 
 const finite = (value: unknown): value is number =>
@@ -284,6 +286,9 @@ export function parseSnapshot(text: string): Result<HostSnapshot, string> {
     stores,
   };
   if (finite(json.stoppedAt)) snapshot.stoppedAt = json.stoppedAt;
+  if (Array.isArray(json.sessions)) {
+    snapshot.sessions = json.sessions.filter((id): id is string => typeof id === "string");
+  }
   if (Array.isArray(json.boards)) {
     snapshot.boards = json.boards.flatMap((entry) => {
       const board = boardEntryOf(entry);
@@ -345,6 +350,15 @@ export function boardRow(row: unknown): Record<string, unknown> | undefined {
   for (const field of BOARD_FIELDS) {
     if (row[field] !== undefined && row[field] !== null) kept[field] = row[field];
   }
+  // The blocked indicator's `blocks` dependencies (D-41), each cut to its target and type.
+  const blocks = Array.isArray(row.dependencies)
+    ? row.dependencies.flatMap((dep) =>
+        isRecord(dep) && dep.type === "blocks" && typeof dep.depends_on_id === "string"
+          ? [{ depends_on_id: dep.depends_on_id, type: "blocks" }]
+          : [],
+      )
+    : [];
+  if (blocks.length > 0) kept.dependencies = blocks;
   let metadata: unknown = row.metadata;
   if (typeof metadata === "string") {
     try {

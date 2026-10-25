@@ -347,7 +347,26 @@ ascii = true
 
 The pane's band settings (`g`, or the `Band` button) change the same settings at once: add or remove a part, move one with the arrows, set the `Done window` field and the `Rows per press` field (1 to 50), and pick the level the band opens at under `Opens at:` (`summary`, `rows` or `overview`). The change is kept in Claude Code's plugin store, under the key `band-settings`, so every session on the machine draws it at its next minute. `Save to file` writes the settings into the `beads-ui.toml` the mod read, or `~/.config/beads-ui/beads-ui.toml` when there is none, replacing its `[band]` table and keeping every other line, and then clears the held change.
 
-The mod keeps your view choices (the open view, filter, swimlane and sort) in Claude Code's plugin store, under the key `view`, and each session's Mine or All choice under `view-scope`, by session name. It never stores issue data there. The key `refresher-lease` holds the lease a session takes before it starts the host refresher, `band-settings` the band settings changed in the pane until they are saved, `band-level` each session's band level, by session name, `panel-settings` the task panel's settings changed in Settings until they are saved, and `view-surfaces` the views' surfaces changed there until they are saved. The one other key, `pending-display-ids`, holds a display id the mod minted for an issue it created but could not write yet: the issue's id and the display id, nothing else.
+The mod keeps your view choices (the open view, filter, swimlane and sort) in Claude Code's plugin store, under the key `view`, and each session's Mine or All choice under `view-scope`, by session name. It never stores issue data there. The key `refresher-lease` holds the lease a session takes before it starts the host refresher, `band-settings` the band settings changed in the pane until they are saved, `band-level` each session's band level, by session name, `panel-settings` the task panel's settings changed in Settings until they are saved, `view-surfaces` the views' surfaces changed there until they are saved, and `indicator-switches` the row indicators switched there until they are saved. The one other key, `pending-display-ids`, holds a display id the mod minted for an issue it created but could not write yet: the issue's id and the display id, nothing else.
+
+### Row indicators
+
+Every task row starts with a gutter of row indicators, one cell for each indicator that is on, each the indicator's glyph or a blank, so the rows stay lined up. It is drawn on the band's rows, the Tasks view's rows, the Backlog's rows and the Board's cards. Below 48 columns the gutter is one cell, showing the first indicator in the list below that applies.
+
+| Glyph | ASCII | Key | Shown when |
+| --- | --- | --- | --- |
+| `⟳` | `*` | `agent` | an agent is working on the issue: it, or one of its children, is an in-progress agent row (the `agent` label, or a title such as `bu-row agent: ...` or `bu-review coordinator agent: ...`). Dimmed when that row's assignee is a session the host refresher does not list as live. |
+| `⊘` | `!` | `blocked` | the issue's status is `blocked`, or an issue that is not closed blocks it through a `blocks` dependency |
+
+A third indicator, for issues with review items (decisions, blockers, open questions), is reserved and not drawn yet. The help (`h`) and Settings list each indicator's glyph, its ASCII form and its meaning. Each is on by default; Settings switches one off at once, kept in Claude Code's plugin store under `indicator-switches` until `Save to file` writes it, or set it in the file:
+
+```toml
+[indicators]
+agent = false     # no agent glyph, and one cell less on every row
+blocked = true
+```
+
+Both indicators look up a row's children and blockers among the issues the pane's board read (every issue of its store that is not closed) and the rows the band read. On a band row from another store, a child or a blocker the band did not read is not seen. The host refresher writes the sessions it lists as live into its snapshot; with no refresher running, no agent glyph is dimmed.
 
 ### Publishing edits
 

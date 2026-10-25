@@ -502,6 +502,8 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     expect(
       written.stores.find((store: { name: string }) => store.name === "kg-store"),
     ).toMatchObject({ ok: true, statuses: { open: { "kg-ec2-3": 1 } } });
+    // D-42: the sessions registered live, which the agent indicator dims by; not the closed one.
+    expect(written.sessions).toEqual(["aih-ec2-3", "aih-ec2-firstmate-1", "kg-ec2-3"]);
   });
 
   it("should name a store that cannot be read and still count the rest", async () => {

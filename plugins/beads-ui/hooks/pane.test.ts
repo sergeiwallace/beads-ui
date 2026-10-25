@@ -364,8 +364,8 @@ describe("the Board tab", () => {
       const { ui } = await openLarge($, on, 1);
 
       expect((await ui.find({ key: "column::open" }))?.text).toBe("open 200");
-      expect((await ui.find({ key: "pager::open" }))?.text).toContain("1-17 of 200");
-      expect((await ui.find({ key: "next::open" }))?.props.label).toBe("+183 more");
+      expect((await ui.find({ key: "pager::open" }))?.text).toContain("1-14 of 200");
+      expect((await ui.find({ key: "next::open" }))?.props.label).toBe("+186 more");
 
       const { moves, largest } = await walkBoard(ui);
 
@@ -448,17 +448,17 @@ describe("the Board tab", () => {
 
     await ui.press({ key: "page-next" });
     await w.clock.settle();
-    expect(await pager()).toContain("18-34 of 200");
+    expect(await pager()).toContain("15-28 of 200");
     expect(await keysOf(ui, "move:", "Select")).not.toContain("move:BU-load0");
 
     await ui.press({ key: "page-next" });
     await w.clock.settle();
-    expect(await pager()).toContain("35-51 of 200");
+    expect(await pager()).toContain("29-42 of 200");
 
     await ui.press({ key: "page-back" });
     await ui.press({ key: "page-back" });
     await w.clock.settle();
-    expect(await pager()).toContain("1-17 of 200");
+    expect(await pager()).toContain("1-14 of 200");
     expect(await keysOf(ui, "move:", "Select")).toContain("move:BU-load0");
     expect(await ui.find({ key: "notice" })).toBeUndefined();
   });
@@ -471,7 +471,7 @@ describe("the Board tab", () => {
     expect((await ui.find({ key: "notice" }))?.text).toBe(
       "focus a card first: Tab moves between cards",
     );
-    expect((await ui.find({ key: "pager::open" }))?.text).toContain("1-17 of 200");
+    expect((await ui.find({ key: "pager::open" }))?.text).toContain("1-14 of 200");
   });
 });
 

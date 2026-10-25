@@ -448,6 +448,10 @@ export interface Listed extends Counted {
   id: string;
   title?: string;
   priority?: number;
+  parent?: string;
+  labels?: string[];
+  /** The issues that block this one, as `blocks` dependencies. */
+  blockedBy?: string[];
 }
 
 /** `listed` as `bd list --json --brief` rows, in bd 1.3's shape (the core's fixtures). */
@@ -462,8 +466,18 @@ export function listRowsOf(listed: readonly Listed[]): Record<string, unknown>[]
     created_at: new Date(START_MS - (1_000 - i) * 60_000).toISOString(),
     updated_at: new Date(START_MS - (1_000 - i) * 60_000).toISOString(),
     ...(one.closedAt === undefined ? {} : { closed_at: new Date(one.closedAt).toISOString() }),
-    labels: [],
-    dependencies: [],
+    labels: one.labels ?? [],
+    ...(one.parent === undefined ? {} : { parent: one.parent }),
+    dependencies: [
+      ...(one.parent === undefined
+        ? []
+        : [{ issue_id: one.id, depends_on_id: one.parent, type: "parent-child" }]),
+      ...(one.blockedBy ?? []).map((id) => ({
+        issue_id: one.id,
+        depends_on_id: id,
+        type: "blocks",
+      })),
+    ],
   }));
 }
 

@@ -10,6 +10,7 @@ import {
   truncate,
 } from "../../core/src/index.ts";
 import type { Surface } from "./adapters.ts";
+import { gutter } from "./indicators.ts";
 
 // The task row and the task list (T-2B.2, D-35): drawn from core's TaskListView on any surface.
 
@@ -59,7 +60,7 @@ const menuButton = (surface: Surface, id: string, handlers: TaskListHandlers) =>
     onPress: () => handlers.menu(id),
   });
 
-/** One task: its label a button that opens it, and its menu button beside it. */
+/** One task: its indicator gutter, its label a button that opens it, and its menu button. */
 export function taskRow(
   surface: Surface,
   row: TaskRowView,
@@ -70,7 +71,8 @@ export function taskRow(
     key: `taskrow:${row.id}`,
     flexDirection: "row",
     gap: 1,
-    children: [
+    children: present<RenderNode>([
+      gutter(surface.ui, row.gutter),
       Button({
         key: `task:${row.id}`,
         label: row.label,
@@ -78,7 +80,7 @@ export function taskRow(
         onPress: () => handlers.open(row.id),
       }),
       menuButton(surface, row.id, handlers),
-    ],
+    ]),
   });
 }
 

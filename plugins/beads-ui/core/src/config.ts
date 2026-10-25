@@ -671,30 +671,63 @@ export const INDICATORS_TABLE = "indicators";
 export interface ResolvedGlyphs {
   /** True: every table glyph draws its ASCII form (glyphs.ts). */
   ascii: boolean;
+  /** One switch per indicator the table sets; an indicator it does not set is on (D-41). */
+  switches: Record<string, boolean>;
   problems: string[];
 }
 
 /**
- * `[indicators] ascii`, read at call time: true draws every glyph of the table in its ASCII
- * form. The table's other keys, one switch per indicator, are the registry's (D-41).
+ * `[indicators]`, read at call time: `ascii`, true to draw every glyph of the table in its ASCII
+ * form, and one boolean per indicator of the registry (D-41), each on unless set to false. A key
+ * naming no indicator yet is kept, so an indicator registered later reads it too.
  */
 export function resolveGlyphs(text: string | undefined): ResolvedGlyphs {
   const problems: string[] = [];
-  if (text === undefined) return { ascii: false, problems };
+  const switches: Record<string, boolean> = {};
+  const none = () => ({ ascii: false, switches, problems });
+  if (text === undefined) return none();
   const parsed = parseToml(text);
-  if (!parsed.ok) return { ascii: false, problems };
+  if (!parsed.ok) return none();
   const table = parsed.value[INDICATORS_TABLE];
-  if (table === undefined) return { ascii: false, problems };
+  if (table === undefined) return none();
   if (!isTable(table)) {
-    problems.push(`${INDICATORS_TABLE} must be a table; drawing the glyphs`);
-    return { ascii: false, problems };
+    problems.push(`${INDICATORS_TABLE} must be a table; drawing the glyphs and every indicator`);
+    return none();
   }
-  if (table.ascii === undefined || typeof table.ascii === "boolean") {
-    return { ascii: table.ascii === true, problems };
+  let ascii = false;
+  for (const [key, value] of Object.entries(table)) {
+    if (typeof value !== "boolean") {
+      problems.push(
+        key === "ascii"
+          ? `${INDICATORS_TABLE}.ascii must be true or false; drawing the glyphs`
+          : `${INDICATORS_TABLE}.${key} must be true or false; drawing it`,
+      );
+    } else if (key === "ascii") {
+      ascii = value;
+    } else {
+      switches[key] = value;
+    }
   }
-  problems.push(`${INDICATORS_TABLE}.ascii must be true or false; drawing the glyphs`);
-  return { ascii: false, problems };
+  return { ascii, switches, problems };
 }
+
+/**
+ * `text` with its `[indicators]` table replaced by `ascii` and `switches`, every other line kept
+ * as written.
+ */
+export function withIndicatorsTable(
+  text: string | undefined,
+  ascii: boolean,
+  switches: Readonly<Record<string, boolean>>,
+): string {
+  return withTable(text, INDICATORS_TABLE, [
+    `ascii = ${ascii}`,
+    ...Object.entries(switches).map(([key, on]) => `${tomlKey(key)} = ${on}`),
+  ]);
+}
+
+/** A table key as TOML writes it: bare when it can be, else quoted. */
+const tomlKey = (key: string): string => (/^[A-Za-z0-9_-]+$/.test(key) ? key : JSON.stringify(key));
 
 /** The `beads-ui.toml` table of the publish run after an edit (D-33, T-2B.6). */
 export const SYNC_TABLE = "sync";

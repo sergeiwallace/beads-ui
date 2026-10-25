@@ -53,6 +53,7 @@ import {
   windowMs,
 } from "../core/src/index.ts";
 import type { BandSettingsPanel } from "./bandSettings.ts";
+import { setLiveSessions } from "./components/indicators.ts";
 import type { Host } from "./host.ts";
 import type { StoreResolver } from "./store.ts";
 
@@ -185,6 +186,13 @@ export class BandTally {
       const fileLease = dir === undefined ? undefined : await this.readLease(dir);
       const snapshot = dir === undefined ? undefined : await this.readSnapshot(dir, fileLease);
       const live = snapshotLive(snapshot, now);
+      // The sessions the registry holds live (D-42), this one with them: the agent glyph is
+      // dimmed for an agent row whose session is not among them.
+      setLiveSessions(
+        live && snapshot?.sessions !== undefined
+          ? new Set([...snapshot.sessions, this.stores.sessionName ?? this.anonId])
+          : undefined,
+      );
       const running = refresherRunning(fileLease, now);
       const outdated = running && laterBuild(await this.ownBuild(), fileLease?.version);
       let source: BandSource = "snapshot";
