@@ -30,7 +30,12 @@ its line, `[band] rows` at a time with `[+M more]`, `[collapse]` and `[summary]`
 ([docs/procedures/mod-install.md](docs/procedures/mod-install.md#the-bands-settings)). The
 colours follow your Claude Code theme, and `[theme]` sets any of them to a hex value;
 `[indicators] ascii = true` draws every glyph as ASCII
-([docs/procedures/mod-install.md](docs/procedures/mod-install.md#the-look)).
+([docs/procedures/mod-install.md](docs/procedures/mod-install.md#the-look)). Every task row, in
+the band, the Tasks view, the Backlog and on Board cards, starts with a gutter of row indicators:
+`⟳` while an agent is working on the issue (dimmed when that agent's session is no longer live on
+the host) and `⊘` when it is blocked. The help and Settings list them, and `[indicators]` or
+Settings switches each one off
+([docs/procedures/mod-install.md](docs/procedures/mod-install.md#row-indicators)).
 
 The MCP UI app for Claude Desktop and claude.ai, and the web app, are [TODO]: neither has been
 started. They are the planned future state in

@@ -656,12 +656,13 @@ Each phase carries its scope, deliverables, tasks with EARS acceptance criteria 
     - [x] `No drawn band line shall exceed the band's columns at 40, 80, 120 and 364 columns, and at no level shall the band's tree exceed maxRows rows.`
     - As built (T-2C.2, BU-mg2.3.21.2, .3 and .4): the reducer, the drawing, the row reads, the keys, `[band] rows` and `level`, and the captures, in D-36's as-built note. The overview draws the Tasks view and any view registered later through the framework; Board, Backlog, Timeline and Settings each draw a button that opens them in the pane until T-2C.8.
   - **T-2C.3 Row indicators: the registry, blocked and agent working** (D-41, D-42, BU-mg2.3.18.1, BU-mg2.3.18.2)
-    - [ ] `When a task row draws in the band, the Tasks view, the Backlog or a Board card, it shall draw a left gutter of one cell per enabled indicator, in registry order, each its glyph or a blank, so that rows stay aligned.`
-    - [ ] `When an issue's status is blocked, or an open issue blocks it through a blocks dependency, the blocked indicator shall show.`
-    - [ ] `When an issue has an in_progress child that is an agent row (label agent, or a title of the form "<name> agent: " or "<name> coordinator agent: "), or is itself one, the agent indicator shall show; while that row's assignee is a session the host's session registry does not hold live, the glyph shall be dimmed.`
-    - [ ] `Each glyph shall take one terminal cell and lie outside Unicode's East Asian ambiguous-width set and its emoji-presentation set, checked by a test; where indicators.ascii is true, each indicator shall draw its ASCII form.`
-    - [ ] `When the help or Settings draws, it shall list each indicator's glyph, ASCII form and meaning, and Settings shall switch each on or off; a test shall add a registry entry and find it drawn, in the legend and on a row, with no other change.`
-    - [ ] `While bodyColumns is below 48, the gutter shall be one cell, showing the first indicator in registry order that fires.`
+    - [x] `When a task row draws in the band, the Tasks view, the Backlog or a Board card, it shall draw a left gutter of one cell per enabled indicator, in registry order, each its glyph or a blank, so that rows stay aligned.`
+    - [x] `When an issue's status is blocked, or an open issue blocks it through a blocks dependency, the blocked indicator shall show.`
+    - [x] `When an issue has an in_progress child that is an agent row (label agent, or a title of the form "<name> agent: " or "<name> coordinator agent: "), or is itself one, the agent indicator shall show; while that row's assignee is a session the host's session registry does not hold live, the glyph shall be dimmed.`
+    - [x] `Each glyph shall take one terminal cell and lie outside Unicode's East Asian ambiguous-width set and its emoji-presentation set, checked by a test; where indicators.ascii is true, each indicator shall draw its ASCII form.`
+    - [x] `When the help or Settings draws, it shall list each indicator's glyph, ASCII form and meaning, and Settings shall switch each on or off; a test shall add a registry entry and find it drawn, in the legend and on a row, with no other change.`
+    - [x] `While bodyColumns is below 48, the gutter shall be one cell, showing the first indicator in registry order that fires.`
+    - As built (T-2C.3, BU-mg2.3.18.1 and .18.2): the registry's entry shape and its three entries, the gutter on the band's rows, the Tasks view (and its Client), the Backlog and Board cards, the snapshot's `blocks` dependencies and live sessions, `[indicators]`' switches, the legend, the cost and the captures, in D-41's and D-42's as-built notes. The review entry is reserved (`planned`) for T-2C.7.
   - **T-2C.4 The held store's review verb and its config** (ai-harness; D-37, D-38)
     - [ ] `When held_cli.py review --scope pair --json runs, it shall print every open and answered held item, from every routed store and landing pad, whose machine is a member of this host's pair in config/message-transports.json, each with its frontmatter, store, path and selection (current; superseded, with the path that supersedes it; escalated to a decider; ai-resolved), selected by the same functions compile and replay use.`
     - [ ] `When --if-changed is given the fingerprint that the store and landing-pad heads still give, the verb shall print only {"unchanged": true, "fingerprint": <it>}.`
@@ -2809,6 +2810,50 @@ Criterion 5: per-issue and all-item views are both definite requirements. Mitiga
 
 Criterion 5: an extensible indicator system is a stated requirement, so the registry is built now. Mitigations: the gutter keeps rows aligned, which is what makes a glyph readable at a glance, and Settings turns off any entry a user does not want, shrinking the gutter by one cell; the width risk is covered by a test: each glyph must lie outside Unicode's ambiguous-width and emoji-presentation sets, the ASCII forms are one config key away, and the candidates are replaced by the build if the test or a live terminal refuses them.
 
+**As built (T-2C.3; BU-mg2.3.18.1, BU-mg2.3.18.2).**
+
+- The registry is `core/src/indicators.ts`. An entry is `{ id, glyph, token, label, planned?, detect(context) }`: `id` is its key in `[indicators]` and Settings, `glyph` an id of the glyph table (so the ASCII form, the width rule and the `ascii` switch are the table's), `token` the colour it draws in, `label` the legend's meaning, and `detect` takes `{ issue, read, live }` (the issue, the read it came from indexed by id and by parent, and the sessions the host's registry holds live, undefined when none was read) and answers `on`, `dim` or nothing. `IndicatorRegistry` holds the entries in order (`register`, which returns its own removal, `all`, `built`, `enabled(switches)`); every surface reads the one instance, `INDICATORS`. A new indicator is one glyph-table row and one `register` call: a test registers an entry and finds it on a task row, in the help's legend and as a Settings switch with no other change (`hooks/components.test.ts`).
+- The entries, in order. The candidates passed the width test as they stood, so they are kept.
+
+| Id | Glyph | ASCII | Token | Shown when |
+| --- | --- | --- | --- | --- |
+| `agent` | ⟳ (U+27F3, `indicator.agent`) | `*` | `accent` | D-42's rule; dimmed when the agent row's session is not live |
+| `blocked` | ⊘ (U+2298, `indicator.blocked`) | `!` | `error` | status `blocked`, or a `blocks` dependency on an issue not closed |
+| `review` | ✎ (U+270E, `indicator.review`) | `?` | `warning` | reserved for T-2C.7: `planned`, so no gutter, legend or Settings draws it yet |
+
+- Why `review` is planned rather than drawn: an entry that cannot fire would cost every row a blank cell and put a line in the legend for something that never shows. `planned` keeps its place in the order and its glyph in the table, so T-2C.7 adds its detection and drops the flag, and nothing else moves. `status.blocked` (◉) stays the status glyph inside the label; the indicator is a separate glyph because it also fires for an open issue a dependency blocks.
+- The gutter is `gutterOf`: one cell per enabled entry in registry order, each the glyph or a blank; below `NARROW_GUTTER_COLUMNS` (48) one cell, the first entry that fires. `gutterColumns` is its cells plus the one-column gap after it, which every row's label width subtracts, so the labels are cut shorter and no line grows. The width tiers are the two the criterion names: every entry at 48 columns and above, one cell below.
+- Where it is drawn. One component, `gutter` in `hooks/components/indicators.ts`, draws a gutter as one `Text` whose blanks are spaces and each glyph a nested `Text` in its token, dimmed where `detect` said `dim`; the kit's tree validator accepted the nested Text on the terminal and in VS Code. It draws first in the shared task row (`taskRow`, so the Tasks view on both surfaces and the band's overview), in the band's count rows (`countRows`; these were drawn by `hooks/components/band.ts`, not the shared task row), in each Backlog row and on each Board card's first line. The Tasks view's Client on the terminal draws the same cells from `TaskClientRow.gutter`, spans whose colours the hooks resolve. The help draws a `Row indicators` legend, one line an entry (`⟳ (*) agent: ...`), and Settings one on/off row an entry, labelled with its glyph and its id, its hint the meaning and the ASCII form.
+- Where a row's read comes from. In the pane, the board's issues (`BeadsPane.indicatorRead`, kept while the board's issue list is the same). On the band, the pane's board when the row is in the pane's store, together with every task the band's count reads returned from that store. So on a band row from another store, a child or blocker the band did not read is not seen; the pane's own store, which holds every issue that is not closed, is complete.
+- The blocked rule needs `blocks` dependencies, which the board's snapshot dropped (`BOARD_FIELDS`). `boardRow` now keeps each row's `blocks` dependencies, cut to `{ depends_on_id, type }`, and nothing else of `dependencies`. A blocker the read does not hold is taken as closed (the board reads every issue that is not), or its status is read from the dependency where `bd show` embedded it.
+- `[indicators]`: `ascii` as before, and one boolean per entry id, on unless set to false; a key naming no entry yet is kept, so an entry registered later reads it, and a value that is not a boolean is named under the pane's header and that entry stays on. Settings' switch applies at the next redraw and is held in `$.store` under `indicator-switches` until Save to file, which writes `[indicators]` with `ascii` and every switch once one is set.
+- Cost. A gutter takes its cells plus one column a row. In the tree, measured on a Board card under the 2.1.310 kit: 124 characters with every cell blank, 183 with one glyph lit, 199 with it dimmed. `GUTTER_TREE_CHARS` (280) prices it on a Board card, so a cell page of the large test store holds 14 cards where it held 17; the Tasks view's 80 rows and the Backlog's 60 stay under 100,000 in the drawing-limit tests unchanged.
+- Expectations this changed: the Board's paging tests in `hooks/pane.test.ts` (`1-17 of 200` to `1-14 of 200`, with the later pages), and `resolveGlyphs`' test, which now reads the switches too.
+- Captures at 120 columns from Claude Code 2.1.310's test kit, laid out by `hooks/tests/render.ts` (colour and dimming not shown: BU-1's agent row's session is live, BU-2's is gone, so BU-2's ⟳ is drawn dimmed). The band's rows of every status the session owns:
+
+```text
+[bd] [t: 5 tasks] (◒[p: 1 in progress], ◉[b: 1 blocked], ◦[o: 3 open], ✓[d: 0 done last 24h]) [e: ▾] [v: ◫] [◨]
+  ⟳  [◒ P1 BU-1 live agent at work]
+   ⊘ [◉ P1 BU-3 blocked by its status]
+  ⟳  [◦ P1 BU-2 agent of a gone session]
+   ⊘ [◦ P2 BU-4 blocked by BU-5]
+     [◦ P3 BU-6 nothing to show]
+  [s: summary]
+```
+
+The pane's Tasks list, in VS Code, whose element tree draws the rows:
+
+```text
+5 tasks: 1 in progress, 1 blocked, 3 open
+⟳  [◒ P1 BU-1 live agent at work] [⋮]
+ ⊘ [◉ P1 BU-3 blocked by its status] [⋮]
+⟳  [◦ P1 BU-2 agent of a gone session] [⋮]
+ ⊘ [◦ P2 BU-4 blocked by BU-5] [⋮]
+   [◦ P3 BU-6 nothing to show] [⋮]
+```
+
+- Not yet checked live in a session: how ⟳ and ⊘ draw in the fleet's terminals and fonts, and the dimmed glyph on the terminal's Client rows.
+
 ---
 
 <a id="d-42"></a>
@@ -2857,6 +2902,12 @@ An issue shows the agent indicator when it has an in-progress child that is an a
 <!-- decision-lineage: decision-id=BU-mg2.2/D-42; decision-topic=the signal behind the agent-working indicator; governs=packages:core/indicators,convention:agent-row,repo:ai-harness/agent-launch; normalized-proposition=an issue has an agent working when it has an in-progress agent-row child issue marked by label or title, dimmed when that row's session is not live on the host; applicability=surface:tui; outcome-id=agent-row-child-liveness-dim; relation=refines; related-decision-id=BU-mg2.2/D-25; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
 Criterion 2: the indicator reads the record every surface reads. Medium confidence because coverage depends on a convention most sessions have not used yet (Risk 17). Mitigations: the label route lets the launch path mark every agent row whatever its title, and AIH-7m40p6 is filed in ai-harness for the owner-sync work that already prints the launch command (its T-2.3 hook); the dimmed state separates a row whose session is live from one whose session is gone, and a row whose session is live but whose agent has ended is the launching session's own collection duty (AIH-813: close the row at collection); the rule is one registry entry (D-41), so a better signal replaces it without touching a view. One such signal exists for a session's own rows: the mods API's `$.agent.list()` returns this session's subagents with a status (`running`, `idle`, `completed` and others; mods reference, read 2026-10-25T02:15Z), which could later confirm that an agent row's agent is still running; it sees one session only and names no issue, so it would refine the dimmed state and leave the Beads rule in place.
+
+**As built (T-2C.3; BU-mg2.3.18.2).**
+
+- The rule is `detectAgent` in `core/src/indicators.ts`: the issue and its children in the read (issues whose `parent` is its id), kept when in progress and an agent row (`isAgentRow`: the label `agent`, or a title matching `AGENT_TITLE`, `^\S+( coordinator)? agent: `). Grandchildren do not count, a closed agent row does not, and a title that only mentions an agent ("Agent Mail: ...") does not. Shown when any is kept; dimmed when the host's session registry was read and none of their assignees is in it (a row with no assignee counts as not live).
+- The session registry. The mod cannot list a directory, so the refresher, which reads `sessions/` every beat (D-26), now writes the ids it holds live into its snapshot as `sessions`; each session's tally reads them at its minute check, adds its own id, and hands them to the gutter (`setLiveSessions`). With no live snapshot, or one from a refresher built before this, the registry is unread and no glyph is dimmed, so a missing refresher never dims a live agent. An agent row assigned to a session on the pair's other host is dimmed, since this host's registry does not hold it.
+- Measured on this repository's store on 2026-10-25 before building (`bd list --json --brief --all`): 13 issues match the rule, 5 by the `agent` label and 8 by the title alone (BU-mg2.3.17.5, the coordinator's own row, among them), and every one's assignee is `aih-ec2-3`, the launching session and the id it registers under; 2 were in progress.
 
 ---
 
