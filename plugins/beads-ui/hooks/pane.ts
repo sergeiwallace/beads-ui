@@ -38,9 +38,14 @@ import {
   footerHints,
   glyphOf,
   groupLayout,
+  gutterColumns,
   historyArgv,
+  INDICATOR_ROW_PREFIX,
+  INDICATORS,
   INITIAL_BOARD_STATE,
+  type IndicatorRead,
   type Issue,
+  indicatorRead,
   isCollapseRule,
   isFirstmate,
   isPanelMode,
@@ -48,6 +53,7 @@ import {
   isShort,
   isSurfaceSetting,
   LEASE_FILE,
+  legendOf,
   MAX_SHOWN,
   type MenuView,
   menuView,
@@ -132,6 +138,7 @@ import {
   undoArgv,
   undoForMove,
   undoView,
+  withIndicatorsTable,
   withPanelTable,
   withSurfacesTable,
 } from "../core/src/index.ts";
@@ -143,6 +150,16 @@ import {
   type Surface,
   type TasksRegion,
 } from "./components/adapters.ts";
+import {
+  enabledIndicators,
+  gutter,
+  gutterFor,
+  gutterSpans,
+  indicatorOn,
+  LEGEND_TITLE,
+  legendLines,
+  setIndicatorSwitches,
+} from "./components/indicators.ts";
 import { colorOf, glyphText, setAscii, setTheme, styledUi } from "./components/look.ts";
 import { navFrame } from "./components/nav.ts";
 import { type ViewEntry, ViewRegistry } from "./components/registry.ts";
@@ -334,6 +351,8 @@ export class BeadsPane {
   tab: string = DEFAULT_TAB;
   /** Every view the pane and the band draw (D-35): their navs and drawing come from it. */
   readonly views = new ViewRegistry();
+  /** The board's issues as the row indicators read them (D-41), kept while the issues are. */
+  private indicatorMemo: { issues: readonly Issue[]; read: IndicatorRead } | undefined;
   /** The task panel's settings (T-2B.2, T-2B.8). */
   readonly panel = new PanelSettingsState();
   /** The Tasks view shows its collapsed tasks (T-2B.2). */
@@ -627,7 +646,8 @@ export class BeadsPane {
     const theme = resolveTheme(config.text);
     const glyphs = resolveGlyphs(config.text);
     const restyled = setTheme(theme.overrides);
-    if (setAscii(glyphs.ascii) || restyled) this.host.invalidate();
+    const switched = setIndicatorSwitches(this.panel.indicators);
+    if (setAscii(glyphs.ascii) || restyled || switched) this.host.invalidate();
     return {
       ...resolved,
       problems: [
@@ -1464,22 +1484,32 @@ export class BeadsPane {
       await this.panel.change({ openAtStart: value === "on" });
     } else if (key === "settings:debug") {
       await this.bandSettings?.setDebug(value === "on");
+    } else if (key.startsWith(INDICATOR_ROW_PREFIX)) {
+      const id = key.slice(INDICATOR_ROW_PREFIX.length);
+      setIndicatorSwitches({ ...this.panel.indicators, [id]: value === "on" });
+      await this.panel.changeIndicator(id, value === "on");
     }
   }
 
   /**
-   * Settings' Save to file (T-2B.8): one write of the `[panel]`, `[surfaces]` and `[band]` tables
-   * into the `beads-ui.toml` the mod read, every other line kept, then nothing is held in
-   * `$.store`. `[surfaces]` is written once a view has a setting.
+   * Settings' Save to file (T-2B.8): one write of the `[panel]`, `[surfaces]`, `[indicators]` and
+   * `[band]` tables into the `beads-ui.toml` the mod read, every other line kept, then nothing is
+   * held in `$.store`. `[surfaces]` is written once a view has a setting, `[indicators]` once an
+   * indicator has a switch.
    */
   async saveSettings(): Promise<void> {
     const panel = this.panel.settings;
     const surfaces = this.panel.surfaces;
+    const switches = this.panel.indicators;
+    const ascii = this.panel.ascii;
     const band = this.bandSettings;
     if (band === undefined) return;
-    const saved = await band.save((text) =>
-      withSurfacesTable(withPanelTable(text, panel), surfaces),
-    );
+    const saved = await band.save((text) => {
+      const written = withSurfacesTable(withPanelTable(text, panel), surfaces);
+      return Object.keys(switches).length === 0
+        ? written
+        : withIndicatorsTable(written, ascii, switches);
+    });
     this.settingsNotice = band.notice;
     band.notice = undefined;
     if (saved) await this.panel.saved();
@@ -1913,7 +1943,11 @@ export class BeadsPane {
       statuses: this.board.statuses,
       settings: this.panel.settings,
       expanded: this.expanded,
-      width: Math.max(1, width - rowControlColumns(client)),
+      width: Math.max(
+        1,
+        width - rowControlColumns(client) - gutterColumns(enabledIndicators(), width),
+      ),
+      gutter: this.gutterAt(width),
       ...(this.focusedId === undefined ? {} : { focusedId: this.focusedId }),
       windowRows: short ? Math.max(3, (rows ?? SHORT_ROWS) - SHORT_CHROME_ROWS) : TASK_WINDOW_ROWS,
     });
@@ -1928,7 +1962,13 @@ export class BeadsPane {
       statuses: this.board.statuses,
       settings: this.panel.settings,
       expanded: this.expanded,
-      width: Math.max(1, surface.columns - rowControlColumns(false)),
+      width: Math.max(
+        1,
+        surface.columns -
+          rowControlColumns(false) -
+          gutterColumns(enabledIndicators(), surface.columns),
+      ),
+      gutter: this.gutterAt(surface.columns),
       windowRows: Math.max(1, (surface.rows ?? SHORT_ROWS) - BAND_LIST_CHROME_ROWS),
       windowStart: surface.scroll?.start ?? 0,
     });
@@ -1953,10 +1993,19 @@ export class BeadsPane {
         : { gapAfter: this.menuFor, gapRows: menuRows(menu) }),
       selectedColor: colorOf("surface.focus"),
     });
-    // The Client draws with its own elements, so its rows take the look's glyph form here.
+    // The Client draws with its own elements, so its rows take the look's glyph form here, and
+    // their gutters the colours the look resolves.
     const props = {
       ...built,
-      rows: built.rows.map((row) => ({ ...row, label: glyphText(row.label) })),
+      rows: built.rows.map((row, i) => {
+        const cells = list.rows[i]?.gutter ?? [];
+        const spans = gutterSpans(cells).map((span) => ({ ...span, text: glyphText(span.text) }));
+        return {
+          ...row,
+          label: glyphText(row.label),
+          ...(spans.length === 0 ? {} : { gutter: spans }),
+        };
+      }),
     };
     this.clientProps = props;
     const labelWidth = Math.max(1, width - rowControlColumns(true));
@@ -2025,6 +2074,27 @@ export class BeadsPane {
       }));
   }
 
+  /** The board's issues as the row indicators read them (D-41): by id and by parent. */
+  indicatorRead(): IndicatorRead {
+    const issues = this.board.issues;
+    if (this.indicatorMemo?.issues !== issues) {
+      this.indicatorMemo = { issues, read: indicatorRead(issues) };
+    }
+    return this.indicatorMemo.read;
+  }
+
+  /** Each row's indicator gutter on a view `columns` wide, from the board's read. */
+  private gutterAt(columns: number): (issue: Issue) => ReturnType<typeof gutterFor> {
+    const read = this.indicatorRead();
+    return (issue) => gutterFor(issue, read, columns);
+  }
+
+  /** The gutter of the board's issue `id`, or none when the board does not hold it. */
+  private gutterOfId(id: string, columns: number): ReturnType<typeof gutterFor> {
+    const issue = this.indicatorRead().byId.get(id);
+    return issue === undefined ? [] : this.gutterAt(columns)(issue);
+  }
+
   private drawSettingsView(ui: PaneUi, surface: Surface): RenderElement {
     const band = this.bandSettings;
     const view = settingsView(
@@ -2032,6 +2102,7 @@ export class BeadsPane {
       band?.settings ?? DEFAULT_BAND_SETTINGS,
       settingsOptionRoom(surface.columns),
       this.surfaceRows(),
+      legendOf(INDICATORS.built()).map((line) => ({ ...line, on: indicatorOn(line.id) })),
     );
     return drawSettings(surface, view, {
       color: colorOf,
@@ -2302,6 +2373,8 @@ export class BeadsPane {
           children: "Quick-add: title words plus p0-p4, type:, @assignee, +label, due:, sprint:",
         }),
         Text({ children: `Filter keys: ${FILTER_KEYS.join(", ")}` }),
+        Text({ bold: true, children: LEGEND_TITLE }),
+        ...legendLines().map((text) => Text({ children: text })),
         Text({ bold: true, children: "Focus, hide and show" }),
         ...USAGE_LINES.map((text) => Text({ children: text })),
         Code({ source: KEYBINDINGS_BLOCK }),
@@ -2331,12 +2404,22 @@ export class BeadsPane {
     const options = values.map((value) =>
       textWidth(value) <= room ? { value } : { value, label: truncate(value, room) },
     );
+    const cells = this.gutterOfId(card.id, this.width);
     return Box({
       key: `card:${card.id}`,
       flexDirection: "column",
       marginBottom: 1,
       children: [
-        Text({ dimColor: true, children: card.displayId }),
+        cells.length === 0
+          ? Text({ dimColor: true, children: card.displayId })
+          : Box({
+              flexDirection: "row",
+              gap: 1,
+              children: present<RenderNode>([
+                gutter(ui, cells),
+                Text({ dimColor: true, wrap: "truncate-end", children: card.displayId }),
+              ]),
+            }),
         Text({ children: card.title }),
         Text({
           color: colorOf(card.priorityToken),
@@ -2524,7 +2607,9 @@ export class BeadsPane {
     const assigneeWidth = wide
       ? Math.min(24, longest(view.rows.map((row) => assigneeLabel(row.assignee))))
       : 0;
-    const fixed = wide ? 3 + idWidth + typeWidth + assigneeWidth + 10 + 8 + 6 : 3 + idWidth + 6 + 3;
+    const fixed =
+      gutterColumns(enabledIndicators(), width) +
+      (wide ? 3 + idWidth + typeWidth + assigneeWidth + 10 + 8 + 6 : 3 + idWidth + 6 + 3);
     const titleWidth = Math.max(10, width - fixed);
     return {
       ...view,
@@ -2578,7 +2663,8 @@ export class BeadsPane {
             key: `row:${row.id}`,
             flexDirection: "row",
             gap: 1,
-            children: [
+            children: present<RenderNode>([
+              gutter(ui, this.gutterOfId(row.id, width)),
               Text({ color: colorOf(row.priorityToken), children: row.priority }),
               Box({
                 width: idWidth,
@@ -2604,7 +2690,7 @@ export class BeadsPane {
                 dimColor: true,
                 onPress: () => void this.openDetailFor(row.id),
               }),
-            ],
+            ]),
           }),
         ),
         page.pages === 1

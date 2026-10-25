@@ -85,6 +85,16 @@ export default function TaskList(props: unknown, surface: ClientSurface): Render
   surface.onKey((event) => send(keyMessage(props, event)));
   const children = props.rows.flatMap((row): RenderNode[] => {
     const selected = row.id === props.selected;
+    // The row's indicator gutter (D-41) leads its label, each glyph in the colour it was handed.
+    const gutter: RenderNode[] = (row.gutter ?? []).map((span) =>
+      span.color === undefined && span.dim !== true
+        ? span.text
+        : Text({
+            ...(span.color === undefined ? {} : { color: span.color }),
+            ...(span.dim === true ? { dimColor: true } : {}),
+            children: span.text,
+          }),
+    );
     const line = Box({
       key: `trow:${row.id}`,
       children: [
@@ -92,7 +102,7 @@ export default function TaskList(props: unknown, surface: ClientSurface): Render
           wrap: "truncate-end",
           hover: { inverse: true },
           ...(selected ? { bold: true, color: props.selectedColor } : {}),
-          children: row.label,
+          children: gutter.length === 0 ? row.label : [...gutter, " ", row.label],
         }),
       ],
     });

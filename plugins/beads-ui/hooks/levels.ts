@@ -14,6 +14,9 @@ import {
   type DisclosureEvent,
   disclosureOf,
   glyphOf,
+  gutterColumns,
+  type IndicatorRead,
+  indicatorRead,
   isRowGroup,
   orderTasks,
   plannedText,
@@ -38,6 +41,7 @@ import {
   ROW_INDENT,
   summaryLine,
 } from "./components/band.ts";
+import { enabledIndicators, gutterFor } from "./components/indicators.ts";
 import { colorOf } from "./components/look.ts";
 import { bandNav, navBar } from "./components/nav.ts";
 import type { Host } from "./host.ts";
@@ -197,8 +201,31 @@ export class BandLevels {
     }
   }
 
+  /**
+   * What a task row's indicators read (D-41): the pane's board when the task is in the pane's
+   * store, which holds every issue of it not closed, and every task the band read in the store.
+   */
+  private readFor(store: string): IndicatorRead {
+    const trim = (path: string) => path.replace(/\/+$/, "");
+    const issues = new Map(
+      trim(store) === trim(this.pane.storePath())
+        ? this.pane.board.issues.map((issue) => [issue.id, issue])
+        : [],
+    );
+    for (const read of this.reads.values()) {
+      for (const task of read.tasks) {
+        if (trim(task.store) === trim(store)) issues.set(task.issue.id, task.issue);
+      }
+    }
+    return indicatorRead([...issues.values()]);
+  }
+
   /** The rows a state draws under its line, in the Tasks view's order. */
-  private rowsOf(state: Disclosure, width: number): { items: BandRowView[]; status?: string } {
+  private rowsOf(
+    state: Disclosure,
+    width: number,
+    columns: number,
+  ): { items: BandRowView[]; status?: string } {
     const part = state.part;
     if (part === "drift") {
       const read = this.tally.readOf(state.line);
@@ -223,14 +250,24 @@ export class BandLevels {
       return { items };
     }
     const groups = this.groupsOf(part);
-    const reads = groups.map((group) => this.reads.get(`${state.line}:${group}`));
+    const held = groups.map((group) => this.reads.get(`${state.line}:${group}`));
     const byGroup: Partial<Record<RowGroup, BandTask[]>> = {};
     groups.forEach((group, i) => {
-      byGroup[group] = reads[i]?.tasks ?? [];
+      byGroup[group] = held[i]?.tasks ?? [];
     });
-    const items = orderTasks(byGroup).map((task) => taskRowView(task, width));
-    const failed = [...new Set(reads.flatMap((read) => read?.failed ?? []))];
-    const reading = reads.some((read) => read === undefined || read.reading);
+    const reads = new Map<string, IndicatorRead>();
+    const readOf = (store: string) => {
+      const held = reads.get(store) ?? this.readFor(store);
+      reads.set(store, held);
+      return held;
+    };
+    const labelWidth = Math.max(1, width - gutterColumns(enabledIndicators(), columns));
+    const items = orderTasks(byGroup).map((task) => ({
+      ...taskRowView(task, labelWidth),
+      gutter: gutterFor(task.issue, readOf(task.store), columns),
+    }));
+    const failed = [...new Set(held.flatMap((read) => read?.failed ?? []))];
+    const reading = held.some((read) => read === undefined || read.reading);
     const status =
       reading && items.length === 0
         ? `reading the tasks${glyphOf("text.more")}`
@@ -332,7 +369,7 @@ export class BandLevels {
   ): RenderElement {
     const settings = this.settings;
     const width = rowLabelColumns(columns, ROW_INDENT);
-    const { items, status } = this.rowsOf(state, width);
+    const { items, status } = this.rowsOf(state, width, columns);
     const rowBudget = budget - 1 - (status === undefined ? 0 : 1);
     const view = bandRowsView(items, {
       shown: state.shown,

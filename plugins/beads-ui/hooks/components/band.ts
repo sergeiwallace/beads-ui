@@ -10,6 +10,7 @@ import {
   type Token,
 } from "../../core/src/index.ts";
 import type { Surface } from "./adapters.ts";
+import { gutter } from "./indicators.ts";
 
 // The band's disclosure levels (D-36, T-2C.2) as components: the summary line with its counts as
 // buttons, a count's rows with their controls, and the controls row every level ends with.
@@ -135,7 +136,8 @@ export function indented(surface: Surface, key: string, children: RenderNode[]):
 
 /**
  * A count's rows under its line (D-36): one button a task, which opens its detail in the
- * overview, a store's row as text, and the controls row under them.
+ * overview, after its indicator gutter (D-41), a store's row as text, and the controls row
+ * under them.
  */
 export function countRows(
   surface: Surface,
@@ -151,6 +153,7 @@ export function countRows(
   const { Box, Text, Button } = surface.ui;
   const rows = view.rows.map((row) =>
     indented(surface, row.key, [
+      ...present<RenderNode>([gutter(surface.ui, row.gutter ?? [], true)]),
       row.id === undefined
         ? Text({ wrap: "truncate-end", color: options.color(row.token), children: row.label })
         : Button({
