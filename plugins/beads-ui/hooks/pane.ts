@@ -277,10 +277,10 @@ export const SELECT_CHROME = 2;
  * help draws these lines, and README.md and docs/procedures/mod-install.md carry the same.
  */
 export const USAGE_LINES: readonly string[] = [
-  "Focus enters the pane: Ctrl+X then Tab (again for the next pane, then back to the prompt), a click on it (fullscreen rendering), or the band's beads button (click it, or Ctrl+X then Tab to the band and Enter).",
+  `Focus enters the pane: Ctrl+X then Tab (again for the next pane, then back to the prompt), a click on it (fullscreen rendering), or the band's pane button, [${glyphOf("pane.open")}] right after the band's text (click it, or Ctrl+X then Tab to the band and Enter).`,
   "Focus leaves: Esc returns it to the prompt and closes the pane.",
-  "Close: Esc, Ctrl+X then X, or /bu (also /show-beads-ui).",
-  "Reopen: /bu, the band's beads button, or a key chord bound to command:bu in ~/.claude/keybindings.json, such as this one for Meta+B:",
+  `Close: Esc, Ctrl+X then X, the band's [${glyphOf("pane.close")}] button (drawn beside [${glyphOf("pane.open")}] while the pane is open), or /bu (also /show-beads-ui).`,
+  `Reopen: /bu, the band's [${glyphOf("pane.open")}] button, or a key chord bound to command:bu in ~/.claude/keybindings.json, such as this one for Meta+B:`,
 ];
 export const KEYBINDINGS_BLOCK = `{
   "bindings": [
@@ -911,7 +911,7 @@ export class BeadsPane {
   }
 
   /**
-   * The band's beads button (D-27, T-1B.6): opens the pane focused when it is closed, and moves
+   * The band's pane button (D-27, T-1B.6, T-2C.14): opens the pane focused when it is closed, and moves
    * the focus ring into it, onto its open tab, when it is open.
    */
   async openOrFocus(): Promise<void> {
@@ -1010,6 +1010,7 @@ export class BeadsPane {
     }
     this.isOpen = true;
     this.savePrefs();
+    host.invalidate();
     void this.refresh({ direct: true });
     if (this.tab === "timeline") void this.readTimeline();
   }
@@ -1023,6 +1024,8 @@ export class BeadsPane {
   closed(): void {
     this.isOpen = false;
     this.savePrefs();
+    // The band's toggle draws the pane's state.
+    this.host?.invalidate();
   }
 
   // ---- actions ----------------------------------------------------------------------------

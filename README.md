@@ -21,7 +21,11 @@ board, backlog and settings, an options menu for every action and a Settings vie
 ([docs/procedures/mod-install.md](docs/procedures/mod-install.md#the-task-panel)). Each view is
 registered once and drawn on the band and the pane alike; `[surfaces]` in `beads-ui.toml`, or a
 view's row in Settings, limits a view to `band` or `pane`
-([docs/procedures/mod-install.md](docs/procedures/mod-install.md#configuration)).
+([docs/procedures/mod-install.md](docs/procedures/mod-install.md#configuration)). Everything you can
+press is drawn between accent-coloured brackets, and the band's pane button is the icon `[◨]`. The
+colours follow your Claude Code theme, and `[theme]` sets any of them to a hex value;
+`[indicators] ascii = true` draws every glyph as ASCII
+([docs/procedures/mod-install.md](docs/procedures/mod-install.md#the-look)).
 
 The MCP UI app for Claude Desktop and claude.ai, and the web app, are [TODO]: neither has been
 started. They are the planned future state in
@@ -35,10 +39,10 @@ and Linux.
 
 How focus reaches the pane and leaves it, and how to close and reopen it. The pane's help (`h`) shows the same.
 
-- Focus enters the pane: Ctrl+X then Tab (again for the next pane, then back to the prompt), a click on it (fullscreen rendering), or the band's beads button (click it, or Ctrl+X then Tab to the band and Enter).
+- Focus enters the pane: Ctrl+X then Tab (again for the next pane, then back to the prompt), a click on it (fullscreen rendering), or the band's pane button, [◨] right after the band's text (click it, or Ctrl+X then Tab to the band and Enter).
 - Focus leaves: Esc returns it to the prompt and closes the pane.
-- Close: Esc, Ctrl+X then X, or /bu (also /show-beads-ui).
-- Reopen: /bu, the band's beads button, or a key chord bound to command:bu in ~/.claude/keybindings.json, such as this one for Meta+B:
+- Close: Esc, Ctrl+X then X, the band's [⊠] button (drawn beside [◨] while the pane is open), or /bu (also /show-beads-ui).
+- Reopen: /bu, the band's [◨] button, or a key chord bound to command:bu in ~/.claude/keybindings.json, such as this one for Meta+B:
 
 ```json
 {
@@ -53,7 +57,7 @@ How focus reaches the pane and leaves it, and how to close and reopen it. The pa
 }
 ```
 
-If `~/.claude/keybindings.json` already exists, add the `Chat` entry to its `bindings` list rather than replacing the file. The chord opens the pane when it is closed and closes it when it is open; it cannot move the focus into a pane that is already open, which Ctrl+X then Tab and the beads button do. Claude Code has no way to hide a pane and keep it open, so hiding it is closing it, and `/bu` brings it back on the same view. It opens on the Tasks view the first time, and on whichever view you left it on after that.
+If `~/.claude/keybindings.json` already exists, add the `Chat` entry to its `bindings` list rather than replacing the file. The chord opens the pane when it is closed and closes it when it is open; it cannot move the focus into a pane that is already open, which Ctrl+X then Tab and the `[◨]` button do. Claude Code has no way to hide a pane and keep it open, so hiding it is closing it, and `/bu` brings it back on the same view. It opens on the Tasks view the first time, and on whichever view you left it on after that.
 
 ## Repository structure
 

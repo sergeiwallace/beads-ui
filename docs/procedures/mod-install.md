@@ -7,7 +7,7 @@ Load the mod for one session from a checkout with `claude --plugin-dir <checkout
 - Claude Code 2.1.299 or later. The design sets that floor because 2.1.299 is the first release that lets a hooks module's helpers live in other files. The mod's gate ran on 2.1.306. Check yours with `claude --version`.
 - `bd` 1.3.x on your `PATH`. The mod runs `bd ... --json` in the session's directory and nothing else.
 - A repository with a Beads store (`bd list` works there). In a directory without one, the pane shows bd's error line, and the band draws only if the session has a name and the machine's store inventory lists other stores (see the band below).
-- Only if you turn on `open_at_start` (below): for the task panel to open on its own at session start, a terminal at least 144 columns wide, or 110 once you have opened the pane yourself, since that is where Claude Code places a pane nobody asked for. A pane you open with `/show-beads-ui` or the band's button opens at any width.
+- Only if you turn on `open_at_start` (below): for the task panel to open on its own at session start, a terminal at least 144 columns wide, or 110 once you have opened the pane yourself, since that is where Claude Code places a pane nobody asked for. A pane you open with `/show-beads-ui` or the band's `[◨]` button opens at any width.
 
 ## Load it from a checkout
 
@@ -70,8 +70,9 @@ With auto-update on, Claude Code checks the marketplace when a session starts, n
 - The pane opens on the Tasks view, the task panel ([below](#the-task-panel)). A nav leads to `t` Tasks, `1` Board, `2` Backlog, `4` Detail, `5` Timeline ([below](#the-timeline)) and `6` Settings. `3` Sprint is drawn dimmed: that view is planned and not built yet, so pressing it shows a line that says so and leaves you on the view you were on. The header names the store the pane reads, as `KG (sw-bms-workspace)` (its prefix and directory) or the directory alone, and when the board was last read (`as of HH:MM:SS`, local time).
 - The pane draws its first render from the host refresher's snapshot of the store (below), with that snapshot's read time in the header, then reads `bd` and draws the result. Every 10 seconds it draws the newest snapshot, and reads `bd` itself only when the refresher is not running, its snapshot is older than three minutes, or the store's snapshot was skipped (a line names why). It reads `bd` itself when you open it and after each write it makes. Either way it reads the open issues and the 25 most recently closed (one page of the done column), never every closed issue: `bd list --json --brief --limit 0` and `bd list --json --brief --status closed --sort closed --limit 25`. A failed `bd list` keeps the last board on screen with an error line naming the exit code, and the next refresh tries again.
 - A session opens its board on its own issues (Mine: the issues assigned to its name); `a` switches to every issue (All) and back. A firstmate session, and a session with no name, opens on All. The choice is kept for each session name. With Mine on and no open issue of its own, the board says so and how many open issues `a` shows.
-- The pane reflows to its size. From 72 columns the nav is a framed side nav beside the view, from 48 a bar of short labels above it, and below 48 a bar of each view's key and a glyph (`✓` Tasks, `▦` Board, `☰` Backlog, `»` Sprint, `◉` Detail, `⇢` Timeline, `⚙` Settings); above the prompt, or under 12 rows, the side nav becomes the bar. The view's own controls carry their full labels from 72 columns, a short word from 48, and below 48 the shortest form, each with its key; the controls wrap onto as many rows as they need, and the board's column groups stack when a row of them would not fit, so no line runs past the pane's edge. Above the prompt, or under 12 rows, the pane drops its help and the footer's hints and moves the input fields below the board, so the tabs, the board's header and a card stay in view.
-- The pane opens only when you ask: `/bu`, `/show-beads-ui` or the band's button. Nothing opens at session start or when the plugin reloads (`/reload-plugins`). To have it open on its own on the Tasks view at session start, set `open_at_start = true` under `[panel]`, or `Open at start` in Settings; `panel.mode` `native` still opens nothing (see [Beside Claude Code's task panel](#beside-claude-codes-task-panel)). That open leaves the keyboard on the prompt, and when Claude Code will not place it (a terminal narrower than 144 columns, or 110 once you have opened the pane), the mod withdraws the open and a toast names the width; the band stays and `/bu` opens the pane anyway.
+- The pane reflows to its size. From 72 columns the nav is a framed side nav beside the view, from 48 a bar of short labels above it, and below 48 a bar of each view's key and a glyph (`✓` Tasks, `⊞` Board, `≣` Backlog, `»` Sprint, `⊡` Detail, `⇢` Timeline, `⊛` Settings); above the prompt, or under 12 rows, the side nav becomes the bar. The view's own controls carry their full labels from 72 columns, a short word from 48, and below 48 the shortest form, each with its key; the controls wrap onto as many rows as they need, and the board's column groups stack when a row of them would not fit, so no line runs past the pane's edge. Above the prompt, or under 12 rows, the pane drops its help and the footer's hints and moves the input fields below the board, so the tabs, the board's header and a card stay in view.
+- Everything you can press, in the band and in the pane, is drawn between brackets in the theme's accent colour, `[like this]`, and lights up under the pointer where the terminal draws hover; text without brackets is not a control. The band's first line ends with its pane button right after the text: `[◨]` opens the pane, or moves the focus into it when it is open, and while the pane is open `[⊠]` beside it closes it.
+- The pane opens only when you ask: `/bu`, `/show-beads-ui` or the band's `[◨]` button. Nothing opens at session start or when the plugin reloads (`/reload-plugins`). To have it open on its own on the Tasks view at session start, set `open_at_start = true` under `[panel]`, or `Open at start` in Settings; `panel.mode` `native` still opens nothing (see [Beside Claude Code's task panel](#beside-claude-codes-task-panel)). That open leaves the keyboard on the prompt, and when Claude Code will not place it (a terminal narrower than 144 columns, or 110 once you have opened the pane), the mod withdraws the open and a toast names the width; the band stays and `/bu` opens the pane anyway.
 
 ## The host refresher
 
@@ -122,10 +123,10 @@ When no store resolves, the pane draws no board and runs no `bd` read. It lists 
 
 How focus reaches the pane and leaves it, and how to close and reopen it. The pane's help (`h`) shows the same.
 
-- Focus enters the pane: Ctrl+X then Tab (again for the next pane, then back to the prompt), a click on it (fullscreen rendering), or the band's beads button (click it, or Ctrl+X then Tab to the band and Enter).
+- Focus enters the pane: Ctrl+X then Tab (again for the next pane, then back to the prompt), a click on it (fullscreen rendering), or the band's pane button, [◨] right after the band's text (click it, or Ctrl+X then Tab to the band and Enter).
 - Focus leaves: Esc returns it to the prompt and closes the pane.
-- Close: Esc, Ctrl+X then X, or /bu (also /show-beads-ui).
-- Reopen: /bu, the band's beads button, or a key chord bound to command:bu in ~/.claude/keybindings.json, such as this one for Meta+B:
+- Close: Esc, Ctrl+X then X, the band's [⊠] button (drawn beside [◨] while the pane is open), or /bu (also /show-beads-ui).
+- Reopen: /bu, the band's [◨] button, or a key chord bound to command:bu in ~/.claude/keybindings.json, such as this one for Meta+B:
 
 ```json
 {
@@ -140,7 +141,7 @@ How focus reaches the pane and leaves it, and how to close and reopen it. The pa
 }
 ```
 
-If `~/.claude/keybindings.json` already exists, add the `Chat` entry to its `bindings` list rather than replacing the file. The chord opens the pane when it is closed and closes it when it is open; it cannot move the focus into a pane that is already open, which Ctrl+X then Tab and the beads button do. Claude Code has no way to hide a pane and keep it open, so hiding it is closing it, and `/bu` brings it back on the same view. It opens on the Tasks view the first time, and on whichever view you left it on after that.
+If `~/.claude/keybindings.json` already exists, add the `Chat` entry to its `bindings` list rather than replacing the file. The chord opens the pane when it is closed and closes it when it is open; it cannot move the focus into a pane that is already open, which Ctrl+X then Tab and the `[◨]` button do. Claude Code has no way to hide a pane and keep it open, so hiding it is closing it, and `/bu` brings it back on the same view. It opens on the Tasks view the first time, and on whichever view you left it on after that.
 
 ## Keys
 
@@ -305,6 +306,26 @@ board = "both"      # the default: the band and the pane
 ```
 
 A view set to `band` leaves the pane's nav and its menu at the next redraw, and the pane opens its first other view in its place; set to `pane`, it leaves the band's. A value other than `both`, `band` or `pane` is named under the pane's header and the view draws on both. Until the band's overview level lands, the band draws no view of its own, so a view set to `band` draws nowhere; set it back to `both` in Settings or in the file. Settings' own row is left out, so Settings cannot take itself off the pane it is set from; `settings = "band"` in the file still does.
+
+### The look
+
+Every colour the band and the pane draw is a named token, and each token is one of Claude Code's theme colours, so the mod follows your light or dark theme. The `[theme]` table sets any token to a hex colour (`#rgb` or `#rrggbb`) instead, drawn from the next refresh:
+
+```toml
+[theme]
+"priority.p0" = "#ff5f5f"   # P0 badges and cards
+"status.wip" = "#d7af00"    # the band's in-progress count
+control = "#5fafff"         # the brackets around everything you can press
+```
+
+The tokens are `status.active`, `status.wip`, `status.frozen`, `status.done`, `priority.p0` to `priority.p4`, `surface.card`, `surface.focus`, `text.default`, `text.dim`, `accent`, `success`, `warning`, `error`, `conflict` and `control`. A key that names no token, or a value that is not a hex colour, is named under the pane's header and that token keeps its theme colour.
+
+The glyphs the mod draws (the status marks, the row menu `⋮`, the nav glyphs, the band's pane buttons `◨` and `⊠`) each take one terminal cell. If your terminal or font draws one of them badly, set `ascii = true` under `[indicators]` and each is drawn as one ASCII character instead (`[+]` and `[x]` for the pane buttons, `:` for the row menu):
+
+```toml
+[indicators]
+ascii = true
+```
 
 The pane's band settings (`g`, or the `Band` button) change the same settings at once: add or remove a part, move one with the arrows, and set the `Done window` field. The change is kept in Claude Code's plugin store, under the key `band-settings`, so every session on the machine draws it at its next minute. `Save to file` writes the settings into the `beads-ui.toml` the mod read, or `~/.config/beads-ui/beads-ui.toml` when there is none, replacing its `[band]` table and keeping every other line, and then clears the held change.
 

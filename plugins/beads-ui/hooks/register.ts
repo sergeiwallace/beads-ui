@@ -158,7 +158,11 @@ export function register(on: On) {
   on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
     if (e.surface !== "terminal" || e.props.hasSurvey) return next(e);
     const { Box, Text, Button } = await $.ui.resolve(e);
-    const band = drawBand({ Box, Text, Button }, tally, () => void pane.openOrFocus());
+    const band = drawBand({ Box, Text, Button }, tally, {
+      open: pane.isOpen,
+      onOpen: () => void pane.openOrFocus(),
+      onClose: () => void pane.close(),
+    });
     if (band === undefined) return next(e);
 
     return Box({ flexDirection: "column", children: [band, await next(e)] });
