@@ -669,12 +669,13 @@ Each phase carries its scope, deliverables, tasks with EARS acceptance criteria 
     - [ ] `If this host is a member of no pair, then --scope pair shall cover this host alone and the output shall say so.`
     - [ ] `When the install step that writes beads-ui's [sync] runs, it shall also write [review] command, the absolute held_cli.py invocation, into the user's beads-ui.toml, and a second run shall change nothing.`
   - **T-2C.5 Review items in the Detail, and answering** (D-37, D-39, D-40, BU-mg2.3.17.1)
-    - [ ] `While [review] command is set in the user's beads-ui.toml, the refresher shall run it once a beat with --if-changed and write the host's review snapshot under its token, each item's task joined to its issue (title, status, priority, labels, parent, assignee, updated_at) through the store inventory, re-joined when that store's Dolt head moves.`
-    - [ ] `When the Detail draws an issue that has review items (held items whose task is the issue's id or display id, or which its latest [blocked] transition waits on) or bd blockers (open blocked-by links, and the latest [blocked] transition's why, waits on, to done and to in_progress), it shall draw a Review section above the description, unasked, one row per item with its kind, title, ask, status, session, and created and updated times.`
-    - [ ] `When the user opens a review item, the system shall show its full body from held_cli.py show --json in a reader, paged so that no drawing passes the 100,000-character tree limit, with Answer, Send to session, Go to issue and Close.`
-    - [ ] `When the user submits an answer, the system shall run held_cli.py answer on the item with the text exactly as typed, and on success shall start a turn in the session from a fixed template naming the item's path, its owner session and the answer commit, asking the session to record the answer's durable home and ship it when it holds the item, or to tell the owner session when another session does.`
-    - [ ] `If the answer command fails or refuses, then the system shall show its message, keep the typed text in the reader, and offer Send to session, which starts the same turn with the text and no answer commit.`
+    - [x] `While [review] command is set in the user's beads-ui.toml, the refresher shall run it once a beat with --if-changed and write the host's review snapshot under its token, each item's task joined to its issue (title, status, priority, labels, parent, assignee, updated_at) through the store inventory, re-joined when that store's Dolt head moves.`
+    - [x] `When the Detail draws an issue that has review items (held items whose task is the issue's id or display id, or which its latest [blocked] transition waits on) or bd blockers (open blocked-by links, and the latest [blocked] transition's why, waits on, to done and to in_progress), it shall draw a Review section above the description, unasked, one row per item with its kind, title, ask, status, session, and created and updated times.`
+    - [x] `When the user opens a review item, the system shall show its full body from held_cli.py show --json in a reader, paged so that no drawing passes the 100,000-character tree limit, with Answer, Send to session, Go to issue and Close.`
+    - [x] `When the user submits an answer, the system shall run held_cli.py answer on the item with the text exactly as typed, and on success shall start a turn in the session from a fixed template naming the item's path, its owner session and the answer commit, asking the session to record the answer's durable home and ship it when it holds the item, or to tell the owner session when another session does.`
+    - [x] `If the answer command fails or refuses, then the system shall show its message, keep the typed text in the reader, and offer Send to session, which starts the same turn with the text and no answer commit.`
     - [ ] `While [review] command is unset, the Detail shall draw its bd blockers alone, and the Review view shall say how to set the command.`
+    - As built (T-2C.5; BU-mg2.3.17.1, BU-mg2.3.17.3): the command's form, the review beat, the join and the wake in D-37's as-built note; the reader, the answer's file, the turn's template, the refusal and Send to session in D-39's; the section, its rows, its paging, the unset line and the captures in D-40's. The sixth criterion's Detail half holds (the bd blockers alone and the line saying how to set the command); its Review view half lands with that view in T-2C.6, which draws the same `REVIEW_UNSET_TEXT`.
   - **T-2C.6 The Review view: scope, filters, sorts and groups** (D-38, D-40, BU-mg2.3.17.2, BU-mg2.3.17.3)
     - [ ] `When a non-firstmate session opens the Review view, it shall list the items that session holds and the items whose task is an issue it owns; the firstmate's view shall list every item in the snapshot, its pair, with one key switching to its own and back.`
     - [ ] `When the filter holds kind:, status:, selection:, session:, machine:, task:, epic:, label: or priority: terms, or free text, the list shall keep only the matching items; an unknown key shall keep the previous filter and name the accepted keys; the default filter shall be status:open selection:current.`
@@ -2630,6 +2631,15 @@ The verb (T-2C.4) prints every open and answered item of every routed store and 
 
 Criterion 2: the selection rules are the held store's, so its own tool applies them, and the read is host infrastructure, so the refresher does it once (D-26). Mitigations: the ai-harness change is T-2C.4, a small verb over functions `compile` already calls, with its own pytest, landed first so that nothing in beads-ui waits on it; the install writes the command where it writes `[sync]` (ai-harness's AIH-qsmn3u step), so the feature ships on wherever `[sync]` does; the minute's lag is the band's own (D-26), a write from the pane drops a wake marker that re-reads at once, and the Review view's header shows the snapshot's read time. Bodies are never in the snapshot: the reader runs `show --json` for one item when it opens.
 
+**As built (T-2C.5; BU-mg2.3.17.1).**
+
+- The command. `[review] command` is an argument list naming the held tool, read from the user's own `beads-ui.toml` alone (`resolveReview` in `core/src/config.ts`, through `StoreResolver.userConfigText`, as `[sync]` is). The mod and the refresher run everything before a `review` argument, or the whole list when there is none, with their own verb (`heldBase` in `core/src/review.ts`). So both forms work: T-2C.4's `held_cli.py` alone, and the whole call ai-harness PR #6108's install writes (`beads_ui_sync.review_command`: `<python> held_cli.py review --scope pair --json`). The session passes the user's file to the refresher as `--config` when it starts it, and the refresher reads `[review]` from that file at every beat, so a change applies without a restart.
+- The beat. The refresher runs `<held> review --scope pair --json`, with `--if-changed <fingerprint>` once it holds one, in the home directory, beside the counts and by the same 28-second deadline, at most 20 seconds (`REVIEW_TIMEOUT_MS`). It reads stdout whatever the exit, since the verb exits 1 with its payload when one routed store could not be read; that exit is named in the snapshot's `error`. It writes `review-<token>.json` whole after a lease check: `schema`, `token`, `readAt` (when items were last printed), `checkedAt`, `fingerprint`, `host`, `pair`, `scope`, `pairNote`, `error`, `items` and `joins`. Each item carries the verb's keys (path, store, relpath, kind, status, session, machine, task, title, ask, created and answered times, answer_recorded_in, decider, selection, superseded_by), never a body, and `issue` when joined. With the command unset nothing runs and the file is removed. A run that fails keeps the last items and names why. No shared fallback file is written: a session reads only the file of the token `lease.json` names. A refresher taking over keeps the last token's fingerprint and joins in memory, so its first run prints `unchanged`, and it drops another token's review file with that token's counts.
+- The join. `joinPlan` sends each task to the inventory store whose prefix starts it, `_` read as `-` (`AI_CLI` holds `AI-CLI-...`), the longest prefix first. Each beat, each store with tasks gets `bd vc status --json`. Only when its head moved or its tasks changed is it read again, with `bd list --json --brief --all --limit 0 --id=<tasks>` and `--label-any=id:<tasks>`, since a task is either a bd id or a display id. A store whose head or rows cannot be read keeps its last join.
+- The wake. After the held store records an answer, the reader drops `wake/review.json`. The refresher, polling every second, runs the verb again then. A wake's review read and a beat's are queued, never run at once.
+- Measured on sem-kg-ec2, 2026-10-25T12:00Z under a LOOK reading, with this build's refresher in a scratch state directory, the real store inventory, and PR #6108's verb (head fafc77f) run by the main venv: a changed beat's verb run took 0.91 s and printed 282,119 bytes for 305 items. The whole review read, verb, six head checks, six joins and the write, took 1.82 s, and wrote a 319,575-byte snapshot with 212 items joined in 6 stores. The next beat's run with `--if-changed` took 0.52 s and printed 109 bytes; with no join read again, the whole review read took 1.08 s and kept the items and their read time.
+- Left to T-2C.6: the Review view's header with the snapshot's read time.
+
 ---
 
 <a id="d-38"></a>
@@ -2721,6 +2731,35 @@ The reader (D-40) carries an Answer input. On submit the mod writes the text, by
 
 Gate 0 keeps the action in the pane. Medium confidence because the answer path has not run against a live pad. Mitigations: a race with the owning session is refused by `answer`'s own clean-pad check, so it corrupts nothing, and the reader keeps the text and offers Send to session (Risk 16); the write path is the store's own verb, named by the user's own config (D-37), never a repository's, so a checkout cannot redirect it, and the text reaches the verb as a file, never through a shell; the turn's template is fixed, like D-33's, and Sergei's text is fenced and marked as Sergei's answer. Tests drive the path with a stub held command at the hooks entry point; the live proof answers a throwaway item in a scratch store, never one of Sergei's.
 
+**As built (T-2C.5; BU-mg2.3.17.1).**
+
+- The reader is `ReviewReader` in `hooks/review.ts`, drawn by `reviewReader` in `hooks/components/review.ts`. Its Answer field is an Input three rows tall: Enter submits, Shift+Enter types a line break, and `onInput` keeps the draft, so Send to session has the text before any submit.
+- Answer writes the field's value, unchanged, with `$.fs.write` to `<state dir>/answers/<ms>-<session dir>_<file>.txt`. It then runs `<held> answer <path> --text-file <file> --json` through `$.process.run` in the session's directory, as an argument list, for at most 120 seconds. Success is exit 0 with JSON `status: ok` and a `commit`. The answer's file is kept. On success the reader drops the review wake marker (D-37's as-built note), marks the item answered until the next snapshot has it, clears the field and submits `answerTurn` (`core/src/views/review.ts`) with `$.prompt.submit`. The session holds the item when its name is the slug of the item's `session`.
+- The turn, when the session holds the item (each field cut to one line by D-33's `inlineText`, the fence longer than any run of backticks in the text):
+
+````text
+beads-ui recorded Sergei's answer to a held item, typed in the pane's reader.
+
+- Item: <path>
+- Kind: <kind>
+- Title: <title>
+- Owner session: <session>
+- Answer commit: <commit>
+
+The text below is Sergei's answer, verbatim. held_cli.py answer wrote it under the item's ## Answer.
+
+```text sergei-answer
+<the text>
+```
+
+This session holds the item. Record the answer in its durable home (a bd comment on its task, or the decision in its design or plan doc), ship that, act on the answer, then retire the item with held_cli.py retire naming that home.
+````
+
+  When another session holds it, the last paragraph reads: "`<owner>` holds the item, not this session. Tell `<owner>` through the fleet's messaging ladder that Sergei answered it, with the item's path and the answer commit, so that it records the answer, records its durable home and ships it. Do not record or retire the item from this session."
+- A refusal or failure shows, under the field, "the answer was not recorded: the answer command exited `<code>`: `<the JSON detail, else stderr>`. The text is kept: Send to session hands it to the session." The field keeps the text and no turn starts. Send to session submits the same template with `Answer commit: none`, its second paragraph saying the text is not yet under `## Answer`, and its last asking the holder to record it with `held_cli.py answer` from a file holding it byte for byte, or asking this session to tell the holder.
+- A bd blocker is answered with the Detail's own comment control (BU-mg2.3.15), below the Review section.
+- Not yet done: the live proof on a throwaway item in a scratch store. It is part of Phase 2C's exit gate, once the chief installs this release.
+
 ---
 
 <a id="d-40"></a>
@@ -2765,6 +2804,65 @@ Gate 0 keeps the action in the pane. Medium confidence because the answer path h
 <!-- decision-lineage: decision-id=BU-mg2.2/D-40; decision-topic=where review items are drawn; governs=claude-mod:pane,claude-mod:band,packages:core/views/review; normalized-proposition=an issue's review items show by default at the top of its detail, and every item in scope is listed in a review view with filters, sorts and groups by task, epic, priority, dates, label, kind and session; applicability=surface:tui; outcome-id=detail-section-review-view; relation=different-question; related-decision-id=BU-mg2.2/D-38; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
 Criterion 5: per-issue and all-item views are both definite requirements. Mitigations: the Detail's section draws a row per item and only the opened item's body, so its height grows by one row an item and pages like the Board past its page; the issue's own `updated_at` is a sort through `priority`, `task` and `epic` grouping, and the item's time is labelled "held" or "answered" where it is drawn, so the sort says what it orders by.
+
+**As built (T-2C.5; BU-mg2.3.17.1, BU-mg2.3.17.3).**
+
+- The section is one component, `reviewRows` and `reviewBlock` in `hooks/components/review.ts`, over core's `reviewSection` (`core/src/views/review.ts`). The pane's Detail draws it after its heading and error lines, above the fields and the description, whenever the issue has review items. The band's overview draws the same rows in a task's detail, after its open-in-the-pane button and cut to the band's rows. A Detail reads the review snapshot as it loads, and the band's detail as it opens.
+- Which items: every snapshot item whose `task` is the issue's bd id or display id, or whose `docs/held/<dir>/<file>.md` part is the one its latest transition comment waits on (`owner:` or `decision:`, projects-relative or absolute), whoever holds it (D-38). A later `[unblocked ...]` comment ends that wait. Every kind and every selection is listed. Current items come first, each group oldest first, twelve at a time (`REVIEW_PAGE_ROWS`) with `earlier items` and `later items`. A row is the item's `kind: title` button, its ask, then its status, its selection when not current, its session, `held <time>` and `answered <time>`, plus "the blocked transition waits on it" for the waited-on item.
+- The bd blockers follow under "bd blockers": each `blocks` dependency whose issue is not closed (`blocked by <id>: <title> (<status>)`, the title and status from `bd show`, else from the board), then the transition's `blocked <time> from <status> by <who>`, `why`, `waits on`, `to done` and `to in_progress`. The heading counts held items and blocker lines together.
+- With `[review] command` unset the section draws the blockers alone and one line: `Held items are not read: set [review] command in your own beads-ui.toml, such as command = ["held_cli.py"].` A command set only in a repository's `beads-ui.toml` counts as unset. While the command is set but no snapshot is there, one line says why (no refresher running, no review snapshot yet); a snapshot's `error` is drawn the same way.
+- The reader replaces the Detail's body while it is open. It shows the title, path, status line and ask, then the body as Markdown, a page at a time. A page is at most 24,000 characters (`READER_PAGE_CHARS`), cut after a line break where one falls in it, with `earlier page`, `later page` and `page i of n`. Then come the Answer field, Send to session, Go to issue and Close. In the hooks test a 310,890-character body pages into 14 pages of at most 23,949 characters that join back to the body, with no drawing at or past 100,000 characters. Go to issue closes onto the joined issue's Detail, or the task's, or the Detail already open when it is that issue. Close closes onto the Detail. In the band an item's row opens the reader in the pane, where the Answer field has its three rows.
+- At 120 columns, from Claude Code 2.1.310's test kit (`hooks/tests/render.ts`; colour and hover not shown): an issue with a held decision held by this session, a held blocker held by the firstmate and named by the issue's display id, a held blocker its blocked transition waits on, and a bd blocker. The capture is cut after the first fields:
+
+```text
+╭─────────────╮ beads-ui  as of 21:12:04
+│[t: Tasks]   │ [a: Showing: mine]  [s: Swimlane: none]  [o: Sort: priority]  [n: New]  [d: Detail]  [m: Move to]
+│[1: Board]   │ [x: Delete]  [g: Band]  [k: Menu]  [h: Help]
+│[2: Backlog] │ BU-beads-ui-claude-code-aeyb beads-ui Claude Code mod: the task manager inside the Claude Code TUI,⋯
+│[3: Sprint]  │ Review (9)
+│[4: Detail]  │ [decision: D-37: where review items come from]
+│[5: Timeline]│   Approve (a), the held_cli.py review verb; one word is enough.
+│[6: Settings]│   open, aih-ec2-3@sem-kg-ec2, held 2026-10-25 09:00
+╰─────────────╯ [blocker: the review command is not installed on acn-mac]
+                  Run the install on acn-mac, or say to wait.
+                  open, aih-ec2-firstmate-1@sem-kg-ec2, held 2026-10-25 10:00
+                [blocker: Sergei to approve the Confluence space]
+                  Approve the space request.
+                  open, kg-ec2-1@sem-kg-ec2, held 2026-10-25 08:00; the blocked transition waits on it
+                bd blockers
+                  blocked by BU-mg2.3.9: T-1.5: delete confirmation flow (open)
+                  blocked 2026-10-25 08:05 from in_progress by kg-ec2-1@sem-kg-ec2
+                  why: the Confluence space must exist before the pages move.
+                  waits on: owner:ai-harness/docs/held/sem-kg-ec2--kg-ec2-1/2026-10-25-01-blocker-owner.md
+                  to done: the pages are published in the space.
+                  to in_progress: the space is approved; publish from the drafts.
+                Title: beads-ui Claude Code mod: the task manager inside the Claude Code TUI, with mouse control_
+                Description: The first surface and the first MVP target: board, backlog, sprint and roadmap views inside
+                Id: BU-mg2.3
+                Display id: BU-beads-ui-claude-code-aeyb
+                Status: blocked v
+```
+
+  The reader on the decision:
+
+```text
+╭─────────────╮ beads-ui  as of 21:12:04
+│[t: Tasks]   │ [a: Showing: mine]  [s: Swimlane: none]  [o: Sort: priority]  [n: New]  [d: Detail]  [m: Move to]
+│[1: Board]   │ [x: Delete]  [g: Band]  [k: Menu]  [h: Help]
+│[2: Backlog] │ decision: D-37: where review items come from
+│[3: Sprint]  │ /home/me/projects/ai-harness/docs/held/sem-kg-ec2--aih-ec2-3/2026-10-25-01-decision-d37.md
+│[4: Detail]  │ open, aih-ec2-3@sem-kg-ec2, held 2026-10-25 09:00
+│[5: Timeline]│ Ask: Approve (a), the held_cli.py review verb; one word is enough.
+│[6: Settings]│ ## D-37: where review items come from
+╰─────────────╯
+                The body, byte for byte.
+
+                ## Answer
+
+                Answer: _
+                [Send to session] [Go to issue] [Close]
+                t Tasks ⋅ 1 Board ⋅ 2 Backlog ⋅ 3 Sprint ⋅ 4 Detail ⋅ 5 Timeline ⋅ 6 Settings ⋅ k menu ⋅ r more tasks
+```
 
 ---
 
