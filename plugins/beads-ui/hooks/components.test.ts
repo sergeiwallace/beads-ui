@@ -4,6 +4,7 @@ import {
   type ActionContext,
   DEFAULT_BAND_SETTINGS,
   DEFAULT_PANEL_SETTINGS,
+  INDICATORS,
   INITIAL_BOARD_STATE,
   labels,
   PRESS_CLOSE,
@@ -460,6 +461,40 @@ describe("the view registry (D-35, T-2C.1)", () => {
     (nav as () => void)();
     expect(textOf(drawBand())).toContain("probe on the band");
     expect(pane.tab).not.toBe("probe");
+  });
+
+  test("should draw an indicator registry entry added with no other change on a task row, in the help's legend and as a Settings switch", async () => {
+    const remove = INDICATORS.register({
+      id: "urgent",
+      glyph: "view.board",
+      token: "priority.p0",
+      label: "priority 1 or higher",
+      detect: ({ issue }) => (issue.priority <= 1 ? "on" : undefined),
+    });
+    try {
+      const pane = await drawnPane();
+      const tree = pane.draw(UI, FRAME);
+      const rows = nodes(tree).filter((node) => String(node.props.key).startsWith("taskrow:"));
+      expect(rows.length).toBeGreaterThan(0);
+      const lit = rows.filter((row) => textOf(row).some((text) => text.includes("⊞")));
+      const urgent = pane.board.issues
+        .filter((issue) => issue.priority <= 1)
+        .map((issue) => issue.id);
+      expect(lit.length).toBeGreaterThan(0);
+      for (const row of lit) {
+        expect(urgent).toContain(String(row.props.key).slice("taskrow:".length));
+      }
+
+      pane.toggleHelp();
+      expect(textOf(pane.draw(UI, FRAME))).toContain("⊞ (#) urgent: priority 1 or higher");
+      pane.toggleHelp();
+      pane.setTab("settings");
+      expect(keysOf(pane.draw(UI, FRAME), "settings:indicator:urgent")).toContain(
+        "settings:indicator:urgent",
+      );
+    } finally {
+      remove();
+    }
   });
 
   test("should draw a view on one surface only when Settings sets it to band or pane, and on both again for both", async () => {

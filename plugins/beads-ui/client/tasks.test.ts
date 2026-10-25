@@ -84,6 +84,33 @@ describe("the task list's Client", () => {
     for (const row of rows) expect(textOf(row).props.hover).toEqual({ inverse: true });
   });
 
+  test("should draw a row's indicator gutter before its label, each glyph in its colour and dimmed where handed so", () => {
+    const { surface } = fakeSurface();
+    const props: TaskClientProps = {
+      ...PROPS,
+      rows: [
+        {
+          id: "BU-1",
+          label: "◐ P1 BU-1 first",
+          gutter: [{ text: "⟳", color: "claude", dim: true }, { text: " " }],
+        },
+        { id: "BU-2", label: "● P2 BU-2 second", gutter: [{ text: " " }, { text: " " }] },
+        { id: "BU-3", label: "○ P2 BU-3 third" },
+      ],
+    };
+    const rows = lines(TaskList(props, surface));
+
+    const [lit, glyph] = textOf(rows[0] as Drawn).props.children as [Drawn, string];
+    expect(lit).toEqual({
+      type: "Text",
+      props: { color: "claude", dimColor: true, children: "⟳" },
+    });
+    expect(textOf(rows[0] as Drawn).props.children).toEqual([lit, " ", " ", "◐ P1 BU-1 first"]);
+    expect(glyph).toBe(" ");
+    expect(textOf(rows[1] as Drawn).props.children).toEqual([" ", " ", " ", "● P2 BU-2 second"]);
+    expect(textOf(rows[2] as Drawn).props.children).toBe("○ P2 BU-3 third");
+  });
+
   test("should select a row on a left click, open the selected row on a second, and ask for its menu at the pointer on a right click", () => {
     const f = fakeSurface();
     TaskList(PROPS, f.surface);
