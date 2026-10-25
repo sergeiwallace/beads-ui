@@ -50,6 +50,7 @@ describe("COMMANDS", () => {
       "tab.detail": "4",
       "tab.timeline": "5",
       "tab.settings": "6",
+      "tab.review": "7",
       "panel.menu": "k",
       "tasks.more": "r",
       "card.edit": "e",

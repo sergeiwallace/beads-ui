@@ -53,6 +53,8 @@ export const COMMANDS: readonly Command[] = [
     binding: hotkey("6"),
     hint: "6 Settings",
   },
+  // T-2C.6 (D-40): every held item in the session's scope, filtered, sorted and grouped.
+  { id: "tab.review", label: "Review", scope: "pane", binding: hotkey("7"), hint: "7 Review" },
   // T-2B.4: every action this pane draws a key for is also in this menu.
   {
     id: "panel.menu",

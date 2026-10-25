@@ -544,6 +544,7 @@ export {
   menuView,
   panelActions,
   parseTaskMessage,
+  REVIEW_MENU_COMMAND,
   taskClientProps,
 } from "./views/menu.ts";
 export type {

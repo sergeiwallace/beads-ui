@@ -23,6 +23,7 @@ export const PANEL_VIEWS = [
   "detail",
   "timeline",
   "settings",
+  "review",
 ] as const;
 export type PanelView = (typeof PANEL_VIEWS)[number];
 
@@ -90,6 +91,13 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
     command: "tab.settings",
     labels: labels("Settings", "Set"),
     glyph: glyphOf("view.settings"),
+    planned: false,
+  },
+  {
+    view: "review",
+    command: "tab.review",
+    labels: labels("Review", "Rev"),
+    glyph: glyphOf("view.review"),
     planned: false,
   },
 ];

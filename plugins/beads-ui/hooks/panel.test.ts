@@ -433,6 +433,7 @@ describe("every action by menu and by key (T-2B.4)", () => {
     },
     { name: "Settings", reach: async (ui) => void (await ui.press({ key: "tab:settings" })) },
     { name: "Timeline", reach: async (ui) => void (await ui.press({ key: "tab:timeline" })) },
+    { name: "Review", reach: async (ui) => void (await ui.press({ key: "tab:review" })) },
   ];
   for (const view of VIEWS) {
     test(`should list in the options menu every key the ${view.name} view draws, and draw a key for every action the menu lists`, async ($, on) => {
