@@ -25,6 +25,7 @@ import {
   createArgv,
   DEFAULT_BAND_SETTINGS,
   DEFAULT_CONFIG,
+  DEFAULT_REVIEW_FILTER,
   DEFAULT_SORT,
   type DetailState,
   DIRECT_GLYPH,
@@ -46,6 +47,7 @@ import {
   type IndicatorRead,
   type Issue,
   indicatorRead,
+  initialReviewFilter,
   isCollapseRule,
   isFirstmate,
   isPanelMode,
@@ -59,9 +61,11 @@ import {
   menuView,
   type NavLayout,
   navLayout,
+  nextOf,
   nextSort,
   nextSwimlaneMode,
   openDetail,
+  openReviewIndex,
   PARTIAL_GLYPH,
   type PageView,
   type PanelView,
@@ -91,7 +95,17 @@ import {
   planDisplayId,
   planMove,
   plannedText,
+  REVIEW_FILTER_KEYS,
+  REVIEW_GROUPS,
+  REVIEW_LIST_PAGE_ITEMS,
+  REVIEW_MENU_COMMAND,
+  REVIEW_SORTS,
   type ResolvedConfig,
+  type ReviewFilterState,
+  type ReviewGroup,
+  type ReviewListView,
+  type ReviewScope,
+  type ReviewSort,
   readPendingDisplayIds,
   readyArgv,
   reduceBoard,
@@ -100,6 +114,7 @@ import {
   resolveConfig,
   resolveGlyphs,
   resolveTheme,
+  reviewListView,
   reviewSection,
   SHORT_ROWS,
   SNAPSHOT_FILE,
@@ -111,6 +126,7 @@ import {
   type SurfaceId,
   type SurfaceRow,
   type SwimlaneMode,
+  scopedItems,
   settingsView,
   showArgv,
   showsTasks,
@@ -122,6 +138,7 @@ import {
   stepPage,
   storeLabel,
   submitFilter,
+  submitReviewFilter,
   surfaceOf,
   type TaskClientProps,
   type TaskListView,
@@ -159,12 +176,14 @@ import {
   indicatorOn,
   LEGEND_TITLE,
   legendLines,
+  reviewItemsOf,
   setIndicatorSwitches,
+  setReviewIndex,
 } from "./components/indicators.ts";
 import { colorOf, glyphText, setAscii, setTheme, styledUi } from "./components/look.ts";
 import { navFrame } from "./components/nav.ts";
 import { type ViewEntry, ViewRegistry } from "./components/registry.ts";
-import { ANSWER_KEY, reviewBlock, reviewReader } from "./components/review.ts";
+import { ANSWER_KEY, reviewBlock, reviewList, reviewReader } from "./components/review.ts";
 import {
   rowControlColumns,
   TASKS_CLIENT_KEY,
@@ -289,6 +308,10 @@ type Ran = (
 /** A `hint` notice names what to do next, so the next action that succeeds clears it. */
 type Notice = { text: string; token: Token; hint?: true };
 
+/** The Review view's lines besides its items on the band: heading, controls, filter, pager. */
+const REVIEW_CHROME_ROWS = 4;
+const REVIEW_SCOPE_HINT =
+  "the Review view lists the items this session holds and those about issues it owns; the firstmate lists its pair's";
 const FOCUS_HINT = "focus a card first: Tab moves between cards";
 const TASK_FOCUS_HINT = "focus a task first: Tab or the arrows move between tasks";
 const MOVE_LABEL = "Move to";
@@ -392,6 +415,17 @@ export class BeadsPane {
   readonly reader: ReviewReader;
   /** The Review section's page of held items. */
   reviewPage = 0;
+  /** The view the reader was opened from, which draws it: the Detail or the Review view. */
+  readerOn: "detail" | "review" = "detail";
+  /**
+   * The Review view (T-2C.6): the firstmate lists its pair (`pair`) or its own (`mine`), any
+   * other session its own; its filter, sort, group and page.
+   */
+  reviewScope: ReviewScope = "mine";
+  reviewFilter: ReviewFilterState = initialReviewFilter();
+  reviewSort: ReviewSort = "updated";
+  reviewGroup: ReviewGroup = "none";
+  reviewPages: Record<SurfaceId, number> = { pane: 0, band: 0 };
   undo: UndoClose | undefined;
   notice: Notice | undefined;
   focusedId: string | undefined;
@@ -460,6 +494,7 @@ export class BeadsPane {
     private readonly bandSettings?: BandSettingsPanel,
   ) {
     this.views.drawWith("tasks", (surface) => this.drawTasks(surface));
+    this.views.drawWith("review", (surface) => this.drawReviewView(surface));
     this.review = new ReviewFeed(stores);
     this.reader = new ReviewReader(stores, this.review);
     this.reader.onChange = () => this.host?.invalidate();
@@ -495,6 +530,7 @@ export class BeadsPane {
     }
     const session = this.stores.sessionName;
     this.scope = session !== undefined && !isFirstmate(session) ? "mine" : "all";
+    this.reviewScope = this.firstmate ? "pair" : "mine";
     const scopes = await this.host?.storeGet(SCOPE_KEY).catch(() => undefined);
     const chosen = isRecord(scopes) ? scopes[session ?? ""] : undefined;
     if (chosen === "mine" || chosen === "all") this.scope = chosen;
@@ -746,6 +782,7 @@ export class BeadsPane {
         if (issue !== undefined) this.dispatch({ type: "issue-refreshed", issue });
       }
       if (full && this.detailId !== undefined) await this.loadDetail(this.detailId);
+      else await this.loadReview();
       if (this.undo !== undefined) {
         const undone = this.board.issues.find((issue) => issue.id === this.undo?.id);
         if (undone !== undefined && undone.status !== this.undo.closed) this.undo = undefined;
@@ -1232,6 +1269,10 @@ export class BeadsPane {
    * the new page's first one instead of falling back to the prompt.
    */
   async stepFocusedPage(delta: number): Promise<void> {
+    if (this.tab === "review") {
+      this.stepReviewPage(delta);
+      return;
+    }
     if (this.tab === "backlog") {
       await this.stepBacklog(delta, true);
       return;
@@ -1280,9 +1321,14 @@ export class BeadsPane {
     this.host?.invalidate();
     void this.host?.focus(PANE_ID, `tab:${tab}`).catch(() => undefined);
     if (tab === "timeline") void this.readTimeline();
+    if (tab === "review") void this.loadReview().then(() => this.host?.invalidate());
   }
 
   cycleSwimlane(): void {
+    if (this.tab === "review") {
+      this.cycleReviewGroup();
+      return;
+    }
     this.swimlane = nextSwimlaneMode(this.swimlane);
     this.clearHint();
     this.resetPages();
@@ -1309,6 +1355,10 @@ export class BeadsPane {
    * merged so another session's choice is kept.
    */
   async toggleScope(): Promise<void> {
+    if (this.tab === "review") {
+      this.toggleReviewScope();
+      return;
+    }
     if (this.stores.sessionName === undefined) {
       this.hint(NO_NAME_TEXT);
       this.host?.invalidate();
@@ -1328,6 +1378,10 @@ export class BeadsPane {
   }
 
   cycleSort(): void {
+    if (this.tab === "review") {
+      this.cycleReviewSort();
+      return;
+    }
     this.sort = nextSort(this.sort);
     this.clearHint();
     this.resetPages();
@@ -1463,6 +1517,7 @@ export class BeadsPane {
       "page.back": () => void this.stepFocusedPage(-1),
       "board.lanes": () => this.stepLanes(1),
       "close.undo": () => void this.undoClose(),
+      [REVIEW_MENU_COMMAND]: () => void this.openFirstReview(),
     };
     actions[command]?.();
   }
@@ -1601,7 +1656,7 @@ export class BeadsPane {
       this.run(showArgv(id), READ_TIMEOUT_MS),
       this.run(historyArgv(id), READ_TIMEOUT_MS),
       this.run(commentsArgv(id), READ_TIMEOUT_MS),
-      this.review.load().catch(() => undefined),
+      this.loadReview(),
     ]);
     if (this.detailId !== id) return;
     const parsedComments = comments.ok ? parseBdComments(comments.stdout) : undefined;
@@ -1885,11 +1940,13 @@ export class BeadsPane {
     tab: string = this.tab,
   ): ActionContext {
     const paged =
-      tab === "backlog"
-        ? this.backlogViewAt(width).page.pages > 1
-        : tab === "board" &&
-          (view.unplacedPage.pages > 1 ||
-            view.lanes.some((lane) => lane.pages.some((page) => page.pages > 1)));
+      tab === "review"
+        ? this.reviewListOn().pages > 1
+        : tab === "backlog"
+          ? this.backlogViewAt(width).page.pages > 1
+          : tab === "board" &&
+            (view.unplacedPage.pages > 1 ||
+              view.lanes.some((lane) => lane.pages.some((page) => page.pages > 1)));
     const list =
       tab === "tasks" ? this.taskListAt(width, this.frameShort(), this.frame.bodyRows) : undefined;
     return {
@@ -1904,6 +1961,7 @@ export class BeadsPane {
       ...(list?.collapsible === true ? { more: list.moreLabel } : {}),
       ...(this.tasksShown ? {} : { hideTasks: true }),
       nav: this.viewsOn("pane"),
+      ...(tab === "review" ? { review: this.reviewControls() } : {}),
     };
   }
 
@@ -1919,14 +1977,18 @@ export class BeadsPane {
     const issue =
       id === undefined ? undefined : this.board.issues.find((candidate) => candidate.id === id);
     const name = id === undefined ? undefined : (issue?.displayId ?? id);
-    return menuView(this.actionContext(width), name);
+    return menuView(this.actionContext(width), name, this.reviewCountOf(id));
   }
 
   private menuViewOf(ctx: ActionContext): MenuView {
     const id = this.menuFor;
     const issue =
       id === undefined ? undefined : this.board.issues.find((candidate) => candidate.id === id);
-    return menuView(ctx, id === undefined ? undefined : (issue?.displayId ?? id));
+    return menuView(
+      ctx,
+      id === undefined ? undefined : (issue?.displayId ?? id),
+      this.reviewCountOf(id),
+    );
   }
 
   /** The options menu; over the Client's rows it is as wide as its widest line (T-2B.5). */
@@ -2390,6 +2452,9 @@ export class BeadsPane {
           children: "Quick-add: title words plus p0-p4, type:, @assignee, +label, due:, sprint:",
         }),
         Text({ children: `Filter keys: ${FILTER_KEYS.join(", ")}` }),
+        Text({
+          children: `Review view filter keys: ${REVIEW_FILTER_KEYS.join(", ")}, and free text; it opens on ${DEFAULT_REVIEW_FILTER}`,
+        }),
         Text({ bold: true, children: LEGEND_TITLE }),
         ...legendLines().map((text) => Text({ children: text })),
         Text({ bold: true, children: "Focus, hide and show" }),
@@ -2740,17 +2805,8 @@ export class BeadsPane {
   private drawDetail(ui: PaneUi, width: number, surface: Surface): RenderElement {
     const { Box, Text, Input, Select, Markdown } = ui;
     const id = this.detailId;
-    const reading = this.reader.state;
-    if (reading !== undefined) {
-      return reviewReader(surface, reading, {
-        step: (delta) => this.reader.step(delta),
-        answer: (text) => void this.reader.answer(text),
-        type: (text) => this.reader.type(text),
-        send: () => void this.reader.send(),
-        issue: () => void this.goToIssue(),
-        close: () => this.closeReader(),
-      });
-    }
+    const reader = this.readerOn === "detail" ? this.drawReader(surface) : undefined;
+    if (reader !== undefined) return reader;
     if (id === undefined) {
       return Box({
         key: "detail",
@@ -2941,10 +2997,14 @@ export class BeadsPane {
     });
   }
 
-  /** Opens a held item in the reader, over the Detail (T-2C.5). */
-  async openReview(path: string): Promise<void> {
+  /**
+   * Opens a held item in the reader (T-2C.5), over the Detail or, from the Review view, over
+   * that view (T-2C.6).
+   */
+  async openReview(path: string, on: "detail" | "review" = "detail"): Promise<void> {
     if (this.review.item(path) === undefined) await this.review.load().catch(() => undefined);
-    this.setTab("detail");
+    this.readerOn = on;
+    this.setTab(on);
     await this.reader.open(path);
     void this.host?.focus(PANE_ID, ANSWER_KEY).catch(() => undefined);
   }
@@ -2964,8 +3024,170 @@ export class BeadsPane {
     if (item === undefined) return;
     const target = item.issue?.id ?? (item.task === "none" ? undefined : item.task);
     const open = this.detail?.issue;
-    if (target === undefined || target === open?.id || target === open?.displayId) return;
+    if (target === undefined) return;
+    if (target === open?.id || target === open?.displayId) {
+      this.setTab("detail");
+      return;
+    }
     await this.openDetailFor(target);
+  }
+
+  /** The reader on `surface`, when an item is open in it. */
+  private drawReader(surface: Surface): RenderElement | undefined {
+    const reading = this.reader.state;
+    if (reading === undefined) return undefined;
+    return reviewReader(surface, reading, {
+      step: (delta) => this.reader.step(delta),
+      answer: (text) => void this.reader.answer(text),
+      type: (text) => this.reader.type(text),
+      send: () => void this.reader.send(),
+      issue: () => void this.goToIssue(),
+      close: () => this.closeReader(),
+    });
+  }
+
+  /** The session is the firstmate (D-30): its Review view lists its whole pair. */
+  get firstmate(): boolean {
+    const session = this.stores.sessionName;
+    return session !== undefined && isFirstmate(session);
+  }
+
+  /**
+   * Reads the review snapshot and hands the row indicators the pair's open, current items by
+   * task (T-2C.7), so every row on both surfaces draws from the same read.
+   */
+  private async loadReview(): Promise<void> {
+    await this.review.load().catch(() => undefined);
+    const index = this.review.configured ? openReviewIndex(this.review.items) : undefined;
+    if (setReviewIndex(index)) this.host?.invalidate();
+  }
+
+  /** How many open, current review items are about the board's issue `id` (T-2C.7). */
+  private reviewCountOf(id: string | undefined): number {
+    if (id === undefined) return 0;
+    const issue = this.board.issues.find((one) => one.id === id) ?? this.detail?.issue;
+    return issue?.id === id ? reviewItemsOf(issue).length : 0;
+  }
+
+  /** The options menu's review row: the task's Detail, then its first open item in the reader. */
+  private async openFirstReview(): Promise<void> {
+    const id = this.menuFor;
+    const issue = id === undefined ? undefined : this.board.issues.find((one) => one.id === id);
+    const first = issue === undefined ? undefined : reviewItemsOf(issue)[0];
+    if (issue === undefined || first === undefined) return;
+    await this.openDetailFor(issue.id);
+    await this.openReview(first.path);
+  }
+
+  /** The Review view's controls as the menu lists them (T-2C.6). */
+  private reviewControls(): { sort: string; group: string; scope?: string } {
+    const view = this.reviewListOn();
+    return {
+      sort: view.sort,
+      group: view.group,
+      ...(view.scope === undefined ? {} : { scope: view.scope.label }),
+    };
+  }
+
+  /**
+   * The Review view's model (T-2C.6) at `columns`, `pageItems` to a page: the pair's items the
+   * session's scope keeps (D-38), through its filter, sort and group.
+   */
+  reviewListOn(on: SurfaceId = "pane", pageItems = REVIEW_LIST_PAGE_ITEMS): ReviewListView {
+    const snapshot = this.review.snapshot;
+    const note = this.review.note;
+    const titles = (id: string) => this.board.issues.find((one) => one.id === id)?.title;
+    const scope: ReviewScope = this.firstmate ? this.reviewScope : "mine";
+    return reviewListView({
+      scoped: scopedItems(this.review.items, {
+        session: this.stores.sessionName,
+        host: snapshot?.host ?? "",
+        scope,
+      }),
+      scope,
+      firstmate: this.firstmate,
+      pair: snapshot?.pair ?? [],
+      filter: this.reviewFilter,
+      sort: this.reviewSort,
+      group: this.reviewGroup,
+      page: this.reviewPages[on],
+      pageItems,
+      configured: this.review.configured,
+      ...(snapshot === undefined ? {} : { readAt: snapshot.readAt }),
+      ...(note === undefined ? {} : { note }),
+      titleOf: titles,
+    });
+  }
+
+  /**
+   * The Review view (T-2C.6, D-35) on either surface: the list, or the reader over it while an
+   * item opened from it is read. On the band a page holds what its rows leave beside the view's
+   * heading, controls, filter and pager, and an item opens in the pane's reader.
+   */
+  drawReviewView(surface: Surface): RenderElement {
+    const band = surface.id === "band";
+    if (!band && this.readerOn === "review") {
+      const reader = this.drawReader(surface);
+      if (reader !== undefined) return reader;
+    }
+    const per = band
+      ? Math.max(1, (surface.rows ?? SHORT_ROWS) - REVIEW_CHROME_ROWS)
+      : REVIEW_LIST_PAGE_ITEMS;
+    const view = this.reviewListOn(surface.id, per);
+    const inPane = () => {
+      this.setTab("review");
+      void this.openOrFocus();
+    };
+    return reviewList(surface, view, this.reviewFilter.text, {
+      open: (path) =>
+        band
+          ? void this.openOrFocus().then(() => this.openReview(path, "review"))
+          : void this.openReview(path, "review"),
+      filter: (text) => this.submitReviewFilter(text),
+      ...(view.scope === undefined ? {} : { scope: () => this.toggleReviewScope() }),
+      sort: () => this.cycleReviewSort(),
+      group: () => this.cycleReviewGroup(),
+      page: (delta) => this.stepReviewPage(delta, surface.id, per),
+      ...(band ? { elsewhere: inPane } : {}),
+    });
+  }
+
+  submitReviewFilter(text: string): void {
+    this.reviewFilter = submitReviewFilter(this.reviewFilter, text);
+    this.reviewPages = { pane: 0, band: 0 };
+    this.host?.invalidate();
+  }
+
+  /** The firstmate's key (`a`) on the Review view: its pair's items, or its own, and back. */
+  toggleReviewScope(): void {
+    if (!this.firstmate) {
+      this.hint(REVIEW_SCOPE_HINT);
+      this.host?.invalidate();
+      return;
+    }
+    this.reviewScope = this.reviewScope === "pair" ? "mine" : "pair";
+    this.reviewPages = { pane: 0, band: 0 };
+    this.clearHint();
+    this.host?.invalidate();
+  }
+
+  cycleReviewSort(): void {
+    this.reviewSort = nextOf(REVIEW_SORTS, this.reviewSort);
+    this.reviewPages = { pane: 0, band: 0 };
+    this.host?.invalidate();
+  }
+
+  cycleReviewGroup(): void {
+    this.reviewGroup = nextOf(REVIEW_GROUPS, this.reviewGroup);
+    this.reviewPages = { pane: 0, band: 0 };
+    this.host?.invalidate();
+  }
+
+  /** Steps the Review view's page on `on`, wrapping at the ends; each surface keeps its own. */
+  stepReviewPage(delta: number, on: SurfaceId = "pane", per = REVIEW_LIST_PAGE_ITEMS): void {
+    const { page, pages } = this.reviewListOn(on, per);
+    this.reviewPages = { ...this.reviewPages, [on]: stepPage(page, pages, delta) };
+    this.host?.invalidate();
   }
 
   /**

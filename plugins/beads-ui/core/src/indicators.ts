@@ -4,8 +4,10 @@
 // help and Settings draw their legend and switches from the same list, so a new indicator is one
 // entry here and one glyph in glyphs.ts.
 
-import { GLYPHS, type GlyphId, glyphOf } from "./glyphs.ts";
+import { type GlyphId, glyphOf } from "./glyphs.ts";
 import type { Issue } from "./model.ts";
+import type { ReviewItem } from "./review.ts";
+import { openItemsOf } from "./reviewList.ts";
 import type { Token } from "./tokens.ts";
 
 /** The issues of the read a row comes from, by id and by parent. */
@@ -30,13 +32,15 @@ export function indicatorRead(issues: readonly Issue[]): IndicatorRead {
 export const EMPTY_READ: IndicatorRead = indicatorRead([]);
 
 /**
- * What an indicator is shown: the issue, the read it came from, and the sessions the host's
- * session registry holds live (D-26), undefined when no registry was read.
+ * What an indicator is shown: the issue, the read it came from, the sessions the host's session
+ * registry holds live (D-26), undefined when no registry was read, and the open, current review
+ * items of the pair by task (T-2C.7, `openReviewIndex`), undefined when none were read.
  */
 export interface IndicatorContext {
   issue: Issue;
   read: IndicatorRead;
   live: ReadonlySet<string> | undefined;
+  review?: ReadonlyMap<string, readonly ReviewItem[]>;
 }
 
 /** `on`: the glyph drawn; `dim`: drawn dimmed. Undefined: a blank cell. */
@@ -95,8 +99,15 @@ export function detectBlocked(context: IndicatorContext): IndicatorState | undef
   return blocking ? "on" : undefined;
 }
 
-/** The review indicator's slot (T-2C.7 detects it once review items are read). */
-const detectNothing = (): undefined => undefined;
+/**
+ * Review (T-2C.7): at least one open, current held item of the pair is about the issue, by its bd
+ * id or its display id, as its Detail lists them (D-38).
+ */
+export function detectReview(context: IndicatorContext): IndicatorState | undefined {
+  const { issue, review } = context;
+  if (review === undefined) return undefined;
+  return openItemsOf(review, issue).length > 0 ? "on" : undefined;
+}
 
 export const DEFAULT_INDICATORS: readonly Indicator[] = [
   {
@@ -117,9 +128,8 @@ export const DEFAULT_INDICATORS: readonly Indicator[] = [
     id: "review",
     glyph: "indicator.review",
     token: "warning",
-    label: GLYPHS["indicator.review"].meaning,
-    planned: true,
-    detect: detectNothing,
+    label: "an open, current review item is about it: a held decision, blocker or question",
+    detect: detectReview,
   },
 ];
 

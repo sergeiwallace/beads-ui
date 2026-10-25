@@ -1,6 +1,7 @@
 import {
   answerArgv,
   answerTurn,
+  inPair,
   isRefresherToken,
   itemKey,
   LEASE_FILE,
@@ -78,9 +79,13 @@ export class ReviewFeed {
     return this.command !== undefined;
   }
 
-  /** Every item, answered ones from this pane marked so before the next snapshot shows it. */
+  /**
+   * Every item inside the snapshot's pair (D-38: no session draws one from outside it), answered
+   * ones from this pane marked so before the next snapshot shows it.
+   */
   get items(): ReviewItem[] {
-    const items = this.snapshot?.items ?? [];
+    const snapshot = this.snapshot;
+    const items = snapshot === undefined ? [] : inPair(snapshot.items, snapshot);
     return items.map((item) => {
       const at = this.answered.get(item.path);
       return at === undefined || item.status !== "open"

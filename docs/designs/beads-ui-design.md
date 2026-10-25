@@ -674,17 +674,19 @@ Each phase carries its scope, deliverables, tasks with EARS acceptance criteria 
     - [x] `When the user opens a review item, the system shall show its full body from held_cli.py show --json in a reader, paged so that no drawing passes the 100,000-character tree limit, with Answer, Send to session, Go to issue and Close.`
     - [x] `When the user submits an answer, the system shall run held_cli.py answer on the item with the text exactly as typed, and on success shall start a turn in the session from a fixed template naming the item's path, its owner session and the answer commit, asking the session to record the answer's durable home and ship it when it holds the item, or to tell the owner session when another session does.`
     - [x] `If the answer command fails or refuses, then the system shall show its message, keep the typed text in the reader, and offer Send to session, which starts the same turn with the text and no answer commit.`
-    - [ ] `While [review] command is unset, the Detail shall draw its bd blockers alone, and the Review view shall say how to set the command.`
+    - [x] `While [review] command is unset, the Detail shall draw its bd blockers alone, and the Review view shall say how to set the command.`
     - As built (T-2C.5; BU-mg2.3.17.1, BU-mg2.3.17.3): the command's form, the review beat, the join and the wake in D-37's as-built note; the reader, the answer's file, the turn's template, the refusal and Send to session in D-39's; the section, its rows, its paging, the unset line and the captures in D-40's. The sixth criterion's Detail half holds (the bd blockers alone and the line saying how to set the command); its Review view half lands with that view in T-2C.6, which draws the same `REVIEW_UNSET_TEXT`.
   - **T-2C.6 The Review view: scope, filters, sorts and groups** (D-38, D-40, BU-mg2.3.17.2, BU-mg2.3.17.3)
-    - [ ] `When a non-firstmate session opens the Review view, it shall list the items that session holds and the items whose task is an issue it owns; the firstmate's view shall list every item in the snapshot, its pair, with one key switching to its own and back.`
-    - [ ] `When the filter holds kind:, status:, selection:, session:, machine:, task:, epic:, label: or priority: terms, or free text, the list shall keep only the matching items; an unknown key shall keep the previous filter and name the accepted keys; the default filter shall be status:open selection:current.`
-    - [ ] `When the sort is updated, created, priority, task, epic, kind or session, the list shall order by it, with ties ordered by updated, newest first; when grouping by task, epic, kind or session, it shall draw a header with a count per group.`
-    - [ ] `When the user opens an item in the Review view, the reader of T-2C.5 shall show it, and Go to issue shall open its issue's Detail.`
-    - [ ] `When the band's overview shows Review, it shall draw the same list, filters and sorts through the shared components.`
-    - [ ] `If an item's machine is outside the snapshot's pair, then no session shall draw it; and a non-firstmate session shall draw no item it neither holds nor owns, outside an issue's own Detail.`
+    - [x] `When a non-firstmate session opens the Review view, it shall list the items that session holds and the items whose task is an issue it owns; the firstmate's view shall list every item in the snapshot, its pair, with one key switching to its own and back.`
+    - [x] `When the filter holds kind:, status:, selection:, session:, machine:, task:, epic:, label: or priority: terms, or free text, the list shall keep only the matching items; an unknown key shall keep the previous filter and name the accepted keys; the default filter shall be status:open selection:current.`
+    - [x] `When the sort is updated, created, priority, task, epic, kind or session, the list shall order by it, with ties ordered by updated, newest first; when grouping by task, epic, kind or session, it shall draw a header with a count per group.`
+    - [x] `When the user opens an item in the Review view, the reader of T-2C.5 shall show it, and Go to issue shall open its issue's Detail.`
+    - [x] `When the band's overview shows Review, it shall draw the same list, filters and sorts through the shared components.`
+    - [x] `If an item's machine is outside the snapshot's pair, then no session shall draw it; and a non-firstmate session shall draw no item it neither holds nor owns, outside an issue's own Detail.`
+    - As built (T-2C.6; BU-mg2.3.17.2, BU-mg2.3.17.3): the rules in `core/src/reviewList.ts` rather than `core/src/review.ts`, so the refresher, which imports `review.ts` through Node's type stripping, loads none of them; the list model `reviewListView` in `core/src/views/review.ts`; the component `reviewList` in `hooks/components/review.ts`; the scope rule, the pair boundary and the keys in D-38's as-built note; the view, its layout and the captures in D-40's.
   - **T-2C.7 The review indicator** (D-41, BU-mg2.3.18.1)
-    - [ ] `When an issue has at least one open, current review item, the review indicator shall show on its rows, and the row's options menu shall name the count and open the first.`
+    - [x] `When an issue has at least one open, current review item, the review indicator shall show on its rows, and the row's options menu shall name the count and open the first.`
+    - As built (T-2C.7, BU-mg2.3.18.1): `detectReview`, the index the pane hands the gutter at every refresh, and the menu row, in D-41's as-built note.
   - **T-2C.8 Every pane view on the framework** (D-35, BU-mg2.3.21.5)
     - [ ] `When this task lands, every view the pane draws (Tasks, Board, Backlog, Detail with its fields, comments and Review section, Timeline, Settings, Review) shall be a view registry entry drawn by both adapters, and hooks/pane.ts and hooks/panel.ts shall hold no view drawing outside the framework.`
     - [ ] `When any view is drawn in the band's overview, every action it offers in the pane shall be reachable there, by a button or a menu, and a test shall enumerate each view's actions on both surfaces and fail on one reachable on one surface alone, unless [surfaces] limits the view.`
@@ -2638,7 +2640,7 @@ Criterion 2: the selection rules are the held store's, so its own tool applies t
 - The join. `joinPlan` sends each task to the inventory store whose prefix starts it, `_` read as `-` (`AI_CLI` holds `AI-CLI-...`), the longest prefix first. Each beat, each store with tasks gets `bd vc status --json`. Only when its head moved or its tasks changed is it read again, with `bd list --json --brief --all --limit 0 --id=<tasks>` and `--label-any=id:<tasks>`, since a task is either a bd id or a display id. A store whose head or rows cannot be read keeps its last join.
 - The wake. After the held store records an answer, the reader drops `wake/review.json`. The refresher, polling every second, runs the verb again then. A wake's review read and a beat's are queued, never run at once.
 - Measured on sem-kg-ec2, 2026-10-25T12:00Z under a LOOK reading, with this build's refresher in a scratch state directory, the real store inventory, and PR #6108's verb (head fafc77f) run by the main venv: a changed beat's verb run took 0.91 s and printed 282,119 bytes for 305 items. The whole review read, verb, six head checks, six joins and the write, took 1.82 s, and wrote a 319,575-byte snapshot with 212 items joined in 6 stores. The next beat's run with `--if-changed` took 0.52 s and printed 109 bytes; with no join read again, the whole review read took 1.08 s and kept the items and their read time.
-- Left to T-2C.6: the Review view's header with the snapshot's read time.
+- The Review view's heading draws the snapshot's read time (`held items read <time>`) in the pane (T-2C.6).
 
 ---
 
@@ -2686,6 +2688,13 @@ Criterion 2: the selection rules are the held store's, so its own tool applies t
 <!-- decision-lineage: decision-id=BU-mg2.2/D-38; decision-topic=which review items each session sees; governs=packages:core/review,claude-mod:review,repo:ai-harness/held_cli; normalized-proposition=the review snapshot holds only the host pair's items, the firstmate lists all of them, another session lists the items it holds or whose issue it owns, and an issue's detail lists the pair's items about that issue; applicability=surface:tui; outcome-id=pair-snapshot-firstmate-all; relation=refines; related-decision-id=BU-mg2.2/D-25; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
 Gate 0 keeps the firstmate's own items and its pair. Mitigations: a Detail is opened on one issue, and every item it lists is one Sergei must act on for that issue, inside the same pair the firstmate already sees, so it crosses no boundary Sergei drew; `task: none` items held by a session reach it through the session's own list, and the firstmate sees all of them; a test proves that no session draws an item from outside the pair and that a non-firstmate's Review view holds nothing it neither holds nor owns (T-2C.6).
+
+**As built (T-2C.6; BU-mg2.3.17.2, BU-mg2.3.17.3).**
+
+- The pair boundary is one place in the session: `ReviewFeed.items` (`hooks/review.ts`) keeps only the items whose `machine` is a member of the snapshot's `pair`, or this host alone when the verb named no pair, and none when the snapshot names neither (`inPair`, `pairMembers` in `core/src/reviewList.ts`). The Review view, every Detail and the review indicator read that getter, so an item from outside the pair is drawn nowhere. The verb already prints only the pair's items; this keeps a snapshot written some other way from widening it, and the later all-hosts scope (BU-mg2.3.17.4) widens these two functions.
+- Holding is `holdsItem`: the item's `session` is `<session name>@<this host>`, the host read from the snapshot's `host`, or the name alone when `session` names no host. So `aih-ec2-3@acn-mac` is not held by `aih-ec2-3` on sem-kg-ec2. Owning is `ownsItem`: the joined issue's assignee is the session's name. A session with no name lists nothing on its own scope.
+- The firstmate (`isFirstmate`, D-30) opens on `pair`, every item of the snapshot; its key is `a`, the board's Mine and All key (D-29), shown as the `Showing: the pair's` and `Showing: mine` control, which switches to the items it holds or owns, the same rule as any other session's, and back. The choice lasts the session and is kept apart from the board's Mine and All. Any other session draws no scope control; `a` on its Review view says that only the firstmate lists the pair.
+- Tests: `core/test/review-list.test.ts` (whose items the Review view lists: mine, pair, a session with no name, the pair boundary with and without a pair) and `hooks/review-view.test.ts` (a non-firstmate's held-or-owned list with the default filter and with `selection:all`, the firstmate's whole pair and `a` both ways, an item from outside the pair drawn in no Review view, Detail or gutter, and a non-firstmate's list on the band).
 
 ---
 
@@ -2864,6 +2873,103 @@ Criterion 5: per-issue and all-item views are both definite requirements. Mitiga
                 t Tasks ⋅ 1 Board ⋅ 2 Backlog ⋅ 3 Sprint ⋅ 4 Detail ⋅ 5 Timeline ⋅ 6 Settings ⋅ k menu ⋅ r more tasks
 ```
 
+**As built (T-2C.6; BU-mg2.3.17.2, BU-mg2.3.17.3).**
+
+- The view is one registry entry (D-35), `review`, `tab.review` on key `7`, labelled `Review` and `Rev`, its glyph `view.review` (`⁇`, ASCII `?`, new in the glyph table and inside the width rule), drawn by `BeadsPane.drawReviewView` through the pane adapter and, in the band's overview, through the band adapter. `[surfaces] review` and Settings' surfaces row set it like any view; by default it is on both.
+- The model is `reviewListView` over `scopedItems`, `matchesReview`, `sortReviewItems` and `groupReviewItems` (`core/src/reviewList.ts`): the items in scope through the filter, sorted, grouped, and cut into pages of whole items, each group's header on every page it spans with its whole count. The heading is `Review: <kept> of <in scope> items, <whose>`, where whose is `the pair's (<pair>)` or `this session's own`, then, in the pane, `held items read <time>`.
+- The filter line is a `Filter:` field (`field`, D-35), opening on `status:open selection:current`. A word with a colon is a term; any other word is free text, every word to be found in the title or ask in any case, so free text cannot hold a colon. `selection:` takes the five values Sergei's list and the held README give, `priority:` 0 to 4 or P0 to P4; `session:` takes the whole `<name>@<host>` or the name alone; `task:` the item's task or the joined issue's bd id or display id; `epic:` the joined issue's parent; `label:` and `priority:` the joined issue's, so an item with no joined issue never matches them. An unknown key, an unknown value or an empty value keeps the previous filter and names the accepted keys (`describeReviewFilterError`), as the Backlog's filter does. The choice is held for the session, not in `$.store`.
+- The sorts, stepped by `o` or the `Sort:` control: `updated (answered, else held)`, `created (held)`, priority, task, epic, kind and session, the labels saying which time the two time sorts read. Updated and created are newest first; the others ascending, with an item that has no value (no joined issue, `task: none`) last. Ties go to updated, newest first, then the path, so the order is the same on every draw. Groups, stepped by `s` or the `Group:` control: none, task (`<task>: <issue title>`, or `no task`), epic (`<parent>: <title>` when the board holds the parent, or `no epic`), kind and session, each header `<name> (<count>)`, the groups placed where their first item falls, so the sort orders them too.
+- The keys reuse the pane's: `a`, `o`, `s`, `p` and `b` run the Review view's own scope, sort, group and pager while it is open, and the options menu lists them under This view. No new hotkey was needed beside `7`. The commands' labels are unchanged.
+- The row, in the pane: the item's `kind: title` button, its ask, then its status, its selection when not current, its session, `held` and `answered` times, its task (the joined display id, or `no task`) and its issue's priority; 25 items to a page (`REVIEW_LIST_PAGE_ITEMS`), so a page stays far under the tree limit beside the pane's chrome (the 30-item test's second page drew under 100,000 characters). In the band, one line an item, the button and that status line, and as many items as the overview's rows leave beside the heading, controls, filter and pager; the band's page is its own. In the band the filter field is the band's Input where the band was handed one, else its button form, the two presets and a button that opens the view in the pane.
+- Opening an item opens the reader of T-2C.5 over the Review view (`readerOn`), so `Close` returns to the list and `Go to issue` opens the issue's Detail; in the band an item opens the pane's reader. With `[review] command` unset the view draws `REVIEW_UNSET_TEXT`; with a snapshot missing or failed, the same note the Detail draws.
+- The help adds a line naming the Review view's filter keys and its default.
+
+The Review view at 120 columns, from Claude Code 2.1.310's test kit (`hooks/tests/render.ts`; colour and hover not shown), for a snapshot of a pair `acn-mac` and `sem-kg-ec2` holding: a blocker held by `kg-ec2-1` about BU-1 (assigned to `aih-ec2-3`), a decision held by `aih-ec2-3`, a decision held by `kg-ec2-1` about its own BU-3, a question on `acn-mac`, an item on `fw-lnx` that names BU-1 (drawn nowhere), a superseded summary and an answered decision. The firstmate's pane:
+
+```text
+╭─────────────╮ BU (beads-ui)  as of 21:12:04
+│[t: Tasks]   │ [k: Menu]  [g: Band]  [h: Help]
+│[1: Board]   │ Review: 4 of 6 items, the pair's (acn-mac, sem-kg-ec2)  held items read 2026-10-21 01:11
+│[2: Backlog] │ [a: Showing: the pair's]  [o: Sort: updated (answered, else held)]  [s: Group: none]
+│[3: Sprint]  │ Filter: status:open selection:current_
+│[4: Detail]  │ [blocker: a blocker on my issue]
+│[5: Timeline]│   Approve the space request.
+│[6: Settings]│   open, kg-ec2-1@sem-kg-ec2, held 2026-10-25 10:00, task BU-1, P1
+│[7: Review]  │ [decision: my own decision]
+╰─────────────╯   Pick (a) or (b).
+                  open, aih-ec2-3@sem-kg-ec2, held 2026-10-25 09:00, no task
+                [decision: someone else's decision]
+                  open, kg-ec2-1@sem-kg-ec2, held 2026-10-25 08:00, task BU-3, P2
+                [decision: the partner host's question]
+                  open, aih-3@acn-mac, held 2026-10-25 07:00, no task
+                t Tasks ⋅ 1 Board ⋅ 2 Backlog ⋅ 3 Sprint ⋅ 4 Detail ⋅ 5 Timeline ⋅ 6 Settings ⋅ 7 Review ⋅ k menu ⋅ r
+```
+
+The same, grouped by task (`s` once):
+
+```text
+                Filter: status:open selection:current_
+                BU-1: the reviewed work (1)
+                [blocker: a blocker on my issue]
+                  Approve the space request.
+                  open, kg-ec2-1@sem-kg-ec2, held 2026-10-25 10:00, task BU-1, P1
+                no task (2)
+                [decision: my own decision]
+                  Pick (a) or (b).
+                  open, aih-ec2-3@sem-kg-ec2, held 2026-10-25 09:00, no task
+                [decision: the partner host's question]
+                  open, aih-3@acn-mac, held 2026-10-25 07:00, no task
+                BU-3: someone else's (1)
+                [decision: someone else's decision]
+                  open, kg-ec2-1@sem-kg-ec2, held 2026-10-25 08:00, task BU-3, P2
+```
+
+`aih-ec2-3`'s pane, the items it holds and the one about the issue it owns:
+
+```text
+╭─────────────╮ BU (beads-ui)  as of 21:12:04
+│[t: Tasks]   │ [k: Menu]  [g: Band]  [h: Help]
+│[1: Board]   │ Review: 2 of 4 items, this session's own  held items read 2026-10-21 01:11
+│[2: Backlog] │ [o: Sort: updated (answered, else held)]  [s: Group: none]
+│[3: Sprint]  │ Filter: status:open selection:current_
+│[4: Detail]  │ [blocker: a blocker on my issue]
+│[5: Timeline]│   Approve the space request.
+│[6: Settings]│   open, kg-ec2-1@sem-kg-ec2, held 2026-10-25 10:00, task BU-1, P1
+│[7: Review]  │ [decision: my own decision]
+╰─────────────╯   Pick (a) or (b).
+                  open, aih-ec2-3@sem-kg-ec2, held 2026-10-25 09:00, no task
+                t Tasks ⋅ 1 Board ⋅ 2 Backlog ⋅ 3 Sprint ⋅ 4 Detail ⋅ 5 Timeline ⋅ 6 Settings ⋅ 7 Review ⋅ k menu ⋅ r
+```
+
+The band's overview on Review, a 14-row band, for the firstmate and for `aih-ec2-3`:
+
+```text
+[bd][all] [a: 4 tasks] (◒[i: 1 in progress], ◉[k: 0 blocked], ◦[l: 3 open], ✓[j: 0 done last 24h]) * [e: ▾] [v: ◫] [◨]
+     [fm] [t: 0 tasks] (◒[p: 0 in progress], ◉[b: 0 blocked], ◦[o: 0 open], ✓[d: 0 done last 24h]) *
+[Tasks]  [Board]  [Bklg]  [Spr]  [Dtl]  [Time]  [Set]  [Rev]
+Review: 4 of 6 items, the pair's (acn-mac, sem-kg-ec2)
+[Showing: the pair's]  [Sort: updated (answered, else held)]  [Group: none]
+Filter: status:open selection:current_
+[blocker: a blocker on my issue] open, kg-ec2-1@sem-kg-ec2, held 2026-10-25 10:00, task BU-1, P1
+[decision: my own decision] open, aih-ec2-3@sem-kg-ec2, held 2026-10-25 09:00, no task
+[decision: someone else's decision] open, kg-ec2-1@sem-kg-ec2, held 2026-10-25 08:00, task BU-3, P2
+[decision: the partner host's question] open, aih-3@acn-mac, held 2026-10-25 07:00, no task
+  [s: summary]
+```
+
+```text
+[bd] [t: 3 tasks] (◒[p: 1 in progress], ◉[b: 0 blocked], ◦[o: 2 open], ✓[d: 0 done last 24h]) * [e: ▾] [v: ◫] [◨]
+[Tasks]  [Board]  [Bklg]  [Spr]  [Dtl]  [Time]  [Set]  [Rev]
+Review: 2 of 4 items, this session's own
+[Sort: updated (answered, else held)]  [Group: none]
+Filter: status:open selection:current_
+[blocker: a blocker on my issue] open, kg-ec2-1@sem-kg-ec2, held 2026-10-25 10:00, task BU-1, P1
+[decision: my own decision] open, aih-ec2-3@sem-kg-ec2, held 2026-10-25 09:00, no task
+  [s: summary]
+```
+
+- Not yet checked live in a session: the Review view against a real snapshot (about 300 items on this host), which waits on ai-harness PR #6108 writing `[review]`; and whether the band's filter Input takes the focus the way the pane's does (D-35's open point).
+
 ---
 
 <a id="d-41"></a>
@@ -2917,7 +3023,7 @@ Criterion 5: an extensible indicator system is a stated requirement, so the regi
 | --- | --- | --- | --- | --- |
 | `agent` | ⟳ (U+27F3, `indicator.agent`) | `*` | `accent` | D-42's rule; dimmed when the agent row's session is not live |
 | `blocked` | ⊘ (U+2298, `indicator.blocked`) | `!` | `error` | status `blocked`, or a `blocks` dependency on an issue not closed |
-| `review` | ✎ (U+270E, `indicator.review`) | `?` | `warning` | reserved for T-2C.7: `planned`, so no gutter, legend or Settings draws it yet |
+| `review` | ✎ (U+270E, `indicator.review`) | `?` | `warning` | an open, current review item of the pair is about the issue (T-2C.7); reserved, `planned`, until T-2C.7 built it |
 
 - Why `review` is planned rather than drawn: an entry that cannot fire would cost every row a blank cell and put a line in the legend for something that never shows. `planned` keeps its place in the order and its glyph in the table, so T-2C.7 adds its detection and drops the flag, and nothing else moves. `status.blocked` (◉) stays the status glyph inside the label; the indicator is a separate glyph because it also fires for an open issue a dependency blocks.
 - The gutter is `gutterOf`: one cell per enabled entry in registry order, each the glyph or a blank; below `NARROW_GUTTER_COLUMNS` (48) one cell, the first entry that fires. `gutterColumns` is its cells plus the one-column gap after it, which every row's label width subtracts, so the labels are cut shorter and no line grows. The width tiers are the two the criterion names: every entry at 48 columns and above, one cell below.
@@ -2951,6 +3057,44 @@ The pane's Tasks list, in VS Code, whose element tree draws the rows:
 ```
 
 - Not yet checked live in a session: how ⟳ and ⊘ draw in the fleet's terminals and fonts, and the dimmed glyph on the terminal's Client rows.
+
+**As built (T-2C.7, BU-mg2.3.18.1).**
+
+- The review entry is built: `planned` dropped, its detection `detectReview` and its label `an open, current review item is about it: a held decision, blocker or question`. It reads the context's new `review`, the pair's open, current items by task (`openReviewIndex` in `core/src/reviewList.ts`, each item under its task and under its joined issue's bd id and display id), and fires when one names the issue's bd id or display id (`openItemsOf`). Answered items and every selection but current are left out. The issue's latest blocked transition is not read here, since a row has no comments: an item reached only through a `waits on` line shows in the Detail and not on the row.
+- The index is one module's state, as the live sessions are: `setReviewIndex` in `hooks/components/indicators.ts`. The pane reads the review snapshot at every refresh (its timer runs whether the pane is open or not) and with every Detail, and hands the index over, so the band's rows and the pane's draw the same read. With `[review] command` unset or no snapshot read, no row lights.
+- The options menu of a task row lists, under its task, `Review items: <N> open, current; open the first` while the task has any (`menuView`'s third argument, the row `card.review`, which has no key of its own, so the menu draws it without one). It opens the task's Detail, then its oldest open, current item in the reader; Close lands on that Detail.
+- A gutter is one cell wider with the entry on: every capture and core test that pinned a two-cell gutter now pins three. The tree cost is unchanged for a blank cell (blanks join the gutter's one string), and `GUTTER_TREE_CHARS` already priced two glyphs lit.
+
+A task row with the review indicator, the pane's Tasks list in VS Code at 120 columns, and its options menu:
+
+```text
+3 tasks: 1 in progress, 0 blocked, 2 open
+  ✎ [◒ P1 BU-1 the reviewed work] [⋮]
+    [◦ P1 BU-9 the epic] [⋮]
+    [◦ P2 BU-2 nothing to review] [⋮]
+```
+
+```text
+  ✎ [◒ P1 BU-1 the reviewed work] [⋮]
+╭─────────────────────────────────────────────────────────────╮
+│ Task BU-1                                                   │
+│ [d: Detail]                                                 │
+│ [m: Move to]                                                │
+│ [e: Edit: open the focused task's detail on its title]      │
+│ [x: Delete]                                                 │
+│ [Review items: 1 open, current; open the first]             │
+│ This view                                                   │
+```
+
+The band's rows of every status the session owns:
+
+```text
+[bd] [t: 3 tasks] (◒[p: 1 in progress], ◉[b: 0 blocked], ◦[o: 2 open], ✓[d: 0 done last 24h]) * [e: ▾] [v: ◫] [◨] [⊠]
+    ✎ [◒ P1 BU-1 the reviewed work]
+      [◦ P1 BU-9 the epic]
+      [◦ P2 BU-2 nothing to review]
+  [s: summary]
+```
 
 ---
 

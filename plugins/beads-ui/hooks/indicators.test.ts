@@ -309,7 +309,7 @@ describe("the legend and the switches (D-41, T-2C.3)", () => {
       "an agent is working on it",
     );
     expect((await ui.find({ key: "settings:indicator:blocked:row" }))?.text).toContain("ASCII !");
-    expect((await ui.find({ key: "settings:indicator:review:row" })) === undefined).toBe(true);
+    expect((await ui.find({ key: "settings:indicator:review:row" }))?.text).toContain("ASCII ?");
   });
 
   test("should switch an indicator off from Settings at once and save the switch to [indicators]", async ($, on) => {

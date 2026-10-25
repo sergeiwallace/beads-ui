@@ -44,6 +44,7 @@ export const GLYPHS = {
   "view.detail": entry("⊡", "i", "view", "the Detail view"),
   "view.timeline": entry("⇢", "-", "view", "the Timeline view"),
   "view.settings": entry("⊛", "*", "view", "the Settings view"),
+  "view.review": entry("⁇", "?", "view", "the Review view"),
   "indicator.agent": entry("⟳", "*", "indicator", "an agent is working on it"),
   "indicator.blocked": entry("⊘", "!", "indicator", "blocked"),
   "indicator.review": entry("✎", "?", "indicator", "it has review items"),

@@ -38,7 +38,16 @@ const navViews = async (ui: Mounted) =>
     .filter((key) => key.startsWith("tab:"))
     .map((key) => key.slice("tab:".length));
 
-const ALL_VIEWS = ["tasks", "board", "backlog", "sprint", "detail", "timeline", "settings"];
+const ALL_VIEWS = [
+  "tasks",
+  "board",
+  "backlog",
+  "sprint",
+  "detail",
+  "timeline",
+  "settings",
+  "review",
+];
 
 describe("a view's surfaces (D-35, T-2C.1)", () => {
   test("should draw every view in the pane's nav when beads-ui.toml has no [surfaces]", async ($, on) => {

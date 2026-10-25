@@ -38,6 +38,11 @@ export interface ActionContext {
   hideTasks?: boolean;
   /** The views the surface's nav draws, from the view registry (D-35); the built-ins when not given. */
   nav?: readonly NavEntry[];
+  /**
+   * The Review view's controls (T-2C.6): its sort and group, and, for the firstmate, its scope
+   * control's label; drawn in the view on both surfaces, and listed here for the menu.
+   */
+  review?: { sort: string; group: string; scope?: string };
 }
 
 const action = (
@@ -68,56 +73,84 @@ export function panelActions(ctx: ActionContext): PanelAction[] {
   const create = action("issue.new", "new", labels("New"));
   const del = action("card.delete", "delete", labels("Delete", "Delete", "Del"), { task: true });
   const undo = ctx.undo ? action("close.undo", "undo", labels("Undo close", "Undo")) : undefined;
+  const review = ctx.review;
   const list: (PanelAction | undefined)[] =
-    ctx.view === "settings" || !isPanelView(ctx.view)
-      ? [menu, help]
-      : ctx.view === "timeline"
-        ? [
-            scope,
-            action("card.detail", "detail", labels("Open"), { task: true }),
-            undo,
-            menu,
-            band,
-            help,
-          ]
-        : ctx.view === "tasks"
+    ctx.view === "review" && review !== undefined
+      ? [
+          review.scope === undefined
+            ? undefined
+            : action("view.scope", "review:scope", labels(review.scope), { place: "view" }),
+          action("view.sort", "review:sort", labels(`Sort: ${review.sort}`), { place: "view" }),
+          action("board.swimlane", "review:group", labels(`Group: ${review.group}`), {
+            place: "view",
+          }),
+          ctx.paged
+            ? action("page.next", "review:later", labels("later items"), { place: "view" })
+            : undefined,
+          ctx.paged
+            ? action("page.back", "review:earlier", labels("earlier items"), { place: "view" })
+            : undefined,
+          menu,
+          band,
+          help,
+        ]
+      : ctx.view === "settings" || !isPanelView(ctx.view)
+        ? [menu, help]
+        : ctx.view === "timeline"
           ? [
               scope,
-              create,
               action("card.detail", "detail", labels("Open"), { task: true }),
-              action("card.move", "move", labels("Status", "Stat"), { task: true }),
-              action("card.edit", "edit", labels("Edit"), { task: true }),
-              del,
               undo,
               menu,
               band,
               help,
-              ctx.more === undefined
-                ? undefined
-                : action("tasks.more", "tasks:more", labels(ctx.more), { place: "view" }),
             ]
-          : [
-              scope,
-              action(
-                "board.swimlane",
-                "swimlane",
-                labels(`Swimlane: ${ctx.swimlane}`, `Lanes: ${ctx.swimlane}`, "Lanes"),
-              ),
-              action("view.sort", "sort", labels(`Sort: ${ctx.sort}`, `Sort: ${ctx.sort}`, "Sort")),
-              create,
-              action("card.detail", "detail", labels("Detail", "Detail", "Dtl"), { task: true }),
-              action("card.move", "move", labels("Move to", "Move"), { task: true }),
-              del,
-              undo,
-              ctx.paged ? action("page.next", "page-next", labels("Next page", "Next")) : undefined,
-              ctx.paged ? action("page.back", "page-back", labels("Page back", "Back")) : undefined,
-              band,
-              menu,
-              help,
-              ctx.lanesPaged
-                ? action("board.lanes", "lanes-next", labels("more lanes"), { place: "view" })
-                : undefined,
-            ];
+          : ctx.view === "tasks"
+            ? [
+                scope,
+                create,
+                action("card.detail", "detail", labels("Open"), { task: true }),
+                action("card.move", "move", labels("Status", "Stat"), { task: true }),
+                action("card.edit", "edit", labels("Edit"), { task: true }),
+                del,
+                undo,
+                menu,
+                band,
+                help,
+                ctx.more === undefined
+                  ? undefined
+                  : action("tasks.more", "tasks:more", labels(ctx.more), { place: "view" }),
+              ]
+            : [
+                scope,
+                action(
+                  "board.swimlane",
+                  "swimlane",
+                  labels(`Swimlane: ${ctx.swimlane}`, `Lanes: ${ctx.swimlane}`, "Lanes"),
+                ),
+                action(
+                  "view.sort",
+                  "sort",
+                  labels(`Sort: ${ctx.sort}`, `Sort: ${ctx.sort}`, "Sort"),
+                ),
+                create,
+                action("card.detail", "detail", labels("Detail", "Detail", "Dtl"), { task: true }),
+                action("card.move", "move", labels("Move to", "Move"), { task: true }),
+                del,
+                undo,
+                ctx.paged
+                  ? action("page.next", "page-next", labels("Next page", "Next"))
+                  : undefined,
+                ctx.paged
+                  ? action("page.back", "page-back", labels("Page back", "Back"))
+                  : undefined,
+                band,
+                menu,
+                help,
+                ctx.lanesPaged
+                  ? action("board.lanes", "lanes-next", labels("more lanes"), { place: "view" })
+                  : undefined,
+              ];
   return list.filter((item): item is PanelAction => item !== undefined);
 }
 
@@ -149,18 +182,31 @@ const itemOf = (command: string): MenuItem => {
   };
 };
 
+/** The menu row that opens a task's review items (T-2C.7): it has no key of its own. */
+export const REVIEW_MENU_COMMAND = "card.review";
+
+const reviewItem = (count: number): MenuItem => ({
+  command: REVIEW_MENU_COMMAND,
+  key: `menu:item:${REVIEW_MENU_COMMAND}`,
+  hotkey: "",
+  label: `Review items: ${count} open, current; open the first`,
+});
+
 /**
  * The options menu: the focused task's actions, then the view's, then the nav's, each with the
  * key that presses it. `task` names the focused task, when there is one.
  */
-export function menuView(ctx: ActionContext, task?: string): MenuView {
+export function menuView(ctx: ActionContext, task?: string, reviewItems = 0): MenuView {
   const actions = panelActions(ctx);
   return {
     sections: [
       {
         key: "menu:task",
         title: task === undefined ? "Focused task (focus one first)" : `Task ${task}`,
-        items: actions.filter((one) => one.task).map((one) => itemOf(one.command)),
+        items: [
+          ...actions.filter((one) => one.task).map((one) => itemOf(one.command)),
+          ...(task === undefined || reviewItems === 0 ? [] : [reviewItem(reviewItems)]),
+        ],
       },
       {
         key: "menu:view",
@@ -177,7 +223,8 @@ export function menuView(ctx: ActionContext, task?: string): MenuView {
 }
 
 /** A menu row as drawn: its key, then its label, as a plain Button with a hotkey reads. */
-export const menuItemText = (item: MenuItem): string => `${item.hotkey}: ${item.label}`;
+export const menuItemText = (item: MenuItem): string =>
+  item.hotkey === "" ? item.label : `${item.hotkey}: ${item.label}`;
 
 // The Tasks view's Client (T-2B.5, D-31): the rows it draws and the keys it hands back, as the
 // plain data a Client's props carry, and the messages it posts, read back as untrusted input.

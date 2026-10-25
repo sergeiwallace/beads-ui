@@ -14,7 +14,9 @@ import {
   indicatorRead,
   legendOf,
   NARROW_GUTTER_COLUMNS,
+  openReviewIndex,
   parseBdList,
+  type ReviewItem,
   resolveGlyphs,
   withIndicatorsTable,
 } from "../src/index.ts";
@@ -43,15 +45,15 @@ const shown = (cells: ReturnType<typeof at>) =>
   cells.map((cell) => (cell.id === undefined ? "-" : `${cell.id}${cell.dim ? ":dim" : ""}`));
 
 describe("the row indicator registry (D-41, T-2C.3)", () => {
-  test("should list agent, blocked and the reserved review entry in that order", () => {
+  test("should list agent, blocked and review in that order, every one built", () => {
     expect(INDICATORS.all().map((entry) => entry.id)).toEqual(["agent", "blocked", "review"]);
-    expect(INDICATORS.built().map((entry) => entry.id)).toEqual(["agent", "blocked"]);
+    expect(INDICATORS.built().map((entry) => entry.id)).toEqual(["agent", "blocked", "review"]);
     for (const entry of INDICATORS.all()) expect(GLYPHS[entry.glyph].kind).toBe("indicator");
   });
 
   test("should drop an indicator from the gutter when [indicators] switches it off", () => {
     const switches = resolveGlyphs("[indicators]\nagent = false\n").switches;
-    expect(INDICATORS.enabled(switches).map((entry) => entry.id)).toEqual(["blocked"]);
+    expect(INDICATORS.enabled(switches).map((entry) => entry.id)).toEqual(["blocked", "review"]);
   });
 
   test("should name a non-boolean switch and keep that indicator on", () => {
@@ -88,26 +90,27 @@ describe("the row indicator registry (D-41, T-2C.3)", () => {
       registry.enabled({}),
       120,
     );
-    expect(shown(cells)).toEqual(["-", "-", "urgent"]);
+    expect(shown(cells)).toEqual(["-", "-", "-", "urgent"]);
     expect(legendOf(registry.built()).map((line) => line.id)).toEqual([
       "agent",
       "blocked",
+      "review",
       "urgent",
     ]);
     remove();
-    expect(registry.built().map((entry) => entry.id)).toEqual(["agent", "blocked"]);
+    expect(registry.built().map((entry) => entry.id)).toEqual(["agent", "blocked", "review"]);
   });
 });
 
 describe("the blocked indicator (T-2C.3)", () => {
   test("should show when the issue's status is blocked", () => {
-    expect(shown(at(issue("BU-1", { status: "blocked" }), []))).toEqual(["-", "blocked"]);
+    expect(shown(at(issue("BU-1", { status: "blocked" }), []))).toEqual(["-", "blocked", "-"]);
   });
 
   test("should show when an open issue blocks it through a blocks dependency", () => {
     const blocker = issue("BU-2", { status: "in_progress" });
     const target = issue("BU-1", { dependencies: [{ type: "blocks", id: "BU-2" }] });
-    expect(shown(at(target, [blocker]))).toEqual(["-", "blocked"]);
+    expect(shown(at(target, [blocker]))).toEqual(["-", "blocked", "-"]);
   });
 
   test("should not show when the blocking issue is closed or outside the read", () => {
@@ -119,7 +122,7 @@ describe("the blocked indicator (T-2C.3)", () => {
         { type: "parent-child", id: "BU-3" },
       ],
     });
-    expect(shown(at(target, [closed, issue("BU-3")]))).toEqual(["-", "-"]);
+    expect(shown(at(target, [closed, issue("BU-3")]))).toEqual(["-", "-", "-"]);
   });
 
   test("should read a board snapshot row's blocks dependency, the snapshot keeping no other kind", () => {
@@ -139,7 +142,7 @@ describe("the blocked indicator (T-2C.3)", () => {
     expect(row?.dependencies).toEqual([{ depends_on_id: "BU-2", type: "blocks" }]);
     const [target] = unwrap(parseBdList(JSON.stringify([row])));
     if (target === undefined) throw new Error("no row");
-    expect(shown(at(target, [issue("BU-2")]))).toEqual(["-", "blocked"]);
+    expect(shown(at(target, [issue("BU-2")]))).toEqual(["-", "blocked", "-"]);
   });
 });
 
@@ -149,7 +152,7 @@ describe("the agent indicator (D-42, T-2C.3)", () => {
 
   test("should show when an in-progress child carries the agent label", () => {
     const child = agentRow("BU-1.1", { title: "a plain title", labels: ["agent"] });
-    expect(shown(at(issue("BU-1"), [child], new Set(["aih-ec2-3"])))).toEqual(["agent", "-"]);
+    expect(shown(at(issue("BU-1"), [child], new Set(["aih-ec2-3"])))).toEqual(["agent", "-", "-"]);
   });
 
   test("should show when an in-progress child's title names an agent or a coordinator agent", () => {
@@ -158,13 +161,14 @@ describe("the agent indicator (D-42, T-2C.3)", () => {
       expect(shown(at(issue("BU-1"), [child], new Set(["aih-ec2-3"]))), title).toEqual([
         "agent",
         "-",
+        "-",
       ]);
     }
   });
 
   test("should show on the agent row itself while it is in progress", () => {
     const row = agentRow("BU-1.1", { labels: ["agent"] });
-    expect(shown(at(row, [], new Set(["aih-ec2-3"])))).toEqual(["agent", "-"]);
+    expect(shown(at(row, [], new Set(["aih-ec2-3"])))).toEqual(["agent", "-", "-"]);
   });
 
   test("should not show for a closed agent row, a title that only mentions an agent, or a grandchild", () => {
@@ -172,13 +176,17 @@ describe("the agent indicator (D-42, T-2C.3)", () => {
     const mention = agentRow("BU-1.2", { title: "Agent Mail: the agent-process ledger" });
     const grandchild = agentRow("BU-1.3.1", { labels: ["agent"], parent: "BU-1.3" });
     expect(shown(at(issue("BU-1"), [closed, mention, grandchild], new Set(["aih-ec2-3"])))).toEqual(
-      ["-", "-"],
+      ["-", "-", "-"],
     );
   });
 
   test("should dim the glyph when the row's assignee is not live in the session registry", () => {
     const child = agentRow("BU-1.1", { labels: ["agent"], assignee: "aih-gone" });
-    expect(shown(at(issue("BU-1"), [child], new Set(["aih-ec2-3"])))).toEqual(["agent:dim", "-"]);
+    expect(shown(at(issue("BU-1"), [child], new Set(["aih-ec2-3"])))).toEqual([
+      "agent:dim",
+      "-",
+      "-",
+    ]);
     const unassigned = issue("BU-1.1", {
       parent: "BU-1",
       status: "in_progress",
@@ -187,12 +195,13 @@ describe("the agent indicator (D-42, T-2C.3)", () => {
     expect(shown(at(issue("BU-1"), [unassigned], new Set(["aih-ec2-3"])))).toEqual([
       "agent:dim",
       "-",
+      "-",
     ]);
   });
 
   test("should draw the glyph undimmed when no session registry was read", () => {
     const child = agentRow("BU-1.1", { labels: ["agent"], assignee: "aih-gone" });
-    expect(shown(at(issue("BU-1"), [child], undefined))).toEqual(["agent", "-"]);
+    expect(shown(at(issue("BU-1"), [child], undefined))).toEqual(["agent", "-", "-"]);
   });
 });
 
@@ -202,8 +211,8 @@ describe("the gutter (D-41, T-2C.3)", () => {
     const none = at(issue("BU-2"), []);
     expect(blocked.length).toBe(enabled.length);
     expect(none.length).toBe(enabled.length);
-    expect(gutterText(blocked)).toBe(` ${GLYPHS["indicator.blocked"].glyph}`);
-    expect(gutterText(none)).toBe("  ");
+    expect(gutterText(blocked)).toBe(` ${GLYPHS["indicator.blocked"].glyph} `);
+    expect(gutterText(none)).toBe("   ");
     expect(gutterColumns(enabled, 120)).toBe(enabled.length + 1);
   });
 
@@ -225,11 +234,12 @@ describe("the gutter (D-41, T-2C.3)", () => {
     expect(shown(at(both, [child], new Set(["aih-ec2-3"]), NARROW_GUTTER_COLUMNS))).toEqual([
       "agent",
       "blocked",
+      "-",
     ]);
   });
 
   test("should take no columns when every indicator is switched off", () => {
-    const none = INDICATORS.enabled({ agent: false, blocked: false });
+    const none = INDICATORS.enabled({ agent: false, blocked: false, review: false });
     expect(gutterColumns(none, 120)).toBe(0);
     expect(
       gutterOf({ issue: issue("BU-1"), read: indicatorRead([]), live: undefined }, none, 40),
@@ -245,6 +255,67 @@ describe("the gutter (D-41, T-2C.3)", () => {
         label: "an agent is working on it; dimmed when its session is not live on this host",
       },
       { id: "blocked", glyph: "⊘", ascii: "!", label: "blocked, or an open issue blocks it" },
+      {
+        id: "review",
+        glyph: "✎",
+        ascii: "?",
+        label: "an open, current review item is about it: a held decision, blocker or question",
+      },
     ]);
+  });
+});
+
+describe("the review indicator (T-2C.7)", () => {
+  const item = (task: string, extra: Partial<ReviewItem> = {}): ReviewItem => ({
+    path: `/p/docs/held/sem-kg-ec2--aih-ec2-3/${task}-${extra.title ?? "x"}.md`,
+    store: "ai-harness",
+    relpath: "",
+    kind: "decision",
+    status: "open",
+    session: "aih-ec2-3@sem-kg-ec2",
+    machine: "sem-kg-ec2",
+    task,
+    title: "x",
+    ask: "",
+    createdAt: "2026-10-25T09:00:00Z",
+    selection: "current",
+    ...extra,
+  });
+  const reviewed = (target: Issue, items: readonly ReviewItem[]) =>
+    shown(
+      gutterOf(
+        {
+          issue: target,
+          read: indicatorRead([target]),
+          live: undefined,
+          review: openReviewIndex(items),
+        },
+        enabled,
+        120,
+      ),
+    );
+
+  test("should show when an open, current review item names the issue by its bd id or its display id", () => {
+    expect(reviewed(issue("BU-1"), [item("BU-1")])).toEqual(["-", "-", "review"]);
+    expect(reviewed(issue("BU-1", { displayId: "BU-one-x" }), [item("BU-one-x")])).toEqual([
+      "-",
+      "-",
+      "review",
+    ]);
+  });
+
+  test("should not show for an answered, superseded, escalated or ai-resolved item, or one about another issue", () => {
+    const items = [
+      item("BU-1", { status: "answered", title: "a" }),
+      item("BU-1", { selection: "superseded", title: "b" }),
+      item("BU-1", { selection: "escalated", title: "c" }),
+      item("BU-1", { selection: "ai-resolved", title: "d" }),
+      item("BU-2", { title: "e" }),
+    ];
+    expect(reviewed(issue("BU-1"), items)).toEqual(["-", "-", "-"]);
+  });
+
+  test("should not show while no review snapshot was read", () => {
+    expect(shown(at(issue("BU-1"), []))).toEqual(["-", "-", "-"]);
   });
 });

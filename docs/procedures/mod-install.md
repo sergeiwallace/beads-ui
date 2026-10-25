@@ -154,19 +154,19 @@ The pane takes these keys while it has the keyboard (`/show-beads-ui` gives it t
 | Key | Action |
 |---|---|
 | `t` | Tasks view, the task panel |
-| `1`, `2`, `4`, `5`, `6` | Board, Backlog, Detail, Timeline, Settings view |
+| `1`, `2`, `4`, `5`, `6`, `7` | Board, Backlog, Detail, Timeline, Settings, Review view |
 | `3` | Sprint: planned, not built yet; shows a line saying so |
 | `k` | Open or close the options menu: every action of the view, each with its key |
-| `a` | Mine or All: this session's own issues, or every issue |
+| `a` | Mine or All: this session's own issues, or every issue; on the Review view, the firstmate's own items or its pair's |
 | `n` | Focus the quick-add field |
-| `s` | Next swimlane: none, assignee, epic (Board, Backlog, Detail) |
-| `o` | Next sort: priority, newest created, recently updated, due date, assignee (Board, Backlog, Detail) |
+| `s` | Next swimlane: none, assignee, epic (Board, Backlog, Detail); on the Review view, the next group |
+| `o` | Next sort: priority, newest created, recently updated, due date, assignee (Board, Backlog, Detail); on the Review view, the next of its sorts |
 | `d` | Open the focused card's, task's or Timeline item's detail |
 | `m` | Focus the focused card's Move to; on the Tasks view, open the task's detail on its status |
 | `e` | On the Tasks view, open the focused task's detail on its title |
 | `r` | On the Tasks view, show the collapsed tasks, or collapse them again |
 | `x` | Delete the focused card or task, or the issue on the Detail tab |
-| `p`, `b` | Next or previous page: of the focused card's column on the Board, of the list on the Backlog, while it is paged |
+| `p`, `b` | Next or previous page: of the focused card's column on the Board, of the list on the Backlog or the Review view, while it is paged |
 | `l` | Next page of swimlanes, while they take more than one page |
 | `u` | Undo the last close, while its line is shown |
 | `h` | Show or hide the help panel |
@@ -359,16 +359,18 @@ Every task row starts with a gutter of row indicators, one cell for each indicat
 | --- | --- | --- | --- |
 | `⟳` | `*` | `agent` | an agent is working on the issue: it, or one of its children, is an in-progress agent row (the `agent` label, or a title such as `bu-row agent: ...` or `bu-review coordinator agent: ...`). Dimmed when that row's assignee is a session the host refresher does not list as live. |
 | `⊘` | `!` | `blocked` | the issue's status is `blocked`, or an issue that is not closed blocks it through a `blocks` dependency |
+| `✎` | `?` | `review` | an open, current held item of your machine pair is about the issue, by its bd id or its display id ([Review items](#review-items)). The row's options menu names how many and opens the first in the reader. |
 
-A third indicator, for issues with review items (decisions, blockers, open questions), is reserved and not drawn yet. The help (`h`) and Settings list each indicator's glyph, its ASCII form and its meaning. Each is on by default; Settings switches one off at once, kept in Claude Code's plugin store under `indicator-switches` until `Save to file` writes it, or set it in the file:
+The help (`h`) and Settings list each indicator's glyph, its ASCII form and its meaning. Each is on by default; Settings switches one off at once, kept in Claude Code's plugin store under `indicator-switches` until `Save to file` writes it, or set it in the file:
 
 ```toml
 [indicators]
 agent = false     # no agent glyph, and one cell less on every row
 blocked = true
+review = true
 ```
 
-Both indicators look up a row's children and blockers among the issues the pane's board read (every issue of its store that is not closed) and the rows the band read. On a band row from another store, a child or a blocker the band did not read is not seen. The host refresher writes the sessions it lists as live into its snapshot; with no refresher running, no agent glyph is dimmed.
+The agent and blocked indicators look up a row's children and blockers among the issues the pane's board read (every issue of its store that is not closed) and the rows the band read. On a band row from another store, a child or a blocker the band did not read is not seen. The host refresher writes the sessions it lists as live into its snapshot; with no refresher running, no agent glyph is dimmed.
 
 ### Publishing edits
 
@@ -441,7 +443,36 @@ This session holds the item. Record the answer in its durable home (a bd comment
 When another session holds the item, the last paragraph instead asks this session to tell that one, through the fleet's messaging ladder, with the path and the answer commit, and not to record or retire it itself. The item's fields are cut to one line each, and the fence is longer than any run of backticks in your text.
 
 - If the answer command refuses (the item is no longer open, its session's landing pad has uncommitted changes) or fails, the reader shows its message and keeps your text. `Send to session` starts the same turn with `Answer commit: none`, saying the text is not yet recorded and asking the session that holds the item to record it with `held_cli.py answer`.
-- `Go to issue` closes the reader onto the Detail of the item's issue; `Close` closes it onto the Detail it was opened from. An answered item shows as answered at once; the next snapshot, within a minute, has it from the store.
+- `Go to issue` closes the reader onto the Detail of the item's issue; `Close` closes it onto the view it was opened from. An answered item shows as answered at once; the next snapshot, within a minute, has it from the store.
+- No session draws an item whose machine is outside the snapshot's pair, in any view; with no pair named, only this host's items are drawn.
+
+#### The Review view
+
+Key `7` opens the Review view in the pane, and `[Rev]` in the band's overview draws the same view there. It lists the held items in the session's scope, with when the refresher last read them:
+
+- A session other than the firstmate lists the items it holds (their `session` is `<its name>@<this host>`) and the items whose task is an issue assigned to it.
+- The firstmate (a session named `...-firstmate-<N>`) lists every item of its machine pair. `a`, or the `Showing:` control, switches to its own items, as any other session lists them, and back.
+
+The `Filter:` field takes `key:value` terms and free words, all combined with AND; press Enter to apply. It opens on `status:open selection:current`.
+
+| Key | Keeps the items |
+| --- | --- |
+| `kind:` | of the kind: `decision`, `blocker`, `exit-goal`, `progress-review`, `summary`, `fleet-brief` or `other` |
+| `status:` | `open` or `answered` |
+| `selection:` | `current`, `superseded`, `escalated` (addressed to a decider), `ai-resolved`, or `all` |
+| `session:` | held by the session, by its whole name (`kg-ec2-1@sem-kg-ec2`) or its name alone |
+| `machine:` | of the machine |
+| `task:` | about the issue, by the item's task or the issue's bd id or display id |
+| `epic:` | whose issue's parent is that id |
+| `label:` | whose issue carries the label |
+| `priority:` | whose issue has the priority, `1` or `P1` |
+| free text | holding every word in their title or ask, in any case |
+
+A term with any other key, a `selection:` or `priority:` it does not know, or a key with no value, leaves the list as it was and says why, naming the accepted keys. An empty filter lists every item in scope.
+
+`o`, or the `Sort:` control, steps through the sorts: updated (the item's answered time, else when it was held, since the store keeps no other), created (when it was held), priority, task, epic, kind and session. Updated and created put the newest first; the others are ascending with items that have none last; ties go to the most recently updated. `s`, or the `Group:` control, steps through the groups: none, task, epic (named by its title when the board holds it), kind and session, each under a header with its count. The pane draws 25 items to a page and the band as many as its rows hold, with `earlier items` and `later items` (`b` and `p` in the pane) wrapping round.
+
+Press an item to open it in the reader. `Close` returns to the list and `Go to issue` opens the issue's Detail. In the band, an item opens the reader in the pane, and the filter's button form (`status:open selection:current`, `selection:all`) applies a preset; a typed filter goes through the pane. With `[review] command` unset, the view says how to set it.
 
 ## Report a bug
 
