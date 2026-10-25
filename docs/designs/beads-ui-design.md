@@ -687,10 +687,12 @@ Each phase carries its scope, deliverables, tasks with EARS acceptance criteria 
     - [ ] `When any view is drawn in the band's overview, every action it offers in the pane shall be reachable there, by a button or a menu, and a test shall enumerate each view's actions on both surfaces and fail on one reachable on one surface alone, unless [surfaces] limits the view.`
     - [ ] `When the migration lands, every existing pane, panel, Detail, comment and Timeline test shall pass, with any expectation the migration changes named in the pull request.`
   - **T-2C.9 Theme tokens on Claude Code theme keys** (D-43, BU-mg2.3.21.6.1)
-    - [ ] `When the band or the pane draws a colour, it shall draw a token from core's token set, each token resolving to a Claude Code theme key by default, so the drawing follows the person's light or dark theme; a test shall fail on any raw colour (a hex value or a named colour) in hooks/ or client/ outside the token map.`
-    - [ ] `Where beads-ui.toml [theme] sets a hex value for a token, the system shall draw that value from the next redraw; an invalid value shall be ignored with one notice naming the key.`
+    - [x] `When the band or the pane draws a colour, it shall draw a token from core's token set, each token resolving to a Claude Code theme key by default, so the drawing follows the person's light or dark theme; a test shall fail on any raw colour (a hex value or a named colour) in hooks/ or client/ outside the token map.`
+    - [x] `Where beads-ui.toml [theme] sets a hex value for a token, the system shall draw that value from the next redraw; an invalid value shall be ignored with one notice naming the key.`
+    - As built (T-2C.9, BU-mg2.3.21.6.1): the `control` token added, `conflict` on the `merged` theme key, `[theme]` and the raw-colour scan, in D-43's as-built note.
   - **T-2C.10 One glyph table** (D-41, D-43, BU-mg2.3.21.6.2)
-    - [ ] `When any view draws a status, priority, type, control or indicator glyph, it shall take it from one glyph table in core, the same table the indicator registry (D-41) reads, with an ASCII form for each entry chosen by [indicators] ascii; a test shall render both forms and fail on a glyph drawn from outside the table.`
+    - [x] `When any view draws a status, priority, type, control or indicator glyph, it shall take it from one glyph table in core, the same table the indicator registry (D-41) reads, with an ASCII form for each entry chosen by [indicators] ascii; a test shall render both forms and fail on a glyph drawn from outside the table.`
+    - As built (T-2C.10, BU-mg2.3.21.6.2): `core/src/glyphs.ts`, `[indicators] ascii`, the width rule and the ten glyphs it replaced, in D-43's as-built note with the table.
   - **T-2C.11 Raster visuals in the band** (D-43, BU-mg2.3.21.6.3)
     - [ ] `While the band's surface draws Raster (the terminal), the band's summary level shall carry at most one Raster row inside maxRows: a done-in-window sparkline and one bar per count, repainted through $.ui.blit no more than once per band redraw; on a surface without Raster it shall draw the same figures as Text.`
     - [ ] `When the Raster row is drawn, the cost of one blit shall be measured and recorded in the design doc's as-built note.`
@@ -701,9 +703,10 @@ Each phase carries its scope, deliverables, tasks with EARS acceptance criteria 
     - [ ] `When a view offers a picture (the Timeline, a burndown), it shall draw an Image only where the surface profile says the terminal can show one, Svg on the desktop, VS Code and mobile surfaces, and the alt text elsewhere; a test shall cover each fallback.`
     - [ ] `Before Image is enabled on a host, this host's tmux allow-passthrough setting shall be probed and the result recorded in the design doc.`
   - **T-2C.14 Every clickable element looks clickable, and the pane toggle** (D-43, BU-mg2.3.21.6.6, BU-mg2.3.21.6.7)
-    - [ ] `When any component draws a Button, or any element with an onPress, it shall draw the shared clickable affordance (a button frame or bracket, a theme-accent colour and a hover style where the surface supports hover), and a test over every view's drawn tree, on both surfaces, shall fail on a pressable element drawn without it.`
-    - [ ] `When the band draws its pane control, it shall draw an icon-first button with one glyph for open and another for close, from the glyph table, with its ASCII form, the affordance above and the same hotkey, and no text label "beads".`
-    - [ ] `When this task lands, the design doc's visual language (D-43) shall state the standard and list each interactive element of the band and the pane with the affordance it draws.`
+    - [x] `When any component draws a Button, or any element with an onPress, it shall draw the shared clickable affordance (a button frame or bracket, a theme-accent colour and a hover style where the surface supports hover), and a test over every view's drawn tree, on both surfaces, shall fail on a pressable element drawn without it.`
+    - [x] `When the band draws its pane control, it shall draw an icon-first button with one glyph for open and another for close, from the glyph table, with its ASCII form, the affordance above and the same hotkey, and no text label "beads".`
+    - [x] `When this task lands, the design doc's visual language (D-43) shall state the standard and list each interactive element of the band and the pane with the affordance it draws.`
+    - As built (T-2C.14, BU-mg2.3.21.6.6 and .6.7): the affordance, the pane toggle's glyphs and why, the list of interactive elements and the before and after captures, in D-43's as-built note.
 - **Exit gate:** `npm run lint` and `npm test` green in beads-ui and the ai-harness pytest green for T-2C.4; the plugin version raised by each release; on sem-kg-ec2, after the chief installs each release and the session runs `/reload-plugins`, recorded in the Approval Log: no pane opening at session start or after `/reload-plugins` unless `[panel] open_at_start` is set; the summary line with its controls at the left; a count expanding rows, "+M more", collapse and summary; the overview; an issue with a held item showing its Review section and the reader; the firstmate's Review view holding an `acn-mac` item and no `fw-lnx` or `mac` item; the indicators on a blocked issue and on an issue with a live agent row.
 
 ### Phase 3: The web app, locally and as the queue dashboard's board
@@ -2828,6 +2831,91 @@ Each lives in the shared components, so both surfaces get it once, and each has 
 <!-- decision-lineage: decision-id=BU-mg2.2/D-43; decision-topic=the visual language of the mod's band and pane; governs=packages:core/tokens,plugins:beads-ui/hooks/components,config:theme; normalized-proposition=the band and pane draw colours from theme-key tokens with optional hex overrides, glyphs from one shared table, every pressable element with one shared clickable affordance, a raster row in the band and pictures only where the surface shows them, each with a text fallback, built once in the shared components; applicability=surface:tui; outcome-id=theme-key-tokens-one-glyph-table-clickable-affordance; relation=refines; related-decision-id=BU-mg2.2/D-19; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
 Gate 0 keeps the pass now, on both surfaces, and the clickable standard everywhere; Sergei's 03:42Z words keep a live browser or web page out of it. Mitigations: the token set adds tokens where a hue is missing and `[theme]` sets any token to a hex value, so a person who wants more colour has it, and the fleet palette, once picked, arrives as one token set with no view change; each surface-specific path sits behind the surface profile with its fallback tested at the hooks entry point (T-2C.11, T-2C.13); the affordance has a compact form for the narrow tiers (a one-cell bracket pair, never dropped), checked by the existing width tests; the order puts the shared parts first (T-2C.9, T-2C.10, T-2C.14), so the riskier ones build on tested tokens, glyphs and controls. The glyph for the pane toggle is chosen in T-2C.14 under the same one-cell and ambiguous-width test as the indicators (D-41) and recorded there with why.
+
+**As built (T-2C.9, T-2C.10 and T-2C.14; BU-mg2.3.21.6.1, .6.2, .6.6 and .6.7).**
+
+- Tokens. Every D-19 token resolves to a Claude Code theme key (`core/src/tokens.ts`). `conflict` moved from the named colour `magenta` to the theme key `merged`, read from the 2.1.310 binary on 2026-10-25, so no token is a raw colour any more. One token was added: `control`, the colour of the clickable brackets, on the accent's key (`claude`), kept separate from `accent` so `[theme]` can set it alone. `[theme]` in `beads-ui.toml` sets any token to `#rgb` or `#rrggbb` (`resolveTheme`); the pane reads it at each config read (every refresh) and asks for a redraw when it changed, so both surfaces draw it from the next redraw. A key naming no token, or a value that is not a hex colour, is ignored with one line under the pane's header naming the key. `colorOf` moved to `hooks/components/look.ts`, the one place either surface resolves a token. A Vitest spec (`test/look.spec.ts`) fails on any hex literal or colour prop set from a string in `hooks/` or `client/`.
+- The glyph table, `core/src/glyphs.ts`. Each entry is a glyph, its ASCII form, a kind and a meaning; the indicator registry (T-2C.3) adds its entries to the same table. `[indicators] ascii = true` draws every table glyph as its ASCII form on both surfaces: the styled element constructors translate Text children, Button labels and Select labels, and the pane translates the Client's row labels, which the Client draws with its own elements. The width rule (D-41) is a test over every entry: one code point, outside Unicode 16.0.0's East Asian wide, fullwidth and ambiguous ranges (a generated fixture) and outside `\p{Emoji}`, `\p{Emoji_Presentation}` and `\p{Extended_Pictographic}`. Ten glyphs drawn before failed it and were replaced: bd's status glyphs ◐ ● ○ (ambiguous), ▦ (ambiguous) and ☰ (wide) in the nav, ⚙ (emoji), the arrows ↑ ↓ ← → (ambiguous), the ellipsis … and the separator · (ambiguous). A source scan fails on a glyph written anywhere in `hooks/`, `client/` or `core/src/` but the table, and a hooks-entry walk of every pane view and overlay, on the terminal and in VS Code, and the band fails on a drawn glyph from outside the table, or on any table glyph drawn under `ascii`.
+
+| Id | Glyph | ASCII | Meaning |
+| --- | --- | --- | --- |
+| `pane.open` | ◨ | `+` | open the pane, or move into it when it is open |
+| `pane.close` | ⊠ | `x` | close the pane |
+| `row.open` | ▸ | `>` | open the task's detail |
+| `row.menu` | ⋮ | `:` | the task's options menu |
+| `move.earlier` | ◂ | `<` | move the part one place left |
+| `move.later` | ▸ | `>` | move the part one place right |
+| `list.above` | ⇡ | `^` | rows above the ones drawn |
+| `list.below` | ⇣ | `v` | rows below the ones drawn |
+| `status.in_progress` | ◒ | `%` | in progress (was ◐) |
+| `status.blocked` | ◉ | `x` | blocked (was ●) |
+| `status.open` | ◦ | `o` | open (was ○) |
+| `view.tasks` | ✓ | `v` | the Tasks view |
+| `view.board` | ⊞ | `#` | the Board view (was ▦) |
+| `view.backlog` | ≣ | `=` | the Backlog view (was ☰) |
+| `view.sprint` | » | `>` | the Sprint view |
+| `view.detail` | ⊡ | `i` | the Detail view (was ◉, now the blocked status) |
+| `view.timeline` | ⇢ | `-` | the Timeline view |
+| `view.settings` | ⊛ | `*` | the Settings view (was ⚙) |
+| `text.more` | ⋯ | `.` | text cut short, or a read still running (was …) |
+| `text.separator` | ⋅ | `\|` | between two hints (was ·) |
+| `text.becomes` | ⇾ | `>` | a field's new value in the history (was →) |
+
+- The clickable affordance, the standard: anything that can be pressed is drawn between a one-cell bracket pair, `[` and `]`, in the `control` token, and text without brackets is not a control. It is one component, `pressable` in `hooks/components/look.ts`, and nothing opts into it: `styledUi` gives every drawing entry point (`drawBand`, `BeadsPane.draw`, `DeleteConfirm.draw`, `bandSurface` and `paneSurface`) a `Button` constructor that draws through it, so a new control cannot reach a surface without it. It draws a keyed frame `press:<key>` holding the open bracket, the button (always `plain`, with `hover: { inverse: true }`) and the close bracket. The engine applies a Button's hover only inside a keyed Box (its tree validator says so), which the frame is. A dimmed button keeps its brackets, dimmed with it. On VS Code, which ignores `hover`, `hotkey` and `plain` on a Button, the brackets and their colour are Text, so the affordance stands without them. The bracket pair is the form at every tier, which is D-43's compact form, so it is never dropped; it costs two columns a button, counted by `buttonWidth` (`PRESS_FRAME_COLUMNS`), so the action bar, the nav (the side nav widened from 13 to 15 columns), the task rows (`rowControlColumns`), the options menu and the Timeline's labels pack and cut with it, and the width tests at 40, 48, 64, 72, 80 and 120 columns pass. It also costs about 300 of a tree's 100,000 characters a button (`PRESS_TREE_CHARS`; 283 measured for a dimmed button keyed `open:BU-mg2.3.10`), so the brackets carry no key or hover of their own, the Board's page budget prices one frame a card and two a pager and drops from 80,000 to 70,000 for the chrome's own buttons (a cell page now holds 17 cards of the large test store where it held 25), and the Tasks view's window draws 80 rows where it drew 100; every drawing-limit test stays under 100,000. Only a `Button` can carry an `onPress`: the mod's tree validator refuses `onPress` on a Box ("Box prop "onPress" is not allowed") and on a Text, measured with a scratch mod under Claude Code 2.1.310's test kit on 2026-10-25, which also showed a `color` on a Button dropped from the drawn tree, so the colour has to live in the brackets. The tests: a hooks-entry walk of every pane view, the Detail, the help, the band settings, the options menu and the delete confirmation, on the terminal and in VS Code, and of the band, fails on a Button not in its frame between the two control-token brackets, not plain, or, on the terminal, without the hover style; a walk of every view the framework draws, through the band adapter (with and without Select, Input and Markdown) and the pane adapter, does the same; the hooks walker's negative arm is checked against a hand-built button with no frame.
+- The pane toggle. The band's `beads` label is gone. Its first line ends, right after the text (the line's `flexGrow` dropped, as D-36 places controls), with the icon `[◨]`, which opens the pane focused or moves the focus into it when it is open (D-27, unchanged; the band button never had a hotkey, and `/bu`, the `command:bu` chord and Ctrl+X Tab are unchanged). While the pane is open, `[⊠]` follows it and closes the pane; the pane asks for a redraw when it opens and closes, so the band shows the pane's state. ASCII: `[+]` and `[x]`. Why these two, under `docs/procedures/decision-framework.md`: a glyph is one table entry, a two-way door with nothing built on it (criterion 1), so the choice is mine and contained. ◨ (U+25E8, square with right half black) draws a window with a filled pane at its right, where Claude Code docks the pane, so it names what it opens, as Sergei asked ("a more useful button icon / indicator of what its function is", "ideally not text"); ⊠ (U+22A0, squared times) is the common close box. Both are in blocks every monospace font of the fleet's terminals carries (Geometric Shapes, Mathematical Operators), and both pass the width rule. Rejected: ⧉ (two joined squares) reads as "copy" or "new window"; ▸ and ◂ already mean open-a-task and move; ⏏ and ⤢ are rarer in fonts; `[pane]` as text, which Sergei said he would rather not have. Why two buttons while the pane is open, rather than one that turns into close: T-2C.14 asks for an open glyph and a close glyph, and D-27 keeps the button's move-the-focus-into-an-open-pane, which the chord cannot do; one button cannot do both, and two keep both. Confidence high.
+- Every interactive element of the band and the pane, and the affordance it draws. Each is a `Button` drawn through `pressable`: its label between the control-token brackets, inverse under hover on the terminal.
+  - The band: `beads-band:open` `[◨]` (`[+]`), and while the pane is open `beads-band:close` `[⊠]` (`[x]`).
+  - The pane, through the framework (`hooks/components`): the nav's `tab:<view>` buttons (side nav, top bar and glyph bar); the action bar's buttons (`scope`, `swimlane`, `sort`, `new`, `detail`, `move`, `edit`, `delete`, `menu`, `band-settings`, `help`); each task row's `task:<id>` label and `taskmenu:<id>` `[⋮]`, and beside a Client row its `task:<id>` `[▸]` and `taskmenu:<id>` `[⋮]`; `tasks:more` (`[r: +M more]`); and the button forms of `choice`, `field` and `markdown` (one button an option, a preset, and the button that types or reads it in the pane).
+  - The pane, still drawn by `pane.ts`, `panel.ts`, `bandSettings.ts` and `confirm.ts` until T-2C.8 moves them: the options menu's `menu:item:<command>` and `menu:close`; the Board's card `open:<id>`, `lanes-back`, `lanes-next` and each cell's `prev:<key>` and `next:<key>`; the Backlog's `open:<id>`, `backlog-back` and `backlog-next`; the Timeline's `timeline:<id>`; Settings' lists and fields and `settings:save`; the band settings' `band:toggle:<part>`, `band:left:<part>` `[◂]`, `band:right:<part>` `[▸]` and `band:save`; the delete confirmation's `close-instead` and `delete`.
+  - Not Buttons: the task list's Client rows take pointer events inside the Client, light inverse under hover and draw the focused row bold in `surface.focus`, and the `[▸]` and `[⋮]` buttons beside each carry the affordance; a `Select` and an `Input` are the engine's own controls, drawn with their own marks.
+- Before and after, at 120 columns, from Claude Code 2.1.310's test kit: the band on the terminal with the pane open, and the Tasks view in VS Code, where the element tree draws its rows (on the terminal a Client draws them). Laid out from the drawn tree by `hooks/tests/render.ts`; colour and hover are not shown. Before, at 473b5ff:
+
+```text
+[bd] 6 tasks (2 in progress, 1 blocked, 2 open, 1 done last 24h) *                                                 beads
+
+╭───────────╮ beads-ui  as of 21:12:04
+│t: Tasks   │ a: Showing: mine  n: New  d: Open  m: Status  e: Edit  x: Delete  k: Menu  g: Band  h: Help
+│1: Board   │ New: _
+│2: Backlog │ 15 tasks: 2 in progress, 1 blocked, 12 open
+│3: Sprint  │ ◐ P1 BU-epic-beads-ui-beads-task-manager-mg2 EPIC beads-ui: Beads task manager for the Claude Code TUI… ⋮
+│4: Detail  │ ◐ P1 BU-beads-ui-claude-code-aeyb beads-ui Claude Code mod: the task manager inside the Claude Code TU… ⋮
+│5: Timeline│ ● P1 BU-t-1-5-delete-xmxe T-1.5: delete confirmation flow ⋮
+│6: Settings│ ○ P1 BU-t-0-1-core-module-gset T-0.1: core module and purity gate ⋮
+╰───────────╯ ○ P1 BU-t-0-2-bd-node-nrrb T-0.2: bd-node adapter ⋮
+              ○ P1 BU-t-0-3-mod-plugin-fumv T-0.3: mod plugin and marketplace ⋮
+              ○ P1 BU-t-0-4-repository-zach T-0.4: repository hygiene for a public repo ⋮
+              ○ P1 BU-t-1-1-board-tab-nxdt T-1.1: Board tab with keyboard Move to ⋮
+              ○ P1 BU-t-1-2-backlog-tab-vptb T-1.2: Backlog tab with sort and filter ⋮
+              ○ P1 BU-t-1-3-detail-tab-ymtx T-1.3: Detail tab and inline edit ⋮
+              r: +5 more
+              t Tasks · 1 Board · 2 Backlog · 3 Sprint · 4 Detail · 5 Timeline · 6 Settings · k menu · r more tasks · n
+```
+
+After:
+
+```text
+[bd] 6 tasks (2 in progress, 1 blocked, 2 open, 1 done last 24h) * [◨] [⊠]
+
+╭─────────────╮ beads-ui  as of 21:12:04
+│[t: Tasks]   │ [a: Showing: mine]  [n: New]  [d: Open]  [m: Status]  [e: Edit]  [x: Delete]  [k: Menu]  [g: Band]
+│[1: Board]   │ [h: Help]
+│[2: Backlog] │ New: _
+│[3: Sprint]  │ 15 tasks: 2 in progress, 1 blocked, 12 open
+│[4: Detail]  │ [◒ P1 BU-epic-beads-ui-beads-task-manager-mg2 EPIC beads-ui: Beads task manager for the Claude Co⋯] [⋮]
+│[5: Timeline]│ [◒ P1 BU-beads-ui-claude-code-aeyb beads-ui Claude Code mod: the task manager inside the Claude C⋯] [⋮]
+│[6: Settings]│ [◉ P1 BU-t-1-5-delete-xmxe T-1.5: delete confirmation flow] [⋮]
+╰─────────────╯ [◦ P1 BU-t-0-1-core-module-gset T-0.1: core module and purity gate] [⋮]
+                [◦ P1 BU-t-0-2-bd-node-nrrb T-0.2: bd-node adapter] [⋮]
+                [◦ P1 BU-t-0-3-mod-plugin-fumv T-0.3: mod plugin and marketplace] [⋮]
+                [◦ P1 BU-t-0-4-repository-zach T-0.4: repository hygiene for a public repo] [⋮]
+                [◦ P1 BU-t-1-1-board-tab-nxdt T-1.1: Board tab with keyboard Move to] [⋮]
+                [◦ P1 BU-t-1-2-backlog-tab-vptb T-1.2: Backlog tab with sort and filter] [⋮]
+                [◦ P1 BU-t-1-3-detail-tab-ymtx T-1.3: Detail tab and inline edit] [⋮]
+                [r: +5 more]
+                t Tasks ⋅ 1 Board ⋅ 2 Backlog ⋅ 3 Sprint ⋅ 4 Detail ⋅ 5 Timeline ⋅ 6 Settings ⋅ k menu ⋅ r more tasks ⋅
+```
+
+- Not done here, by D-43's order: the colours beyond the brackets and the rest of the pane's look (T-2C.12), the band's disclosure levels and its count buttons (T-2C.2, which draw through this affordance), the indicator entries (T-2C.3) and Raster in the band (T-2C.11). Not yet checked live in a session: how the brackets and ◨ ⊠ draw in the fleet's terminals and fonts; the `ascii` switch is the fallback until they are.
 
 ---
 
