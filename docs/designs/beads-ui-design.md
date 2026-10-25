@@ -648,12 +648,13 @@ Each phase carries its scope, deliverables, tasks with EARS acceptance criteria 
     - [x] `If a component is given an element the band cannot draw (Select, Input, Markdown), then the band adapter shall draw its button or menu form, and a test shall cover each such element.`
     - As built (T-2C.1, BU-mg2.3.21.1): the registry, the `Surface` adapters, the components and `[surfaces]` are in D-35's as-built note. The Tasks view, the task row and list, the action bar, the nav and Settings' fields and lists draw through `hooks/components`; the other views wait for T-2C.8. The band site measured as accepting Select, Input and Markdown, so the button forms apply where a band is handed only Box, Text and Button, as `drawBand`'s is today.
   - **T-2C.2 The band's disclosure levels** (D-36, BU-mg2.3.21.2, .3 and .4)
-    - [ ] `When the band draws its summary line, every count it draws (in progress, blocked, open, done, and any count part configured under T-1B.11) shall be a button inside the summary text, on each of the firstmate's lines too, and the expand and overview controls shall sit directly after the text, at the left; no beads-ui control shall sit at the line's right end.`
-    - [ ] `When the user presses a count, by click, by Enter after Ctrl+X Tab, or by its hotkey, the band shall draw rows of that count's tasks under the summary, band.rows of them (5 unless configured), then a "+M more" row while more remain; "+M more" shall add band.rows more; "collapse" shall return to band.rows; "summary" shall return to the summary line alone. The expand control shall do the same for every status the session owns, in the Tasks view's order.`
-    - [ ] `When the user presses the overview control, the band shall draw a nav row generated from the view registry (every view whose surfaces include the band) and the chosen view through the framework, within the band's maxRows, with an "n more" row and scrolling past it.`
-    - [ ] `When a band row is pressed, or receives Enter, the band shall open that task's detail in the overview level.`
-    - [ ] `When band.rows or band.level (summary, rows or overview) is set in beads-ui.toml or in Settings, the band shall apply it at its next redraw; the level the user last chose shall persist in $.store per session.`
-    - [ ] `No drawn band line shall exceed the band's columns at 40, 80, 120 and 364 columns, and at no level shall the band's tree exceed maxRows rows.`
+    - [x] `When the band draws its summary line, every count it draws (in progress, blocked, open, done, and any count part configured under T-1B.11) shall be a button inside the summary text, on each of the firstmate's lines too, and the expand and overview controls shall sit directly after the text, at the left; no beads-ui control shall sit at the line's right end.`
+    - [x] `When the user presses a count, by click, by Enter after Ctrl+X Tab, or by its hotkey, the band shall draw rows of that count's tasks under the summary, band.rows of them (5 unless configured), then a "+M more" row while more remain; "+M more" shall add band.rows more; "collapse" shall return to band.rows; "summary" shall return to the summary line alone. The expand control shall do the same for every status the session owns, in the Tasks view's order.`
+    - [x] `When the user presses the overview control, the band shall draw a nav row generated from the view registry (every view whose surfaces include the band) and the chosen view through the framework, within the band's maxRows, with an "n more" row and scrolling past it.`
+    - [x] `When a band row is pressed, or receives Enter, the band shall open that task's detail in the overview level.`
+    - [x] `When band.rows or band.level (summary, rows or overview) is set in beads-ui.toml or in Settings, the band shall apply it at its next redraw; the level the user last chose shall persist in $.store per session.`
+    - [x] `No drawn band line shall exceed the band's columns at 40, 80, 120 and 364 columns, and at no level shall the band's tree exceed maxRows rows.`
+    - As built (T-2C.2, BU-mg2.3.21.2, .3 and .4): the reducer, the drawing, the row reads, the keys, `[band] rows` and `level`, and the captures, in D-36's as-built note. The overview draws the Tasks view and any view registered later through the framework; Board, Backlog, Timeline and Settings each draw a button that opens them in the pane until T-2C.8.
   - **T-2C.3 Row indicators: the registry, blocked and agent working** (D-41, D-42, BU-mg2.3.18.1, BU-mg2.3.18.2)
     - [ ] `When a task row draws in the band, the Tasks view, the Backlog or a Board card, it shall draw a left gutter of one cell per enabled indicator, in registry order, each its glyph or a blank, so that rows stay aligned.`
     - [ ] `When an issue's status is blocked, or an open issue blocks it through a blocks dependency, the blocked indicator shall show.`
@@ -2504,6 +2505,84 @@ The firstmate's `[bd][all]` and `[fm]` lines each carry their own count buttons;
 <!-- decision-lineage: decision-id=BU-mg2.2/D-36; decision-topic=what the band shows at each level and where its controls sit; governs=claude-mod:band,config:band.rows,config:band.level; normalized-proposition=the band opens at a one-line summary whose counts are buttons and whose controls follow the text at the left, expands a pressed count into N task rows with more and collapse controls, and offers an overview of the pane's views within maxRows; applicability=surface:tui; outcome-id=band-three-levels-left-controls; relation=refines; related-decision-id=BU-mg2.2/D-34; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
 Gate 0: each part of the chosen option is a clause of Sergei's message, and the pane stays, as Sergei asked. Mitigations: the band opens at the summary, so rows appear only on a press, and "summary" is one press from any level (Risk 18); the level a session last chose persists, so a user who wants rows open keeps them; the summary text keeps `truncate-end`, and the count buttons are `plain` buttons drawn in the line's own text, so a narrow band truncates the tail as today and a test pins each width from 40 to 364 columns. The beads button of D-27 moves to the left with the other controls, drawn as D-43's icon-first pane toggle (T-2C.14). Claude Code's own `[-]` mark at the right end is untouched.
+
+**As built (T-2C.2; BU-mg2.3.21.2, .3 and .4).**
+
+- The levels are a reducer in core, `core/src/views/disclosure.ts`: `Disclosure` holds the level, the line and count whose rows are open, how many rows are drawn, the overview's view, the task it details, the overview list's first row, and `basis`, the `band.level` it was chosen under. `reduceDisclosure` takes a press (a count, expand, "+M more", collapse, summary, the overview control, a nav press, a row, back, a scroll). A press on the count whose rows are open returns to the summary. `settleDisclosure` keeps a session's state until `band.level` changes, and then opens at the new level at the next redraw, so the file or Settings wins over a kept choice only when it changes. The state is kept in `$.store` under `band-level`, by session name, beside every other session's.
+- The drawing is one class, `BandLevels` (`hooks/levels.ts`), drawing through the band adapter (`bandSurface`) and the components in `hooks/components/band.ts` (`summaryLine`, `countRows`, `controlsRow`). `register.ts` hands it every element the `AbovePrompt` site resolved, Select, Input and Markdown included, with the props' `bodyColumns` and `maxRows`. Every control is a `Button` drawn through D-43's affordance (`styledUi`), and the look tests walk the band at each level.
+- The summary line. A count is a button whose label is the count's text; since a Button draws no colour of its own (D-43), each status count follows its status glyph drawn in the count's token: `◒` in progress, `◉` blocked, `◦` open and, new in the glyph table, `✓` done (`status.done`, the Tasks view's glyph and ASCII form). The total, the drift marker and the unpublished count are buttons with no glyph. `summaryPieces` lays a line out in its columns: a count that does not fit whole is left out and the line ends with `⋯`, so a narrow band cuts the tail, and the controls follow the cut text. The first line's controls follow its text: `[▾]` (expand, `band.expand`), `[◫]` (overview, `band.overview`) and D-27's pane toggle, `[◨]`, with `[⊠]` while the pane is open. Both new control glyphs pass the width rule; ASCII `v` and `=`.
+- The rows. A count press reads that count's tasks with `bd list --json --brief --limit 0 --status=<status>` (`--status=closed --closed-after=<window start>` for done), with `--assignee=<session>` on a line that counts one session, in every store the line sums, so the rows hold the same issues the count does, the other host's included as of the last sync (`countTasksArgv`, `BandTally.readTasks`). The reads run on the press and again when the count moves or the session writes, never on a quiet minute; a store whose read fails is named in a `not read from <store>` line and the rest are drawn. Rows are ordered as the Tasks view orders them (status, then priority, then age), done last, newest first. The drift count's rows are the stores out of step with the pair, and the unpublished count's the stores with edits not yet published (`SyncState.pendingStores`); neither is pressable. When "+M more" has drawn more rows than the band's height holds, the newest rows are drawn and the controls row says how many are above.
+- The overview. Its nav is `bandNav` over `BeadsPane.viewsOn("band")`, the view registry under `[surfaces]` and Settings, with no hotkeys, since the pane's are digits. A view with a framework drawing (today the Tasks view, and any view registered later) is drawn through the band adapter with the rows the band has left, and its list scrolls with `[⇡ N above]` and `[⇣ N below]` buttons (the adapter's new `scroll`, and `windowStart` in core's `rowWindow`). A view needs 5 rows of the band (`MIN_VIEW_ROWS`); with fewer, it says so with a button that opens it in the pane. At short height, the band always, the task list cuts its count line to the columns instead of wrapping it, since a wrapped line would take a row the band does not have; every note the band draws is cut the same way. The views the pane still draws itself (Board, Backlog, Timeline, Settings) each draw a line saying so and a button that opens the pane on that view, until T-2C.8 moves them; Sprint draws its planned notice. A task row pressed at the rows level or in the overview's list draws that task's detail in the overview: its row, its status, type and assignee, its parent, its store and times, `[back]`, and, for a task of the pane's store, a button that opens it in the pane.
+- The keys, all letters, since a band button's digit fires from an empty prompt: on the session's own line `t` total, `p` in progress, `b` blocked, `o` open, `d` done, `w` unpublished; on a firstmate's `[bd][all]` line `a`, `i`, `k`, `l`, `j` and `u` (unsynced), so the two lines never share one; `e` expand, `v` overview, `m` "+M more", `c` collapse, `s` summary. The kit cannot press a band hotkey (its `key` needs a Client), so the tests pin each button's `hotkey`.
+- `[band] rows` (1 to 50, default 5) and `[band] level` (`summary`, `rows` or `overview`, default `summary`) are read with the rest of `[band]`, changed in the band settings (`Rows per press`, `Opens at:`) and written by Save to file. `level = "rows"` opens on every status, as expand does.
+- Height and width: no level draws more rows than `maxRows` (each level's budget is what the lines leave), and no line passes the band's columns; `hooks/levels.test.ts` draws each level at 40, 80, 120 and 364 columns with a 6-row band for a session and for the firstmate.
+- Expectations this changed: the format tests read a line's counts through `plainLine` and draw it 364 columns wide, as the buttons make a long line's tail cut short at 120; the pane toggle's first-line captures in `focus.test.ts` now hold the count buttons and the two controls before `[◨]`; Save to file writes `rows` and `level`.
+The levels at 120 columns, from Claude Code 2.1.310's test kit, laid out from the drawn tree by `hooks/tests/render.ts` (colour and hover not shown), for a test fixture of a session owning tasks in two stores. The summary:
+
+```text
+[bd] [t: 7 tasks] (◒[p: 4 in progress], ◉[b: 1 blocked], ◦[o: 1 open], ✓[d: 1 done last 24h]) * [e: ▾] [v: ◫] [◨]
+```
+
+The rows of `[▾]`, after one "+M more":
+
+```text
+[bd] [t: 7 tasks] (◒[p: 4 in progress], ◉[b: 1 blocked], ◦[o: 1 open], ✓[d: 1 done last 24h]) * [e: ▾] [v: ◫] [◨]
+  [◒ P0 AIH-qsmn3u write beads-ui's [sync] command]
+  [◒ P1 BU-mg2.3.21.2 T-2C.2: the band's disclosure levels]
+  [◒ P1 BU-mg2.3.21.3 the count buttons and their rows]
+  [◒ P2 AIH-p811n7 idle session wakes]
+  [◉ P2 BU-mg2.3.18.1 T-2C.3: row indicators]
+  [◦ P2 BU-mg2.3.21.5 T-2C.8: every pane view on the framework]
+  [✓ P2 BU-mg2.3.21.1 T-2C.1: the component framework]
+  [c: collapse] [s: summary]
+```
+
+The overview on the Tasks view, a 12-row band:
+
+```text
+[bd] [t: 7 tasks] (◒[p: 4 in progress], ◉[b: 1 blocked], ◦[o: 1 open], ✓[d: 1 done last 24h]) * [e: ▾] [v: ◫] [◨]
+[Tasks]  [Board]  [Bklg]  [Spr]  [Dtl]  [Time]  [Set]
+15 tasks: 2 in progress, 1 blocked, 12 open
+[◒ P1 BU-epic-beads-ui-beads-task-manager-mg2 EPIC beads-ui: Beads task manager for the Claude Code TUI, an MCP UI⋯] [⋮]
+[◒ P1 BU-beads-ui-claude-code-aeyb beads-ui Claude Code mod: the task manager inside the Claude Code TUI, with mou⋯] [⋮]
+[◉ P1 BU-t-1-5-delete-xmxe T-1.5: delete confirmation flow] [⋮]
+[◦ P1 BU-t-0-1-core-module-gset T-0.1: core module and purity gate] [⋮]
+[◦ P1 BU-t-0-2-bd-node-nrrb T-0.2: bd-node adapter] [⋮]
+[⇣ 5 below]
+[r: +5 more]
+  [s: summary]
+```
+
+A row's detail in the overview:
+
+```text
+[bd] [t: 7 tasks] (◒[p: 4 in progress], ◉[b: 1 blocked], ◦[o: 1 open], ✓[d: 1 done last 24h]) * [e: ▾] [v: ◫] [◨]
+[Tasks]  [Board]  [Bklg]  [Spr]  [Dtl]  [Time]  [Set]
+◒ P0 AIH-qsmn3u write beads-ui's [sync] command
+  in_progress, task, @aih-ec2-3
+  ai-harness, updated 2026-10-20T08:32:04.000Z
+  [back] [s: summary]
+```
+
+The firstmate's two lines at the summary, and with the `[bd][all]` line's in-progress count open:
+
+```text
+[bd][all] [a: 9 tasks] (◒[i: 5 in progress], ◉[k: 1 blocked], ◦[l: 2 open], ✓[j: 1 done last 24h]) * [e: ▾] [v: ◫] [◨]
+     [fm] [t: 2 tasks] (◒[p: 1 in progress], ◉[b: 0 blocked], ◦[o: 1 open], ✓[d: 0 done last 24h]) *
+```
+
+```text
+[bd][all] [a: 9 tasks] (◒[i: 5 in progress], ◉[k: 1 blocked], ◦[l: 2 open], ✓[j: 1 done last 24h]) * [e: ▾] [v: ◫] [◨]
+  [◒ P0 AIH-qsmn3u write beads-ui's [sync] command]
+  [◒ P1 BU-mg2.3.21.2 T-2C.2: the band's disclosure levels]
+  [◒ P1 BU-mg2.3.21.3 the count buttons and their rows]
+  [◒ P1 AIH-x1 chief loop]
+  [◒ P2 AIH-p811n7 idle session wakes]
+  [s: summary]
+     [fm] [t: 2 tasks] (◒[p: 1 in progress], ◉[b: 0 blocked], ◦[o: 1 open], ✓[d: 0 done last 24h]) *
+```
+
+The `*` ends each line because the test world runs no host refresher, so the session read its counts itself.
 
 ---
 
