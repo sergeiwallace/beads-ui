@@ -91,6 +91,7 @@ import {
   reduceDetail,
   refresherRunning,
   resolveConfig,
+  resolveTheme,
   SHORT_ROWS,
   SNAPSHOT_FILE,
   type SortSpec,
@@ -115,7 +116,6 @@ import {
   surfaceOf,
   type TaskClientProps,
   type TaskListView,
-  TERMINAL_THEME,
   TIMELINE_TYPES,
   type Token,
   taskClientProps,
@@ -141,6 +141,7 @@ import {
   type Surface,
   type TasksRegion,
 } from "./components/adapters.ts";
+import { colorOf, setTheme } from "./components/look.ts";
 import { navFrame } from "./components/nav.ts";
 import { type ViewEntry, ViewRegistry } from "./components/registry.ts";
 import {
@@ -308,12 +309,6 @@ const messageOf = (reason: unknown): string =>
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
-
-/** A mod `Text` colour for a semantic token (D-19). */
-export function colorOf(token: Token): string {
-  const color = TERMINAL_THEME[token];
-  return color.kind === "theme" ? color.key : color.name;
-}
 
 const present = <T>(items: readonly (T | undefined | false)[]): T[] =>
   items.filter((item): item is T => item !== undefined && item !== false);
@@ -617,9 +612,11 @@ export class BeadsPane {
       : [];
     await this.panel.read(config.text);
     const resolved = resolveConfig(config.text, this.storePath());
+    const theme = resolveTheme(config.text);
+    if (setTheme(theme.overrides)) this.host.invalidate();
     return {
       ...resolved,
-      problems: [...resolved.problems, ...problems, ...this.panel.problems],
+      problems: [...resolved.problems, ...problems, ...this.panel.problems, ...theme.problems],
     };
   }
 

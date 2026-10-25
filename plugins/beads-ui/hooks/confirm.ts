@@ -11,8 +11,9 @@ import {
   reduceConfirm,
   type UndoClose,
 } from "../core/src/index.ts";
+import { colorOf } from "./components/look.ts";
 import type { Host } from "./host.ts";
-import { colorOf, type PaneUi } from "./pane.ts";
+import type { PaneUi } from "./pane.ts";
 
 export const CONFIRM_ID = "beads-confirm";
 

@@ -50,6 +50,7 @@ export type {
   ResolvedPanel,
   ResolvedSurfaces,
   ResolvedSync,
+  ResolvedTheme,
   TomlError,
   TomlTable,
   TomlValue,
@@ -68,8 +69,10 @@ export {
   resolvePanel,
   resolveSurfaces,
   resolveSync,
+  resolveTheme,
   SURFACES_TABLE,
   SYNC_TABLE,
+  THEME_TABLE,
   userConfigPath,
   withBandTable,
   withOverrides,
@@ -270,8 +273,10 @@ export {
   syncArgv,
   syncedText,
 } from "./sync.ts";
-export type { TerminalColor, Token } from "./tokens.ts";
+export type { TerminalColor, ThemeOverrides, Token } from "./tokens.ts";
 export {
+  colorFor,
+  isToken,
   priorityToken,
   statusToken,
   TERMINAL_THEME,

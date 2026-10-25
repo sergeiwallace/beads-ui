@@ -20,18 +20,21 @@ export const TOKENS = [
   "warning",
   "error",
   "conflict",
+  "control",
 ] as const;
 export type Token = (typeof TOKENS)[number];
 
-/** A mod `Text` colour: a Claude Code theme key, or a named colour such as "red". */
-export type TerminalColor = { kind: "theme"; key: string } | { kind: "named"; name: string };
+/** A mod `Text` colour: a Claude Code theme key, which follows the person's light or dark theme. */
+export type TerminalColor = { kind: "theme"; key: string };
 
 const theme = (key: string): TerminalColor => ({ kind: "theme", key });
 
 /**
- * The terminal map. Theme keys are names in Claude Code's theme objects, read from the 2.1.306
- * binary on 2026-10-21 (text, inactive, subtle, suggestion, success, error, warning, claude,
- * permission, promptBorder); they follow the user's light or dark theme.
+ * The terminal map (D-19, D-43). Theme keys are names in Claude Code's theme objects, read from
+ * the 2.1.306 binary on 2026-10-21 (text, inactive, subtle, suggestion, success, error, warning,
+ * claude, permission, promptBorder) and `merged` from the 2.1.310 binary on 2026-10-25; they
+ * follow the user's light or dark theme. `control` colours the bracket every pressable element
+ * draws (T-2C.14), on the accent's key. `[theme]` sets any token to a hex value (resolveTheme).
  */
 export const TERMINAL_THEME: Readonly<Record<Token, TerminalColor>> = {
   "status.active": theme("suggestion"),
@@ -51,7 +54,8 @@ export const TERMINAL_THEME: Readonly<Record<Token, TerminalColor>> = {
   success: theme("success"),
   warning: theme("warning"),
   error: theme("error"),
-  conflict: { kind: "named", name: "magenta" },
+  conflict: theme("merged"),
+  control: theme("claude"),
 };
 
 export function statusToken(category: StatusCategory): Token {
@@ -62,8 +66,17 @@ export function priorityToken(priority: Priority): Token {
   return `priority.p${priority}`;
 }
 
+export const isToken = (name: string): name is Token =>
+  (TOKENS as readonly string[]).includes(name);
+
 /** Looks a token up by name, as read from a theme preset; undefined when the name is not a token. */
 export function terminalColor(name: string): TerminalColor | undefined {
-  const token = TOKENS.find((candidate) => candidate === name);
-  return token === undefined ? undefined : TERMINAL_THEME[token];
+  return isToken(name) ? TERMINAL_THEME[name] : undefined;
 }
+
+/** Hex values `[theme]` sets, one per token it names. */
+export type ThemeOverrides = Readonly<Partial<Record<Token, string>>>;
+
+/** The colour a surface draws for `token`: its `[theme]` hex value when set, else its theme key. */
+export const colorFor = (token: Token, overrides: ThemeOverrides = {}): string =>
+  overrides[token] ?? TERMINAL_THEME[token].key;

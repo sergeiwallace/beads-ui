@@ -1,6 +1,6 @@
 import type { Elements, RenderElement } from "claude-code";
 
-import { colorOf } from "./pane.ts";
+import { colorOf } from "./components/look.ts";
 import type { BandTally } from "./tally.ts";
 
 export type BandUi = Pick<Elements["terminal"], "Box" | "Text" | "Button">;
