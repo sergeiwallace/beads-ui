@@ -18,7 +18,10 @@ Only the Claude Code mod (the TUI plugin) is implemented. Phase 0 (the monorepo 
 DOM-free shared core and the public-repo hygiene) and Phase 1 (the MVP, a read-mostly board in the
 mod) have landed. The mod's pane now opens on a task panel: the session's own tasks, a nav to the
 board, backlog and settings, an options menu for every action and a Settings view
-([docs/procedures/mod-install.md](docs/procedures/mod-install.md#the-task-panel)).
+([docs/procedures/mod-install.md](docs/procedures/mod-install.md#the-task-panel)). Each view is
+registered once and drawn on the band and the pane alike; `[surfaces]` in `beads-ui.toml`, or a
+view's row in Settings, limits a view to `band` or `pane`
+([docs/procedures/mod-install.md](docs/procedures/mod-install.md#configuration)).
 
 The MCP UI app for Claude Desktop and claude.ai, and the web app, are [TODO]: neither has been
 started. They are the planned future state in
