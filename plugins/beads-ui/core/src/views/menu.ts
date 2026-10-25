@@ -188,9 +188,18 @@ export interface ClientKey {
   command: string;
 }
 
+/** One span of a Client row's indicator gutter (D-41), its colour resolved by the hooks. */
+export interface TaskClientSpan {
+  text: string;
+  color?: string;
+  dim?: boolean;
+}
+
 export interface TaskClientRow {
   id: string;
   label: string;
+  /** The row's indicator gutter, drawn before its label; absent with none enabled. */
+  gutter?: TaskClientSpan[];
 }
 
 /** What the hooks hand the task list's Client: rows and keys, never behaviour. */

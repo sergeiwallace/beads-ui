@@ -44,6 +44,18 @@ export interface SurfaceRow {
 /** The key of a view's surfaces row; the view's id follows it. */
 export const SURFACE_ROW_PREFIX = "settings:surfaces:";
 
+/** A row indicator Settings switches (D-41): its legend line and whether it is on. */
+export interface IndicatorRow {
+  id: string;
+  glyph: string;
+  ascii: string;
+  label: string;
+  on: boolean;
+}
+
+/** The key of an indicator's switch row; the indicator's id follows it. */
+export const INDICATOR_ROW_PREFIX = "settings:indicator:";
+
 /** Each option's label within `width` columns, its value first so a cut keeps it readable. */
 const options = (
   values: readonly string[],
@@ -61,6 +73,7 @@ export function settingsView(
   band: BandSettings,
   width: number,
   surfaces: readonly SurfaceRow[] = [],
+  indicators: readonly IndicatorRow[] = [],
 ): SettingsView {
   const room = Math.max(8, width);
   return {
@@ -120,6 +133,20 @@ export function settingsView(
           value: row.setting,
           options: options(SURFACE_SETTINGS, SURFACE_LABELS, room),
           hint: "the surfaces this view draws on; [surfaces] in beads-ui.toml",
+        }),
+      ),
+      ...indicators.map(
+        (row): SettingRow => ({
+          key: `${INDICATOR_ROW_PREFIX}${row.id}`,
+          label: `${row.glyph} ${row.id}`,
+          kind: "choice",
+          value: row.on ? "on" : "off",
+          options: options(
+            ["on", "off"],
+            { on: "drawn on every task row", off: "not drawn" },
+            room,
+          ),
+          hint: `${row.label} (ASCII ${row.ascii}); [indicators] ${row.id} in beads-ui.toml`,
         }),
       ),
     ],

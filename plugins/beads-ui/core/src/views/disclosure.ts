@@ -3,6 +3,7 @@
 // draws. Pure: a reducer over the person's presses, and the layouts the band draws from it.
 
 import { glyphOf } from "../glyphs.ts";
+import type { GutterCell } from "../indicators.ts";
 import { buttonWidth, PRESS_FRAME_COLUMNS, textWidth } from "../layout.ts";
 import type { Issue } from "../model.ts";
 import { sortIssues } from "../sort.ts";
@@ -266,6 +267,8 @@ export interface BandRowView {
   token: Token;
   /** The task a press opens; undefined for a store's row, which is not pressable. */
   id?: string;
+  /** A task row's indicator gutter (D-41), drawn left of its label. */
+  gutter?: GutterCell[];
 }
 
 export interface BandRowsView {

@@ -80,9 +80,17 @@ describe("the glyph table (D-41, D-43, T-2C.10)", () => {
   });
 
   test("should read [indicators] ascii as the form drawn, glyphs unless it is true", () => {
-    expect(resolveGlyphs(undefined)).toEqual({ ascii: false, problems: [] });
-    expect(resolveGlyphs("[indicators]\nascii = true\n")).toEqual({ ascii: true, problems: [] });
-    expect(resolveGlyphs("[indicators]\nagent = false\n")).toEqual({ ascii: false, problems: [] });
+    expect(resolveGlyphs(undefined)).toEqual({ ascii: false, switches: {}, problems: [] });
+    expect(resolveGlyphs("[indicators]\nascii = true\n")).toEqual({
+      ascii: true,
+      switches: {},
+      problems: [],
+    });
+    expect(resolveGlyphs("[indicators]\nagent = false\n")).toEqual({
+      ascii: false,
+      switches: { agent: false },
+      problems: [],
+    });
     expect(resolveGlyphs('[indicators]\nascii = "yes"\n').problems).toEqual([
       "indicators.ascii must be true or false; drawing the glyphs",
     ]);

@@ -3,6 +3,7 @@
 // as the collapse rule says. Pure: the element tree draws it now, and a Client later (D-31).
 
 import { glyphOf } from "../glyphs.ts";
+import type { GutterCell } from "../indicators.ts";
 import type { Issue, Status } from "../model.ts";
 import { sortIssues } from "../sort.ts";
 import { priorityToken, type Token } from "../tokens.ts";
@@ -115,6 +116,8 @@ export interface TaskRowView {
   priorityToken: Token;
   /** The row as drawn: glyph, priority, display id and title, cut to the row's width. */
   label: string;
+  /** The row's indicator gutter (D-41), drawn left of its label; empty with none enabled. */
+  gutter: GutterCell[];
 }
 
 export interface TaskListView {
@@ -147,6 +150,8 @@ export interface TaskListOptions {
   windowRows?: number;
   /** The first row the window draws, where the surface scrolls it (the band, D-36). */
   windowStart?: number;
+  /** Each row's indicator gutter (D-41); none when unset. */
+  gutter?: (issue: Issue) => GutterCell[];
 }
 
 /** How many of `tasks` the rule draws before the rest collapse. */
@@ -193,6 +198,7 @@ export function taskListView(issues: readonly Issue[], options: TaskListOptions)
         `${glyph} P${issue.priority} ${issue.displayId ?? issue.id} ${issue.title}`,
         options.width,
       ),
+      gutter: options.gutter?.(issue) ?? [],
     };
   });
   const counts = { in_progress: 0, blocked: 0, open: 0 };
