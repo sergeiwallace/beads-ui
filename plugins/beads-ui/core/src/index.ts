@@ -48,6 +48,7 @@ export type {
   ResolvedBand,
   ResolvedConfig,
   ResolvedPanel,
+  ResolvedSurfaces,
   ResolvedSync,
   TomlError,
   TomlTable,
@@ -65,12 +66,15 @@ export {
   resolveBand,
   resolveConfig,
   resolvePanel,
+  resolveSurfaces,
   resolveSync,
+  SURFACES_TABLE,
   SYNC_TABLE,
   userConfigPath,
   withBandTable,
   withOverrides,
   withPanelTable,
+  withSurfacesTable,
 } from "./config.ts";
 export type {
   Filter,
@@ -445,8 +449,24 @@ export {
   taskListView,
   withPanelOverrides,
 } from "./views/panel.ts";
-export type { SettingOption, SettingRow, SettingsView } from "./views/settings.ts";
-export { settingsView } from "./views/settings.ts";
+export type {
+  SettingOption,
+  SettingRow,
+  SettingsView,
+  SurfaceRow,
+} from "./views/settings.ts";
+export { SURFACE_ROW_PREFIX, settingsView } from "./views/settings.ts";
+export type { SurfaceId, SurfaceOverrides, SurfaceSetting } from "./views/surfaces.ts";
+export {
+  drawsOn,
+  entriesOn,
+  isSurfaceSetting,
+  SURFACE_IDS,
+  SURFACE_LABELS,
+  SURFACE_SETTINGS,
+  surfaceOf,
+  surfaceOverridesOf,
+} from "./views/surfaces.ts";
 export {
   asOf,
   BLOCK_MAX_CHARS,
