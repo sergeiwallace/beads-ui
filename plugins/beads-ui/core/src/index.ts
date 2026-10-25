@@ -3,6 +3,8 @@ export {
   CLOSED_PAGE_SIZE,
   cascadePreviewArgv,
   closeArgv,
+  commentAddArgv,
+  commentsArgv,
   deleteArgv,
   deletePreviewArgv,
   headArgv,
@@ -138,6 +140,7 @@ export {
 } from "./mint.ts";
 export type {
   BdArgv,
+  Comment,
   DeletePreview,
   Dependency,
   HistoryEvent,
@@ -154,6 +157,7 @@ export type {
 export { STATUS_CATEGORIES } from "./model.ts";
 export type { ParseError, ParseResult } from "./parsers.ts";
 export {
+  parseBdComments,
   parseBdCount,
   parseBdCreatedId,
   parseBdDeletePreview,
@@ -332,6 +336,8 @@ export {
   STALE_WRITE_EXIT,
   stepPage,
 } from "./views/board.ts";
+export type { CommentRow, CommentsView } from "./views/comments.ts";
+export { COMMENTS_MAX_CHARS, commentsView, parseCommentDraft } from "./views/comments.ts";
 export type {
   ConfirmEvent,
   ConfirmPhase,

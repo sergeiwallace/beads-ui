@@ -1,6 +1,7 @@
 import type { Args, On, ProcessRunResult, RenderPropsOf } from "claude-code";
 import { mock } from "claude-code/testing";
 
+import commentsMg23 from "../../core/test/fixtures/bd-comments-BU-mg2.3.json.ts";
 import cascadePreview from "../../core/test/fixtures/bd-delete-cascade-dry-run.json.ts";
 import dependentsText from "../../core/test/fixtures/bd-delete-dry-run-dependents.txt.ts";
 import leafText from "../../core/test/fixtures/bd-delete-dry-run-leaf.txt.ts";
@@ -116,12 +117,13 @@ const READS: Readonly<Record<string, ProcessRunResult>> = {
   "bd show BU-mg2.3": ok(show),
   "bd show BU-mg2.3.5": ok(show5),
   "bd history BU-mg2.3 --events": ok(historyMg23),
+  "bd comments BU-mg2.3": ok(commentsMg23),
   "bd delete BU-2zw --dry-run": ok(leafText),
   "bd delete BU-mg2.3 --dry-run": exit(1, DEPENDENTS_STDERR, dependentsText),
   "bd delete BU-mg2.3 --cascade --dry-run": ok(cascadePreview),
 };
 
-const WRITES = ["bd update ", "bd close ", "bd create ", "bd reopen "];
+const WRITES = ["bd update ", "bd close ", "bd create ", "bd reopen ", "bd comments add "];
 
 /**
  * What a script answers: a result, an Error to reject the call, `HANG` for a child that never

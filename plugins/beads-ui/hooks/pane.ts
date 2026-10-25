@@ -17,7 +17,11 @@ import {
   boardView,
   type CardView,
   COMMANDS,
+  type Comment,
   clockStamp,
+  commentAddArgv,
+  commentsArgv,
+  commentsView,
   createArgv,
   DEFAULT_BAND_SETTINGS,
   DEFAULT_CONFIG,
@@ -57,6 +61,7 @@ import {
   type PendingDisplayId,
   type PlannedView,
   panelActions,
+  parseBdComments,
   parseBdCreatedId,
   parseBdHistoryEvents,
   parseBdList,
@@ -64,6 +69,7 @@ import {
   parseBdShow,
   parseBdStatuses,
   parseBoardSnapshot,
+  parseCommentDraft,
   parseFieldEdit,
   parseFileLease,
   parseIssueRows,
@@ -288,6 +294,15 @@ export const SHORT_HELP_TEXT =
 export const NO_NAME_TEXT =
   "Mine needs the session's name, which ai c sets in CLAUDE_CODE_TASK_LIST_ID; this session has none, so the board shows all issues";
 
+/** The Backlog's measured columns (backlogViewAt): the tier and each fixed column's width. */
+interface BacklogColumns {
+  wide: boolean;
+  idWidth: number;
+  typeWidth: number;
+}
+
+const assigneeLabel = (assignee: string): string => (assignee === "" ? "" : `@${assignee}`);
+
 const messageOf = (reason: unknown): string =>
   reason instanceof Error ? reason.message : String(reason);
 
@@ -340,6 +355,13 @@ export class BeadsPane {
   detailId: string | undefined;
   detail: DetailState | undefined;
   detailError: string | undefined;
+  /** The open issue's comments (BU-mg2.3.15), read with its detail; undefined until read. */
+  comments: Comment[] | undefined;
+  commentsError: string | undefined;
+  /** What the comment control holds: kept when its write fails, so no typed text is lost. */
+  commentDraft = "";
+  commentSaving = false;
+  commentError: string | undefined;
   undo: UndoClose | undefined;
   notice: Notice | undefined;
   focusedId: string | undefined;
@@ -1493,21 +1515,37 @@ export class BeadsPane {
       this.host?.invalidate();
       return;
     }
+    if (id !== this.detailId) {
+      this.commentDraft = "";
+      this.commentError = undefined;
+    }
     this.focusedId = id;
     this.detailId = id;
     this.detail = undefined;
     this.detailError = undefined;
+    this.comments = undefined;
+    this.commentsError = undefined;
     this.setTab("detail");
     await this.loadDetail(id);
     this.host?.invalidate();
   }
 
   private async loadDetail(id: string): Promise<void> {
-    const [shown, history] = await Promise.all([
+    const [shown, history, comments] = await Promise.all([
       this.run(showArgv(id), READ_TIMEOUT_MS),
       this.run(historyArgv(id), READ_TIMEOUT_MS),
+      this.run(commentsArgv(id), READ_TIMEOUT_MS),
     ]);
     if (this.detailId !== id) return;
+    const parsedComments = comments.ok ? parseBdComments(comments.stdout) : undefined;
+    if (parsedComments?.ok === true) {
+      this.comments = parsedComments.value;
+      this.commentsError = undefined;
+    } else {
+      this.commentsError = comments.ok
+        ? `bd comments ${id} returned nothing beads-ui can read`
+        : this.failure(`bd comments ${id}`, comments);
+    }
     const issue = shown.ok ? parseBdShow(shown.stdout) : undefined;
     const first = issue?.ok === true ? issue.value.find((one) => one.id === id) : undefined;
     if (first === undefined) {
@@ -1556,6 +1594,42 @@ export class BeadsPane {
     await this.wrote(ran.dir);
     await this.loadDetail(detail.issue.id);
     await this.refresh({ direct: true });
+  }
+
+  /**
+   * A comment typed in the Detail view (BU-mg2.3.15): `bd comments add` as the session's actor,
+   * then the publish hears of the write (D-33) and the comments are read again. A failed write
+   * keeps the typed text in the control and says why.
+   */
+  async addComment(text: string): Promise<void> {
+    const issue = this.detail?.issue;
+    if (issue === undefined || this.commentSaving) return;
+    this.commentDraft = text;
+    const parsed = parseCommentDraft(text);
+    if (!parsed.ok) {
+      this.commentError = parsed.error;
+      this.host?.invalidate();
+      return;
+    }
+    this.commentError = undefined;
+    this.commentSaving = true;
+    this.host?.invalidate();
+    const ran = await this.run(
+      commentAddArgv(issue.id, parsed.value, this.stores.sessionName),
+      WRITE_TIMEOUT_MS,
+    );
+    this.commentSaving = false;
+    if (!ran.ok) {
+      this.commentError = this.failure("adding the comment", ran);
+      this.host?.invalidate();
+      return;
+    }
+    await this.wrote(ran.dir);
+    if (this.detailId === issue.id) {
+      this.commentDraft = "";
+      await this.loadDetail(issue.id);
+    }
+    this.host?.invalidate();
   }
 
   requestDelete(): void {
@@ -2376,27 +2450,45 @@ export class BeadsPane {
     });
   }
 
-  /** The Backlog's column widths at a body width. */
-  private backlogLayout(width: number): { wide: boolean; idWidth: number; titleWidth: number } {
+  /**
+   * The Backlog as core pages it, at the page the person stepped to, with its columns sized to
+   * the page drawn: the display id, type and assignee columns take their longest value up to a
+   * cap, so a value that fits is drawn whole, and the title takes the rest of the width.
+   */
+  private backlogViewAt(width: number): BacklogView & BacklogColumns {
     const wide = width >= 90;
-    const idWidth = Math.min(32, Math.max(10, Math.floor(width * (wide ? 0.28 : 0.3))));
-    const fixed = wide ? 3 + idWidth + 8 + 12 + 10 + 8 + 6 : 3 + idWidth + 6 + 3;
-    return { wide, idWidth, titleWidth: Math.max(10, width - fixed) };
-  }
-
-  /** The Backlog as core pages it, at the page the person stepped to. */
-  private backlogViewAt(width: number): BacklogView {
-    const { idWidth, titleWidth } = this.backlogLayout(width);
-    return backlogView(this.shown().issues, {
+    const view = backlogView(this.shown().issues, {
       statuses: this.board.statuses,
       filter: this.filter,
       sort: this.sort,
-      titleWidth,
-      idWidth,
+      titleWidth: Number.POSITIVE_INFINITY,
+      idWidth: Number.POSITIVE_INFINITY,
       pageSize: BACKLOG_PAGE_SIZE,
       page: this.backlogPage,
       ...(this.readyIds === undefined ? {} : { readyIds: this.readyIds }),
     });
+    const longest = (values: readonly string[]) => Math.max(1, ...values.map(textWidth));
+    const idCap = Math.max(10, Math.floor(width * (wide ? 0.28 : 0.3)));
+    const idWidth = Math.min(idCap, longest(view.rows.map((row) => row.displayId)));
+    const typeWidth = wide ? Math.min(12, longest(view.rows.map((row) => row.type))) : 0;
+    const assigneeWidth = wide
+      ? Math.min(24, longest(view.rows.map((row) => assigneeLabel(row.assignee))))
+      : 0;
+    const fixed = wide ? 3 + idWidth + typeWidth + assigneeWidth + 10 + 8 + 6 : 3 + idWidth + 6 + 3;
+    const titleWidth = Math.max(10, width - fixed);
+    return {
+      ...view,
+      rows: view.rows.map((row) => ({
+        ...row,
+        displayId: truncate(row.displayId, idWidth),
+        type: truncate(row.type, typeWidth),
+        assignee: truncate(assigneeLabel(row.assignee), assigneeWidth),
+        title: truncate(row.title, titleWidth),
+      })),
+      wide,
+      idWidth,
+      typeWidth,
+    };
   }
 
   /**
@@ -2416,9 +2508,8 @@ export class BeadsPane {
 
   private drawBacklog(ui: PaneUi, width: number): RenderElement {
     const { Box, Text, Button } = ui;
-    const { wide, idWidth } = this.backlogLayout(width);
     const view = this.backlogViewAt(width);
-    const { page } = view;
+    const { page, wide, idWidth, typeWidth } = view;
     return Box({
       key: "backlog",
       flexDirection: "column",
@@ -2444,7 +2535,7 @@ export class BeadsPane {
                 children: [Text({ dimColor: true, wrap: "truncate-end", children: row.displayId })],
               }),
               ...(wide
-                ? [Box({ width: 8, children: [Text({ children: truncate(row.type, 8) })] })]
+                ? [Box({ width: typeWidth, children: [Text({ children: row.type })] })]
                 : []),
               Box({
                 flexGrow: 1,
@@ -2452,9 +2543,7 @@ export class BeadsPane {
               }),
               ...(wide
                 ? [
-                    Text({
-                      children: truncate(row.assignee === "" ? "" : `@${row.assignee}`, 12),
-                    }),
+                    Text({ children: row.assignee }),
                     Text({ dimColor: true, children: row.created }),
                   ]
                 : []),
@@ -2523,7 +2612,7 @@ export class BeadsPane {
     }
     const wide = width >= 90;
     const left = wide ? Math.floor(width * 0.45) : width;
-    const view = detailView(this.detail, { issues: this.board.issues, width: left - 14 });
+    const view = detailView(this.detail, { issues: this.board.issues, width, fieldWidth: left });
     const statuses = this.board.statuses.map((status) => ({ value: status.name }));
     // A control's own label shares its row with the value, and on a narrow pane a long value
     // squeezes it and cuts it in two (Claude Code 2.1.306, 53 columns). So the label is drawn
@@ -2638,32 +2727,67 @@ export class BeadsPane {
         ...view.dependencies.map((dep) =>
           Box({
             key: `dep:${dep.id}`,
-            children: [
-              Text({
-                children: truncate(
-                  `${dep.displayId}  ${dep.status}  ${dep.type}  ${dep.title}`,
-                  width,
-                ),
-              }),
-            ],
+            children: [Text({ children: dep.line })],
           }),
         ),
         Text({ bold: true, children: `History, last ${view.events.length}` }),
         ...view.events.map((event, i) =>
           Box({
             key: `event:${i}`,
-            children: [
-              Text({
-                dimColor: true,
-                children: truncate(
-                  `${event.at}  ${event.actor}  ${event.type}  ${event.summary}`,
-                  width,
-                ),
-              }),
-            ],
+            children: [Text({ dimColor: true, children: event.line })],
           }),
         ),
+        ...this.drawComments(ui, width, id),
       ]),
     });
+  }
+
+  /**
+   * The open issue's comments, newest last, and the control a new one is typed into
+   * (BU-mg2.3.15). The task panel opens a task into this view, so both read the same list.
+   */
+  private drawComments(ui: PaneUi, width: number, issueId: string): RenderNode[] {
+    const { Box, Text, Input, Markdown } = ui;
+    const view = commentsView(issueId, this.comments ?? [], { width });
+    return present<RenderNode>([
+      Box({
+        key: "comments-heading",
+        children: [Text({ bold: true, children: view.heading })],
+      }),
+      this.commentsError === undefined
+        ? undefined
+        : this.line(ui, "comments-error", this.commentsError, "error"),
+      ...view.rows.map((row) =>
+        Box({
+          key: `comment:${row.id}`,
+          flexDirection: "column",
+          children: [
+            Text({ dimColor: true, children: row.line }),
+            Markdown({ key: `comment-md:${row.id}`, text: row.text }),
+          ],
+        }),
+      ),
+      this.commentSaving
+        ? this.line(ui, "comment-saving", "adding the comment…", "text.dim")
+        : undefined,
+      this.commentError === undefined
+        ? undefined
+        : this.line(ui, "comment-error", this.commentError, "error"),
+      Box({
+        key: "comment-row",
+        flexDirection: "row",
+        gap: 1,
+        children: [
+          Box({ key: "label:comment", flexShrink: 0, children: [Text({ children: "Comment:" })] }),
+          Input({
+            key: "comment-add",
+            value: this.commentDraft,
+            placeholder: "one line: \\n is a line break, \\\\ a backslash",
+            submitLabel: "add",
+            onSubmit: (value) => void this.addComment(value),
+          }),
+        ],
+      }),
+    ]);
   }
 }

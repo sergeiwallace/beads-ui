@@ -88,6 +88,29 @@ export function historyArgv(id: string): BdArgv {
   return ["bd", "history", issueIdArg(id), "--events", "--json"];
 }
 
+/** Every comment on an issue, oldest first; `bd show --json` leaves them out. */
+export function commentsArgv(id: string): BdArgv {
+  return ["bd", "comments", issueIdArg(id), "--json"];
+}
+
+/**
+ * Adds a comment, written by `actor` when given (bd records it as the comment's author), else
+ * by bd's own default. The text is the one positional after `--`, so a text that starts with
+ * "-" is never read as a flag.
+ */
+export function commentAddArgv(id: string, text: string, actor?: string): BdArgv {
+  return [
+    "bd",
+    "comments",
+    "add",
+    issueIdArg(id),
+    ...(actor === undefined ? [] : [`--actor=${actor}`]),
+    "--json",
+    "--",
+    text,
+  ];
+}
+
 /** The guarded status write: bd exits 13 and writes nothing when `shown` is stale. */
 export function moveArgv(id: string, to: string, shown: string): BdArgv {
   return [
