@@ -1,6 +1,7 @@
 import type { Elements, RenderElement } from "claude-code";
 
 import type { SurfaceId, TaskClientProps } from "../../core/src/index.ts";
+import { styledUi } from "./look.ts";
 
 // The two adapters of the component layer (D-35, T-2C.1): what each surface can draw, handed to
 // every component, so one component draws a view on the band and on the pane.
@@ -48,7 +49,7 @@ export const PANE_ELEMENTS: ReadonlySet<ElementKind> = new Set(ELEMENT_KINDS);
 
 /** The band adapter: the elements it was handed, its columns and its maxRows, short always. */
 export function bandSurface(ui: SurfaceUi, size: { columns: number; maxRows?: number }): Surface {
-  const { Box, Text, Button, Input, Select, Markdown } = ui;
+  const { Box, Text, Button, Input, Select, Markdown } = styledUi(ui);
   return {
     id: "band",
     ui: {
@@ -74,7 +75,7 @@ export function paneSurface(
 ): Surface {
   return {
     id: "pane",
-    ui,
+    ui: styledUi(ui),
     columns: size.columns,
     rows: size.rows,
     short: size.short,

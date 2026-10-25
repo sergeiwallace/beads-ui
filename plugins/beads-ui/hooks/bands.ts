@@ -1,6 +1,6 @@
 import type { Elements, RenderElement } from "claude-code";
 
-import { colorOf } from "./components/look.ts";
+import { colorOf, styledUi } from "./components/look.ts";
 import type { BandTally } from "./tally.ts";
 
 export type BandUi = Pick<Elements["terminal"], "Box" | "Text" | "Button">;
@@ -23,7 +23,7 @@ export function drawBand(
 ): RenderElement | undefined {
   const lines = tally.lines;
   if (lines.length === 0) return undefined;
-  const { Box, Text, Button } = ui;
+  const { Box, Text, Button } = styledUi(ui);
   return Box({
     key: "beads-band",
     flexDirection: "column",

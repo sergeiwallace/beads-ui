@@ -35,7 +35,7 @@ const cardsIn = (state: BoardState, status: string, columnWidth = 30) => {
 
 describe("truncate", () => {
   test("should cut to the width with an ellipsis and fold whitespace when the text is long", () => {
-    expect(truncate("Board  tab\nwith keyboard", 9)).toBe("Board ta…");
+    expect(truncate("Board  tab\nwith keyboard", 9)).toBe("Board ta⋯");
     expect(truncate("short", 9)).toBe("short");
   });
 
@@ -80,8 +80,8 @@ describe("boardView", () => {
 
     expect(card).toEqual({
       id: "BU-mg2",
-      displayId: "BU-epic-beads-u…",
-      title: "EPIC beads-ui:…",
+      displayId: "BU-epic-beads-u⋯",
+      title: "EPIC beads-ui:⋯",
       priority: "P1",
       priorityToken: "priority.p1",
       assignee: "@aih-ec2-3",
@@ -312,7 +312,7 @@ describe("backlogView", () => {
       priorityToken: "priority.p1",
       type: "task",
       assignee: "",
-      title: "T-0.1: core module and…",
+      title: "T-0.1: core module and⋯",
       created: "2026-10-21",
     });
   });

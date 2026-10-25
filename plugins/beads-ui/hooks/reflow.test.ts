@@ -106,7 +106,7 @@ describe("reflow without overflow (T-1B.9)", () => {
 
     expect((await ui.find({ key: "swimlane" }))?.props.label).toBe("Lanes");
     // T-2B.1: below 48 columns the nav is a bar of keys and glyphs.
-    expect((await ui.find({ key: "tab:backlog" }))?.props.label).toBe("☰");
+    expect((await ui.find({ key: "tab:backlog" }))?.props.label).toBe("≣");
     expect((await ui.find({ key: "delete" }))?.props.label).toBe("Del");
     expect((await ui.find({ key: "tab:backlog" }))?.props.hotkey).toBe("2");
     expect((await ui.find({ key: "group::active" }))?.props.width).toBeGreaterThanOrEqual(16);

@@ -428,7 +428,7 @@ describe("the Timeline's row window (BU-beads-ui-timeline-dety N-3, A005)", () =
       }
 
       expect(largest).toBeLessThan(100_000);
-      expect((await ui.find({ key: "timeline-above" }))?.text).toMatch(/^↑ \d+ above$/);
+      expect((await ui.find({ key: "timeline-above" }))?.text).toMatch(/^⇡ \d+ above$/);
       expect((await ui.find({ key: "timeline-count" }))?.text).toBe(
         "300 epics and milestones: 300 with a due date, 0 without",
       );
@@ -444,6 +444,6 @@ describe("the Timeline's row window (BU-beads-ui-timeline-dety N-3, A005)", () =
     const short = (await timelineIds(ui)).length;
     expect(short).toBeGreaterThan(0);
     expect(short).toBeLessThan(tall);
-    expect((await ui.find({ key: "timeline-below" }))?.text).toBe(`↓ ${300 - short} below`);
+    expect((await ui.find({ key: "timeline-below" }))?.text).toBe(`⇣ ${300 - short} below`);
   });
 });

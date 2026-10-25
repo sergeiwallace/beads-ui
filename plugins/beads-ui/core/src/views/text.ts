@@ -1,8 +1,9 @@
+import { glyphOf } from "../glyphs.ts";
 import type { Priority } from "../model.ts";
 
 /**
  * Fits text to `width` columns on one line: whitespace runs become one space, and an overlong
- * string ends in "…". Counts code points, so a wide glyph still counts as one column.
+ * string ends in the glyph table's `text.more`. Counts code points, so a wide glyph still counts as one column.
  */
 export function truncate(text: string, width: number): string {
   if (!(width >= 1)) return "";
@@ -11,7 +12,7 @@ export function truncate(text: string, width: number): string {
   return `${chars
     .slice(0, Math.floor(width) - 1)
     .join("")
-    .trimEnd()}…`;
+    .trimEnd()}${glyphOf("text.more")}`;
 }
 
 export function priorityBadge(priority: Priority): string {

@@ -76,7 +76,7 @@ describe("fields drawn whole when the pane has room (BU-mg2.3.14)", () => {
     const ui = await detailAt($, on, 140);
 
     expect(await textOf(ui, "dep:BU-mg2")).toBe(
-      "BU-epic-beads-ui-beads-task-manager-mg2 in_progress parent-child EPIC beads-ui: Beads task manager for the Claude Code TUI,…",
+      "BU-epic-beads-ui-beads-task-manager-mg2 in_progress parent-child EPIC beads-ui: Beads task manager for the Claude Code TUI,⋯",
     );
   });
 
@@ -90,10 +90,10 @@ describe("fields drawn whole when the pane has room (BU-mg2.3.14)", () => {
     const ui = await detailAt($, on, 48);
 
     const heading = await textOf(ui, "detail-heading");
-    expect(heading.endsWith("…")).toBe(true);
+    expect(heading.endsWith("⋯")).toBe(true);
     expect([...heading].length).toBe(47);
     expect(await textOf(ui, "field:metadata")).toBe(
-      'Metadata: {"display_id":"BU-beads-ui-claude-co…',
+      'Metadata: {"display_id":"BU-beads-ui-claude-co⋯',
     );
     // A short field still fits whole.
     expect(await textOf(ui, "field:id")).toBe("Id: BU-mg2.3");

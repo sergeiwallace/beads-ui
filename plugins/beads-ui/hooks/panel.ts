@@ -4,6 +4,7 @@ import {
   barCells,
   DEFAULT_PANEL_SETTINGS,
   DUE_COLUMNS,
+  glyphOf,
   type MenuView,
   menuItemText,
   type PanelOverrides,
@@ -265,7 +266,9 @@ export function drawTimeline(
         ? undefined
         : Box({
             key: "timeline-above",
-            children: [Text({ dimColor: true, children: `↑ ${layout.above} above` })],
+            children: [
+              Text({ dimColor: true, children: `${glyphOf("list.above")} ${layout.above} above` }),
+            ],
           }),
       ...rows,
       Box({
@@ -280,7 +283,9 @@ export function drawTimeline(
         ? undefined
         : Box({
             key: "timeline-below",
-            children: [Text({ dimColor: true, children: `↓ ${layout.below} below` })],
+            children: [
+              Text({ dimColor: true, children: `${glyphOf("list.below")} ${layout.below} below` }),
+            ],
           }),
     ]),
   });

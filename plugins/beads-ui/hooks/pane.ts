@@ -36,6 +36,7 @@ import {
   FILTER_KEYS,
   type FilterState,
   footerHints,
+  glyphOf,
   groupLayout,
   historyArgv,
   INITIAL_BOARD_STATE,
@@ -91,6 +92,7 @@ import {
   reduceDetail,
   refresherRunning,
   resolveConfig,
+  resolveGlyphs,
   resolveTheme,
   SHORT_ROWS,
   SNAPSHOT_FILE,
@@ -141,7 +143,7 @@ import {
   type Surface,
   type TasksRegion,
 } from "./components/adapters.ts";
-import { colorOf, setTheme } from "./components/look.ts";
+import { colorOf, glyphText, setAscii, setTheme, styledUi } from "./components/look.ts";
 import { navFrame } from "./components/nav.ts";
 import { type ViewEntry, ViewRegistry } from "./components/registry.ts";
 import {
@@ -303,6 +305,8 @@ interface BacklogColumns {
 }
 
 const assigneeLabel = (assignee: string): string => (assignee === "" ? "" : `@${assignee}`);
+
+const MORE = glyphOf("text.more");
 
 const messageOf = (reason: unknown): string =>
   reason instanceof Error ? reason.message : String(reason);
@@ -613,10 +617,18 @@ export class BeadsPane {
     await this.panel.read(config.text);
     const resolved = resolveConfig(config.text, this.storePath());
     const theme = resolveTheme(config.text);
-    if (setTheme(theme.overrides)) this.host.invalidate();
+    const glyphs = resolveGlyphs(config.text);
+    const restyled = setTheme(theme.overrides);
+    if (setAscii(glyphs.ascii) || restyled) this.host.invalidate();
     return {
       ...resolved,
-      problems: [...resolved.problems, ...problems, ...this.panel.problems, ...theme.problems],
+      problems: [
+        ...resolved.problems,
+        ...problems,
+        ...this.panel.problems,
+        ...theme.problems,
+        ...glyphs.problems,
+      ],
     };
   }
 
@@ -1695,12 +1707,13 @@ export class BeadsPane {
    * move below the board, so the tabs, the board's header and a card come first.
    */
   draw(
-    ui: PaneUi,
+    elements: PaneUi,
     frame: PaneFrame,
     helpRegion?: RenderElement,
     tasksRegion?: TasksRegion,
     raster?: RasterElement,
   ): RenderElement {
+    const ui = styledUi(elements);
     const { Box, Text } = ui;
     if (this.host === undefined) {
       return Box({ children: [Text({ children: "beads-ui starts with the session." })] });
@@ -1775,7 +1788,12 @@ export class BeadsPane {
           ? undefined
           : Box({
               key: "footer",
-              children: [Text({ dimColor: true, children: footerHints("card").join(" · ") })],
+              children: [
+                Text({
+                  dimColor: true,
+                  children: footerHints("card").join(` ${glyphOf("text.separator")} `),
+                }),
+              ],
             }),
       ]),
     );
@@ -1902,13 +1920,18 @@ export class BeadsPane {
   ): TaskListClient {
     const menu = this.menuOpen ? this.menuViewOf(ctx) : undefined;
     const menuWidth = menu === undefined ? 0 : menuColumns(menu, width);
-    const props = taskClientProps(list, ctx, {
+    const built = taskClientProps(list, ctx, {
       ...(this.focusedId === undefined ? {} : { selected: this.focusedId }),
       ...(menu === undefined || this.menuFor === undefined
         ? {}
         : { gapAfter: this.menuFor, gapRows: menuRows(menu) }),
       selectedColor: colorOf("surface.focus"),
     });
+    // The Client draws with its own elements, so its rows take the look's glyph form here.
+    const props = {
+      ...built,
+      rows: built.rows.map((row) => ({ ...row, label: glyphText(row.label) })),
+    };
     this.clientProps = props;
     const labelWidth = Math.max(1, width - rowControlColumns(true));
     return {
@@ -1928,7 +1951,7 @@ export class BeadsPane {
     if (!this.board.loaded) {
       return Box({
         key: "tasks",
-        children: [Text({ dimColor: true, children: "reading the store…" })],
+        children: [Text({ dimColor: true, children: `reading the store${MORE}` })],
       });
     }
     const width = surface.columns;
@@ -2008,7 +2031,7 @@ export class BeadsPane {
     if (!this.board.loaded) {
       return ui.Box({
         key: "timeline",
-        children: [ui.Text({ dimColor: true, children: "reading the store…" })],
+        children: [ui.Text({ dimColor: true, children: `reading the store${MORE}` })],
       });
     }
     const view = timelineView(this.scoped(this.timelineIssues()), {
@@ -2094,7 +2117,7 @@ export class BeadsPane {
           children: !resolved
             ? ""
             : this.board.loadedAt === undefined
-              ? "loading…"
+              ? `loading${MORE}`
               : asOf(this.board.loadedAt),
         }),
         ...(this.unsynced.length === 0
@@ -2287,7 +2310,7 @@ export class BeadsPane {
         Text({ children: card.title }),
         Text({
           color: colorOf(card.priorityToken),
-          children: `${card.priority}${card.assignee === "" ? "" : ` ${card.assignee}`}${card.pending ? " moving…" : ""}`,
+          children: `${card.priority}${card.assignee === "" ? "" : ` ${card.assignee}`}${card.pending ? ` moving${MORE}` : ""}`,
         }),
         Select({
           key: `move:${card.id}`,
@@ -2318,7 +2341,7 @@ export class BeadsPane {
     if (view.loading) {
       return Box({
         key: "board",
-        children: [Text({ dimColor: true, children: "reading the store…" })],
+        children: [Text({ dimColor: true, children: `reading the store${MORE}` })],
       });
     }
     const lanes = view.lanes.map((lane) =>
@@ -2604,7 +2627,9 @@ export class BeadsPane {
       return Box({
         key: "detail",
         flexDirection: "column",
-        children: present([errorLine ?? Text({ dimColor: true, children: `reading ${id}…` })]),
+        children: present([
+          errorLine ?? Text({ dimColor: true, children: `reading ${id}${MORE}` }),
+        ]),
       });
     }
     const wide = width >= 90;
@@ -2765,7 +2790,7 @@ export class BeadsPane {
         }),
       ),
       this.commentSaving
-        ? this.line(ui, "comment-saving", "adding the comment…", "text.dim")
+        ? this.line(ui, "comment-saving", `adding the comment${MORE}`, "text.dim")
         : undefined,
       this.commentError === undefined
         ? undefined

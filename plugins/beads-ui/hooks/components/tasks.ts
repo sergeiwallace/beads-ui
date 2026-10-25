@@ -1,17 +1,23 @@
 import type { RenderElement, RenderNode } from "claude-code";
 
-import { hotkeyOf, type TaskListView, type TaskRowView, type Token } from "../../core/src/index.ts";
+import {
+  glyphOf,
+  hotkeyOf,
+  type TaskListView,
+  type TaskRowView,
+  type Token,
+} from "../../core/src/index.ts";
 import type { Surface } from "./adapters.ts";
 
 // The task row and the task list (T-2B.2, D-35): drawn from core's TaskListView on any surface.
 
 /** The menu button each task row carries, so a left click reaches the options menu (T-2B.4). */
-export const ROW_MENU_LABEL = "⋮";
+export const ROW_MENU_LABEL = glyphOf("row.menu");
 
 /** Beside a row the Client draws (T-2B.5): the button Enter on the focused task presses. */
-export const ROW_OPEN_LABEL = "▸";
+export const ROW_OPEN_LABEL = glyphOf("row.open");
 
-/** Columns the buttons beside a task's label take, each after a gap: ⋮, or ▸ and ⋮ by a Client. */
+/** Columns the buttons beside a task's label take, each after a gap: the menu, or open and menu by a Client. */
 export const rowControlColumns = (client: boolean): number => (client ? 4 : 2);
 
 /** The task list's Client (T-2B.5): its key, the instance the hooks hear posts and faults from. */
@@ -170,14 +176,18 @@ export function taskList(
         ? undefined
         : Box({
             key: "tasks-above",
-            children: [Text({ dimColor: true, children: `↑ ${list.above} above` })],
+            children: [
+              Text({ dimColor: true, children: `${glyphOf("list.above")} ${list.above} above` }),
+            ],
           }),
       ...rows,
       list.below === 0
         ? undefined
         : Box({
             key: "tasks-below",
-            children: [Text({ dimColor: true, children: `↓ ${list.below} below` })],
+            children: [
+              Text({ dimColor: true, children: `${glyphOf("list.below")} ${list.below} below` }),
+            ],
           }),
       list.collapsible
         ? Button({

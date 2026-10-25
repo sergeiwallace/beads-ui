@@ -47,6 +47,7 @@ export type {
   BeadsUiConfig,
   ResolvedBand,
   ResolvedConfig,
+  ResolvedGlyphs,
   ResolvedPanel,
   ResolvedSurfaces,
   ResolvedSync,
@@ -61,11 +62,13 @@ export {
   CONFIG_FILE_NAME,
   configCandidates,
   DEFAULT_CONFIG,
+  INDICATORS_TABLE,
   MIN_REFRESH_SECONDS,
   PANEL_TABLE,
   parseToml,
   resolveBand,
   resolveConfig,
+  resolveGlyphs,
   resolvePanel,
   resolveSurfaces,
   resolveSync,
@@ -96,6 +99,8 @@ export {
   parseFilter,
   submitFilter,
 } from "./filter.ts";
+export type { Glyph, GlyphId, GlyphKind } from "./glyphs.ts";
+export { asciiOf, GLYPHS, glyphOf, isTableGlyph } from "./glyphs.ts";
 export type { Labels, Tier } from "./layout.ts";
 export {
   buttonWidth,

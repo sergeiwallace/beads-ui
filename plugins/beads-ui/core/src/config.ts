@@ -625,6 +625,37 @@ export function resolveTheme(text: string | undefined): ResolvedTheme {
   return { overrides, problems };
 }
 
+/** The `beads-ui.toml` table of the row indicators and the glyphs' form (D-41, T-2C.10). */
+export const INDICATORS_TABLE = "indicators";
+
+export interface ResolvedGlyphs {
+  /** True: every table glyph draws its ASCII form (glyphs.ts). */
+  ascii: boolean;
+  problems: string[];
+}
+
+/**
+ * `[indicators] ascii`, read at call time: true draws every glyph of the table in its ASCII
+ * form. The table's other keys, one switch per indicator, are the registry's (D-41).
+ */
+export function resolveGlyphs(text: string | undefined): ResolvedGlyphs {
+  const problems: string[] = [];
+  if (text === undefined) return { ascii: false, problems };
+  const parsed = parseToml(text);
+  if (!parsed.ok) return { ascii: false, problems };
+  const table = parsed.value[INDICATORS_TABLE];
+  if (table === undefined) return { ascii: false, problems };
+  if (!isTable(table)) {
+    problems.push(`${INDICATORS_TABLE} must be a table; drawing the glyphs`);
+    return { ascii: false, problems };
+  }
+  if (table.ascii === undefined || typeof table.ascii === "boolean") {
+    return { ascii: table.ascii === true, problems };
+  }
+  problems.push(`${INDICATORS_TABLE}.ascii must be true or false; drawing the glyphs`);
+  return { ascii: false, problems };
+}
+
 /** The `beads-ui.toml` table of the publish run after an edit (D-33, T-2B.6). */
 export const SYNC_TABLE = "sync";
 

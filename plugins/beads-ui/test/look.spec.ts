@@ -51,3 +51,39 @@ describe("raw colours (D-43, T-2C.9)", () => {
     expect(found).toEqual([]);
   });
 });
+
+/** Each code line of `text` holding a character outside ASCII, as `<line>: <text>`. */
+function glyphsWritten(text: string): string[] {
+  return text
+    .split("\n")
+    .map((line, i) => ({ line, at: i + 1 }))
+    .filter(({ line }) => !/^\s*(\/\/|\*|\/\*)/.test(line))
+    .filter(({ line }) => /[^ -~\t]/.test(line.replace(/\s\/\/.*$/, "")))
+    .map(({ line, at }) => `${at}: ${line.trim()}`);
+}
+
+// D-43, T-2C.10: a glyph reaches a drawing only from core/src/glyphs.ts, so no other source
+// file of the mod writes one; the hooks-entry walk (hooks/look.test.ts) checks what is drawn.
+describe("glyphs written outside the table (D-43, T-2C.10)", () => {
+  it("should find a glyph in a string and pass one in a comment", () => {
+    expect(glyphsWritten('const MENU = "⋮";')).toHaveLength(1);
+    expect(glyphsWritten("// the menu glyph ⋮")).toEqual([]);
+    expect(glyphsWritten('const MENU = glyphOf("row.menu"); // ⋮')).toEqual([]);
+  });
+
+  it("should write no glyph in hooks/, client/ or core/src/ but in the glyph table", () => {
+    const table = join(pluginRoot, "core", "src", "glyphs.ts");
+    const files = [
+      ...sources(join(pluginRoot, "hooks")),
+      ...sources(join(pluginRoot, "client")),
+      ...sources(join(pluginRoot, "core", "src")),
+    ].filter((file) => file !== table);
+    expect(files.length).toBeGreaterThan(40);
+    const found = files.flatMap((file) =>
+      glyphsWritten(readFileSync(file, "utf8")).map(
+        (hit) => `${relative(pluginRoot, file)}:${hit}`,
+      ),
+    );
+    expect(found).toEqual([]);
+  });
+});

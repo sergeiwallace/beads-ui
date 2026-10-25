@@ -54,7 +54,7 @@ describe("detailView", () => {
         status: "in_progress",
         title:
           "EPIC beads-ui: Beads task manager for the Claude Code TUI, an MCP UI app and a web app, sharing one core",
-        line: "BU-epic-beads-ui-beads-task-manager-mg2…",
+        line: "BU-epic-beads-ui-beads-task-manager-mg2⋯",
       },
     ]);
   });
@@ -75,13 +75,13 @@ describe("detailView", () => {
         at: "2026-10-21 05:48",
         actor: "Sergei Wallace",
         type: "status_changed",
-        summary: "status → in_progress",
+        summary: "status ⇾ in_progress",
       },
       {
         at: "2026-10-14 23:31",
         actor: "Sergei Wallace",
         type: "updated",
-        summary: "metadata.display_id → BU-beads-ui-claude-code-aeyb",
+        summary: "metadata.display_id ⇾ BU-beads-ui-claude-code-aeyb",
       },
       {
         at: "2026-10-14 23:31",
@@ -113,7 +113,7 @@ describe("reduceDetail", () => {
     const opened = openDetail(epic(), epicEvents());
 
     const saving = reduceDetail(opened, { type: "edit-submitted", field: "title" });
-    expect(detailView(saving, { width: 80 }).savingLine).toBe("saving title…");
+    expect(detailView(saving, { width: 80 }).savingLine).toBe("saving title⋯");
 
     const saved = reduceDetail(saving, { type: "edit-succeeded" });
     const waiting = detailView(saved, { width: 80 });
@@ -237,7 +237,7 @@ describe("parseFieldEdit", () => {
     const view = detailView(openDetail(issue, []), { width: 16 });
     const field = (key: string) => view.fields.find((candidate) => candidate.key === key);
 
-    expect(field("title")?.value).toBe("beads-ui…");
+    expect(field("title")?.value).toBe("beads-ui⋯");
     expect(field("title")?.raw).toBe(issue.title);
     expect(field("priority")?.raw).toBe(String(issue.priority));
     expect(field("id")?.raw).toBeUndefined();

@@ -140,7 +140,7 @@ describe("the first paint (T-1B.8)", () => {
     const { ui } = await opened($, on, { script: listsHang });
 
     expect(await cards(ui)).toEqual([]);
-    expect((await ui.find({ key: "header" }))?.text).toContain("loading…");
+    expect((await ui.find({ key: "header" }))?.text).toContain("loading⋯");
   });
 
   test("should run no bd list of its own while the refresher's snapshot is current", async ($, on) => {
