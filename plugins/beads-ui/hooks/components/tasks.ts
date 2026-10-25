@@ -3,6 +3,7 @@ import type { RenderElement, RenderNode } from "claude-code";
 import {
   glyphOf,
   hotkeyOf,
+  PRESS_FRAME_COLUMNS,
   type TaskListView,
   type TaskRowView,
   type Token,
@@ -17,8 +18,13 @@ export const ROW_MENU_LABEL = glyphOf("row.menu");
 /** Beside a row the Client draws (T-2B.5): the button Enter on the focused task presses. */
 export const ROW_OPEN_LABEL = glyphOf("row.open");
 
-/** Columns the buttons beside a task's label take, each after a gap: the menu, or open and menu by a Client. */
-export const rowControlColumns = (client: boolean): number => (client ? 4 : 2);
+/**
+ * Columns a task row takes beside its label's text: the label button's brackets and the menu
+ * button after a gap, or, beside a Client's row, the open and menu buttons each after a gap,
+ * every button in the clickable brackets (T-2C.14).
+ */
+export const rowControlColumns = (client: boolean): number =>
+  client ? 2 * (1 + 1 + PRESS_FRAME_COLUMNS) : PRESS_FRAME_COLUMNS + 1 + 1 + PRESS_FRAME_COLUMNS;
 
 /** The task list's Client (T-2B.5): its key, the instance the hooks hear posts and faults from. */
 export const TASKS_CLIENT_KEY = "tasks-list";

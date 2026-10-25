@@ -181,8 +181,9 @@ describe("the Board tab", () => {
     await w.clock.settle();
 
     expect((await ui.find({ key: "move:BU-mg2.3" }))?.props.value).toBe("in_progress");
-    // The side nav takes 14 of the 117 columns, so the card's display id is cut in its column.
-    expect((await ui.find({ key: "group::wip" }))?.text).toContain("BU-beads-ui-claude-code");
+    // The side nav and its gap take 16 of the 117 columns, so the card's display id is cut in its
+    // column.
+    expect((await ui.find({ key: "group::wip" }))?.text).toContain("BU-beads-ui-claude-cod");
     expect((await ui.find({ key: "conflict-line" }))?.text).toBe(
       "BU-mg2.3 changed elsewhere before the move to review; restored to in_progress and refreshed",
     );
@@ -363,8 +364,8 @@ describe("the Board tab", () => {
       const { ui } = await openLarge($, on, 1);
 
       expect((await ui.find({ key: "column::open" }))?.text).toBe("open 200");
-      expect((await ui.find({ key: "pager::open" }))?.text).toContain("1-25 of 200");
-      expect((await ui.find({ key: "next::open" }))?.props.label).toBe("+175 more");
+      expect((await ui.find({ key: "pager::open" }))?.text).toContain("1-17 of 200");
+      expect((await ui.find({ key: "next::open" }))?.props.label).toBe("+183 more");
 
       const { moves, largest } = await walkBoard(ui);
 
@@ -381,7 +382,9 @@ describe("the Board tab", () => {
       const { ui } = await openLarge($, on, 200);
       await ui.press({ key: "swimlane" });
 
-      expect((await ui.find({ key: "lane-pager" }))?.text).toMatch(/^back\s*lanes 1-\d+ of 201/);
+      expect((await ui.find({ key: "lane-pager" }))?.text).toMatch(
+        /^\[back\]\s*lanes 1-\d+ of 201/,
+      );
 
       const { moves, largest } = await walkBoard(ui);
 
@@ -445,17 +448,17 @@ describe("the Board tab", () => {
 
     await ui.press({ key: "page-next" });
     await w.clock.settle();
-    expect(await pager()).toContain("26-50 of 200");
+    expect(await pager()).toContain("18-34 of 200");
     expect(await keysOf(ui, "move:", "Select")).not.toContain("move:BU-load0");
 
     await ui.press({ key: "page-next" });
     await w.clock.settle();
-    expect(await pager()).toContain("51-75 of 200");
+    expect(await pager()).toContain("35-51 of 200");
 
     await ui.press({ key: "page-back" });
     await ui.press({ key: "page-back" });
     await w.clock.settle();
-    expect(await pager()).toContain("1-25 of 200");
+    expect(await pager()).toContain("1-17 of 200");
     expect(await keysOf(ui, "move:", "Select")).toContain("move:BU-load0");
     expect(await ui.find({ key: "notice" })).toBeUndefined();
   });
@@ -468,7 +471,7 @@ describe("the Board tab", () => {
     expect((await ui.find({ key: "notice" }))?.text).toBe(
       "focus a card first: Tab moves between cards",
     );
-    expect((await ui.find({ key: "pager::open" }))?.text).toContain("1-25 of 200");
+    expect((await ui.find({ key: "pager::open" }))?.text).toContain("1-17 of 200");
   });
 });
 

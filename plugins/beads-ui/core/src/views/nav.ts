@@ -117,8 +117,11 @@ export function hotkeyOf(command: string): string {
 /** `side` beside the view, `top` a bar of short labels above it, `glyph` a bar of keys and glyphs. */
 export type NavKind = "side" | "top" | "glyph";
 
-/** The side nav's width, its border included: the widest entry, `6: Settings`, and the frame. */
-export const SIDE_NAV_COLUMNS = 13;
+/**
+ * The side nav's width, its border included: the widest entry, `6: Settings` in the clickable
+ * brackets, and the frame.
+ */
+export const SIDE_NAV_COLUMNS = 15;
 /** Columns between the side nav and the view beside it. */
 export const SIDE_NAV_GAP = 1;
 

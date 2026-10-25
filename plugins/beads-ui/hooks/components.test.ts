@@ -6,8 +6,11 @@ import {
   DEFAULT_PANEL_SETTINGS,
   INITIAL_BOARD_STATE,
   labels,
+  PRESS_CLOSE,
+  PRESS_OPEN,
   panelActions,
   reduceBoard,
+  SIDE_NAV_COLUMNS,
   settingsView,
   taskListView,
 } from "../core/src/index.ts";
@@ -15,6 +18,7 @@ import { allIssues, storeStatuses } from "../core/test/helpers.ts";
 import { actionBar } from "./components/actions.ts";
 import { bandSurface, paneSurface, type Surface } from "./components/adapters.ts";
 import { choice, field, markdown } from "./components/elements.ts";
+import { colorOf, pressKey } from "./components/look.ts";
 import { bandNav, navBar } from "./components/nav.ts";
 import { taskList, taskRow } from "./components/tasks.ts";
 import type { Host } from "./host.ts";
@@ -64,6 +68,15 @@ const textOf = (tree: unknown): string[] => {
     else if (Array.isArray(value)) for (const child of value) walk(child);
     else if (isNode(value)) {
       if (value.type === "Button") out.push(String(value.props.label));
+      // A button's clickable brackets (T-2C.14) are its frame, not text; bareButtons checks them.
+      if (String(value.props.key ?? "").startsWith(pressKey(""))) {
+        walk(
+          (value.props.children as unknown[]).filter(
+            (child) => isNode(child) && child.type === "Button",
+          ),
+        );
+        return;
+      }
       walk(value.props.children);
     }
   };
@@ -95,6 +108,40 @@ const keysOf = (tree: unknown, prefix: string) =>
   nodes(tree)
     .map((node) => String(node.props.key ?? ""))
     .filter((key) => key.startsWith(prefix));
+
+/**
+ * The keys of the Buttons a tree draws outside the clickable affordance (T-2C.14): each must sit
+ * in its `press:` frame between the two brackets in the control token, plain.
+ */
+const bareButtons = (tree: unknown): string[] => {
+  const out: string[] = [];
+  const isBracket = (node: unknown, text: string) =>
+    isNode(node) &&
+    node.type === "Text" &&
+    node.props.color === colorOf("control") &&
+    node.props.children === text;
+  const walk = (value: unknown, parent: Node | undefined) => {
+    if (Array.isArray(value)) {
+      for (const child of value) walk(child, parent);
+      return;
+    }
+    if (!isNode(value)) return;
+    if (value.type === "Button") {
+      const key = String(value.props.key);
+      const siblings = (parent?.props.children ?? []) as unknown[];
+      const at = siblings.indexOf(value);
+      const framed =
+        parent?.props.key === pressKey(key) &&
+        isBracket(siblings[at - 1], PRESS_OPEN) &&
+        isBracket(siblings[at + 1], PRESS_CLOSE) &&
+        value.props.plain === true;
+      if (!framed) out.push(key);
+    }
+    walk(value.props.children, value);
+  };
+  walk(tree, undefined);
+  return out;
+};
 
 const COLUMNS = 80;
 const band = (columns = COLUMNS): Surface => bandSurface(UI, { columns, maxRows: 10 });
@@ -284,7 +331,7 @@ describe("the element a surface lacks (D-35, T-2C.1)", () => {
 describe("the view registry (D-35, T-2C.1)", () => {
   const FRAME = { width: 117, bodyColumns: 118, placement: "dock", bodyRows: 28 };
   /** The pane's view width at FRAME: the body less the side nav and its gap. */
-  const VIEW_COLUMNS = 117 - 13 - 1;
+  const VIEW_COLUMNS = 117 - SIDE_NAV_COLUMNS - 1;
 
   async function drawnPane() {
     const pane = new BeadsPane(new StoreResolver());
@@ -324,6 +371,24 @@ describe("the view registry (D-35, T-2C.1)", () => {
         children: [surface.ui.Text({ children: `probe on the ${surface.id}` })],
       }),
   };
+
+  test("should draw every pressable element of every view the framework draws in the clickable affordance, on the band and on the pane", async () => {
+    const beads = await drawnPane();
+    const drawn = beads.views.all().filter((entry) => entry.draw !== undefined);
+    expect(drawn.length).toBeGreaterThan(0);
+
+    for (const entry of drawn) {
+      for (const surface of [band(VIEW_COLUMNS), pane(VIEW_COLUMNS), bare(VIEW_COLUMNS)]) {
+        const tree = entry.draw?.(surface);
+        expect(
+          nodes(tree).some((node) => node.type === "Button"),
+          entry.view,
+        ).toBe(true);
+        expect(bareButtons(tree), `${entry.view} on the ${surface.id}`).toEqual([]);
+      }
+    }
+    expect(bareButtons(beads.draw(UI, FRAME))).toEqual([]);
+  });
 
   test("should draw the Tasks view, registered once, on the pane and the band from the pane's state, a band press running the pane's action", async () => {
     const pane = await drawnPane();

@@ -76,7 +76,7 @@ describe("fields drawn whole when the pane has room (BU-mg2.3.14)", () => {
     const ui = await detailAt($, on, 140);
 
     expect(await textOf(ui, "dep:BU-mg2")).toBe(
-      "BU-epic-beads-ui-beads-task-manager-mg2 in_progress parent-child EPIC beads-ui: Beads task manager for the Claude Code TUI,⋯",
+      "BU-epic-beads-ui-beads-task-manager-mg2 in_progress parent-child EPIC beads-ui: Beads task manager for the Claude Code TUI⋯",
     );
   });
 

@@ -203,9 +203,10 @@ const WANTED_ROWS = 24;
 const SHORT_CHROME_ROWS = 6;
 /**
  * The most task rows the Tasks view draws at once: Claude Code keeps only a tree's first 100,000
- * characters, so a longer list draws a window of rows that follows the focus.
+ * characters, so a longer list draws a window of rows that follows the focus. 80, not the 100 it
+ * was before each row's two buttons drew in the clickable affordance (T-2C.14).
  */
-export const TASK_WINDOW_ROWS = 100;
+export const TASK_WINDOW_ROWS = 80;
 /**
  * The rows the Timeline's chrome takes besides the nav: the header, the toolbar, the footer, and
  * the view's count, axis, above, undated heading and below lines.

@@ -497,7 +497,15 @@ describe("every action by menu and by key (T-2B.4)", () => {
 
     await ui.press({ key: "taskmenu:BU-mg2.3.9" });
     const keys = (await ui.findAll({})).map((element) => element.key ?? "");
-    expect(keys.indexOf("options-menu")).toBe(keys.indexOf("taskrow:BU-mg2.3.9") + 1 + 2);
+    // Under that row: after its menu button and before the next row (each button now sits in
+    // its affordance frame, T-2C.14, so the elements between are not counted).
+    const at = keys.indexOf("options-menu");
+    expect(at).toBeGreaterThan(keys.indexOf("taskmenu:BU-mg2.3.9"));
+    expect(
+      keys
+        .slice(keys.indexOf("taskrow:BU-mg2.3.9") + 1, at)
+        .filter((key) => key.startsWith("taskrow:")),
+    ).toEqual([]);
     expect((await ui.find({ key: "menu:task" }))?.text).toBe("Task BU-t-1-5-delete-xmxe");
     expect((await ui.find({ key: "menu:item:card.detail" }))?.props.label).toBe("d: Detail");
 
