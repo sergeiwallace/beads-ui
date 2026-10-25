@@ -47,6 +47,7 @@ import {
   storeSnapshotOf,
   supervise,
   syncArgv,
+  userConfigPath,
   WAKE_DIR,
   wakeFileName,
   wakeText,
@@ -486,6 +487,9 @@ export class BandTally {
       .then(leaseOf)
       .catch(() => undefined);
     if (taken?.token !== token) return { kind: "wait" } as const;
+    // The user's own beads-ui.toml, where the refresher reads `[review] command` at each beat
+    // (D-37); never a repository's.
+    const config = userConfigPath({ xdgConfigHome: this.stores.xdgConfigHome, home });
     const argv = [
       "node",
       `${host.pluginRoot}/${REFRESHER_PATH}`,
@@ -496,6 +500,7 @@ export class BandTally {
       home,
       "--token",
       token,
+      ...(config === undefined ? [] : ["--config", config]),
     ];
     const started = await host
       .stream(host.cwd, argv, START_TIMEOUT_MS)

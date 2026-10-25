@@ -48,16 +48,22 @@ if (args[0] === "list") {
   const at = new Date(Date.UTC(2026, 9, 1)).toISOString();
   const rows = issues.map((issue, i) => ({
     id: "S-" + i, title: issue.title ?? "issue " + i, status: issue.status, priority: 2,
-    issue_type: "task", assignee: issue.assignee, owner: "someone@example.com",
+    issue_type: "task", assignee: issue.assignee, parent: issue.parent, owner: "someone@example.com",
     created_at: at, updated_at: at, created_by: "someone", dependency_count: 0,
     ...(issue.closedAt === undefined ? {} : { closed_at: new Date(issue.closedAt).toISOString() }),
     metadata: { display_id: "S-issue-" + i, other: "dropped" }, labels: ["id:S-issue-" + i],
   }));
   const closed = args.includes("closed");
   const limit = Number(args[args.indexOf("--limit") + 1]);
-  const picked = closed
-    ? rows.filter((row) => row.status === "closed").sort((a, b) => (a.closed_at < b.closed_at ? 1 : -1))
-    : rows.filter((row) => row.status !== "closed");
+  const ids = args.find((arg) => arg.startsWith("--id="))?.slice(5).split(",");
+  const labels = args.find((arg) => arg.startsWith("--label-any="))?.slice(12).split(",");
+  const picked = ids !== undefined
+    ? rows.filter((row) => ids.includes(row.id))
+    : labels !== undefined
+      ? rows.filter((row) => row.labels.some((label) => labels.includes(label)))
+      : closed
+        ? rows.filter((row) => row.status === "closed").sort((a, b) => (a.closed_at < b.closed_at ? 1 : -1))
+        : rows.filter((row) => row.status !== "closed");
   fs.writeSync(1, JSON.stringify(limit > 0 ? picked.slice(0, limit) : picked) + "\\n");
   process.exit(0);
 }
@@ -80,6 +86,7 @@ interface Issue {
   assignee?: string;
   closedAt?: number;
   title?: string;
+  parent?: string;
 }
 
 const scratch: string[] = [];
@@ -816,6 +823,233 @@ describe("the host refresher", { timeout: 30_000 }, () => {
 
       expect(aih.statuses.open).toEqual({ "aih-ec2-3": 2 });
       expect(snapshot(h).stores.map((store: { path: string }) => store.path)).not.toContain(tree);
+    });
+  });
+
+  // T-2C.5, D-37: the held store's review verb, run once a beat through the user's
+  // `[review] command`. A stub held command logs each call and prints `review.json` from its
+  // directory, or only `unchanged` while `--if-changed` names the fingerprint in `fingerprint`;
+  // a `fail` file there makes it exit 4 with the store's JSON refusal.
+  describe("the review beat (T-2C.5)", () => {
+    const HELD = `#!/usr/bin/env node
+const fs = require("node:fs");
+const path = require("node:path");
+const dir = path.dirname(process.argv[1]);
+const args = process.argv.slice(2);
+fs.appendFileSync(path.join(dir, "held.log"), JSON.stringify({ args, cwd: process.cwd() }) + "\\n");
+if (fs.existsSync(path.join(dir, "fail"))) {
+  process.stdout.write(JSON.stringify({ status: "error", key: "pairs", detail: "message-transports.json is malformed" }) + "\\n");
+  process.stderr.write("held: pairs: message-transports.json is malformed\\n");
+  process.exit(1);
+}
+const fingerprint = fs.readFileSync(path.join(dir, "fingerprint"), "utf8").trim();
+const at = args.indexOf("--if-changed");
+if (at >= 0 && args[at + 1] === fingerprint) {
+  process.stdout.write(JSON.stringify({ unchanged: true, fingerprint }) + "\\n");
+  process.exit(0);
+}
+const payload = JSON.parse(fs.readFileSync(path.join(dir, "review.json"), "utf8"));
+process.stdout.write(JSON.stringify({ ...payload, fingerprint }) + "\\n");
+`;
+    // The verb's own item shape (ai-harness held_cli.py review, REVIEW_KEYS and its derived fields).
+    const item = (n: number, task: string, extra: Record<string, unknown> = {}) => ({
+      path: `/home/me/projects/ai-harness/docs/held/sem-kg-ec2--aih-ec2-3/2026-10-25-0${n}-decision-x.md`,
+      store: "ai-harness",
+      relpath: `docs/held/sem-kg-ec2--aih-ec2-3/2026-10-25-0${n}-decision-x.md`,
+      kind: "decision",
+      status: "open",
+      session: "aih-ec2-3@sem-kg-ec2",
+      machine: "sem-kg-ec2",
+      task,
+      title: `D-${n}: a decision`,
+      ask: "Approve (a).",
+      source_skill: "/format-decision",
+      created_at: `2026-10-25T0${n}:00:00Z`,
+      answered_at: null,
+      answer_recorded_in: null,
+      decider: null,
+      escalated: false,
+      ai_resolved: false,
+      selection: "current",
+      superseded_by: null,
+      ...extra,
+    });
+    const payloadOf = (items: unknown[]) => ({
+      schema: 1,
+      host: "sem-kg-ec2",
+      pair: ["acn-mac", "sem-kg-ec2"],
+      scope: "pair",
+      read_at: "2026-10-25T11:00:00Z",
+      stores: {},
+      items,
+      malformed: [],
+    });
+    const STORE: Record<string, Issue[]> = {
+      S: [
+        { status: "in_progress", assignee: "aih-ec2-3", title: "the reviewed task", parent: "S-9" },
+        { status: "blocked", title: "the task named by its display id" },
+      ],
+    };
+
+    /** A host whose user config names the stub held command, and the files the stub reads. */
+    function reviewHost(items: unknown[], config = true) {
+      const h = host(STORE);
+      const held = join(h.root, "held");
+      mkdirSync(held);
+      writeFileSync(join(held, "held_cli"), HELD);
+      chmodSync(join(held, "held_cli"), 0o755);
+      writeFileSync(join(held, "fingerprint"), "fp-1");
+      writeFileSync(join(held, "review.json"), JSON.stringify(payloadOf(items)));
+      writeFileSync(join(held, "held.log"), "");
+      const configPath = join(h.home, ".config", "beads-ui", "beads-ui.toml");
+      mkdirSync(join(h.home, ".config", "beads-ui"), { recursive: true });
+      // The install's own form: the whole review call, whose verb the refresher replaces.
+      writeFileSync(
+        configPath,
+        config
+          ? `[review]\ncommand = ["${join(held, "held_cli")}", "review", "--scope", "pair", "--json"]\n`
+          : `[sync]\ncommand = ["publish"]\n`,
+      );
+      const heldCalls = () =>
+        readFileSync(join(held, "held.log"), "utf8")
+          .split("\n")
+          .filter((line) => line !== "")
+          .map((line) => JSON.parse(line) as { args: string[]; cwd: string });
+      return { ...h, held, configPath, heldCalls };
+    }
+    const reviewOf = (h: Host) => {
+      const token = lease(h)?.token;
+      return typeof token === "string"
+        ? readJson(join(h.state, `review-${token}.json`))
+        : undefined;
+    };
+    const KEEP = [...FAST.slice(0, 6), "--idle-ms", "60000"];
+    const joins = (h: Host) =>
+      calls(h).filter(
+        (call) =>
+          call.args[0] === "list" &&
+          call.args.some((arg) => arg.startsWith("--id=") || arg.startsWith("--label-any=")),
+      );
+
+    it("should run the review verb with the user's command and write the pair's items, each joined to its issue by bd id or display id", async () => {
+      const h = reviewHost([item(1, "S-0"), item(2, "S-issue-1"), item(3, "none")]);
+      register(h, "aih-ec2-3");
+
+      launch(h, "token-review01", [...KEEP, "--config", h.configPath]);
+      const written = await until(() => reviewOf(h));
+
+      expect(h.heldCalls()[0]).toEqual({
+        args: ["review", "--scope", "pair", "--json"],
+        cwd: h.home,
+      });
+      expect(written).toMatchObject({
+        schema: 1,
+        token: "token-review01",
+        fingerprint: "fp-1",
+        host: "sem-kg-ec2",
+        pair: ["acn-mac", "sem-kg-ec2"],
+      });
+      expect(written.error).toBeUndefined();
+      const [first, second, third] = written.items;
+      expect(first.issue).toEqual({
+        id: "S-0",
+        displayId: "S-issue-0",
+        title: "the reviewed task",
+        status: "in_progress",
+        priority: 2,
+        labels: ["id:S-issue-0"],
+        parent: "S-9",
+        assignee: "aih-ec2-3",
+        updatedAt: "2026-10-01T00:00:00.000Z",
+        store: join(h.root, "S"),
+      });
+      expect(second.issue).toMatchObject({ id: "S-1", displayId: "S-issue-1", status: "blocked" });
+      expect(third.issue).toBeUndefined();
+      expect(first).toMatchObject({ kind: "decision", task: "S-0", selection: "current" });
+      expect(joins(h).map((call) => call.args.filter((arg) => arg.startsWith("--")))).toEqual([
+        ["--json", "--brief", "--all", "--limit", "--id=S-0,S-issue-1"],
+        ["--json", "--brief", "--all", "--limit", "--label-any=id:S-0,id:S-issue-1"],
+      ]);
+    });
+
+    it("should pass the last fingerprint, keep the items while the verb prints unchanged, and join again only once the store's head moves", async () => {
+      const h = reviewHost([item(1, "S-0")]);
+      register(h, "aih-ec2-3");
+
+      launch(h, "token-review02", [...KEEP, "--config", h.configPath]);
+      const first = await until(() => reviewOf(h));
+      await until(() => (h.heldCalls().length >= 3 ? true : undefined));
+      const kept = await until(() => {
+        const now = reviewOf(h);
+        return now !== undefined && now.checkedAt > first.checkedAt ? now : undefined;
+      });
+
+      expect(h.heldCalls()[1]?.args).toEqual([
+        "review",
+        "--scope",
+        "pair",
+        "--json",
+        "--if-changed",
+        "fp-1",
+      ]);
+      expect(kept.readAt).toBe(first.readAt);
+      expect(kept.items).toEqual(first.items);
+      expect(joins(h)).toHaveLength(2);
+
+      const issues = JSON.parse(readFileSync(join(h.root, "S", "issues.json"), "utf8"));
+      issues[0].status = "closed";
+      writeFileSync(join(h.root, "S", "issues.json"), JSON.stringify(issues));
+      writeFileSync(join(h.root, "S", "head"), "head-2");
+      const rejoined = await until(() =>
+        reviewOf(h)?.items?.[0]?.issue?.status === "closed" ? reviewOf(h) : undefined,
+      );
+
+      expect(rejoined.joins[0]).toMatchObject({ path: join(h.root, "S"), head: "head-2" });
+      expect(joins(h)).toHaveLength(4);
+      expect(rejoined.readAt).toBe(first.readAt);
+    });
+
+    it("should run no held command and write no review snapshot while [review] command is unset", async () => {
+      const h = reviewHost([item(1, "S-0")], false);
+      register(h, "aih-ec2-3");
+
+      launch(h, "token-review03", [...KEEP, "--config", h.configPath]);
+      await until(() =>
+        current(h) !== undefined && (current(h)?.beatAt ?? 0) > 0 ? true : undefined,
+      );
+      await until(() =>
+        calls(h).filter((call) => call.args[0] === "count").length >= 8 ? true : undefined,
+      );
+
+      expect(h.heldCalls()).toEqual([]);
+      expect(existsSync(join(h.state, "review-token-review03.json"))).toBe(false);
+    });
+
+    it("should keep the last items and name the failure when the command fails, and write the failure alone when it never answered", async () => {
+      const h = reviewHost([item(1, "S-0")]);
+      writeFileSync(join(h.held, "fail"), "");
+      register(h, "aih-ec2-3");
+
+      launch(h, "token-review04", [...KEEP, "--config", h.configPath]);
+      const failed = await until(() => reviewOf(h));
+
+      expect(failed.items).toEqual([]);
+      expect(failed.error).toBe(
+        "the review command did not answer: exited 1, the review command refused: message-transports.json is malformed, held: pairs: message-transports.json is malformed",
+      );
+
+      rmSync(join(h.held, "fail"));
+      const read = await until(() => (reviewOf(h)?.items?.length === 1 ? reviewOf(h) : undefined));
+      expect(read.error).toBeUndefined();
+
+      writeFileSync(join(h.held, "fail"), "");
+      const kept = await until(() =>
+        reviewOf(h)?.error !== undefined && reviewOf(h)?.checkedAt > read.checkedAt
+          ? reviewOf(h)
+          : undefined,
+      );
+      expect(kept.items).toEqual(read.items);
+      expect(kept.fingerprint).toBe("fp-1");
     });
   });
 

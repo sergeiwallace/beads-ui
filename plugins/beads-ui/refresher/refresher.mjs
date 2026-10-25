@@ -17,8 +17,12 @@
 // and it re-reads a store a session just wrote to as soon as that session drops a marker in
 // `<state-dir>/wake/`.
 //
-// Every snapshot it writes is its own: `counts-<token>.json` and `boards/<token>/`, which no
-// other refresher writes. A session reads the snapshot of the token `lease.json` names, so a
+// With `[review] command` set in the user's own beads-ui.toml (`--config`, the file the session
+// read it from), it also runs the held store's review verb once a beat behind its fingerprint and
+// writes the host pair's items, each joined to its issue, to `review-<token>.json` (D-37, T-2C.5).
+//
+// Every snapshot it writes is its own: `counts-<token>.json`, `review-<token>.json` and
+// `boards/<token>/`, which no other refresher writes. A session reads the snapshot of the token `lease.json` names, so a
 // refresher ousted while it was stopped between its lease check and its write writes only its
 // own files, which nobody reads any more. `counts.json`, the last published snapshot, is
 // replaced only after the holder's own file is written and the lease checked again; a session
@@ -45,6 +49,19 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { boardReadArgvs, headArgv, statusesArgv } from "../core/src/argv.ts";
+import { resolveReview } from "../core/src/config.ts";
+import {
+  issuesByTask,
+  joinArgvs,
+  joinItems,
+  joinPlan,
+  parseReviewOutput,
+  parseReviewSnapshot,
+  REVIEW_SNAPSHOT_SCHEMA,
+  REVIEW_TIMEOUT_MS,
+  reviewArgv,
+  reviewFileName,
+} from "../core/src/review.ts";
 import {
   BEAT_MS,
   BOARD_MAX_BYTES,
@@ -124,6 +141,9 @@ function parseArgs(argv) {
     }
   }
   if (!options["state-dir"].startsWith("/")) throw new Error("--state-dir must be absolute");
+  if (options.config !== undefined && !options.config.startsWith("/")) {
+    throw new Error("--config must be absolute");
+  }
   if (!isRefresherToken(options.token)) {
     throw new Error("--token must be 8 to 64 letters, digits, _ or -");
   }
@@ -463,6 +483,73 @@ async function readBoard(store, known, dir, token, writable, inherited, deadline
   return { path: store.path, ok: true, file, head: commit, readAt, checkedAt: readAt, bytes };
 }
 
+/**
+ * One run of the held store's command in `cwd`, by `deadline`: its stdout whatever its exit, since
+ * the review verb prints its payload and exits 1 when one routed store could not be read, and its
+ * exit and the first line of its stderr. `error` is set when it did not run to an exit.
+ */
+function runHeld(argv, cwd, deadline) {
+  const left = deadline - Date.now();
+  if (left <= 0) return Promise.resolve({ error: UNREAD });
+  return new Promise((resolve) => {
+    execFile(
+      argv[0],
+      argv.slice(1),
+      {
+        cwd,
+        timeout: Math.min(REVIEW_TIMEOUT_MS, left),
+        maxBuffer: BOARD_BUFFER,
+        env: { ...process.env, NO_COLOR: "1" },
+      },
+      (error, stdout, stderr) => {
+        const why = `${stderr}`.trim().split("\n")[0] ?? "";
+        if (error !== null && typeof error.code !== "number") {
+          resolve({ error: `timed out or could not start${why === "" ? "" : `, ${why}`}` });
+          return;
+        }
+        resolve({ code: error === null ? 0 : error.code, stdout: `${stdout}`, why });
+      },
+    );
+  });
+}
+
+const sameTasks = (a, b) => a.length === b.length && a.every((task, i) => task === b[i]);
+
+/**
+ * Each store's join for `items` (T-2C.5): the issues their tasks name, read with joinArgvs when
+ * the store's Dolt head moved or the tasks asked of it changed since `joins` was read, else kept.
+ * A store whose head or rows cannot be read keeps its last join. Undefined once `holds` fails.
+ */
+async function joinReview(items, joins, stores, holds, deadline) {
+  const known = new Map(joins.map((join) => [join.path, join]));
+  const plan = [...joinPlan(items, stores).values()];
+  const out = [];
+  const reads = plan.map(({ store, tasks }) => async () => {
+    const held = known.get(store.path);
+    const keep = () => {
+      if (held !== undefined) out.push(held);
+      return holds();
+    };
+    if (!holds()) return false;
+    const head = await count(store, headArgv(), deadline);
+    const commit = head.ok ? parseHead(head.stdout) : undefined;
+    if (commit === undefined) return keep();
+    if (held !== undefined && held.head === commit && sameTasks(held.tasks, tasks)) return keep();
+    const rows = [];
+    for (const argv of joinArgvs(tasks)) {
+      const ran = await count(store, argv, deadline, BOARD_TIMEOUT_MS, BOARD_BUFFER);
+      const json = ran.ok ? parseJson(ran.stdout) : { ok: false };
+      if (!json.ok || !Array.isArray(json.value)) return keep();
+      rows.push(...json.value);
+    }
+    const issues = [...new Set(issuesByTask(rows, store.path).values())];
+    out.push({ path: store.path, head: commit, tasks, issues });
+    return holds();
+  });
+  if (!(await inTurn(reads, CONCURRENT_STORES))) return undefined;
+  return out.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+}
+
 /** A synchronous stall of `ms`: the event loop, and so every timer, waits with it. */
 const stall = (ms) => {
   if (ms > 0) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
@@ -493,6 +580,16 @@ function dropOtherTokens(dir, token, now, staleMs, isHolder) {
       fresh.add(match[1]);
       continue;
     }
+    if (!isHolder()) return;
+    try {
+      unlinkSync(join(dir, name));
+    } catch {
+      // another holder removed it first
+    }
+  }
+  for (const name of readdirSync(dir)) {
+    const match = /^review-(.+)\.json$/.exec(name);
+    if (match === null || fresh.has(match[1]) || !old(join(dir, name))) continue;
     if (!isHolder()) return;
     try {
       unlinkSync(join(dir, name));
@@ -654,6 +751,16 @@ async function run(options) {
       inherited.set(entry.path, join(dir, BOARDS_DIR, previous.value.token, entry.file));
     }
   }
+  // The review items the last refresher published, so its fingerprint lets this one's first run
+  // print only `unchanged` and its joins are re-read only for a store whose head moved.
+  const reviewPath = join(dir, reviewFileName(token));
+  let review;
+  if (previous.ok && isRefresherToken(previous.value.token) && previous.value.token !== token) {
+    const old = parseReviewSnapshot(
+      readText(join(dir, reviewFileName(previous.value.token))) ?? "",
+    );
+    if (old.ok && old.value.error === undefined) review = old.value;
+  }
   const boardOf = (store, deadline) =>
     readBoard(
       store,
@@ -722,6 +829,59 @@ async function run(options) {
     keepNewer(boards, store.path, entry, startedAt);
     return holds();
   };
+  /**
+   * The review beat (D-37, T-2C.5): `[review] command` read from the user's file at each beat;
+   * unset, the review snapshot is removed and nothing runs. Set, the verb runs with the last
+   * fingerprint, and its items, or the last ones with `unchanged`, are joined to their issues and
+   * written whole to `review-<token>.json`. A run that fails keeps the last items and names why.
+   * False once the lease is lost.
+   */
+  const readReview = async (deadline) => {
+    const command =
+      options.config === undefined ? undefined : resolveReview(readText(options.config)).command;
+    if (command === undefined) {
+      review = undefined;
+      if (existsSync(reviewPath) && writable()) unlinkSync(reviewPath);
+      return holds();
+    }
+    const checkedAt = Date.now();
+    const known = review?.fingerprint === "" ? undefined : review?.fingerprint;
+    const ran = await runHeld(reviewArgv(command, known), options.home, deadline);
+    if (!holds()) return false;
+    const parsed = ran.stdout === undefined ? undefined : parseReviewOutput(ran.stdout);
+    const exited = ran.code === 0 || ran.code === undefined ? "" : `exited ${ran.code}`;
+    let next;
+    if (parsed?.ok === true && parsed.value.unchanged && review !== undefined) {
+      const { error: _cleared, ...kept } = review;
+      next = { ...kept, checkedAt };
+    } else if (parsed?.ok === true && !parsed.value.unchanged) {
+      const { fingerprint, host, pair, scope, pairNote, items } = parsed.value;
+      next = { fingerprint, host, pair, scope, items, readAt: checkedAt, checkedAt };
+      next.joins = review?.joins ?? [];
+      if (pairNote !== undefined) next.pairNote = pairNote;
+      if (exited !== "") {
+        next.error = `the review command ${exited}${ran.why === "" ? "" : `: ${ran.why}`}`;
+      }
+    } else {
+      const why =
+        ran.error ??
+        [exited, parsed?.ok === false ? parsed.error : "", ran.why].filter((one) => one).join(", ");
+      next = {
+        ...(review ?? { fingerprint: "", host: "", pair: [], scope: "pair", items: [], readAt: 0 }),
+        checkedAt,
+        error: `the review command did not answer: ${why || "it printed nothing"}`,
+      };
+    }
+    const joins = await joinReview(next.items, next.joins ?? [], storeList, holds, deadline);
+    if (joins === undefined) return false;
+    next.joins = joins;
+    next.items = joinItems(next.items, joins);
+    if (!writable()) return false;
+    const text = `${JSON.stringify({ ...next, schema: REVIEW_SNAPSHOT_SCHEMA, token })}\n`;
+    writeWhole(reviewPath, text, token);
+    review = next;
+    return holds();
+  };
   // Stopping on purpose marks the snapshot, so a session starts the next refresher at its next
   // minute check rather than three minutes on.
   const stop = () => {
@@ -772,7 +932,10 @@ async function run(options) {
         return true;
       });
     }
+    // The review verb runs beside the counts, ending by the same deadline.
+    const reviewing = readReview(deadline);
     if (!(await inTurn(reads, CONCURRENT_STORES))) return quit();
+    if (!(await reviewing)) return quit();
     for (const map of [counts, boards]) {
       for (const path of map.keys()) {
         if (![...storeList, ...boardList].some((store) => store.path === path)) map.delete(path);
