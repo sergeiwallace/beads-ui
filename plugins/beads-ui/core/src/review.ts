@@ -10,6 +10,12 @@ export const reviewFileName = (token: string): string => `review-${token}.json`;
 export const REVIEW_SNAPSHOT_SCHEMA = 1;
 /** The held store's review payload schema this reads (`held_cli.py review`'s REVIEW_SCHEMA). */
 export const HELD_REVIEW_SCHEMA = 1;
+/**
+ * The wake marker a session drops in the refresher's `wake/` after it answers an item, so the
+ * review verb runs again within a second or two rather than at the next beat (D-37). No store's
+ * marker takes this name: theirs are named from an absolute path.
+ */
+export const REVIEW_WAKE_FILE = "review.json";
 /** The verb was measured at 2.6 s for 300 items on sem-kg-ec2; a beat gives it this long. */
 export const REVIEW_TIMEOUT_MS = 20_000;
 

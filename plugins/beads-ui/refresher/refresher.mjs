@@ -59,6 +59,7 @@ import {
   parseReviewSnapshot,
   REVIEW_SNAPSHOT_SCHEMA,
   REVIEW_TIMEOUT_MS,
+  REVIEW_WAKE_FILE,
   reviewArgv,
   reviewFileName,
 } from "../core/src/review.ts";
@@ -882,6 +883,12 @@ async function run(options) {
     review = next;
     return holds();
   };
+  // A beat's review read and a wake's never run at once: each waits for the one before it.
+  let reviewQueue = Promise.resolve(true);
+  const queueReview = (deadline) => {
+    reviewQueue = reviewQueue.then((held) => held && readReview(deadline));
+    return reviewQueue;
+  };
   // Stopping on purpose marks the snapshot, so a session starts the next refresher at its next
   // minute check rather than three minutes on.
   const stop = () => {
@@ -933,7 +940,7 @@ async function run(options) {
       });
     }
     // The review verb runs beside the counts, ending by the same deadline.
-    const reviewing = readReview(deadline);
+    const reviewing = queueReview(deadline);
     if (!(await inTurn(reads, CONCURRENT_STORES))) return quit();
     if (!(await reviewing)) return quit();
     for (const map of [counts, boards]) {
@@ -961,8 +968,19 @@ async function run(options) {
     waking = true;
     try {
       const paths = new Set();
+      let reviewWoken = false;
       for (const name of names) {
         const path = join(wakeDir, name);
+        if (name === REVIEW_WAKE_FILE) {
+          // A session answered a held item: the review verb runs again now.
+          reviewWoken = true;
+          try {
+            unlinkSync(path);
+          } catch {
+            // replaced meanwhile: read at the next poll
+          }
+          continue;
+        }
         const marker = parseWake(readText(path) ?? "");
         if (!holds()) return quit();
         try {
@@ -992,6 +1010,8 @@ async function run(options) {
           keepNewer(boards, board.path, entry, startedAt);
         }
       }
+      if (reviewWoken && !(await queueReview(deadline))) return quit();
+      if (paths.size === 0) return;
       if (!publish()) return quit();
     } finally {
       waking = false;

@@ -246,6 +246,7 @@ export {
   parseReviewSnapshot,
   REVIEW_SNAPSHOT_SCHEMA,
   REVIEW_TIMEOUT_MS,
+  REVIEW_WAKE_FILE,
   reviewArgv,
   reviewFileName,
   showItemArgv,

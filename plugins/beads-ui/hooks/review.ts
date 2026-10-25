@@ -7,6 +7,7 @@ import {
   parseFileLease,
   parseReviewSnapshot,
   READER_PAGE_CHARS,
+  REVIEW_WAKE_FILE,
   type ReviewItem,
   type ReviewSnapshot,
   readerPages,
@@ -14,6 +15,8 @@ import {
   reviewFileName,
   showItemArgv,
   stateDirOf,
+  WAKE_DIR,
+  wakeText,
 } from "../core/src/index.ts";
 import type { Host } from "./host.ts";
 import type { StoreResolver } from "./store.ts";
@@ -219,12 +222,16 @@ export class ReviewReader {
     this.changed();
   }
 
+  private async stateDir(): Promise<string | undefined> {
+    const xdgStateHome = await this.host?.stateHome().catch(() => undefined);
+    return stateDirOf({ xdgStateHome, home: this.stores.home });
+  }
+
   /** The text, byte for byte as typed, to a file under the state directory; its path. */
   private async writeAnswer(item: ReviewItem, text: string): Promise<string | undefined> {
     const host = this.host;
     if (host === undefined) return undefined;
-    const xdgStateHome = await host.stateHome().catch(() => undefined);
-    const dir = stateDirOf({ xdgStateHome, home: this.stores.home });
+    const dir = await this.stateDir();
     if (dir === undefined) return undefined;
     const now = await host.now();
     const name = itemKey(item).replace(/[^A-Za-z0-9._-]/g, "_");
@@ -268,6 +275,14 @@ export class ReviewReader {
           this.feed.markAnswered(state.item.path, at);
           state.item = { ...state.item, status: "answered", answeredAt: at };
           state.draft = "";
+          // The refresher runs the review verb again at once, not at its next beat (D-37).
+          const dir = await this.stateDir();
+          if (dir !== undefined) {
+            const now = await host.now();
+            await host
+              .writeFile(`${dir}/${WAKE_DIR}/${REVIEW_WAKE_FILE}`, wakeText(state.item.path, now))
+              .catch(() => undefined);
+          }
           await host.submit(turn).catch(() => undefined);
           outcome = { kind: "answered", commit: json.commit, turn };
         } else {
