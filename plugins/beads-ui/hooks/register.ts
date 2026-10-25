@@ -1,8 +1,9 @@
 import type { On } from "claude-code";
 
-import { isTaskPanelRetired } from "../core/src/index.ts";
+import { isTaskPanelRetired, pictureForm } from "../core/src/index.ts";
 import { BandSettingsPanel } from "./bandSettings.ts";
 import { drawBand } from "./bands.ts";
+import type { SurfacePicture } from "./components/adapters.ts";
 import { CONFIRM_ID, DeleteConfirm } from "./confirm.ts";
 import type { Host } from "./host.ts";
 import { BandLevels } from "./levels.ts";
@@ -11,6 +12,7 @@ import { TASKS_CLIENT_KEY } from "./panel.ts";
 import { StoreResolver } from "./store.ts";
 import { readStream } from "./stream.ts";
 import { BandTally, EditSync } from "./tally.ts";
+import { readTerminal } from "./terminal.ts";
 
 export const PLUGIN_NAME = "beads-ui";
 export const COMMAND_NAME = "show-beads-ui";
@@ -112,6 +114,12 @@ export function register(on: On) {
           .blit({ requestId, key, cells })
           .then((answer: unknown) => (answer as { deny?: unknown } | undefined)?.deny === undefined)
           .catch(() => false),
+      terminalEnv: async () => ({
+        term: await $.env.get("TERM"),
+        termProgram: await $.env.get("TERM_PROGRAM"),
+        termProgramVersion: await $.env.get("TERM_PROGRAM_VERSION"),
+        tmux: await $.env.get("TMUX"),
+      }),
     };
     for (const spec of COMMAND_SPECS) await $.command.register(spec);
     confirm.host = host;
@@ -121,6 +129,13 @@ export function register(on: On) {
     await tally.bind(host);
     await levels.bind(host);
     sync.bind(host);
+    // Whether the terminal draws an Image (T-2C.13): read once, the pane drawn again with it.
+    void readTerminal(host)
+      .then((verdict) => {
+        pane.images = verdict;
+        host.invalidate();
+      })
+      .catch(() => undefined);
     // T-2B.7: the task panel opens at session start under panel.mode. Claude Code's own task
     // panel is retired when the settings deny TaskCreate by name, as ai-harness's switch does (D-21).
     if (e.isInteractive) {
@@ -210,6 +225,12 @@ export function register(on: On) {
         ? (await $.ui.resolve(e)).Client
         : undefined;
     const Raster = e.surface === "terminal" ? (await $.ui.resolve(e)).Raster : undefined;
+    // A view's picture (T-2C.13): an Image only where the terminal draws one, an Svg off the
+    // terminal, its alt text elsewhere.
+    const { Image, Svg } = await $.ui.resolve(e);
+    const form = pictureForm(e.surface, pane.images.images);
+    const picture: SurfacePicture =
+      form === "image" ? { form, Image } : form === "svg" ? { form, Svg } : { form: "alt" };
     const help = Client?.({ key: "hello", module: "../client/hello.ts" });
     const tasks: TasksRegion | undefined =
       Client === undefined
@@ -224,7 +245,7 @@ export function register(on: On) {
       placement: e.props.placement,
       ...(e.props.scroll === undefined ? {} : { bodyRows: e.props.scroll.bodyRows }),
     };
-    return pane.draw(ui, frame, help, tasks, Raster);
+    return pane.draw(ui, frame, help, tasks, Raster, picture);
   });
 
   // The task list's Client (T-2B.5): what it posts runs the pane's own actions, and a fault drops

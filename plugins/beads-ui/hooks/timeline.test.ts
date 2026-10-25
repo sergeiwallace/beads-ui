@@ -447,3 +447,101 @@ describe("the Timeline's row window (BU-beads-ui-timeline-dety N-3, A005)", () =
     expect((await ui.find({ key: "timeline-below" }))?.text).toBe(`⇣ ${300 - short} below`);
   });
 });
+
+// T-2C.13: the Timeline's picture, in the form the surface profile gives it. The world's
+// terminal reads TERM, TERM_PROGRAM and TMUX from its env, and tmux answers from the script.
+const TMUX_PASSTHROUGH = "tmux show-options -gv allow-passthrough";
+const TMUX_TERMTYPE = "tmux display-message -p #{client_termtype}";
+const ALT = `Picture: 4 due ${TODAY} to 2026-12-15, today ${TODAY}`;
+const IN_TMUX = { TERM: "tmux-256color", TERM_PROGRAM: "tmux", TMUX: "/tmp/tmux-1000/default,1,0" };
+
+/** The dated store, seen from a terminal whose env is `env`, tmux answering from `tmux`. */
+const pictured = (
+  env: Readonly<Record<string, string>>,
+  tmux: Readonly<Record<string, string>> = {},
+): WorldOptions => {
+  const base = storeOf(DATED_STORE);
+  return {
+    ...base,
+    env: { ...base.env, ...env },
+    script: (key, argv, cwd) => {
+      const answer = tmux[key];
+      return answer === undefined ? base.script?.(key, argv, cwd) : ok(`${answer}\n`);
+    },
+  };
+};
+
+const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+describe("the Timeline's picture (T-2C.13)", () => {
+  test("should draw an Image of the dated items on a terminal that draws pictures, with its alt text", async ($, on) => {
+    const { ui } = await openTimeline($, on, "terminal", pictured({ TERM: "xterm-kitty" }));
+
+    const image = await ui.find({ type: "Image" });
+    expect(image?.key).toBe("timeline-picture");
+    const source = image?.props.source as { png?: string };
+    const bytes = Uint8Array.from(atob(String(source.png)), (char) => char.charCodeAt(0));
+    expect([...bytes.slice(0, 8)]).toEqual(PNG_SIGNATURE);
+    expect(image?.props.rows).toBe(DATED_ORDER.length);
+    expect(Number(image?.props.columns)).toBeLessThanOrEqual(PANE_PROPS.bodyColumns);
+    expect(image?.props.alt).toBe(ALT);
+    expect(await ui.findAll({ type: "Svg" })).toEqual([]);
+    // The bars are still drawn under it.
+    expect(await keysOf(ui, "timeline-bar:", "Raster")).toHaveLength(DATED_ORDER.length);
+  });
+
+  test("should draw the alt text and no Image inside tmux with allow-passthrough off, and not ask for the outer terminal", async ($, on) => {
+    const { w, ui } = await openTimeline(
+      $,
+      on,
+      "terminal",
+      pictured(IN_TMUX, { [TMUX_PASSTHROUGH]: "off", [TMUX_TERMTYPE]: "kitty(0.35.2)" }),
+    );
+
+    expect(await ui.findAll({ type: "Image" })).toEqual([]);
+    expect((await ui.find({ key: "timeline-picture" }))?.text).toBe(ALT);
+    expect(w.keys()).toContain(TMUX_PASSTHROUGH);
+    expect(w.keys()).not.toContain(TMUX_TERMTYPE);
+  });
+
+  test("should draw an Image inside tmux with allow-passthrough on and kitty outside it", async ($, on) => {
+    const { ui } = await openTimeline(
+      $,
+      on,
+      "terminal",
+      pictured(IN_TMUX, { [TMUX_PASSTHROUGH]: "on", [TMUX_TERMTYPE]: "kitty(0.35.2)" }),
+    );
+
+    expect((await ui.find({ type: "Image" }))?.key).toBe("timeline-picture");
+  });
+
+  test("should draw the alt text on a terminal that names no picture support", async ($, on) => {
+    const { ui } = await openTimeline($, on, "terminal", pictured({ TERM: "xterm-256color" }));
+
+    expect(await ui.findAll({ type: "Image" })).toEqual([]);
+    expect((await ui.find({ key: "timeline-picture" }))?.text).toBe(ALT);
+  });
+
+  for (const surface of ["desktop", "vscode"] as const) {
+    test(`should draw an Svg with a hover title on each bar in ${surface}`, async ($, on) => {
+      const { ui } = await openTimeline($, on, surface, pictured({ TERM: "xterm-kitty" }));
+
+      const svg = await ui.find({ type: "Svg" });
+      expect(svg?.props.isInteractive).toBe(true);
+      expect(svg?.props.alt).toBe(ALT);
+      const source = String(svg?.props.source);
+      expect(source.match(/<rect /g)).toHaveLength(DATED_ORDER.length);
+      expect(source).toContain("<title>Sprint 7 due 2026-11-09</title>");
+      expect(await ui.findAll({ type: "Image" })).toEqual([]);
+    });
+  }
+
+  test("should draw no picture when no epic or milestone has a due date", async ($, on) => {
+    const { ui } = await openTimeline($, on, "terminal", {
+      ...storeOf(rows),
+      env: { HOME: "/home/me", CLAUDE_CODE_TASK_LIST_ID: FIRSTMATE, TERM: "xterm-kitty" },
+    });
+
+    expect(await ui.find({ key: "timeline-picture" })).toBeUndefined();
+  });
+});

@@ -35,6 +35,9 @@ export const colorOf = (token: Token): string => colorFor(token, theme);
 /** The 24-bit colour a Raster cell draws for `token`: its `[theme]` hex value, else core's. */
 export const rasterColorOf = (token: Token): number => rasterColorFor(token, theme);
 
+/** The `[theme]` values drawn now, which a picture's colours follow. */
+export const themeOverrides = (): ThemeOverrides => theme;
+
 /** True under `[indicators] ascii`: a Raster's glyph cells draw their ASCII forms too. */
 export const isAscii = (): boolean => ascii;
 

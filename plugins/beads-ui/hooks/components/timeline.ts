@@ -7,6 +7,7 @@ import {
   RASTER_COLORS,
   SPACE,
   type TimelineLayout,
+  type TimelinePicture,
 } from "../../core/src/index.ts";
 import type { Surface } from "./adapters.ts";
 import { emptyState } from "./frame.ts";
@@ -17,6 +18,43 @@ import { lineWindow, textLine, windowed } from "./window.ts";
 
 const present = <T>(items: readonly (T | undefined | false)[]): T[] =>
   items.filter((item): item is T => item !== undefined && item !== false);
+
+/** The picture's key: an Image, an Svg or its alt text, as the surface profile says (T-2C.13). */
+export const PICTURE_KEY = "timeline-picture";
+
+/**
+ * The Timeline's picture in the form the surface draws: an Image of its pixels where the
+ * terminal shows one, an Svg (hover titles on each bar) off the terminal, else its alt text.
+ */
+function picture(surface: Surface, shown: TimelinePicture): RenderElement | undefined {
+  const { Box, Text } = surface.ui;
+  const form = surface.picture;
+  if (form === undefined) return undefined;
+  if (form.form === "image") {
+    return Box({
+      key: PICTURE_KEY,
+      children: [
+        form.Image({
+          key: PICTURE_KEY,
+          source: { png: shown.png },
+          columns: shown.columns,
+          rows: shown.rows,
+          alt: shown.alt,
+        }),
+      ],
+    });
+  }
+  if (form.form === "svg") {
+    return Box({
+      key: PICTURE_KEY,
+      children: [form.Svg({ source: shown.svg, alt: shown.alt, isInteractive: true })],
+    });
+  }
+  return Box({
+    key: PICTURE_KEY,
+    children: [Text({ ...weight("meta"), wrap: "truncate-end", children: shown.alt })],
+  });
+}
 
 /**
  * The Timeline: each dated epic or milestone as a button that opens it, with, where the surface
@@ -29,7 +67,7 @@ const present = <T>(items: readonly (T | undefined | false)[]): T[] =>
 export function timeline(
   surface: Surface,
   layout: TimelineLayout,
-  options: { open: (id: string) => void },
+  options: { open: (id: string) => void; picture?: TimelinePicture },
 ): RenderElement {
   const { Box, Text, Button } = surface.ui;
   const raster = windowed(surface) ? undefined : surface.raster;
@@ -111,6 +149,9 @@ export function timeline(
             key: "timeline-axis",
             children: [Text({ ...weight("meta"), children: layout.axisLine })],
           }),
+      layout.rows.length === 0 || options.picture === undefined
+        ? undefined
+        : picture(surface, options.picture),
       layout.above === 0
         ? undefined
         : Box({

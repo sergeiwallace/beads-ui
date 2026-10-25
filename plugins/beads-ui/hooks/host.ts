@@ -83,4 +83,13 @@ export interface Host {
    * `cells`. Resolves false when the engine refused it.
    */
   blit: (requestId: string, key: string, cells: string) => Promise<boolean>;
+  /** `$.env.get` of what the terminal says of itself: TERM, TERM_PROGRAM, its version and TMUX. */
+  terminalEnv: () => Promise<TerminalEnv>;
+}
+
+export interface TerminalEnv {
+  term: string | undefined;
+  termProgram: string | undefined;
+  termProgramVersion: string | undefined;
+  tmux: string | undefined;
 }

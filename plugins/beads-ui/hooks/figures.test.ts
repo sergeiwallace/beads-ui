@@ -3,6 +3,7 @@ import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
 import { decodeRasterCells, RASTER_DEFAULT_COLOR } from "../core/src/index.ts";
+import list from "../core/test/fixtures/bd-list-all-brief.json.ts";
 import { PLUGIN_NAME } from "./register.ts";
 import { test } from "./tests/kit.ts";
 import { ME, MINE } from "./tests/mine.ts";
@@ -16,9 +17,11 @@ import {
   inventoryOf,
   type Listed,
   listScript,
+  ok,
   type Script,
   SESSION,
   START_MS,
+  STORE_LIST,
   VIEWPORT,
   type WorldOptions,
   world,
@@ -283,5 +286,28 @@ describe("the figures row's repaint (T-2C.11)", () => {
 
     expect(w.blits).toHaveLength(1);
     expect(String((await ui.find({ type: "Raster" }))?.props.cells)).toBe(w.blits[0]?.cells);
+  });
+});
+
+describe("the band's overview draws no picture (T-2C.13)", () => {
+  test("should draw the Timeline in the overview with no Image, Svg or alt line, its rows kept for the levels", async ($, on) => {
+    // An epic with a due date, which the pane's Timeline draws a picture of.
+    const dated = (JSON.parse(list) as Record<string, unknown>[]).map((row) =>
+      row.id === "BU-mg2" ? { ...row, due_at: "2026-12-15T00:00:00Z" } : row,
+    );
+    const store: Script = (key) => (key === STORE_LIST ? ok(JSON.stringify(dated)) : undefined);
+    const w = await started($, on, {
+      ...as({ script: store }),
+      env: { HOME: "/home/me", CLAUDE_CODE_TASK_LIST_ID: ME, TERM: "xterm-kitty" },
+    });
+
+    await (await band($)).press({ key: "band:overview" });
+    await w.clock.settle();
+    await (await band($)).press({ key: "tab:timeline" });
+    await w.clock.settle();
+    const ui = await band($);
+    expect((await ui.find({ key: "timeline-count" }))?.text).toMatch(/1 with a due date/);
+    expect(await ui.find({ key: "timeline-picture" })).toBeUndefined();
+    expect(await ui.findAll({ type: "Image" })).toEqual([]);
   });
 });
