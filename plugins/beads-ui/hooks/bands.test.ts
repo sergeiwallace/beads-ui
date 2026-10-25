@@ -1153,3 +1153,40 @@ describe("the session a daemon-hosted session draws for (BU-ylx.6.9)", () => {
     expect(await line($, "own")).toBe(FM);
   });
 });
+
+describe("the band's colours (D-43, T-2C.9)", () => {
+  const drawnOf = async ($: Engine) => JSON.stringify(await (await band($)).drawn());
+
+  test("should draw each count's token on its Claude Code theme key when beads-ui.toml has no [theme]", async ($, on) => {
+    await started($, on, named("aih-ec2-3", { refresher: true, files: LIVE }));
+
+    const drawn = await drawnOf($);
+    expect(drawn).toContain('"color":"claude"');
+    expect(drawn).toContain('"color":"warning"');
+    expect(drawn).not.toMatch(/"color":"#/);
+  });
+
+  test("should draw a [theme] hex value for the token it names from the next redraw", async ($, on) => {
+    const files = { ...LIVE, [USER_CONFIG]: '[theme]\n"status.wip" = "#123456"\n' };
+    await started($, on, named("aih-ec2-3", { refresher: true, files }));
+
+    const drawn = await drawnOf($);
+    expect(drawn).toContain('"color":"#123456"');
+    expect(drawn).toContain('"color":"warning"');
+  });
+
+  test("should ignore an invalid [theme] value with one notice naming the key in the pane", async ($, on) => {
+    const files = { ...LIVE, [USER_CONFIG]: '[theme]\nwarning = "orange"\n' };
+    await started($, on, named("aih-ec2-3", { refresher: true, files }));
+    await $.command.run(SHOW);
+
+    expect(await drawnOf($)).toContain('"color":"warning"');
+    const shown = await pane($);
+    const lines = await Promise.all(
+      [0, 1, 2, 3].map(async (i) => (await shown.find({ key: `config:${i}` }))?.text),
+    );
+    expect(lines.filter((text) => text?.startsWith("theme."))).toEqual([
+      'theme.warning "orange" is not a hex colour such as "#d77757"; using the theme\'s colour',
+    ]);
+  });
+});

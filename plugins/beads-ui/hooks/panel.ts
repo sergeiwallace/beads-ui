@@ -4,10 +4,12 @@ import {
   barCells,
   DEFAULT_PANEL_SETTINGS,
   DUE_COLUMNS,
+  glyphOf,
   type MenuView,
   menuItemText,
   type PanelOverrides,
   type PanelSettings,
+  PRESS_FRAME_COLUMNS,
   panelOverridesOf,
   RASTER_COLORS,
   resolvePanel,
@@ -134,10 +136,10 @@ export const menuColumns = (menu: MenuView, width: number): number =>
     width,
     4 +
       Math.max(
-        textWidth(MENU_CLOSE_LABEL),
+        textWidth(MENU_CLOSE_LABEL) + PRESS_FRAME_COLUMNS,
         ...menu.sections.flatMap((section) => [
           textWidth(section.title),
-          ...section.items.map((item) => textWidth(menuItemText(item))),
+          ...section.items.map((item) => textWidth(menuItemText(item)) + PRESS_FRAME_COLUMNS),
         ]),
       ),
   );
@@ -154,8 +156,8 @@ export function drawMenu(
   close: () => void,
 ): RenderElement {
   const { Box, Text, Button } = ui;
-  // The frame and its padding take four columns.
-  const room = Math.max(4, width - 4);
+  // The frame and its padding take four columns, and each item's clickable brackets two.
+  const room = Math.max(4, width - 4 - PRESS_FRAME_COLUMNS);
   return Box({
     key: "options-menu",
     flexDirection: "column",
@@ -265,7 +267,9 @@ export function drawTimeline(
         ? undefined
         : Box({
             key: "timeline-above",
-            children: [Text({ dimColor: true, children: `↑ ${layout.above} above` })],
+            children: [
+              Text({ dimColor: true, children: `${glyphOf("list.above")} ${layout.above} above` }),
+            ],
           }),
       ...rows,
       Box({
@@ -280,7 +284,9 @@ export function drawTimeline(
         ? undefined
         : Box({
             key: "timeline-below",
-            children: [Text({ dimColor: true, children: `↓ ${layout.below} below` })],
+            children: [
+              Text({ dimColor: true, children: `${glyphOf("list.below")} ${layout.below} below` }),
+            ],
           }),
     ]),
   });

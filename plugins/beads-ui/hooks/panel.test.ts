@@ -124,7 +124,7 @@ describe("the frame, nav bar and width tiers (T-2B.1)", () => {
       const backlog = (await ui.find({ key: "tab:backlog" }))?.props.label;
 
       expect(nav?.props.borderStyle).toBe(kind === "side" ? "round" : undefined);
-      expect(backlog).toBe(kind === "side" ? "Backlog" : kind === "top" ? "Bklg" : "☰");
+      expect(backlog).toBe(kind === "side" ? "Backlog" : kind === "top" ? "Bklg" : "≣");
       expect((await ui.find({ key: "tab:backlog" }))?.props.hotkey).toBe("2");
       expect(overflows(await ui.drawn(), columns)).toEqual([]);
       await ui.press({ key: "tasks:more" });
@@ -171,7 +171,7 @@ describe("the frame, nav bar and width tiers (T-2B.1)", () => {
         expect(drawn).toContain(id);
         expect(drawn.length).toBeLessThan(MINE_ORDER.length);
       }
-      expect((await ui.find({ key: "tasks-above" }))?.text).toMatch(/^↑ \d+ above$/);
+      expect((await ui.find({ key: "tasks-above" }))?.text).toMatch(/^⇡ \d+ above$/);
     });
   }
 });
@@ -188,7 +188,7 @@ describe("the task list, shown and collapsed (T-2B.2)", () => {
     expect((await ui.find({ key: "tasks-count" }))?.text).toBe(
       "15 tasks: 2 in progress, 1 blocked, 12 open",
     );
-    expect((await ui.find({ key: "task:BU-mg2.3.9" }))?.props.label).toMatch(/^● P1 /);
+    expect((await ui.find({ key: "task:BU-mg2.3.9" }))?.props.label).toMatch(/^◉ P1 /);
   });
 
   test("should expand the collapsed tasks in place when +5 more is pressed, and reach each one by key", async ($, on) => {
@@ -247,7 +247,7 @@ describe("the task list, shown and collapsed (T-2B.2)", () => {
 
       expect(reached.size).toBe(300);
       expect(largest).toBeLessThan(100_000);
-      expect((await ui.find({ key: "tasks-above" }))?.text).toMatch(/^↑ \d+ above$/);
+      expect((await ui.find({ key: "tasks-above" }))?.text).toMatch(/^⇡ \d+ above$/);
     },
   );
 
@@ -497,7 +497,15 @@ describe("every action by menu and by key (T-2B.4)", () => {
 
     await ui.press({ key: "taskmenu:BU-mg2.3.9" });
     const keys = (await ui.findAll({})).map((element) => element.key ?? "");
-    expect(keys.indexOf("options-menu")).toBe(keys.indexOf("taskrow:BU-mg2.3.9") + 1 + 2);
+    // Under that row: after its menu button and before the next row (each button now sits in
+    // its affordance frame, T-2C.14, so the elements between are not counted).
+    const at = keys.indexOf("options-menu");
+    expect(at).toBeGreaterThan(keys.indexOf("taskmenu:BU-mg2.3.9"));
+    expect(
+      keys
+        .slice(keys.indexOf("taskrow:BU-mg2.3.9") + 1, at)
+        .filter((key) => key.startsWith("taskrow:")),
+    ).toEqual([]);
     expect((await ui.find({ key: "menu:task" }))?.text).toBe("Task BU-t-1-5-delete-xmxe");
     expect((await ui.find({ key: "menu:item:card.detail" }))?.props.label).toBe("d: Detail");
 

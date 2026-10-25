@@ -1,4 +1,5 @@
 import { historyArgv, issueIdArg, showArgv, statusArg } from "../argv.ts";
+import { glyphOf } from "../glyphs.ts";
 import { textWidth } from "../layout.ts";
 import type { BdArgv, HistoryEvent, Issue, Result } from "../model.ts";
 import { isCalendarDate } from "../quickadd.ts";
@@ -248,7 +249,9 @@ function changeSummary(json: string | undefined): string | undefined {
       if (typeof entry === "object" && entry !== null && !Array.isArray(entry)) {
         walk(path, entry as Record<string, unknown>);
       } else {
-        parts.push(`${path} → ${typeof entry === "string" ? entry : JSON.stringify(entry)}`);
+        parts.push(
+          `${path} ${glyphOf("text.becomes")} ${typeof entry === "string" ? entry : JSON.stringify(entry)}`,
+        );
       }
     }
   };
@@ -330,7 +333,7 @@ export function detailView(state: DetailState, options: DetailViewOptions): Deta
       };
     }),
   };
-  if (state.saving !== undefined) view.savingLine = `saving ${state.saving}…`;
+  if (state.saving !== undefined) view.savingLine = `saving ${state.saving}${glyphOf("text.more")}`;
   if (state.error !== undefined) view.errorLine = state.error;
   if (state.stale) view.reread = [showArgv(issue.id), historyArgv(issue.id)];
   return view;

@@ -36,6 +36,7 @@ import {
   FILTER_KEYS,
   type FilterState,
   footerHints,
+  glyphOf,
   groupLayout,
   historyArgv,
   INITIAL_BOARD_STATE,
@@ -91,6 +92,8 @@ import {
   reduceDetail,
   refresherRunning,
   resolveConfig,
+  resolveGlyphs,
+  resolveTheme,
   SHORT_ROWS,
   SNAPSHOT_FILE,
   type SortSpec,
@@ -115,7 +118,6 @@ import {
   surfaceOf,
   type TaskClientProps,
   type TaskListView,
-  TERMINAL_THEME,
   TIMELINE_TYPES,
   type Token,
   taskClientProps,
@@ -141,6 +143,7 @@ import {
   type Surface,
   type TasksRegion,
 } from "./components/adapters.ts";
+import { colorOf, glyphText, setAscii, setTheme, styledUi } from "./components/look.ts";
 import { navFrame } from "./components/nav.ts";
 import { type ViewEntry, ViewRegistry } from "./components/registry.ts";
 import {
@@ -200,9 +203,10 @@ const WANTED_ROWS = 24;
 const SHORT_CHROME_ROWS = 6;
 /**
  * The most task rows the Tasks view draws at once: Claude Code keeps only a tree's first 100,000
- * characters, so a longer list draws a window of rows that follows the focus.
+ * characters, so a longer list draws a window of rows that follows the focus. 80, not the 100 it
+ * was before each row's two buttons drew in the clickable affordance (T-2C.14).
  */
-export const TASK_WINDOW_ROWS = 100;
+export const TASK_WINDOW_ROWS = 80;
 /**
  * The rows the Timeline's chrome takes besides the nav: the header, the toolbar, the footer, and
  * the view's count, axis, above, undated heading and below lines.
@@ -273,10 +277,10 @@ export const SELECT_CHROME = 2;
  * help draws these lines, and README.md and docs/procedures/mod-install.md carry the same.
  */
 export const USAGE_LINES: readonly string[] = [
-  "Focus enters the pane: Ctrl+X then Tab (again for the next pane, then back to the prompt), a click on it (fullscreen rendering), or the band's beads button (click it, or Ctrl+X then Tab to the band and Enter).",
+  `Focus enters the pane: Ctrl+X then Tab (again for the next pane, then back to the prompt), a click on it (fullscreen rendering), or the band's pane button, [${glyphOf("pane.open")}] right after the band's text (click it, or Ctrl+X then Tab to the band and Enter).`,
   "Focus leaves: Esc returns it to the prompt and closes the pane.",
-  "Close: Esc, Ctrl+X then X, or /bu (also /show-beads-ui).",
-  "Reopen: /bu, the band's beads button, or a key chord bound to command:bu in ~/.claude/keybindings.json, such as this one for Meta+B:",
+  `Close: Esc, Ctrl+X then X, the band's [${glyphOf("pane.close")}] button (drawn beside [${glyphOf("pane.open")}] while the pane is open), or /bu (also /show-beads-ui).`,
+  `Reopen: /bu, the band's [${glyphOf("pane.open")}] button, or a key chord bound to command:bu in ~/.claude/keybindings.json, such as this one for Meta+B:`,
 ];
 export const KEYBINDINGS_BLOCK = `{
   "bindings": [
@@ -303,17 +307,13 @@ interface BacklogColumns {
 
 const assigneeLabel = (assignee: string): string => (assignee === "" ? "" : `@${assignee}`);
 
+const MORE = glyphOf("text.more");
+
 const messageOf = (reason: unknown): string =>
   reason instanceof Error ? reason.message : String(reason);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
-
-/** A mod `Text` colour for a semantic token (D-19). */
-export function colorOf(token: Token): string {
-  const color = TERMINAL_THEME[token];
-  return color.kind === "theme" ? color.key : color.name;
-}
 
 const present = <T>(items: readonly (T | undefined | false)[]): T[] =>
   items.filter((item): item is T => item !== undefined && item !== false);
@@ -617,9 +617,19 @@ export class BeadsPane {
       : [];
     await this.panel.read(config.text);
     const resolved = resolveConfig(config.text, this.storePath());
+    const theme = resolveTheme(config.text);
+    const glyphs = resolveGlyphs(config.text);
+    const restyled = setTheme(theme.overrides);
+    if (setAscii(glyphs.ascii) || restyled) this.host.invalidate();
     return {
       ...resolved,
-      problems: [...resolved.problems, ...problems, ...this.panel.problems],
+      problems: [
+        ...resolved.problems,
+        ...problems,
+        ...this.panel.problems,
+        ...theme.problems,
+        ...glyphs.problems,
+      ],
     };
   }
 
@@ -901,7 +911,7 @@ export class BeadsPane {
   }
 
   /**
-   * The band's beads button (D-27, T-1B.6): opens the pane focused when it is closed, and moves
+   * The band's pane button (D-27, T-1B.6, T-2C.14): opens the pane focused when it is closed, and moves
    * the focus ring into it, onto its open tab, when it is open.
    */
   async openOrFocus(): Promise<void> {
@@ -1000,6 +1010,7 @@ export class BeadsPane {
     }
     this.isOpen = true;
     this.savePrefs();
+    host.invalidate();
     void this.refresh({ direct: true });
     if (this.tab === "timeline") void this.readTimeline();
   }
@@ -1013,6 +1024,8 @@ export class BeadsPane {
   closed(): void {
     this.isOpen = false;
     this.savePrefs();
+    // The band's toggle draws the pane's state.
+    this.host?.invalidate();
   }
 
   // ---- actions ----------------------------------------------------------------------------
@@ -1698,12 +1711,13 @@ export class BeadsPane {
    * move below the board, so the tabs, the board's header and a card come first.
    */
   draw(
-    ui: PaneUi,
+    elements: PaneUi,
     frame: PaneFrame,
     helpRegion?: RenderElement,
     tasksRegion?: TasksRegion,
     raster?: RasterElement,
   ): RenderElement {
+    const ui = styledUi(elements);
     const { Box, Text } = ui;
     if (this.host === undefined) {
       return Box({ children: [Text({ children: "beads-ui starts with the session." })] });
@@ -1778,7 +1792,12 @@ export class BeadsPane {
           ? undefined
           : Box({
               key: "footer",
-              children: [Text({ dimColor: true, children: footerHints("card").join(" · ") })],
+              children: [
+                Text({
+                  dimColor: true,
+                  children: footerHints("card").join(` ${glyphOf("text.separator")} `),
+                }),
+              ],
             }),
       ]),
     );
@@ -1905,13 +1924,18 @@ export class BeadsPane {
   ): TaskListClient {
     const menu = this.menuOpen ? this.menuViewOf(ctx) : undefined;
     const menuWidth = menu === undefined ? 0 : menuColumns(menu, width);
-    const props = taskClientProps(list, ctx, {
+    const built = taskClientProps(list, ctx, {
       ...(this.focusedId === undefined ? {} : { selected: this.focusedId }),
       ...(menu === undefined || this.menuFor === undefined
         ? {}
         : { gapAfter: this.menuFor, gapRows: menuRows(menu) }),
       selectedColor: colorOf("surface.focus"),
     });
+    // The Client draws with its own elements, so its rows take the look's glyph form here.
+    const props = {
+      ...built,
+      rows: built.rows.map((row) => ({ ...row, label: glyphText(row.label) })),
+    };
     this.clientProps = props;
     const labelWidth = Math.max(1, width - rowControlColumns(true));
     return {
@@ -1931,7 +1955,7 @@ export class BeadsPane {
     if (!this.board.loaded) {
       return Box({
         key: "tasks",
-        children: [Text({ dimColor: true, children: "reading the store…" })],
+        children: [Text({ dimColor: true, children: `reading the store${MORE}` })],
       });
     }
     const width = surface.columns;
@@ -2011,7 +2035,7 @@ export class BeadsPane {
     if (!this.board.loaded) {
       return ui.Box({
         key: "timeline",
-        children: [ui.Text({ dimColor: true, children: "reading the store…" })],
+        children: [ui.Text({ dimColor: true, children: `reading the store${MORE}` })],
       });
     }
     const view = timelineView(this.scoped(this.timelineIssues()), {
@@ -2097,7 +2121,7 @@ export class BeadsPane {
           children: !resolved
             ? ""
             : this.board.loadedAt === undefined
-              ? "loading…"
+              ? `loading${MORE}`
               : asOf(this.board.loadedAt),
         }),
         ...(this.unsynced.length === 0
@@ -2290,7 +2314,7 @@ export class BeadsPane {
         Text({ children: card.title }),
         Text({
           color: colorOf(card.priorityToken),
-          children: `${card.priority}${card.assignee === "" ? "" : ` ${card.assignee}`}${card.pending ? " moving…" : ""}`,
+          children: `${card.priority}${card.assignee === "" ? "" : ` ${card.assignee}`}${card.pending ? ` moving${MORE}` : ""}`,
         }),
         Select({
           key: `move:${card.id}`,
@@ -2321,7 +2345,7 @@ export class BeadsPane {
     if (view.loading) {
       return Box({
         key: "board",
-        children: [Text({ dimColor: true, children: "reading the store…" })],
+        children: [Text({ dimColor: true, children: `reading the store${MORE}` })],
       });
     }
     const lanes = view.lanes.map((lane) =>
@@ -2607,7 +2631,9 @@ export class BeadsPane {
       return Box({
         key: "detail",
         flexDirection: "column",
-        children: present([errorLine ?? Text({ dimColor: true, children: `reading ${id}…` })]),
+        children: present([
+          errorLine ?? Text({ dimColor: true, children: `reading ${id}${MORE}` }),
+        ]),
       });
     }
     const wide = width >= 90;
@@ -2768,7 +2794,7 @@ export class BeadsPane {
         }),
       ),
       this.commentSaving
-        ? this.line(ui, "comment-saving", "adding the comment…", "text.dim")
+        ? this.line(ui, "comment-saving", `adding the comment${MORE}`, "text.dim")
         : undefined,
       this.commentError === undefined
         ? undefined

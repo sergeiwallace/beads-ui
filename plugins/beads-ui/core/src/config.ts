@@ -8,6 +8,7 @@ import {
   STORE_TOKEN,
   type SyncSettings,
 } from "./sync.ts";
+import { isToken, TOKENS, type Token } from "./tokens.ts";
 import {
   BAND_PARTS,
   type BandPart,
@@ -580,6 +581,79 @@ export function withSurfacesTable(
     SURFACES_TABLE,
     entries.map(([view, setting]) => `${view} = ${JSON.stringify(setting)}`),
   );
+}
+
+/** The `beads-ui.toml` table of hex colours, one key per token (D-43, T-2C.9). */
+export const THEME_TABLE = "theme";
+
+export interface ResolvedTheme {
+  /** The hex value of each token the table sets; every other token keeps its theme key. */
+  overrides: Partial<Record<Token, string>>;
+  /** One line per key the file got wrong, naming it; that token keeps its theme key. */
+  problems: string[];
+}
+
+const HEX_COLOR = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
+/**
+ * `[theme]`, read at call time: `"<token>" = "#rrggbb"` (or `#rgb`) for any D-19 token. A key
+ * naming no token, or a value that is not a hex colour, is ignored with one line naming the key.
+ */
+export function resolveTheme(text: string | undefined): ResolvedTheme {
+  const overrides: Partial<Record<Token, string>> = {};
+  const problems: string[] = [];
+  if (text === undefined) return { overrides, problems };
+  const parsed = parseToml(text);
+  if (!parsed.ok) return { overrides, problems };
+  const table = parsed.value[THEME_TABLE];
+  if (table === undefined) return { overrides, problems };
+  if (!isTable(table)) {
+    problems.push(`${THEME_TABLE} must be a table; using the theme's colours`);
+    return { overrides, problems };
+  }
+  for (const [key, value] of Object.entries(table)) {
+    if (!isToken(key)) {
+      problems.push(`theme.${key} names no token; it is one of ${TOKENS.join(", ")}`);
+    } else if (typeof value === "string" && HEX_COLOR.test(value)) {
+      overrides[key] = value;
+    } else {
+      problems.push(
+        `theme.${key} ${JSON.stringify(value)} is not a hex colour such as "#d77757"; using the theme's colour`,
+      );
+    }
+  }
+  return { overrides, problems };
+}
+
+/** The `beads-ui.toml` table of the row indicators and the glyphs' form (D-41, T-2C.10). */
+export const INDICATORS_TABLE = "indicators";
+
+export interface ResolvedGlyphs {
+  /** True: every table glyph draws its ASCII form (glyphs.ts). */
+  ascii: boolean;
+  problems: string[];
+}
+
+/**
+ * `[indicators] ascii`, read at call time: true draws every glyph of the table in its ASCII
+ * form. The table's other keys, one switch per indicator, are the registry's (D-41).
+ */
+export function resolveGlyphs(text: string | undefined): ResolvedGlyphs {
+  const problems: string[] = [];
+  if (text === undefined) return { ascii: false, problems };
+  const parsed = parseToml(text);
+  if (!parsed.ok) return { ascii: false, problems };
+  const table = parsed.value[INDICATORS_TABLE];
+  if (table === undefined) return { ascii: false, problems };
+  if (!isTable(table)) {
+    problems.push(`${INDICATORS_TABLE} must be a table; drawing the glyphs`);
+    return { ascii: false, problems };
+  }
+  if (table.ascii === undefined || typeof table.ascii === "boolean") {
+    return { ascii: table.ascii === true, problems };
+  }
+  problems.push(`${INDICATORS_TABLE}.ascii must be true or false; drawing the glyphs`);
+  return { ascii: false, problems };
 }
 
 /** The `beads-ui.toml` table of the publish run after an edit (D-33, T-2B.6). */

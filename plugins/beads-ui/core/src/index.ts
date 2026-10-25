@@ -47,9 +47,11 @@ export type {
   BeadsUiConfig,
   ResolvedBand,
   ResolvedConfig,
+  ResolvedGlyphs,
   ResolvedPanel,
   ResolvedSurfaces,
   ResolvedSync,
+  ResolvedTheme,
   TomlError,
   TomlTable,
   TomlValue,
@@ -60,16 +62,20 @@ export {
   CONFIG_FILE_NAME,
   configCandidates,
   DEFAULT_CONFIG,
+  INDICATORS_TABLE,
   MIN_REFRESH_SECONDS,
   PANEL_TABLE,
   parseToml,
   resolveBand,
   resolveConfig,
+  resolveGlyphs,
   resolvePanel,
   resolveSurfaces,
   resolveSync,
+  resolveTheme,
   SURFACES_TABLE,
   SYNC_TABLE,
+  THEME_TABLE,
   userConfigPath,
   withBandTable,
   withOverrides,
@@ -93,6 +99,8 @@ export {
   parseFilter,
   submitFilter,
 } from "./filter.ts";
+export type { Glyph, GlyphId, GlyphKind } from "./glyphs.ts";
+export { asciiOf, GLYPHS, glyphOf, isTableGlyph } from "./glyphs.ts";
 export type { Labels, Tier } from "./layout.ts";
 export {
   buttonWidth,
@@ -101,6 +109,10 @@ export {
   labels,
   MEDIUM_COLUMNS,
   MIN_GROUP_COLUMNS,
+  PRESS_CLOSE,
+  PRESS_FRAME_COLUMNS,
+  PRESS_OPEN,
+  PRESS_TREE_CHARS,
   packRows,
   SHORT_ROWS,
   textWidth,
@@ -270,8 +282,10 @@ export {
   syncArgv,
   syncedText,
 } from "./sync.ts";
-export type { TerminalColor, Token } from "./tokens.ts";
+export type { TerminalColor, ThemeOverrides, Token } from "./tokens.ts";
 export {
+  colorFor,
+  isToken,
   priorityToken,
   statusToken,
   TERMINAL_THEME,

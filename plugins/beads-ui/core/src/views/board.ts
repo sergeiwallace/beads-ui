@@ -1,6 +1,7 @@
 import { CLOSED_PAGE_SIZE, moveArgv } from "../argv.ts";
 import { buildColumns, buildSwimlanes, type SwimlaneMode } from "../columns.ts";
 import { applyFilter, type Filter } from "../filter.ts";
+import { PRESS_TREE_CHARS } from "../layout.ts";
 import type { BdArgv, Issue, Result, Status, StatusCategory } from "../model.ts";
 import type { SortSpec } from "../sort.ts";
 import { priorityToken, statusToken, type Token } from "../tokens.ts";
@@ -289,19 +290,21 @@ export interface BoardPageLimit {
  * The mod's budget, from the drawing measured with `claude plugin test` (2026-10-21): an option
  * is `{"value":<name>},`, 11 characters beside the quoted name; a card with one option and 90
  * characters of text lines serialized to 773, so 666 beside them, and 700 leaves room for longer
- * press handles and the pending mark. The tests at 600 cards (hooks/pane.test.ts), with this
- * store's nine statuses and with 30 statuses of 40 characters, hold every page under 100,000
- * with the rest of the pane; the 80,000 leaves room for the header, toolbar and lines.
+ * press handles and the pending mark. Each button also draws in the clickable affordance
+ * (T-2C.14), PRESS_TREE_CHARS a button: one on a card, two on a pager. The tests at 600 cards
+ * (hooks/pane.test.ts), with this store's nine statuses and with 30 statuses of 40 characters,
+ * hold every page under 100,000 with the rest of the pane; the 70,000 leaves room for the
+ * header, toolbar, nav and lines, whose own buttons the affordance grew by about 8,000.
  */
 export const BOARD_PAGE_LIMIT: BoardPageLimit = {
   perCell: CLOSED_PAGE_SIZE,
   minPerCell: 5,
-  budget: 80_000,
-  card: 700,
+  budget: 70_000,
+  card: 700 + PRESS_TREE_CHARS,
   cardText: 3,
   option: 11,
   nameChar: 1,
-  pager: 450,
+  pager: 450 + 2 * PRESS_TREE_CHARS,
   header: 150,
   lane: 200,
 };

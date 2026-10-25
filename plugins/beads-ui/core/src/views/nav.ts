@@ -3,6 +3,7 @@
 // glyphs below that; above the prompt or under 12 rows the side nav becomes the top bar.
 
 import { commandById } from "../commands.ts";
+import { glyphOf } from "../glyphs.ts";
 import {
   buttonWidth,
   isShort,
@@ -46,49 +47,49 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
     view: "tasks",
     command: "tab.tasks",
     labels: labels("Tasks"),
-    glyph: "✓",
+    glyph: glyphOf("view.tasks"),
     planned: false,
   },
   {
     view: "board",
     command: "tab.board",
     labels: labels("Board"),
-    glyph: "▦",
+    glyph: glyphOf("view.board"),
     planned: false,
   },
   {
     view: "backlog",
     command: "tab.backlog",
     labels: labels("Backlog", "Bklg"),
-    glyph: "☰",
+    glyph: glyphOf("view.backlog"),
     planned: false,
   },
   {
     view: "sprint",
     command: "tab.sprint",
     labels: labels("Sprint", "Spr"),
-    glyph: "»",
+    glyph: glyphOf("view.sprint"),
     planned: true,
   },
   {
     view: "detail",
     command: "tab.detail",
     labels: labels("Detail", "Dtl"),
-    glyph: "◉",
+    glyph: glyphOf("view.detail"),
     planned: false,
   },
   {
     view: "timeline",
     command: "tab.timeline",
     labels: labels("Timeline", "Time"),
-    glyph: "⇢",
+    glyph: glyphOf("view.timeline"),
     planned: false,
   },
   {
     view: "settings",
     command: "tab.settings",
     labels: labels("Settings", "Set"),
-    glyph: "⚙",
+    glyph: glyphOf("view.settings"),
     planned: false,
   },
 ];
@@ -116,8 +117,11 @@ export function hotkeyOf(command: string): string {
 /** `side` beside the view, `top` a bar of short labels above it, `glyph` a bar of keys and glyphs. */
 export type NavKind = "side" | "top" | "glyph";
 
-/** The side nav's width, its border included: the widest entry, `6: Settings`, and the frame. */
-export const SIDE_NAV_COLUMNS = 13;
+/**
+ * The side nav's width, its border included: the widest entry, `6: Settings` in the clickable
+ * brackets, and the frame.
+ */
+export const SIDE_NAV_COLUMNS = 15;
 /** Columns between the side nav and the view beside it. */
 export const SIDE_NAV_GAP = 1;
 

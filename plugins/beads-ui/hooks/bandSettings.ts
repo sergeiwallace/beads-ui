@@ -8,6 +8,7 @@ import {
   type BandSettings,
   bandOverridesOf,
   configCandidates,
+  glyphOf,
   resolveBand,
   type Token,
   windowMs,
@@ -190,7 +191,7 @@ export class BandSettingsPanel {
           drawn
             ? Button({
                 key: `band:left:${part}`,
-                label: "←",
+                label: glyphOf("move.earlier"),
                 plain: true,
                 onPress: () => void this.movePart(part, -1),
               })
@@ -198,7 +199,7 @@ export class BandSettingsPanel {
           drawn
             ? Button({
                 key: `band:right:${part}`,
-                label: "→",
+                label: glyphOf("move.later"),
                 plain: true,
                 onPress: () => void this.movePart(part, 1),
               })

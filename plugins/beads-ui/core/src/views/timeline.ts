@@ -2,7 +2,7 @@
 // one axis, and the ones with no due date listed apart. Pure: the terminal draws each item as a
 // Raster bar, every other surface as a Text row, both from this model (D-31).
 
-import { tierOf } from "../layout.ts";
+import { PRESS_FRAME_COLUMNS, tierOf } from "../layout.ts";
 import type { Issue, Status, StatusCategory } from "../model.ts";
 import { sortIssues } from "../sort.ts";
 import { statusToken, type Token } from "../tokens.ts";
@@ -186,6 +186,7 @@ export function timelineLayout(
   const labelColumns =
     placement === "beside" ? Math.min(28, Math.max(10, Math.floor(columns * 0.3))) : columns;
   // Beside: label, a space, the bar, a space, the due date. Above: the bar, a space, the date.
+  // Each label is a button, cut to leave room for its clickable brackets (T-2C.14).
   const room = columns - DUE_COLUMNS - 1 - (placement === "beside" ? labelColumns + 1 : 0);
   const barColumns = Math.min(RASTER_MAX_COLUMNS, Math.max(1, room));
   const total = view.items.length + view.undated.length;
@@ -202,17 +203,20 @@ export function timelineLayout(
     below: total - end,
     rows: view.items.slice(start, Math.min(end, dated)).map((item) => ({
       id: item.id,
-      label: truncate(item.label, labelColumns),
+      label: truncate(item.label, labelColumns - PRESS_FRAME_COLUMNS),
       due: item.due,
       token: item.token,
       category: item.category,
       columns: barColumns,
       filled: 1 + Math.round(item.position * (barColumns - 1)),
-      line: truncate(`${item.due} ${item.label}`, columns),
+      line: truncate(`${item.due} ${item.label}`, columns - PRESS_FRAME_COLUMNS),
     })),
     undated: view.undated
       .slice(Math.max(0, start - dated), Math.max(0, end - dated))
-      .map((entry) => ({ id: entry.id, label: truncate(entry.label, columns) })),
+      .map((entry) => ({
+        id: entry.id,
+        label: truncate(entry.label, columns - PRESS_FRAME_COLUMNS),
+      })),
     summary: truncate(
       `${plural(total, "epic or milestone", "epics and milestones")}: ${view.items.length} with a due date, ${view.undated.length} without`,
       columns,

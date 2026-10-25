@@ -31,11 +31,27 @@ export const labels = (wide: string, medium = wide, narrow = medium): Labels => 
 export const textWidth = (text: string): number => [...text].length;
 
 /**
- * The columns a plain `Button` takes: Claude Code draws it `{hotkey}: {label}` (or the label
- * alone without a hotkey) and never shrinks it, so a row of them is as wide as its sum.
+ * The clickable affordance (D-43, T-2C.14): the one-cell bracket pair every pressable element
+ * draws around its button, at every tier, so a narrow surface never drops it.
+ */
+export const PRESS_OPEN = "[";
+export const PRESS_CLOSE = "]";
+export const PRESS_FRAME_COLUMNS = 2;
+/**
+ * The serialized characters one affordance frame adds to a drawn tree beside its button, of the
+ * 100,000 a mod tree keeps: 283 measured with `claude plugin test` (2026-10-25) for a dimmed
+ * button keyed `open:BU-mg2.3.10`, the frame's key repeating the button's, so 300 covers a key of
+ * about 30 characters.
+ */
+export const PRESS_TREE_CHARS = 300;
+
+/**
+ * The columns a pressable element takes: Claude Code draws its plain `Button` `{hotkey}: {label}`
+ * (or the label alone without a hotkey) and never shrinks it, inside the affordance's brackets,
+ * so a row of them is as wide as its sum.
  */
 export const buttonWidth = (label: string, hotkey?: string): number =>
-  textWidth(label) + (hotkey === undefined ? 0 : textWidth(hotkey) + 2);
+  textWidth(label) + (hotkey === undefined ? 0 : textWidth(hotkey) + 2) + PRESS_FRAME_COLUMNS;
 
 /** Splits `items` into rows, in order, each no wider than `width` with `gap` between items. */
 export function packRows<T extends { width: number }>(

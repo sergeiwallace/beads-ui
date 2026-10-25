@@ -2,6 +2,7 @@
 // blocked, then open, the first `shown` drawn and the rest collapsed behind a "+M more" control,
 // as the collapse rule says. Pure: the element tree draws it now, and a Client later (D-31).
 
+import { glyphOf } from "../glyphs.ts";
 import type { Issue, Status } from "../model.ts";
 import { sortIssues } from "../sort.ts";
 import { priorityToken, type Token } from "../tokens.ts";
@@ -72,11 +73,14 @@ export function isTaskPanelRetired(permissions: unknown): boolean {
 export type TaskGroup = "in_progress" | "blocked" | "open";
 export const TASK_GROUPS: readonly TaskGroup[] = ["in_progress", "blocked", "open"];
 
-/** bd's own glyph for each group's status (`bd statuses`). */
+/**
+ * Each group's status glyph, from the glyph table. bd's own (`bd statuses`: ◐, ●, ○) are of
+ * ambiguous East Asian width, so the table draws one-cell neighbours of them (D-43).
+ */
 export const TASK_GLYPHS: Readonly<Record<TaskGroup, string>> = {
-  in_progress: "◐",
-  blocked: "●",
-  open: "○",
+  in_progress: glyphOf("status.in_progress"),
+  blocked: glyphOf("status.blocked"),
+  open: glyphOf("status.open"),
 };
 
 /**

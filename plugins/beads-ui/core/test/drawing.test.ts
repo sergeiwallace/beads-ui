@@ -44,7 +44,7 @@ describe("bandLine", () => {
   test("should keep the label's indent and cut the rest to the width when the band is narrow", () => {
     const options = { settings: DEFAULT_BAND_SETTINGS, direct: false, width: 24 };
 
-    expect(bandLine(read, total, options).line).toBe("     [fm] 24 tasks (6 i…");
+    expect(bandLine(read, total, options).line).toBe("     [fm] 24 tasks (6 i⋯");
   });
 
   test("should read 1 task, not 1 tasks, when the counts sum to one and leave the other parts as they are", () => {

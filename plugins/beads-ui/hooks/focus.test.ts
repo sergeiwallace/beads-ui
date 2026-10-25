@@ -1,11 +1,13 @@
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
-import { COMMANDS } from "../core/src/index.ts";
-import { BEADS_BUTTON_KEY } from "./bands.ts";
+import { COMMANDS, glyphOf } from "../core/src/index.ts";
+import { BEADS_BUTTON_KEY, PANE_CLOSE_KEY } from "./bands.ts";
 import { KEYBINDINGS_BLOCK, USAGE_LINES } from "./pane.ts";
 import { PANE_ID, PLUGIN_NAME } from "./register.ts";
 import { test } from "./tests/kit.ts";
+import { render } from "./tests/render.ts";
+import { overflows } from "./tests/width.ts";
 import {
   BAND_PROPS,
   BU,
@@ -22,7 +24,7 @@ import {
 // T-1B.6 and D-27: how focus enters and leaves the pane, how it is shown and hidden, and the
 // help that says so.
 
-/** A store whose band draws, so its beads button is there to press. */
+/** A store whose band draws, so its pane button is there to press. */
 const COUNTED = { script: countScript({ [CWD]: [{ status: "open" }] }) };
 
 const band = ($: Engine) =>
@@ -46,6 +48,85 @@ const pane = ($: Engine) =>
     })
     .then(onBoard);
 
+describe("the band's pane toggle (D-43, T-2C.14)", () => {
+  const USER_CONFIG = "/home/me/.config/beads-ui/beads-ui.toml";
+  const firstLine = async ($: Engine, columns = 120) =>
+    render(
+      await (
+        await $.ui.mount({
+          plugin: PLUGIN_NAME,
+          surface: "terminal",
+          component: "AbovePrompt",
+          props: { ...BAND_PROPS, bodyColumns: columns },
+          viewport: { ...VIEWPORT, columns },
+        })
+      ).drawn(),
+      columns,
+    )[0] ?? "";
+
+  test("should draw the open glyph in its brackets right after the band's text, and no beads label, while the pane is closed", async ($, on) => {
+    const w = world(on, COUNTED);
+    await $.session.start(SESSION);
+    await w.clock.settle();
+    const ui = await band($);
+
+    expect((await ui.find({ key: BEADS_BUTTON_KEY }))?.props.label).toBe(glyphOf("pane.open"));
+    expect(await ui.find({ key: PANE_CLOSE_KEY })).toBeUndefined();
+    expect((await ui.findAll({ type: "Button" })).map((one) => one.props.label)).not.toContain(
+      "beads",
+    );
+    expect(await firstLine($)).toBe(
+      `[bd] 1 task (0 in progress, 0 blocked, 1 open, 0 done last 24h) * [${glyphOf("pane.open")}]`,
+    );
+  });
+
+  test("should draw the close glyph beside the open one while the pane is open, and close the pane when it is pressed", async ($, on) => {
+    const w = world(on, COUNTED);
+    await $.session.start(SESSION);
+    await $.command.run(SHOW);
+    await w.clock.settle();
+
+    expect(await firstLine($)).toMatch(
+      new RegExp(`24h\\) \\* \\[${glyphOf("pane.open")}\\] \\[${glyphOf("pane.close")}\\]$`),
+    );
+    await (await band($)).press({ key: PANE_CLOSE_KEY });
+    await w.clock.settle();
+
+    expect(w.closed).toEqual([PANE_ID]);
+    expect(await (await band($)).find({ key: PANE_CLOSE_KEY })).toBeUndefined();
+    expect(await (await band($)).find({ key: BEADS_BUTTON_KEY })).toBeDefined();
+  });
+
+  test("should draw the toggle's ASCII forms under [indicators] ascii", async ($, on) => {
+    const w = world(on, { ...COUNTED, files: { [USER_CONFIG]: "[indicators]\nascii = true\n" } });
+    await $.session.start(SESSION);
+    await $.command.run(SHOW);
+    await w.clock.settle();
+
+    expect(await firstLine($)).toMatch(/24h\) \* \[\+\] \[x\]$/);
+  });
+
+  for (const columns of [40, 48, 64, 72, 80, 120]) {
+    test(`should draw the band and its open toggle within ${columns} columns`, async ($, on) => {
+      const w = world(on, COUNTED);
+      await $.session.start(SESSION);
+      await $.command.run(SHOW);
+      await w.clock.settle();
+      const drawn = await (
+        await $.ui.mount({
+          plugin: PLUGIN_NAME,
+          surface: "terminal",
+          component: "AbovePrompt",
+          props: { ...BAND_PROPS, bodyColumns: columns },
+          viewport: { ...VIEWPORT, columns },
+        })
+      ).drawn();
+
+      expect(overflows(drawn, columns)).toEqual([]);
+    });
+  }
+});
+
 describe("show and hide (T-1B.6)", () => {
   test("should open the pane focused when /bu runs while it is closed, and close it when /bu runs again", async ($, on) => {
     const w = world(on);
@@ -60,7 +141,7 @@ describe("show and hide (T-1B.6)", () => {
     expect(w.closed).toEqual([PANE_ID]);
   });
 
-  test("should open the pane focused when the band's beads button is pressed while it is closed", async ($, on) => {
+  test("should open the pane focused when the band's pane button is pressed while it is closed", async ($, on) => {
     const w = world(on, COUNTED);
     await $.session.start(SESSION);
     await w.clock.settle();
@@ -74,7 +155,7 @@ describe("show and hide (T-1B.6)", () => {
     expect(w.focused).toEqual([]);
   });
 
-  test("should move the focus into the open pane, onto its tab, when the beads button is pressed", async ($, on) => {
+  test("should move the focus into the open pane, onto its tab, when the band's pane button is pressed", async ($, on) => {
     const w = world(on, COUNTED);
     await $.session.start(SESSION);
     await $.command.run(SHOW);
@@ -105,9 +186,9 @@ describe("the help (T-1B.6)", () => {
     for (const text of [
       "Ctrl+X then Tab",
       "a click on it",
-      "the band's beads button",
+      "the band's pane button, [◨] right after the band's text",
       "Esc returns it to the prompt",
-      "Close: Esc, Ctrl+X then X, or /bu",
+      "Close: Esc, Ctrl+X then X, the band's [⊠] button",
       "Reopen: /bu",
       "command:bu",
     ]) {

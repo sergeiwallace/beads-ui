@@ -5,14 +5,18 @@ import {
   type ConfirmPhase,
   type ConfirmState,
   confirmView,
+  glyphOf,
   type Issue,
   nextCommand,
   openDeleteConfirm,
   reduceConfirm,
   type UndoClose,
 } from "../core/src/index.ts";
+import { colorOf, styledUi } from "./components/look.ts";
 import type { Host } from "./host.ts";
-import { colorOf, type PaneUi } from "./pane.ts";
+import type { PaneUi } from "./pane.ts";
+
+const MORE = glyphOf("text.more");
 
 export const CONFIRM_ID = "beads-confirm";
 
@@ -132,7 +136,8 @@ export class DeleteConfirm {
     this.finished(view.statusLine ?? "", view.undo, this.dir);
   }
 
-  draw(ui: PaneUi, width: number): RenderElement {
+  draw(elements: PaneUi, width: number): RenderElement {
+    const ui = styledUi(elements);
     const { Box, Text, Button, Input, Code } = ui;
     const state = this.state;
     if (state === undefined) {
@@ -151,7 +156,7 @@ export class DeleteConfirm {
         view.preview === ""
           ? Box({
               key: "confirm-preview",
-              children: [Text({ dimColor: true, children: "running bd delete --dry-run…" })],
+              children: [Text({ dimColor: true, children: `running bd delete --dry-run${MORE}` })],
             })
           : Box({ key: "confirm-preview", children: [Code({ source: view.preview })] }),
         ...([
