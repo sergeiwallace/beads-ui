@@ -255,11 +255,11 @@ export class BandLevels {
     groups.forEach((group, i) => {
       byGroup[group] = held[i]?.tasks ?? [];
     });
-    const reads = new Map<string, IndicatorRead>();
+    const storeReads = new Map<string, IndicatorRead>();
     const readOf = (store: string) => {
-      const held = reads.get(store) ?? this.readFor(store);
-      reads.set(store, held);
-      return held;
+      const read = storeReads.get(store) ?? this.readFor(store);
+      storeReads.set(store, read);
+      return read;
     };
     const labelWidth = Math.max(1, width - gutterColumns(enabledIndicators(), columns));
     const items = orderTasks(byGroup).map((task) => ({
