@@ -945,7 +945,7 @@ describe("the band's parts (T-1B.11)", () => {
     await ui.press({ key: "band:save" });
 
     expect(w.files.get(USER_CONFIG)).toBe(
-      `${kept}\n[band]\ndone_window = "48h"\nparts = ["total", "in_progress", "blocked", "open", "done", "unpublished"]\ndebug = false\n`,
+      `${kept}\n[band]\ndone_window = "48h"\nparts = ["total", "in_progress", "blocked", "open", "done", "unpublished"]\ndebug = false\nrows = 5\nlevel = "summary"\n`,
     );
     expect(w.store.get(BAND_SETTINGS_KEY)).toEqual({});
     expect((await ui.find({ key: "band:notice" }))?.text).toBe(

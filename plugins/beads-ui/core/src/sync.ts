@@ -312,6 +312,13 @@ export class SyncState {
     return due.map(({ key, store, text, retries }) => ({ key, store, text, retries }));
   }
 
+  /** Each store with writes not yet published, or whose failure was given up on (D-36's rows). */
+  get pendingStores(): { store: string; unpublished: number; failed: boolean }[] {
+    return [...this.stores.entries()]
+      .filter(([, state]) => state.unpublished > 0 || state.failed)
+      .map(([store, state]) => ({ store, unpublished: state.unpublished, failed: state.failed }));
+  }
+
   /** Every store's writes since its last successful publish. */
   get unpublished(): number {
     let sum = 0;

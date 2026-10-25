@@ -145,6 +145,8 @@ export interface TaskListOptions {
   focusedId?: string;
   /** At short height: the most rows drawn, a window kept round the focused task. */
   windowRows?: number;
+  /** The first row the window draws, where the surface scrolls it (the band, D-36). */
+  windowStart?: number;
 }
 
 /** How many of `tasks` the rule draws before the rest collapse. */
@@ -166,8 +168,13 @@ export function rowWindow(
   ids: readonly string[],
   focusedId: string | undefined,
   limit: number | undefined,
+  first?: number,
 ): { start: number; end: number } {
   if (limit === undefined || limit < 1 || ids.length <= limit) return { start: 0, end: ids.length };
+  if (first !== undefined) {
+    const start = Math.min(Math.max(0, first), ids.length - limit);
+    return { start, end: start + limit };
+  }
   const at = Math.max(0, focusedId === undefined ? 0 : ids.indexOf(focusedId));
   const end = Math.min(ids.length, Math.max(limit, at + 2));
   return { start: Math.max(0, end - limit), end };
@@ -198,6 +205,7 @@ export function taskListView(issues: readonly Issue[], options: TaskListOptions)
     visible.map((task) => task.id),
     options.focusedId,
     options.windowRows,
+    options.windowStart,
   );
   const above = start;
   const below = visible.length - end;
