@@ -5,6 +5,8 @@
 // border frames its box, and a plain Button draws `{hotkey}: {label}` (a framed one
 // `[ {label} ]`). Colour, hover and wrapping are not drawn.
 
+import { decodeRasterCells, RASTER_DEFAULT_COLOR } from "../../core/src/index.ts";
+
 interface DrawnNode {
   type?: string;
   props?: Record<string, unknown>;
@@ -27,6 +29,22 @@ function inline(value: unknown): string {
   const node = asNode(value);
   if (node === undefined) return "";
   return (node.children ?? []).map(inline).join("");
+}
+
+/**
+ * A Raster's cells as text, a line a row: each cell's code point, and `#` for a cell whose
+ * background is set (a bar's filled cell), since a capture draws no colour.
+ */
+function rasterLines(props: Record<string, unknown>): string[] {
+  const columns = numberOf(props.columns);
+  const cells = typeof props.cells === "string" ? decodeRasterCells(props.cells) : [];
+  const text = cells.map((cell) =>
+    cell.background !== RASTER_DEFAULT_COLOR ? "#" : String.fromCodePoint(cell.codePoint),
+  );
+  const rows = Math.max(1, numberOf(props.rows));
+  return Array.from({ length: rows }, (_, row) =>
+    text.slice(row * columns, (row + 1) * columns).join(""),
+  );
 }
 
 function block(value: unknown, width: number): string[] {
@@ -55,7 +73,7 @@ function block(value: unknown, width: number): string[] {
     case "Markdown":
       return String(props.source ?? props.text ?? "").split("\n");
     case "Raster":
-      return ["#".repeat(numberOf(props.columns))];
+      return rasterLines(props);
     case "Box":
       return box(props, node.children ?? [], width);
     default:

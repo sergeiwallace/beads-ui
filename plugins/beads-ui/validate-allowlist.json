@@ -26,6 +26,7 @@
         "$.settings.read",
         "$.store.get",
         "$.store.set",
+        "$.ui.blit",
         "$.ui.close",
         "$.ui.focus",
         "$.ui.invalidate",
@@ -42,6 +43,10 @@
         "CLAUDE_CODE_SESSION_NAME",
         "CLAUDE_CODE_TASK_LIST_ID",
         "HOME",
+        "TERM",
+        "TERM_PROGRAM",
+        "TERM_PROGRAM_VERSION",
+        "TMUX",
         "XDG_CONFIG_HOME",
         "XDG_STATE_HOME"
       ],

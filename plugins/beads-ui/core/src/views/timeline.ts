@@ -7,6 +7,13 @@ import type { Issue, Status, StatusCategory } from "../model.ts";
 import { sortIssues } from "../sort.ts";
 import { statusToken, type Token } from "../tokens.ts";
 import { rowWindow } from "./panel.ts";
+import {
+  RASTER_DEFAULT_COLOR,
+  RASTER_TRACK_COLOR,
+  type RasterCell,
+  rasterCells,
+  rasterColorFor,
+} from "./raster.ts";
 import { truncate } from "./text.ts";
 
 /** The issue types the Timeline places: epics, and milestones such as D-5's `Sprint <name>`. */
@@ -233,50 +240,24 @@ export function timelineLayout(
   };
 }
 
-/** A Raster cell's colour for the terminal's own default. */
-export const RASTER_DEFAULT_COLOR = 0x01000000;
-
 /** A bar's colour by its status category, as 0xRRGGBB: D-19's status tokens for a Raster. */
 export const RASTER_COLORS: Readonly<Record<StatusCategory, number>> = {
-  active: 0x5f87d7,
-  wip: 0xd7875f,
-  frozen: 0x8a8a8a,
-  done: 0x5faf5f,
+  active: rasterColorFor("status.active"),
+  wip: rasterColorFor("status.wip"),
+  frozen: rasterColorFor("status.frozen"),
+  done: rasterColorFor("status.done"),
 };
 
-/** The axis past a bar's end: a dim dot a cell. */
-const TRACK = { codePoint: 0x2e, color: 0x585858 };
-
-const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-function base64(bytes: Uint8Array): string {
-  let out = "";
-  for (let i = 0; i < bytes.length; i += 3) {
-    const a = bytes[i] ?? 0;
-    const b = bytes[i + 1] ?? 0;
-    const c = bytes[i + 2] ?? 0;
-    const n = (a << 16) | (b << 8) | c;
-    out += B64[(n >> 18) & 63] ?? "";
-    out += B64[(n >> 12) & 63] ?? "";
-    out += i + 1 < bytes.length ? (B64[(n >> 6) & 63] ?? "") : "=";
-    out += i + 2 < bytes.length ? (B64[n & 63] ?? "") : "=";
-  }
-  return out;
+/** A bar's cells: `filled` spaces on `color`, then the track, a dim dot a cell. */
+export function barRun(columns: number, filled: number, color: number): RasterCell[] {
+  return Array.from({ length: Math.max(0, columns) }, (_, i) =>
+    i < filled
+      ? { codePoint: 0x20, color: RASTER_DEFAULT_COLOR, background: color }
+      : { codePoint: 0x2e, color: RASTER_TRACK_COLOR, background: RASTER_DEFAULT_COLOR },
+  );
 }
 
-/**
- * A one-row Raster's `cells` for a bar: `filled` cells drawn as spaces on `color`, then the
- * track. Each cell is three little-endian 32-bit numbers (code point, colour, background), the
- * whole row base64, as Claude Code's Raster reads them.
- */
+/** A one-row Raster's `cells` for a bar (barRun), as Claude Code's Raster reads them. */
 export function barCells(columns: number, filled: number, color: number): string {
-  const bytes = new Uint8Array(columns * 12);
-  const view = new DataView(bytes.buffer);
-  for (let i = 0; i < columns; i++) {
-    const on = i < filled;
-    view.setUint32(i * 12, on ? 0x20 : TRACK.codePoint, true);
-    view.setUint32(i * 12 + 4, on ? RASTER_DEFAULT_COLOR : TRACK.color, true);
-    view.setUint32(i * 12 + 8, on ? color : RASTER_DEFAULT_COLOR, true);
-  }
-  return base64(bytes);
+  return rasterCells(barRun(columns, filled, color));
 }

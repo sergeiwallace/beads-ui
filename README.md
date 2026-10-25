@@ -32,7 +32,14 @@ the same actions as in the pane and an options menu for the rest. Its keys are l
 ([docs/procedures/mod-install.md](docs/procedures/mod-install.md#the-bands-settings)). The
 colours follow your Claude Code theme, and `[theme]` sets any of them to a hex value;
 `[indicators] ascii = true` draws every glyph as ASCII
-([docs/procedures/mod-install.md](docs/procedures/mod-install.md#the-look)). Every task row, in
+([docs/procedures/mod-install.md](docs/procedures/mod-install.md#the-look)). At the summary the
+band adds a figures row when it has a row to spare: in the terminal a Raster row with a sparkline
+of the done window and a bar for each status count, and in Claude Desktop the same figures as text
+([docs/procedures/mod-install.md](docs/procedures/mod-install.md#what-it-does)). The pane's
+Timeline draws a picture of its dated items: an image where the terminal draws one (kitty, Ghostty,
+iTerm2 3.5 or later, and inside tmux only with `allow-passthrough on`), an SVG in Claude Desktop
+and VS Code, and its alt text everywhere else
+([docs/procedures/mod-install.md](docs/procedures/mod-install.md#the-timeline)). Every task row, in
 the band, the Tasks view, the Backlog and on Board cards, starts with a gutter of row indicators:
 `⟳` while an agent is working on the issue (dimmed when that agent's session is no longer live on
 the host), `⊘` when it is blocked and `✎` when it has an open review item. The help and Settings list them, and `[indicators]` or

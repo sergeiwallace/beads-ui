@@ -51,6 +51,7 @@ export function columnsNeeded(value: unknown): number {
     case "Input":
       return (props.label === undefined ? 0 : widthOf(String(props.label)) + 2) + 1;
     case "Raster":
+    case "Image":
       return numberOf(props.columns);
     case "Code":
       return Math.max(

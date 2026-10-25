@@ -41,6 +41,7 @@ import {
   groupLayout,
   gutterColumns,
   historyArgv,
+  type ImageVerdict,
   INDICATOR_ROW_PREFIX,
   INDICATORS,
   INITIAL_BOARD_STATE,
@@ -151,6 +152,7 @@ import {
   taskListView,
   textWidth,
   timelineLayout,
+  timelinePicture,
   timelinePlacement,
   timelineReadArgvs,
   timelineView,
@@ -169,6 +171,7 @@ import {
   paneSurface,
   type RasterElement,
   type Surface,
+  type SurfacePicture,
   type TasksRegion,
 } from "./components/adapters.ts";
 import { type BacklogColumns, backlog } from "./components/backlog.ts";
@@ -188,7 +191,15 @@ import {
   setIndicatorSwitches,
   setReviewIndex,
 } from "./components/indicators.ts";
-import { colorOf, glyphText, setAscii, setTheme, styledUi, weight } from "./components/look.ts";
+import {
+  colorOf,
+  glyphText,
+  setAscii,
+  setTheme,
+  styledUi,
+  themeOverrides,
+  weight,
+} from "./components/look.ts";
 import { drawMenu, menuColumns, menuRows } from "./components/menu.ts";
 import { navFrame } from "./components/nav.ts";
 import { type ViewEntry, ViewRegistry } from "./components/registry.ts";
@@ -394,6 +405,8 @@ export class BeadsPane {
   menuX: number | undefined;
   /** The task list's Client failed (T-2B.5): the element tree draws the list for the session. */
   clientFaulted = false;
+  /** Whether the terminal draws an Image's pixels (T-2C.13), read at session start. */
+  images: ImageVerdict = { images: false, reason: "the terminal is not read yet" };
   /** The props the task list's Client was last handed, which its posts are read against. */
   private clientProps: TaskClientProps | undefined;
   /** The Settings view's last notice. */
@@ -1947,6 +1960,7 @@ export class BeadsPane {
     helpRegion?: RenderElement,
     tasksRegion?: TasksRegion,
     raster?: RasterElement,
+    picture?: SurfacePicture,
   ): RenderElement {
     const ui = styledUi(elements);
     const { Box, Text } = ui;
@@ -1966,6 +1980,7 @@ export class BeadsPane {
     const extras = {
       ...(region === undefined ? {} : { client: region }),
       ...(raster === undefined ? {} : { raster }),
+      ...(picture === undefined ? {} : { picture }),
     };
     // The pane adapter (D-35): what every component the pane draws through can use, at the
     // view's width for its chrome and at the section's inner width for the view itself.
@@ -2393,9 +2408,22 @@ export class BeadsPane {
       ...(this.board.loadedAt === undefined ? {} : { today: this.board.loadedAt }),
     });
     const nav = this.navAt(this.frame);
+    // The picture (T-2C.13), where the surface draws one: not on the band, whose rows its
+    // levels keep. It takes its rows, or one for its alt text, before the items' window.
+    const picture =
+      surface.picture === undefined || windowed(surface)
+        ? undefined
+        : timelinePicture(view, {
+            columns: width,
+            overrides: themeOverrides(),
+            ...(this.board.loadedAt === undefined ? {} : { today: this.board.loadedAt }),
+          });
+    const pictureRows =
+      picture === undefined ? 0 : surface.picture?.form === "alt" ? 1 : picture.rows;
     const room =
       (this.frame.bodyRows ?? WANTED_ROWS) -
       TIMELINE_CHROME_ROWS -
+      pictureRows -
       (surface.short ? 0 : SECTION_ROWS) -
       (nav.kind === "side" ? 0 : nav.rows.length);
     // A Raster bar under its label takes two rows.
@@ -2426,7 +2454,10 @@ export class BeadsPane {
             ),
           }
         : layout,
-      { open: (id) => void this.openOn(surface, id) },
+      {
+        open: (id) => void this.openOn(surface, id),
+        ...(picture === undefined ? {} : { picture }),
+      },
     );
   }
 

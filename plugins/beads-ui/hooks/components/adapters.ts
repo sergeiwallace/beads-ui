@@ -20,6 +20,19 @@ export type TasksRegion = (props: TaskClientProps, width: number, height: number
 /** The terminal's Raster (T-2B.9): a grid of coloured cells. */
 export type RasterElement = Terminal["Raster"];
 
+/** A picture's element (T-2C.13): real pixels on the terminal, or an Svg off it. */
+export type ImageElement = Terminal["Image"];
+export type SvgElement = Elements["desktop"]["Svg"];
+
+/**
+ * How the surface draws a picture (D-43, T-2C.13), from the surface profile: an Image where the
+ * terminal can show one, an Svg on the desktop, VS Code and mobile, its alt text elsewhere.
+ */
+export type SurfacePicture =
+  | { form: "image"; Image: ImageElement }
+  | { form: "svg"; Svg: SvgElement }
+  | { form: "alt" };
+
 /**
  * Where the surface scrolls a list itself rather than following the focus (the band's overview,
  * D-36): the first row drawn, and what moving it to another first row does.
@@ -45,6 +58,8 @@ export interface Surface {
   readonly client?: TasksRegion;
   /** Where a Raster draws: the Timeline's bars. */
   readonly raster?: RasterElement;
+  /** How a view's picture draws; none on the band, whose rows are kept for its levels. */
+  readonly picture?: SurfacePicture;
   /** Where a list scrolls by its own controls, not the focus. */
   readonly scroll?: SurfaceScroll;
 }
@@ -86,11 +101,11 @@ export function bandSurface(
   };
 }
 
-/** The pane adapter: every element, the view's columns and rows, and its Client and Raster. */
+/** The pane adapter: every element, the view's columns and rows, its Client, Raster and picture. */
 export function paneSurface(
   ui: SurfaceUi,
   size: { columns: number; rows?: number; short: boolean },
-  extras: { client?: TasksRegion; raster?: RasterElement } = {},
+  extras: { client?: TasksRegion; raster?: RasterElement; picture?: SurfacePicture } = {},
 ): Surface {
   return {
     id: "pane",
@@ -101,6 +116,7 @@ export function paneSurface(
     elements: PANE_ELEMENTS,
     ...(extras.client === undefined ? {} : { client: extras.client }),
     ...(extras.raster === undefined ? {} : { raster: extras.raster }),
+    ...(extras.picture === undefined ? {} : { picture: extras.picture }),
   };
 }
 

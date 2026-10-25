@@ -3,6 +3,7 @@ import {
   colorFor,
   PRESS_CLOSE,
   PRESS_OPEN,
+  rasterColorFor,
   type ThemeOverrides,
   type Token,
 } from "../../core/src/index.ts";
@@ -30,6 +31,15 @@ export function setAscii(next: boolean): boolean {
 
 /** The colour a `Text` draws for `token`: its `[theme]` hex value, else its theme key. */
 export const colorOf = (token: Token): string => colorFor(token, theme);
+
+/** The 24-bit colour a Raster cell draws for `token`: its `[theme]` hex value, else core's. */
+export const rasterColorOf = (token: Token): number => rasterColorFor(token, theme);
+
+/** The `[theme]` values drawn now, which a picture's colours follow. */
+export const themeOverrides = (): ThemeOverrides => theme;
+
+/** True under `[indicators] ascii`: a Raster's glyph cells draw their ASCII forms too. */
+export const isAscii = (): boolean => ascii;
 
 /** `text` as drawn: each glyph of the table in its ASCII form under `[indicators] ascii`. */
 export const glyphText = (text: string): string => (ascii ? asciiOf(text) : text);
