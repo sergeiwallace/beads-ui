@@ -12,6 +12,7 @@ import {
   type Tier,
   tierOf,
 } from "../layout.ts";
+import type { SurfaceSetting } from "./surfaces.ts";
 
 export const PANEL_VIEWS = [
   "tasks",
@@ -28,13 +29,16 @@ export type PanelView = (typeof PANEL_VIEWS)[number];
 export type PlannedView = "sprint";
 
 export interface NavEntry {
-  view: PanelView;
+  /** A PanelView for the built-in views; any id for a view registered later (D-35). */
+  view: string;
   /** The COMMANDS id whose hotkey presses it. */
   command: string;
   labels: Labels;
   /** One column wide, drawn after its key when the pane is narrow. */
   glyph: string;
   planned: boolean;
+  /** The surfaces the view draws on (D-35); both when not named. */
+  surfaces?: SurfaceSetting;
 }
 
 export const NAV_ENTRIES: readonly NavEntry[] = [
@@ -125,7 +129,7 @@ export function navKind(columns: number, placement: string, bodyRows?: number): 
 }
 
 export interface NavItem {
-  view: PanelView;
+  view: string;
   key: string;
   label: string;
   hotkey: string;
@@ -149,18 +153,18 @@ export interface NavLayout {
 /**
  * The nav in a body `columns` wide, with `active` the view now drawn. `bodyColumns`, the pane's
  * own width when the surface draws a column narrower than it, picks the tier T-2B.1 names.
- * `hideTasks` draws no Tasks entry (T-2B.7).
+ * `entries` are the views the surface draws, from the view registry (D-35).
  */
 export function navLayout(
   columns: number,
   placement: string,
   bodyRows: number | undefined,
-  active: PanelView,
+  active: string,
   bodyColumns: number = columns,
-  hideTasks = false,
+  entries: readonly NavEntry[] = NAV_ENTRIES,
 ): NavLayout {
   const kind = navKind(bodyColumns, placement, bodyRows);
-  const items = navEntries(hideTasks).map((entry): NavItem => {
+  const items = entries.map((entry): NavItem => {
     const label =
       kind === "side" ? entry.labels.wide : kind === "top" ? entry.labels.medium : entry.glyph;
     const hotkey = hotkeyOf(entry.command);

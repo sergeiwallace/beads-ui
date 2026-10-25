@@ -25,6 +25,7 @@ import {
   PANEL_MODES,
   type PanelSettings,
 } from "./views/panel.ts";
+import { isSurfaceSetting, SURFACE_SETTINGS, type SurfaceSetting } from "./views/surfaces.ts";
 
 /** The settings the mod reads from `beads-ui.toml` (design, Configuration), at call time. */
 export interface BeadsUiConfig {
@@ -525,6 +526,60 @@ export function withPanelTable(text: string | undefined, settings: PanelSettings
     `mode = ${JSON.stringify(settings.mode)}`,
     `open_at_start = ${settings.openAtStart}`,
   ]);
+}
+
+/** The `beads-ui.toml` table naming the surfaces each view draws on (D-35, T-2C.1). */
+export const SURFACES_TABLE = "surfaces";
+
+export interface ResolvedSurfaces {
+  /** One setting per view the table names; a view it does not name draws on both. */
+  settings: Record<string, SurfaceSetting>;
+  /** One line per entry the file got wrong; that view draws on both. */
+  problems: string[];
+}
+
+/**
+ * `[surfaces]`, read at call time: one key per view id, `both`, `band` or `pane`. A key naming
+ * no view the registry holds is kept, so a view registered later reads it too.
+ */
+export function resolveSurfaces(text: string | undefined): ResolvedSurfaces {
+  const settings: Record<string, SurfaceSetting> = {};
+  const problems: string[] = [];
+  if (text === undefined) return { settings, problems };
+  const parsed = parseToml(text);
+  if (!parsed.ok) return { settings, problems };
+  const table = parsed.value[SURFACES_TABLE];
+  if (table === undefined) return { settings, problems };
+  if (!isTable(table)) {
+    problems.push(`${SURFACES_TABLE} must be a table; every view draws on both surfaces`);
+    return { settings, problems };
+  }
+  for (const [view, value] of Object.entries(table)) {
+    if (isSurfaceSetting(value)) settings[view] = value;
+    else
+      problems.push(
+        `surfaces.${view} ${JSON.stringify(value)} is not one of ${SURFACE_SETTINGS.join(", ")}; using both`,
+      );
+  }
+  return { settings, problems };
+}
+
+/**
+ * `text` with its `[surfaces]` table replaced by `settings`, every other line kept as written;
+ * with no setting and no table in the file, `text` as it was.
+ */
+export function withSurfacesTable(
+  text: string,
+  settings: Readonly<Record<string, SurfaceSetting>>,
+): string {
+  const entries = Object.entries(settings);
+  const has = text.split("\n").some((line) => HEADER.exec(line)?.[1]?.trim() === SURFACES_TABLE);
+  if (entries.length === 0 && !has) return text;
+  return withTable(
+    text,
+    SURFACES_TABLE,
+    entries.map(([view, setting]) => `${view} = ${JSON.stringify(setting)}`),
+  );
 }
 
 /** The `beads-ui.toml` table of the publish run after an edit (D-33, T-2B.6). */

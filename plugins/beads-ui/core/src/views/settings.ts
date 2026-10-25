@@ -1,5 +1,6 @@
 // The Settings view (T-2B.8): the panel's shown count, its collapse rule, panel.mode, open at start, debug
-// mode, and the band's parts, order and done window, as rows a surface draws as controls.
+// mode, each view's surfaces (D-35), and the band's parts, order and done window, as rows a
+// surface draws as controls.
 
 import type { BandSettings } from "./band.ts";
 import {
@@ -10,6 +11,7 @@ import {
   PANEL_MODES,
   type PanelSettings,
 } from "./panel.ts";
+import { SURFACE_LABELS, SURFACE_SETTINGS, type SurfaceSetting } from "./surfaces.ts";
 import { truncate } from "./text.ts";
 
 export interface SettingOption {
@@ -32,6 +34,16 @@ export interface SettingsView {
   rows: SettingRow[];
 }
 
+/** A view whose surfaces Settings sets (D-35): its id, its name and its setting now. */
+export interface SurfaceRow {
+  view: string;
+  label: string;
+  setting: SurfaceSetting;
+}
+
+/** The key of a view's surfaces row; the view's id follows it. */
+export const SURFACE_ROW_PREFIX = "settings:surfaces:";
+
 /** Each option's label within `width` columns, its value first so a cut keeps it readable. */
 const options = (
   values: readonly string[],
@@ -48,6 +60,7 @@ export function settingsView(
   panel: PanelSettings,
   band: BandSettings,
   width: number,
+  surfaces: readonly SurfaceRow[] = [],
 ): SettingsView {
   const room = Math.max(8, width);
   return {
@@ -99,6 +112,16 @@ export function settingsView(
         ),
         hint: "the band's read time, to the second",
       },
+      ...surfaces.map(
+        (row): SettingRow => ({
+          key: `${SURFACE_ROW_PREFIX}${row.view}`,
+          label: `${row.label} view`,
+          kind: "choice",
+          value: row.setting,
+          options: options(SURFACE_SETTINGS, SURFACE_LABELS, room),
+          hint: "the surfaces this view draws on; [surfaces] in beads-ui.toml",
+        }),
+      ),
     ],
   };
 }

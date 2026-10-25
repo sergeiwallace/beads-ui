@@ -4,7 +4,7 @@
 
 import { commandById } from "../commands.ts";
 import { type Labels, labels } from "../layout.ts";
-import { hotkeyOf, navEntries, type PanelView } from "./nav.ts";
+import { hotkeyOf, isPanelView, type NavEntry, navEntries } from "./nav.ts";
 import type { TaskListView } from "./panel.ts";
 
 export interface PanelAction {
@@ -21,7 +21,8 @@ export interface PanelAction {
 
 /** What the drawn view offers right now. */
 export interface ActionContext {
-  view: PanelView;
+  /** A PanelView, or the id of a view registered later (D-35). */
+  view: string;
   mine: boolean;
   swimlane: string;
   sort: string;
@@ -35,6 +36,8 @@ export interface ActionContext {
   more?: string;
   /** `panel.mode = native`: the nav, and so the menu's Go to section, has no Tasks entry (T-2B.7). */
   hideTasks?: boolean;
+  /** The views the surface's nav draws, from the view registry (D-35); the built-ins when not given. */
+  nav?: readonly NavEntry[];
 }
 
 const action = (
@@ -66,7 +69,7 @@ export function panelActions(ctx: ActionContext): PanelAction[] {
   const del = action("card.delete", "delete", labels("Delete", "Delete", "Del"), { task: true });
   const undo = ctx.undo ? action("close.undo", "undo", labels("Undo close", "Undo")) : undefined;
   const list: (PanelAction | undefined)[] =
-    ctx.view === "settings"
+    ctx.view === "settings" || !isPanelView(ctx.view)
       ? [menu, help]
       : ctx.view === "timeline"
         ? [
@@ -167,7 +170,7 @@ export function menuView(ctx: ActionContext, task?: string): MenuView {
       {
         key: "menu:nav",
         title: "Go to",
-        items: navEntries(ctx.hideTasks).map((entry) => itemOf(entry.command)),
+        items: (ctx.nav ?? navEntries(ctx.hideTasks)).map((entry) => itemOf(entry.command)),
       },
     ],
   };

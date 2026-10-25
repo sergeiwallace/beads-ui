@@ -15,7 +15,6 @@ import {
   boardPath,
   boardReadArgvs,
   boardView,
-  buttonWidth,
   type CardView,
   COMMANDS,
   clockStamp,
@@ -35,15 +34,14 @@ import {
   footerHints,
   groupLayout,
   historyArgv,
-  hotkeyOf,
   INITIAL_BOARD_STATE,
   type Issue,
   isCollapseRule,
   isFirstmate,
   isPanelMode,
-  isPanelView,
   isRefresherToken,
   isShort,
+  isSurfaceSetting,
   LEASE_FILE,
   MAX_SHOWN,
   type MenuView,
@@ -58,7 +56,6 @@ import {
   type PanelView,
   type PendingDisplayId,
   type PlannedView,
-  packRows,
   panelActions,
   parseBdCreatedId,
   parseBdHistoryEvents,
@@ -94,6 +91,9 @@ import {
   STALE_MS,
   STATUS_CATEGORIES,
   type StoreResolution,
+  SURFACE_ROW_PREFIX,
+  type SurfaceId,
+  type SurfaceRow,
   type SwimlaneMode,
   settingsView,
   showArgv,
@@ -106,6 +106,7 @@ import {
   stepPage,
   storeLabel,
   submitFilter,
+  surfaceOf,
   type TaskClientProps,
   type TaskListView,
   TERMINAL_THEME,
@@ -114,7 +115,6 @@ import {
   taskClientProps,
   taskListView,
   textWidth,
-  tierOf,
   timelineLayout,
   timelinePlacement,
   timelineReadArgvs,
@@ -125,22 +125,33 @@ import {
   undoForMove,
   undoView,
   withPanelTable,
+  withSurfacesTable,
 } from "../core/src/index.ts";
 import type { BandSettingsPanel } from "./bandSettings.ts";
+import { actionBar } from "./components/actions.ts";
+import {
+  paneSurface,
+  type RasterElement,
+  type Surface,
+  type TasksRegion,
+} from "./components/adapters.ts";
+import { navFrame } from "./components/nav.ts";
+import { type ViewEntry, ViewRegistry } from "./components/registry.ts";
+import {
+  rowControlColumns,
+  TASKS_CLIENT_KEY,
+  type TaskListClient,
+  taskList,
+} from "./components/tasks.ts";
 import type { Host } from "./host.ts";
 import {
-  drawFrame,
   drawMenu,
   drawSettings,
-  drawTaskList,
   drawTimeline,
   menuColumns,
   menuRows,
   PanelSettingsState,
-  rowControlColumns,
   settingsOptionRoom,
-  TASKS_CLIENT_KEY,
-  type TaskListClient,
 } from "./panel.ts";
 import type { StoreResolver } from "./store.ts";
 
@@ -197,13 +208,12 @@ const READ_TIMEOUT_MS = 8_000;
 const RUN_OUTPUT_LIMIT = "4 MiB";
 const WRITE_TIMEOUT_MS = 15_000;
 
-/** The views the nav opens (T-2B.1); Sprint is planned and never opens. */
+/** The built-in views the nav opens (T-2B.1); Sprint is planned and never opens. */
 export type Tab = Exclude<PanelView, PlannedView>;
 /** D-28: tab 3 is the Sprint view Phase 2 builds; until then pressing it says so and stays put. */
 export const SPRINT_PLANNED_TEXT = plannedText("sprint");
 /** The view the pane opens on when no view was kept (T-2B.2): the task panel. */
 export const DEFAULT_TAB: Tab = "tasks";
-const isTab = (value: unknown): value is Tab => isPanelView(value) && value !== "sprint";
 /** The issue types a Detail's Type list offers, with every type the store's issues carry. */
 export const ISSUE_TYPES: readonly string[] = ["task", "bug", "feature", "epic", "chore"];
 
@@ -223,17 +233,14 @@ export type PaneUi = Pick<
 >;
 
 /**
- * Draws the task list's Client (T-2B.5) where the surface has one: register.ts names the module,
- * since Claude Code reads a Client's module path off the hooks module's source.
+ * The task list's Client (T-2B.5) where the surface has one, and the terminal's Raster (T-2B.9):
+ * register.ts names the Client's module, since Claude Code reads it off the hooks module's source.
  */
-export type TasksRegion = (props: TaskClientProps, width: number, height: number) => RenderElement;
-
-/** The terminal's Raster (T-2B.9): a grid of coloured cells; no other surface draws one. */
-export type RasterElement = Elements["terminal"]["Raster"];
+export type { RasterElement, TasksRegion };
 
 export interface Prefs {
-  /** The open view; `tab`, which held 0.4.0's board-first tab, is no longer read. */
-  view: Tab;
+  /** The open view's id; `tab`, which held 0.4.0's board-first tab, is no longer read. */
+  view: string;
   filter: string;
   swimlane: SwimlaneMode;
   sort: string;
@@ -306,7 +313,10 @@ export class BeadsPane {
   board: BoardState = INITIAL_BOARD_STATE;
   readyIds: ReadonlySet<string> | undefined;
   filter: FilterState = EMPTY_FILTER_STATE;
-  tab: Tab = DEFAULT_TAB;
+  /** The open view's id, a Tab or a view registered later (D-35). */
+  tab: string = DEFAULT_TAB;
+  /** Every view the pane and the band draw (D-35): their navs and drawing come from it. */
+  readonly views = new ViewRegistry();
   /** The task panel's settings (T-2B.2, T-2B.8). */
   readonly panel = new PanelSettingsState();
   /** The Tasks view shows its collapsed tasks (T-2B.2). */
@@ -391,7 +401,9 @@ export class BeadsPane {
   constructor(
     private readonly stores: StoreResolver,
     private readonly bandSettings?: BandSettingsPanel,
-  ) {}
+  ) {
+    this.views.drawWith("tasks", (surface) => this.drawTasks(surface));
+  }
 
   async bind(host: Host): Promise<void> {
     this.host = host;
@@ -426,7 +438,7 @@ export class BeadsPane {
     if (chosen === "mine" || chosen === "all") this.scope = chosen;
     const stored = await this.host?.storeGet(PREFS_KEY).catch(() => undefined);
     if (!isRecord(stored)) return;
-    if (isTab(stored.view)) this.tab = stored.view;
+    if (typeof stored.view === "string" && this.opens(stored.view)) this.tab = stored.view;
     if (typeof stored.filter === "string") {
       this.filter = submitFilter(EMPTY_FILTER_STATE, stored.filter);
     }
@@ -884,9 +896,30 @@ export class BeadsPane {
     return showsTasks(this.panel.settings.mode);
   }
 
-  /** Under native the Tasks view is never drawn: a kept or default Tasks view opens the Board. */
+  /**
+   * The views `surface` draws (D-35): the registry's, under `[surfaces]` and Settings, with no
+   * Tasks under native (T-2B.7).
+   */
+  viewsOn(surface: SurfaceId): ViewEntry[] {
+    return this.views
+      .on(surface, this.panel.surfaces)
+      .filter((entry) => entry.view !== "tasks" || this.tasksShown);
+  }
+
+  /** True when the pane opens `view`: a built view it draws. */
+  private opens(view: string): boolean {
+    return this.viewsOn("pane").some((entry) => entry.view === view && !entry.planned);
+  }
+
+  /**
+   * Under native the Tasks view is never drawn: a kept or default Tasks view opens the Board. A
+   * view `[surfaces]` or Settings keeps off the pane opens the first view the pane draws.
+   */
   private settleTab(): void {
     if (this.tab === "tasks" && !this.tasksShown) this.tab = "board";
+    if (!this.opens(this.tab)) {
+      this.tab = this.viewsOn("pane").find((entry) => !entry.planned)?.view ?? DEFAULT_TAB;
+    }
   }
 
   /**
@@ -1162,8 +1195,8 @@ export class BeadsPane {
    * an element the new tab does not draw (a card's detail button), the ring and the keyboard
    * would fall back to the prompt.
    */
-  setTab(tab: Tab): void {
-    if (tab === "tasks" && !this.tasksShown) return;
+  setTab(tab: string): void {
+    if (!this.opens(tab)) return;
     this.tab = tab;
     this.menuOpen = false;
     this.clearHint();
@@ -1330,17 +1363,10 @@ export class BeadsPane {
 
   /** Every command a control or a menu item runs, by COMMANDS id (T-2B.4). */
   runCommand(command: string): void {
-    const views: Readonly<Record<string, Tab>> = {
-      "tab.tasks": "tasks",
-      "tab.board": "board",
-      "tab.backlog": "backlog",
-      "tab.detail": "detail",
-      "tab.timeline": "timeline",
-      "tab.settings": "settings",
-    };
-    const view = views[command];
-    if (view !== undefined) {
-      this.setTab(view);
+    // A view's own command opens it (D-35): every registered view's, not a fixed list.
+    const view = this.views.byCommand(command);
+    if (view !== undefined && !view.planned) {
+      this.setTab(view.view);
       return;
     }
     const actions: Readonly<Record<string, () => void>> = {
@@ -1380,10 +1406,15 @@ export class BeadsPane {
     await this.panel.change({ shown });
   }
 
-  /** A Settings list (T-2B.8): the collapse rule, panel.mode or debug mode, applied at once. */
+  /**
+   * A Settings list (T-2B.8): the collapse rule, panel.mode, debug mode or a view's surfaces
+   * (D-35), applied at once.
+   */
   async chooseSetting(key: string, value: string): Promise<void> {
     this.settingsNotice = undefined;
-    if (key === "settings:collapse" && isCollapseRule(value)) {
+    if (key.startsWith(SURFACE_ROW_PREFIX) && isSurfaceSetting(value)) {
+      await this.panel.changeSurface(key.slice(SURFACE_ROW_PREFIX.length), value);
+    } else if (key === "settings:collapse" && isCollapseRule(value)) {
       await this.panel.change({ collapse: value });
     } else if (key === "settings:mode" && isPanelMode(value)) {
       await this.panel.change({ mode: value });
@@ -1395,14 +1426,18 @@ export class BeadsPane {
   }
 
   /**
-   * Settings' Save to file (T-2B.8): one write of the `[panel]` and `[band]` tables into the
-   * `beads-ui.toml` the mod read, every other line kept, then nothing is held in `$.store`.
+   * Settings' Save to file (T-2B.8): one write of the `[panel]`, `[surfaces]` and `[band]` tables
+   * into the `beads-ui.toml` the mod read, every other line kept, then nothing is held in
+   * `$.store`. `[surfaces]` is written once a view has a setting.
    */
   async saveSettings(): Promise<void> {
     const panel = this.panel.settings;
+    const surfaces = this.panel.surfaces;
     const band = this.bandSettings;
     if (band === undefined) return;
-    const saved = await band.save((text) => withPanelTable(text, panel));
+    const saved = await band.save((text) =>
+      withSurfacesTable(withPanelTable(text, panel), surfaces),
+    );
     this.settingsNotice = band.notice;
     band.notice = undefined;
     if (saved) await this.panel.saved();
@@ -1606,33 +1641,45 @@ export class BeadsPane {
     // The view's own width: the body less the side nav when it is drawn (T-2B.1).
     const width = nav.viewColumns;
     this.width = width;
-    const framed = (content: readonly RenderNode[]) =>
-      drawFrame(ui, nav, (item) => this.pressNav(item.view), content);
-    if (this.store?.ok === false) return framed(this.drawNoStore(ui, this.store));
     const short = isShort(frame.placement, frame.bodyRows);
+    const region = this.clientFaulted ? undefined : tasksRegion;
+    // The pane adapter (D-35): what every component the pane draws through can use.
+    const surface = paneSurface(
+      ui,
+      { columns: width, short, ...(frame.bodyRows === undefined ? {} : { rows: frame.bodyRows }) },
+      {
+        ...(region === undefined ? {} : { client: region }),
+        ...(raster === undefined ? {} : { raster }),
+      },
+    );
+    const framed = (content: readonly RenderNode[]) =>
+      navFrame(surface, nav, (item) => this.pressNav(item.view), content);
+    if (this.store?.ok === false) return framed(this.drawNoStore(ui, this.store));
     const { groups, perRow, groupWidth } = this.layout(width);
     const view = this.boardViewAt(width);
     const ctx = this.actionContext(width, view);
-    const region = this.clientFaulted ? undefined : tasksRegion;
-    const menu = this.menuOpen
-      ? this.drawMenu(ui, ctx, width, this.tab === "tasks" && region !== undefined)
-      : undefined;
+    // The Tasks view draws the menu under the row it is about; every other view, above its body.
+    const menu =
+      this.menuOpen && this.tab !== "tasks" ? this.drawMenu(ui, ctx, width, false) : undefined;
+    // A view on the component layer draws itself through the pane adapter; the rest still
+    // draw here until T-2C.8 moves them.
+    const drawn = this.views.get(this.tab)?.draw;
     const body =
-      this.tab === "tasks"
-        ? this.drawTasks(ui, width, frame, ctx, menu, region)
+      drawn !== undefined
+        ? drawn(surface)
         : this.tab === "board"
           ? this.drawBoard(ui, view, groups, perRow, groupWidth)
           : this.tab === "backlog"
             ? this.drawBacklog(ui, width)
             : this.tab === "settings"
-              ? this.drawSettingsView(ui, width)
+              ? this.drawSettingsView(ui, surface)
               : this.tab === "timeline"
                 ? this.drawTimeline(ui, width, frame, raster)
                 : this.drawDetail(ui, width);
     const inputs =
-      this.tab === "detail" || this.tab === "settings" || this.tab === "timeline"
-        ? undefined
-        : this.drawInputs(ui, this.tab !== "tasks");
+      this.tab === "tasks" || this.tab === "board" || this.tab === "backlog"
+        ? this.drawInputs(ui, this.tab !== "tasks")
+        : undefined;
     const settings =
       this.bandSettings?.isOpen === true && this.tab !== "settings"
         ? this.bandSettings.draw(ui, colorOf)
@@ -1640,9 +1687,13 @@ export class BeadsPane {
     return framed(
       present<RenderNode>([
         this.drawHeader(ui),
-        this.drawToolbar(ui, ctx, width),
+        actionBar(
+          surface,
+          panelActions(ctx).filter((action) => action.place === "toolbar"),
+          (command) => this.runCommand(command),
+        ),
         ...this.drawLines(ui, width, view, short),
-        this.tab === "tasks" ? undefined : menu,
+        menu,
         !short && this.help ? this.drawHelp(ui, helpRegion) : undefined,
         short ? undefined : settings,
         short ? undefined : inputs,
@@ -1667,36 +1718,51 @@ export class BeadsPane {
       frame.bodyRows,
       this.tab,
       frame.bodyColumns,
-      !this.tasksShown,
+      this.viewsOn("pane"),
     );
   }
 
-  private pressNav(view: PanelView): void {
+  /** A nav press on either surface: a planned view says so, any other opens. */
+  pressNav(view: string): void {
     if (view === "sprint") this.pressPlanned(view);
     else this.setTab(view);
   }
 
-  /** What the drawn view offers (T-2B.4): the toolbar, the view's own controls and the menu read it. */
-  private actionContext(width: number, view: BoardView = this.boardViewAt(width)): ActionContext {
+  /**
+   * What the drawn view offers (T-2B.4): the toolbar, the view's own controls and the menu read
+   * it. `tab` is the view it is for: the open one, or the one a surface draws.
+   */
+  private actionContext(
+    width: number,
+    view: BoardView = this.boardViewAt(width),
+    tab: string = this.tab,
+  ): ActionContext {
     const paged =
-      this.tab === "backlog"
+      tab === "backlog"
         ? this.backlogViewAt(width).page.pages > 1
-        : this.tab === "board" &&
+        : tab === "board" &&
           (view.unplacedPage.pages > 1 ||
             view.lanes.some((lane) => lane.pages.some((page) => page.pages > 1)));
-    const list = this.tab === "tasks" ? this.taskListAt(width, this.frame) : undefined;
+    const list =
+      tab === "tasks" ? this.taskListAt(width, this.frameShort(), this.frame.bodyRows) : undefined;
     return {
-      view: this.tab,
+      view: tab,
       mine: this.scope === "mine",
       swimlane: this.swimlane,
       sort: sortLabel(this.sort),
       undo: this.undo !== undefined,
       paged,
-      lanesPaged: this.tab === "board" && view.lanePage.pages > 1,
+      lanesPaged: tab === "board" && view.lanePage.pages > 1,
       bandSettings: this.bandSettings !== undefined,
       ...(list?.collapsible === true ? { more: list.moreLabel } : {}),
       ...(this.tasksShown ? {} : { hideTasks: true }),
+      nav: this.viewsOn("pane"),
     };
+  }
+
+  /** The short-height rule at the frame the pane last drew at (T-1B.9). */
+  private frameShort(): boolean {
+    return isShort(this.frame.placement, this.frame.bodyRows);
   }
 
   /** The options menu as the view now offers it. */
@@ -1717,7 +1783,12 @@ export class BeadsPane {
   }
 
   /** The options menu; over the Client's rows it is as wide as its widest line (T-2B.5). */
-  private drawMenu(ui: PaneUi, ctx: ActionContext, width: number, popup: boolean): RenderElement {
+  private drawMenu(
+    ui: Surface["ui"],
+    ctx: ActionContext,
+    width: number,
+    popup: boolean,
+  ): RenderElement {
     const menu = this.menuViewOf(ctx);
     return drawMenu(
       ui,
@@ -1728,18 +1799,23 @@ export class BeadsPane {
     );
   }
 
-  /** The Tasks view's list at a width (T-2B.2); at short height a window round the focused task. */
-  private taskListAt(width: number, frame: PaneFrame, client = false): TaskListView {
-    const short = isShort(frame.placement, frame.bodyRows);
+  /**
+   * The Tasks view's list at a width (T-2B.2); at short height a window round the focused task,
+   * within `rows`, the rows the surface has.
+   */
+  private taskListAt(
+    width: number,
+    short: boolean,
+    rows: number | undefined,
+    client = false,
+  ): TaskListView {
     return taskListView(this.shown().issues, {
       statuses: this.board.statuses,
       settings: this.panel.settings,
       expanded: this.expanded,
       width: Math.max(1, width - rowControlColumns(client)),
       ...(this.focusedId === undefined ? {} : { focusedId: this.focusedId }),
-      windowRows: short
-        ? Math.max(3, (frame.bodyRows ?? SHORT_ROWS) - SHORT_CHROME_ROWS)
-        : TASK_WINDOW_ROWS,
+      windowRows: short ? Math.max(3, (rows ?? SHORT_ROWS) - SHORT_CHROME_ROWS) : TASK_WINDOW_ROWS,
     });
   }
 
@@ -1772,28 +1848,31 @@ export class BeadsPane {
     };
   }
 
-  private drawTasks(
-    ui: PaneUi,
-    width: number,
-    frame: PaneFrame,
-    ctx: ActionContext,
-    menu: RenderElement | undefined,
-    region: TasksRegion | undefined,
-  ): RenderElement {
-    const { Box, Text } = ui;
+  /**
+   * The Tasks view (T-2B.2, D-35) on any surface: the task list component from the pane's state,
+   * its Client where the surface mounts one, and the options menu under the row it is about.
+   */
+  drawTasks(surface: Surface): RenderElement {
+    const { Box, Text } = surface.ui;
     if (!this.board.loaded) {
       return Box({
         key: "tasks",
         children: [Text({ dimColor: true, children: "reading the store…" })],
       });
     }
+    const width = surface.columns;
+    const ctx = this.actionContext(width, undefined, "tasks");
+    const region = surface.client;
+    const menu = this.menuOpen
+      ? this.drawMenu(surface.ui, ctx, width, region !== undefined)
+      : undefined;
     const session = this.stores.sessionName;
-    const list = this.taskListAt(width, frame, region !== undefined);
+    const list = this.taskListAt(width, surface.short, surface.rows, region !== undefined);
     const empty =
       this.scope === "mine" && session !== undefined
         ? `No task in progress, blocked or open is assigned to ${session}; a shows every owner's.`
         : "No task is in progress, blocked or open.";
-    return drawTaskList(ui, list, {
+    return taskList(surface, list, {
       color: colorOf,
       empty,
       handlers: {
@@ -1807,14 +1886,30 @@ export class BeadsPane {
     });
   }
 
-  private drawSettingsView(ui: PaneUi, width: number): RenderElement {
+  /**
+   * Each view's surfaces row (D-35): every built view but Settings, whose own row would take
+   * Settings off the surface it was set from; `[surfaces]` still sets it.
+   */
+  private surfaceRows(): SurfaceRow[] {
+    return this.views
+      .all()
+      .filter((entry) => !entry.planned && entry.view !== "settings")
+      .map((entry) => ({
+        view: entry.view,
+        label: entry.labels.wide,
+        setting: surfaceOf(entry, this.panel.surfaces),
+      }));
+  }
+
+  private drawSettingsView(ui: PaneUi, surface: Surface): RenderElement {
     const band = this.bandSettings;
     const view = settingsView(
       this.panel.settings,
       band?.settings ?? DEFAULT_BAND_SETTINGS,
-      settingsOptionRoom(width),
+      settingsOptionRoom(surface.columns),
+      this.surfaceRows(),
     );
-    return drawSettings(ui, view, {
+    return drawSettings(surface, view, {
       color: colorOf,
       problems: this.panel.problems,
       ...(this.settingsNotice === undefined ? {} : { notice: this.settingsNotice }),
@@ -1968,43 +2063,6 @@ export class BeadsPane {
         ],
       }),
     ]);
-  }
-
-  /**
-   * The toolbar's buttons, labelled for the width's tier and packed into rows that each fit it
-   * (T-1B.9): full words from 72 columns, a short word from 48, the shortest form below.
-   */
-  private drawToolbar(ui: PaneUi, ctx: ActionContext, width: number): RenderElement {
-    const { Box, Button } = ui;
-    const tier = tierOf(width);
-    const gap = tier === "narrow" ? 1 : 2;
-    const items = panelActions(ctx)
-      .filter((action) => action.place === "toolbar")
-      .map((action) => {
-        const hotkey = hotkeyOf(action.command);
-        const label = action.labels[tier];
-        return { ...action, label, hotkey, width: buttonWidth(label, hotkey) };
-      });
-    return Box({
-      key: "toolbar",
-      flexDirection: "column",
-      children: packRows(items, width, gap).map((row, i) =>
-        Box({
-          key: `toolbar:${i}`,
-          flexDirection: "row",
-          columnGap: gap,
-          children: row.map((item) =>
-            Button({
-              key: item.key,
-              label: item.label,
-              hotkey: item.hotkey,
-              plain: true,
-              onPress: () => this.runCommand(item.command),
-            }),
-          ),
-        }),
-      ),
-    });
   }
 
   private drawLines(ui: PaneUi, width: number, view: BoardView, short: boolean): RenderElement[] {
