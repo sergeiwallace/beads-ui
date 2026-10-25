@@ -912,9 +912,11 @@ export class BeadsPane {
   }
 
   /**
-   * The session's start (T-2B.7, D-32), once a session. Under `panel.mode` both or beads, read
-   * from beads-ui.toml and the held Settings change now, the pane opens unasked on the Tasks
-   * view, docked where Claude Code places it and leaving the keyboard on the prompt. Under native
+   * The session's start (T-2B.7, D-32), once a session; a plugin reload starts it again. The pane
+   * opens only when asked (`/bu`, the band's button) unless `panel.open_at_start` is on
+   * (BU-ylx.10, off by default). With it on and `panel.mode` both or beads, read from
+   * beads-ui.toml and the held Settings change now, the pane opens unasked on the Tasks view,
+   * docked where Claude Code places it and leaving the keyboard on the prompt. Under native
    * nothing opens, and when `retired` (Claude Code's task panel is retired on this machine, D-21)
    * one toast says no task panel is enabled.
    */
@@ -926,6 +928,7 @@ export class BeadsPane {
       if (retired) this.host.toast(NO_PANEL_TEXT);
       return;
     }
+    if (!this.panel.settings.openAtStart) return;
     // The person opened the pane while the settings were read: theirs is the open, even if closed.
     if (this.isOpen || this.asked) return;
     const kept = this.tab;
@@ -1406,6 +1409,8 @@ export class BeadsPane {
       await this.panel.change({ collapse: value });
     } else if (key === "settings:mode" && isPanelMode(value)) {
       await this.panel.change({ mode: value });
+    } else if (key === "settings:open-at-start") {
+      await this.panel.change({ openAtStart: value === "on" });
     } else if (key === "settings:debug") {
       await this.bandSettings?.setDebug(value === "on");
     }

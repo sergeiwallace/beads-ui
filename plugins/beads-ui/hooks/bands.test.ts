@@ -14,7 +14,7 @@ import {
   wakeFileName,
 } from "../core/src/index.ts";
 import { BAND_SETTINGS_KEY } from "./bandSettings.ts";
-import { NARROW_TEXT, SCOPE_KEY } from "./pane.ts";
+import { SCOPE_KEY } from "./pane.ts";
 import { PANE_ID, PLUGIN_NAME } from "./register.ts";
 import { test } from "./tests/kit.ts";
 import {
@@ -959,18 +959,14 @@ describe("the band's parts (T-1B.11)", () => {
 // The open nobody asked for, at session start, is panelmode.test.ts's (T-2B.7).
 describe("the pane's width rule", () => {
   test("should open the pane the person asked for whatever the width", async ($, on) => {
-    // At 80 columns Claude Code held the session-start open unplaced, and the mod said so.
+    // At 80 columns Claude Code holds a pane nobody asked for; the person's own open is placed.
     const w = await started($, on, { columns: 80 });
-    expect(w.toasts).toEqual([NARROW_TEXT]);
     await band($, 80);
 
     await $.command.run(SHOW);
 
-    expect(w.opened.map((open) => [open.id, open.focus])).toEqual([
-      [PANE_ID, undefined],
-      [PANE_ID, true],
-    ]);
-    expect(w.toasts).toEqual([NARROW_TEXT]);
+    expect(w.opened.map((open) => [open.id, open.focus])).toEqual([[PANE_ID, true]]);
+    expect(w.toasts).toEqual([]);
   });
 });
 

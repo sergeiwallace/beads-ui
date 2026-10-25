@@ -1,4 +1,4 @@
-// The Settings view (T-2B.8): the panel's shown count, its collapse rule and panel.mode, debug
+// The Settings view (T-2B.8): the panel's shown count, its collapse rule, panel.mode, open at start, debug
 // mode, and the band's parts, order and done window, as rows a surface draws as controls.
 
 import type { BandSettings } from "./band.ts";
@@ -73,7 +73,19 @@ export function settingsView(
         kind: "choice",
         value: panel.mode,
         options: options(PANEL_MODES, PANEL_MODE_LABELS, room),
-        hint: "both and beads open the panel at session start; native opens none and hides Tasks",
+        hint: "both and beads draw the Tasks view; native hides it",
+      },
+      {
+        key: "settings:open-at-start",
+        label: "Open at start",
+        kind: "choice",
+        value: panel.openAtStart ? "on" : "off",
+        options: options(
+          ["off", "on"],
+          { off: "the pane opens only when asked", on: "the pane opens at session start" },
+          room,
+        ),
+        hint: "on opens the pane by itself at session start and at each plugin reload",
       },
       {
         key: "settings:debug",
