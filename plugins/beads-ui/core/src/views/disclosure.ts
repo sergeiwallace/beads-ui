@@ -31,8 +31,10 @@ export interface Disclosure {
   view: string;
   /** The task the overview details, by id. */
   detail?: string;
-  /** The first row the overview's list draws. */
+  /** The first row the overview's view draws: its list's, or the open detail's. */
   start: number;
+  /** While a detail is open, the first row of the list it was opened from, which back restores. */
+  listStart?: number;
   /** The band.level the state was chosen under: a new band.level replaces it at the next redraw. */
   basis: BandLevel;
 }
@@ -112,24 +114,26 @@ export function reduceDisclosure(
     case "collapse":
       return { ...state, shown: rows };
     case "summary": {
-      const { detail: _detail, ...rest } = state;
+      const { detail: _detail, listStart: _start, ...rest } = state;
       return { ...rest, level: "summary" };
     }
     case "overview": {
-      const { detail: _detail, ...rest } = state;
+      const { detail: _detail, listStart: _start, ...rest } = state;
       return state.level === "overview"
         ? { ...rest, level: "summary" }
         : { ...rest, level: "overview" };
     }
     case "view": {
-      const { detail: _detail, ...rest } = state;
+      const { detail: _detail, listStart: _start, ...rest } = state;
       return { ...rest, level: "overview", view: event.view, start: 0 };
     }
-    case "open":
-      return { ...state, level: "overview", detail: event.id };
+    case "open": {
+      const listStart = state.detail === undefined ? state.start : (state.listStart ?? 0);
+      return { ...state, level: "overview", detail: event.id, start: 0, listStart };
+    }
     case "back": {
-      const { detail: _detail, ...rest } = state;
-      return rest;
+      const { detail: _detail, listStart, ...rest } = state;
+      return { ...rest, start: listStart ?? 0 };
     }
     case "scroll":
       return { ...state, start: Math.max(0, event.start) };
@@ -142,7 +146,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 /** A kept state read back from `$.store`; undefined when it is not one. */
 export function disclosureOf(value: unknown): Disclosure | undefined {
   if (!isRecord(value)) return undefined;
-  const { level, line, part, shown, view, detail, start, basis } = value;
+  const { level, line, part, shown, view, detail, start, listStart, basis } = value;
   if (!isBandLevel(level) || !isBandLevel(basis)) return undefined;
   if (typeof part !== "string" || !isBandPart(part)) return undefined;
   if (typeof line !== "string" || typeof view !== "string") return undefined;
@@ -156,6 +160,13 @@ export function disclosureOf(value: unknown): Disclosure | undefined {
     start: typeof start === "number" && Number.isInteger(start) && start >= 0 ? start : 0,
     basis,
     ...(typeof detail === "string" && detail !== "" ? { detail } : {}),
+    ...(typeof detail === "string" &&
+    detail !== "" &&
+    typeof listStart === "number" &&
+    Number.isInteger(listStart) &&
+    listStart >= 0
+      ? { listStart }
+      : {}),
   };
 }
 

@@ -35,7 +35,6 @@ import {
   aboveNote,
   controlsRow,
   countRows,
-  indented,
   type LevelControls,
   moreLabel,
   ROW_INDENT,
@@ -44,7 +43,7 @@ import {
 import { enabledIndicators, gutterFor } from "./components/indicators.ts";
 import { colorOf } from "./components/look.ts";
 import { bandNav, navBar } from "./components/nav.ts";
-import { reviewRows } from "./components/review.ts";
+import { textLine } from "./components/window.ts";
 import type { Host } from "./host.ts";
 import type { BeadsPane } from "./pane.ts";
 import type { BandTally } from "./tally.ts";
@@ -92,6 +91,8 @@ export class BandLevels {
   private kept: Disclosure | undefined;
   private loaded = false;
   private readonly reads = new Map<string, Read>();
+  /** The task whose Detail the overview last asked the pane to read. */
+  private asked: string | undefined;
 
   constructor(
     private readonly tally: BandTally,
@@ -100,6 +101,7 @@ export class BandLevels {
   ) {
     tally.onRecount = (wrote) => this.recount(wrote);
     pane.onBandOpen = (id) => this.press({ type: "open", id });
+    pane.onBandView = (view) => this.press({ type: "view", view });
   }
 
   async bind(host: Host): Promise<void> {
@@ -134,8 +136,18 @@ export class BandLevels {
   /** A press on the band: the new state, kept for the session, and its rows read. */
   press(event: DisclosureEvent): void {
     this.kept = reduceDisclosure(this.state(), event, this.settings);
-    // A task's detail draws its review items (T-2C.5): the host's snapshot is read as it opens.
-    if (event.type === "open") void this.pane.review.load().then(() => this.host?.invalidate());
+    // A task's Detail draws its review items (T-2C.5): it is read, with the host's snapshot, as
+    // it opens.
+    if (event.type === "open") {
+      this.asked = undefined;
+      this.askDetail(event.id);
+      void this.pane.review.load().then(() => this.host?.invalidate());
+    }
+    // Leaving the overview closes the menu and the help it drew.
+    if (event.type === "summary" || event.type === "overview" || event.type === "view") {
+      if (this.pane.menuOn === "band") this.pane.menuOpen = false;
+      this.pane.bandHelp = false;
+    }
     this.save();
     this.recount(false);
     this.host?.invalidate();
@@ -397,9 +409,11 @@ export class BandLevels {
   }
 
   /**
-   * The overview (D-36): the nav the view registry gives the band, and the chosen view drawn
-   * through the band adapter, or the detail of the task pressed, all in `budget` rows. A view the
-   * framework does not draw yet (T-2C.8) says so and opens in the pane.
+   * The overview (D-36, T-2C.8): the nav the view registry gives the band, the chosen view
+   * drawn through the band adapter from its registry entry, its controls (the New and Filter
+   * fields) over it, the pane's last notice, and the controls row with the view's options
+   * menu, all in `budget` rows. A pressed task opens the Detail view on it. With the menu or the
+   * help open, it draws in place of the view.
    */
   private drawOverview(
     elements: SurfaceUi,
@@ -407,26 +421,45 @@ export class BandLevels {
     columns: number,
     budget: number,
   ): RenderElement {
-    const entries = this.pane.viewsOn("band");
+    const pane = this.pane;
+    const entries = pane.viewsOn("band");
     const active = state.detail !== undefined ? "detail" : state.view;
+    if (state.detail !== undefined) this.askDetail(state.detail);
     const nav = bandNav(columns, entries, active);
-    const summary = () => this.press({ type: "summary" });
     const plain = bandSurface(elements, { columns, maxRows: budget });
+    const menuOpen = pane.menuOpen && pane.menuOn === "band";
     const controls = controlsRow(plain, "band-overview:controls", {
-      summary,
+      summary: () => this.press({ type: "summary" }),
       ...(state.detail === undefined ? {} : { back: () => this.press({ type: "back" }) }),
+      menu: {
+        open: menuOpen,
+        press: () => void pane.toggleMenu(undefined, undefined, "band", active),
+      },
     });
-    const bodyRows = budget - nav.rows.length - 1;
     const { Box, Text, Button } = plain.ui;
+    const entry = entries.find((one) => one.view === active);
+    const sized = (rows: number) =>
+      bandSurface(
+        elements,
+        { columns, maxRows: rows },
+        { start: state.start, to: (start) => this.press({ type: "scroll", start }) },
+      );
+    const room = budget - nav.rows.length - 1;
+    const notice = pane.notice;
+    const above: RenderNode[] = present<RenderNode>([
+      notice === undefined
+        ? undefined
+        : textLine(plain, "band-overview:notice", notice.text, { token: notice.token }),
+      ...(menuOpen || pane.bandHelp ? [] : (entry?.controls?.(sized(room)) ?? [])),
+    ]);
+    // The view's own rows come first: at a height that leaves the view too few, the notice and
+    // the fields give theirs up.
+    const kept = room - above.length >= MIN_VIEW_ROWS ? above : [];
+    const bodyRows = room - kept.length;
     if (bodyRows < 1) {
       return Box({ key: "beads-band:overview", flexDirection: "column", children: [controls] });
     }
-    const surface = bandSurface(
-      elements,
-      { columns, maxRows: bodyRows },
-      { start: state.start, to: (start) => this.press({ type: "scroll", start }) },
-    );
-    const entry = entries.find((one) => one.view === state.view);
+    const surface = sized(bodyRows);
     const note = (text: string, action?: { key: string; label: string; press: () => void }) =>
       Box({
         key: "band-overview:note",
@@ -442,38 +475,33 @@ export class BandLevels {
       key: `band-pane:${view}`,
       label: `${glyphOf("pane.open")} open ${label} in the pane`,
       press: () => {
-        this.pane.setTab(view);
-        void this.pane.openOrFocus();
+        pane.setTab(view);
+        void pane.openOrFocus();
       },
     });
     let body: RenderNode;
-    if (state.detail !== undefined) {
-      body = this.drawDetail(surface, state.detail, bodyRows);
-    } else if (entry === undefined) {
+    if (entry === undefined) {
       body = note("This view is not drawn on the band: Settings' surfaces keep it to the pane.");
-    } else if (entry.planned) {
+    } else if (entry.planned || entry.draw === undefined) {
       body = note(plannedText(entry.view as "sprint"));
-    } else if (entry.draw !== undefined) {
-      body =
-        bodyRows >= MIN_VIEW_ROWS
-          ? entry.draw(surface)
-          : note(
-              `${entry.labels.wide} needs ${MIN_VIEW_ROWS} of the band's rows and has ${bodyRows} here.`,
-              inPane(entry.view, entry.labels.wide),
-            );
-    } else if (entry.view === "detail") {
-      body = note("Press a task's row to see its detail here.");
-    } else {
+    } else if (bodyRows < MIN_VIEW_ROWS) {
       body = note(
-        `${entry.labels.wide} draws in the pane until it moves onto the shared components.`,
+        `${entry.labels.wide} needs ${MIN_VIEW_ROWS} of the band's rows and has ${bodyRows} here.`,
         inPane(entry.view, entry.labels.wide),
       );
+    } else if (menuOpen) {
+      body = pane.drawBandMenu(surface, entry.view);
+    } else if (pane.bandHelp) {
+      body = pane.drawHelp(surface);
+    } else {
+      body = entry.draw(surface);
     }
     return Box({
       key: "beads-band:overview",
       flexDirection: "column",
       children: [
         navBar(plain, nav, (item) => this.press({ type: "view", view: item.view })),
+        ...kept,
         body,
         controls,
       ],
@@ -481,63 +509,14 @@ export class BandLevels {
   }
 
   /**
-   * A task's detail in the overview: its row, its fields, a button to open it in the pane, and
-   * its Review section's rows (T-2C.5), as many as the band's rows hold.
+   * Has the pane read the Detail of the task the overview details: a kept state names one the
+   * pane has not read yet after a restart, and a press on a row reads it at once.
    */
-  private drawDetail(surface: Surface, id: string, rows: number): RenderElement {
-    const { Box, Text, Button } = surface.ui;
-    const width = surface.columns;
+  private askDetail(id: string): void {
+    if (this.pane.detailId === id || this.asked === id) return;
     const task = this.issueOf(id);
-    if (task === undefined) {
-      return Box({
-        key: "band-detail",
-        children: [Text({ dimColor: true, children: truncate(`${id}: not read yet`, width) })],
-      });
-    }
-    const { issue } = task;
-    const head = taskRowView(task, width);
-    const fields = [
-      `${issue.status}, ${issue.type}${issue.assignee === undefined ? "" : `, @${issue.assignee}`}`,
-      issue.parent === undefined ? undefined : `parent ${issue.parent}`,
-      `${storeName(task.store)}, updated ${issue.updatedAt}${issue.closedAt === undefined ? "" : `, closed ${issue.closedAt}`}`,
-    ].filter((one): one is string => one !== undefined);
-    const ownStore = task.store.replace(/\/+$/, "") === this.pane.storePath().replace(/\/+$/, "");
-    const section = this.pane.reviewSectionOf(
-      issue,
-      this.pane.detail?.issue.id === issue.id ? this.pane.comments : [],
-    );
-    const open = (path: string) =>
-      void this.pane.openOrFocus().then(() => this.pane.openReview(path));
-    const children = present<RenderNode>([
-      Text({ bold: true, color: colorOf(head.token), wrap: "truncate-end", children: head.label }),
-      ...fields.map((field) =>
-        indented(surface, `band-detail:${field.slice(0, 8)}`, [
-          Text({
-            dimColor: true,
-            wrap: "truncate-end",
-            children: truncate(field, width - ROW_INDENT),
-          }),
-        ]),
-      ),
-      ownStore
-        ? Button({
-            key: `band-detail:pane:${issue.id}`,
-            label: `${glyphOf("pane.open")} open in the pane`,
-            plain: true,
-            onPress: () =>
-              void this.pane.openOrFocus().then(() => this.pane.openDetailFor(issue.id)),
-          })
-        : undefined,
-      ...(section === undefined
-        ? []
-        : reviewRows(surface, section, {
-            open,
-            page: (delta) => {
-              this.pane.reviewPage = Math.max(0, this.pane.reviewPage + delta);
-              this.host?.invalidate();
-            },
-          })),
-    ]);
-    return Box({ key: "band-detail", flexDirection: "column", children: children.slice(0, rows) });
+    if (task === undefined) return;
+    this.asked = id;
+    void this.pane.showDetail(task.issue, task.store);
   }
 }

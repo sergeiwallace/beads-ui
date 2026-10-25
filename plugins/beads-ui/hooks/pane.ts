@@ -16,7 +16,6 @@ import {
   boardReadArgvs,
   boardView,
   CARD_FRAME_COLUMNS,
-  type CardView,
   COMMANDS,
   type Comment,
   clockStamp,
@@ -69,7 +68,6 @@ import {
   openDetail,
   openReviewIndex,
   PARTIAL_GLYPH,
-  type PageView,
   type PanelView,
   type PendingDisplayId,
   type PlannedView,
@@ -140,7 +138,6 @@ import {
   sortLabel,
   stateDirOf,
   statusesArgv,
-  statusToken,
   stepPage,
   storeLabel,
   submitFilter,
@@ -174,10 +171,14 @@ import {
   type Surface,
   type TasksRegion,
 } from "./components/adapters.ts";
-import { emptyState, errorState, headerBar, section } from "./components/frame.ts";
+import { type BacklogColumns, backlog } from "./components/backlog.ts";
+import { board } from "./components/board.ts";
+import { detail } from "./components/detail.ts";
+import { field } from "./components/elements.ts";
+import { emptyState, errorState, headerBar, readingState, section } from "./components/frame.ts";
+import { type HelpPart, help } from "./components/help.ts";
 import {
   enabledIndicators,
-  gutter,
   gutterFor,
   gutterSpans,
   indicatorOn,
@@ -187,34 +188,22 @@ import {
   setIndicatorSwitches,
   setReviewIndex,
 } from "./components/indicators.ts";
-import {
-  colorOf,
-  glyphText,
-  rowHover,
-  setAscii,
-  setTheme,
-  styledUi,
-  weight,
-} from "./components/look.ts";
+import { colorOf, glyphText, setAscii, setTheme, styledUi, weight } from "./components/look.ts";
+import { drawMenu, menuColumns, menuRows } from "./components/menu.ts";
 import { navFrame } from "./components/nav.ts";
 import { type ViewEntry, ViewRegistry } from "./components/registry.ts";
-import { ANSWER_KEY, reviewBlock, reviewList, reviewReader } from "./components/review.ts";
+import { ANSWER_KEY, reviewList, reviewReader } from "./components/review.ts";
+import { drawSettings, settingsOptionRoom } from "./components/settings.ts";
 import {
   rowControlColumns,
   TASKS_CLIENT_KEY,
   type TaskListClient,
   taskList,
 } from "./components/tasks.ts";
+import { timeline } from "./components/timeline.ts";
+import { fitted, windowed } from "./components/window.ts";
 import type { Host } from "./host.ts";
-import {
-  drawMenu,
-  drawSettings,
-  drawTimeline,
-  menuColumns,
-  menuRows,
-  PanelSettingsState,
-  settingsOptionRoom,
-} from "./panel.ts";
+import { PanelSettingsState } from "./panel.ts";
 import { ReviewFeed, ReviewReader } from "./review.ts";
 import type { StoreResolver } from "./store.ts";
 
@@ -329,9 +318,8 @@ const REVIEW_SCOPE_HINT =
   "the Review view lists the items this session holds and those about issues it owns; the firstmate lists its pair's";
 const FOCUS_HINT = "focus a card first: Tab moves between cards";
 const TASK_FOCUS_HINT = "focus a task first: Tab or the arrows move between tasks";
-const MOVE_LABEL = "Move to";
-/** What a `Select` draws beside its value: the open mark and a space. */
-export const SELECT_CHROME = 2;
+const BAND_TASK_HINT = "press a card's detail button, or a task's row, to open it here";
+const BAND_NEW_HINT = "type a title in the New field above";
 /**
  * How focus reaches the pane and leaves it, and how to close and reopen it (D-27, T-1B.6): the
  * help draws these lines, and README.md and docs/procedures/mod-install.md carry the same.
@@ -357,13 +345,6 @@ export const SHORT_HELP_TEXT =
   "Help needs a docked pane 12 rows or taller: Ctrl+X then an arrow resizes the pane.";
 export const NO_NAME_TEXT =
   "Mine needs the session's name, which ai c sets in CLAUDE_CODE_TASK_LIST_ID; this session has none, so the board shows all issues";
-
-/** The Backlog's measured columns (backlogViewAt): the tier and each fixed column's width. */
-interface BacklogColumns {
-  wide: boolean;
-  idWidth: number;
-  typeWidth: number;
-}
 
 const assigneeLabel = (assignee: string): string => (assignee === "" ? "" : `@${assignee}`);
 
@@ -403,8 +384,11 @@ export class BeadsPane {
   readonly panel = new PanelSettingsState();
   /** The Tasks view shows its collapsed tasks (T-2B.2). */
   expanded = false;
-  /** The options menu is open (T-2B.4), about `menuFor` when a task was focused. */
+  /** The options menu is open (T-2B.4), about `menuFor` when a task was focused, on `menuOn`. */
   menuOpen = false;
+  menuOn: SurfaceId = "pane";
+  /** The band's overview draws the help in place of its view (T-2C.8). */
+  bandHelp = false;
   menuFor: string | undefined;
   /** The column a right click opened the menu at (T-2B.5); undefined when a key or button did. */
   menuX: number | undefined;
@@ -420,6 +404,8 @@ export class BeadsPane {
   sort: SortSpec = DEFAULT_SORT;
   config: ResolvedConfig = { config: DEFAULT_CONFIG, problems: [] };
   detailId: string | undefined;
+  /** The store the Detail's issue was read from, when it is not the pane's: a band row's. */
+  private detailStore: string | undefined;
   detail: DetailState | undefined;
   detailError: string | undefined;
   /** The open issue's comments (BU-mg2.3.15), read with its detail; undefined until read. */
@@ -467,6 +453,8 @@ export class BeadsPane {
    * register.ts. Unset, a band press opens it in the pane, as the pane's own rows do.
    */
   onBandOpen: ((id: string) => void) | undefined;
+  /** A view a press on the band asked for (a menu's Go to): the band's overview opens it. */
+  onBandView: ((view: string) => void) | undefined;
   /** The inventory's stores out of step with the pair (D-34), named in the header. */
   unsynced: string[] = [];
   /** Display ids minted after a create whose write has not succeeded, retried on each refresh. */
@@ -513,7 +501,24 @@ export class BeadsPane {
     private readonly stores: StoreResolver,
     private readonly bandSettings?: BandSettingsPanel,
   ) {
-    this.views.drawWith("tasks", (surface) => this.drawTasks(surface));
+    this.views.drawWith(
+      "tasks",
+      (surface) => this.drawTasks(surface),
+      (surface) => this.drawInputs(surface, false),
+    );
+    this.views.drawWith(
+      "board",
+      (surface) => this.drawBoard(surface),
+      (surface) => this.drawInputs(surface, true),
+    );
+    this.views.drawWith(
+      "backlog",
+      (surface) => this.drawBacklog(surface),
+      (surface) => this.drawInputs(surface, true),
+    );
+    this.views.drawWith("detail", (surface) => this.drawDetail(surface));
+    this.views.drawWith("timeline", (surface) => this.drawTimeline(surface));
+    this.views.drawWith("settings", (surface) => this.drawSettingsView(surface));
     this.views.drawWith("review", (surface) => this.drawReviewView(surface));
     this.review = new ReviewFeed(stores);
     this.reader = new ReviewReader(stores, this.review);
@@ -1449,17 +1454,25 @@ export class BeadsPane {
    * `k`, or a task row's menu button (T-2B.4): opens the options menu about the focused task, or
    * about `id`, and moves the focus ring onto its first item; a second press closes it.
    */
-  async toggleMenu(id?: string, x?: number): Promise<void> {
-    if (this.menuOpen && (id === undefined || id === this.menuFor)) {
+  async toggleMenu(
+    id?: string,
+    x?: number,
+    on: SurfaceId = "pane",
+    view: string = this.tab,
+  ): Promise<void> {
+    if (this.menuOpen && this.menuOn === on && (id === undefined || id === this.menuFor)) {
       this.closeMenu();
       return;
     }
     if (id !== undefined) this.focusedId = id;
     this.menuX = x;
-    this.menuFor = this.target();
+    this.menuFor = view === "detail" ? this.detailId : this.focusedId;
     this.menuOpen = true;
+    this.menuOn = on;
     this.clearHint();
     this.host?.invalidate();
+    // A menu opened on the band leaves the keyboard where it is.
+    if (on === "band") return;
     const first = this.menuAt(this.frame).sections.flatMap((section) => section.items)[0];
     if (first !== undefined) {
       await this.host?.focus(PANE_ID, first.key).catch(() => undefined);
@@ -1662,6 +1675,7 @@ export class BeadsPane {
     this.reader.state = undefined;
     this.focusedId = id;
     this.detailId = id;
+    this.detailStore = undefined;
     this.detail = undefined;
     this.detailError = undefined;
     this.comments = undefined;
@@ -1671,11 +1685,99 @@ export class BeadsPane {
     this.host?.invalidate();
   }
 
+  /** One bd call about the Detail's issue, in the store it was read from. */
+  private async runForDetail(argv: readonly string[], timeoutMs: number): Promise<Ran> {
+    const dir = this.detailStore;
+    if (dir === undefined) return this.run(argv, timeoutMs);
+    return { ...(await this.runAt(dir, argv, timeoutMs, false)), dir };
+  }
+
+  /**
+   * A task's Detail for the band's overview (D-36, T-2C.8): the issue the band read, drawn at
+   * once, then read again with its history and comments from `store`, its own store, which its
+   * edits and comments are written to. The pane's open view stays as it is.
+   */
+  async showDetail(issue: Issue, store: string): Promise<void> {
+    const id = issue.id;
+    if (id !== this.detailId) {
+      this.commentDraft = "";
+      this.commentError = undefined;
+      this.reviewPage = 0;
+      this.comments = undefined;
+      this.commentsError = undefined;
+      this.detail = openDetail(issue, []);
+    }
+    const trim = (path: string) => path.replace(/\/+$/, "");
+    this.detailId = id;
+    this.detailStore = trim(store) === trim(this.storePath()) ? undefined : store;
+    this.detailError = undefined;
+    this.host?.invalidate();
+    await this.loadDetail(id);
+    this.host?.invalidate();
+  }
+
+  /** A task opened from `surface`: in the pane's Detail, or in the band's overview. */
+  private openOn(surface: Surface, id: string): Promise<void> {
+    const band = this.onBandOpen;
+    if (surface.id === "band" && band !== undefined) {
+      band(id);
+      return Promise.resolve();
+    }
+    return this.openDetailFor(id);
+  }
+
+  /**
+   * A command pressed on the band for `view` (T-2C.8): what the pane's toolbar or menu runs for
+   * that view, without moving the pane's own view or its keyboard. A view's command opens it in
+   * the overview; Open, Status and Edit open the task's Detail there, whose fields edit it; New
+   * points at the band's own New field; Help and the band settings draw in the overview.
+   */
+  runOnBand(command: string, view: string): void {
+    const target = this.views.byCommand(command);
+    if (target !== undefined && !target.planned) {
+      this.onBandView?.(target.view);
+      return;
+    }
+    const task = this.menuFor ?? (view === "detail" ? this.detailId : this.focusedId);
+    if (command === "card.detail" || command === "card.edit" || command === "card.move") {
+      if (task === undefined || this.onBandOpen === undefined) {
+        this.hint(view === "tasks" ? TASK_FOCUS_HINT : BAND_TASK_HINT);
+      } else {
+        this.onBandOpen(task);
+      }
+      return;
+    }
+    if (command === "issue.new") {
+      this.hint(BAND_NEW_HINT);
+      return;
+    }
+    if (command === "help") {
+      this.bandHelp = !this.bandHelp;
+      return;
+    }
+    if (command === "band.settings") {
+      this.onBandView?.("settings");
+      return;
+    }
+    if (command === "panel.menu") {
+      void this.toggleMenu(undefined, undefined, "band", view);
+      return;
+    }
+    // Every other command reads the view it is for, which is the band's, for its one call.
+    const kept = this.tab;
+    this.tab = view;
+    try {
+      this.runCommand(command);
+    } finally {
+      this.tab = kept;
+    }
+  }
+
   private async loadDetail(id: string): Promise<void> {
     const [shown, history, comments] = await Promise.all([
-      this.run(showArgv(id), READ_TIMEOUT_MS),
-      this.run(historyArgv(id), READ_TIMEOUT_MS),
-      this.run(commentsArgv(id), READ_TIMEOUT_MS),
+      this.runForDetail(showArgv(id), READ_TIMEOUT_MS),
+      this.runForDetail(historyArgv(id), READ_TIMEOUT_MS),
+      this.runForDetail(commentsArgv(id), READ_TIMEOUT_MS),
       this.loadReview(),
     ]);
     if (this.detailId !== id) return;
@@ -1721,7 +1823,7 @@ export class BeadsPane {
     this.clearHint();
     this.detail = reduceDetail(detail, { type: "edit-submitted", field });
     this.host?.invalidate();
-    const ran = await this.run(argv.value, WRITE_TIMEOUT_MS);
+    const ran = await this.runForDetail(argv.value, WRITE_TIMEOUT_MS);
     if (this.detail === undefined) return;
     if (!ran.ok) {
       this.detail = reduceDetail(this.detail, {
@@ -1756,7 +1858,7 @@ export class BeadsPane {
     this.commentError = undefined;
     this.commentSaving = true;
     this.host?.invalidate();
-    const ran = await this.run(
+    const ran = await this.runForDetail(
       commentAddArgv(issue.id, parsed.value, this.stores.sessionName),
       WRITE_TIMEOUT_MS,
     );
@@ -1886,38 +1988,29 @@ export class BeadsPane {
     const framed = (content: readonly RenderNode[]) =>
       navFrame(surface, nav, (item) => this.pressNav(item.view), content);
     if (this.store?.ok === false) return framed(this.drawNoStore(ui, this.store, short));
-    const { groups, perRow, groupWidth } = this.layout(width);
     const view = this.boardViewAt(width);
     const ctx = this.actionContext(width, view);
     // The Tasks view draws the menu under the row it is about; every other view, above its body.
     const menu =
-      this.menuOpen && this.tab !== "tasks" ? this.drawMenu(ui, ctx, width, false) : undefined;
-    // A view on the component layer draws itself through the pane adapter; the rest still
-    // draw here until T-2C.8 moves them.
+      this.menuOpen && this.menuOn === "pane" && this.tab !== "tasks"
+        ? this.drawMenu(inner, ctx, width, false)
+        : undefined;
+    // Every view draws itself through the pane adapter (D-35, T-2C.8), from its registry entry.
     const entry = this.views.get(this.tab);
-    const drawn = entry?.draw;
     const content =
-      drawn !== undefined
-        ? drawn(inner)
-        : this.tab === "board"
-          ? this.drawBoard(inner, view, groups, perRow, groupWidth)
-          : this.tab === "backlog"
-            ? this.drawBacklog(inner, width)
-            : this.tab === "settings"
-              ? this.drawSettingsView(ui, inner)
-              : this.tab === "timeline"
-                ? this.drawTimeline(inner, width, frame, raster)
-                : this.drawDetail(ui, width, inner);
+      entry?.draw?.(inner) ??
+      emptyState(inner, "view-unbuilt", `${entry?.labels.wide ?? this.tab} is not built yet.`);
     const body = section(inner, {
       key: `section:${this.tab}`,
       title: entry === undefined ? this.tab : `${entry.glyph} ${entry.labels.wide}`,
       framed: this.framesView(frame),
       children: [content],
     });
+    const controls = entry?.controls?.(surface) ?? [];
     const inputs =
-      this.tab === "tasks" || this.tab === "board" || this.tab === "backlog"
-        ? this.drawInputs(ui, this.tab !== "tasks")
-        : undefined;
+      controls.length === 0
+        ? undefined
+        : Box({ key: "inputs", flexDirection: "column", children: controls });
     const settings =
       this.bandSettings?.isOpen === true && this.tab !== "settings"
         ? this.bandSettings.draw(ui, colorOf)
@@ -1932,7 +2025,7 @@ export class BeadsPane {
         ),
         ...this.drawLines(ui, width, view, short),
         menu,
-        !short && this.help ? this.drawHelp(ui, helpRegion) : undefined,
+        !short && this.help ? this.drawHelp(surface, helpRegion) : undefined,
         short ? undefined : settings,
         short ? undefined : inputs,
         body,
@@ -1979,6 +2072,7 @@ export class BeadsPane {
     width: number,
     view: BoardView = this.boardViewAt(width),
     tab: string = this.tab,
+    on: SurfaceId = "pane",
   ): ActionContext {
     const paged =
       tab === "review"
@@ -2001,7 +2095,7 @@ export class BeadsPane {
       bandSettings: this.bandSettings !== undefined,
       ...(list?.collapsible === true ? { more: list.moreLabel } : {}),
       ...(this.tasksShown ? {} : { hideTasks: true }),
-      nav: this.viewsOn("pane"),
+      nav: this.viewsOn(on),
       ...(tab === "review" ? { review: this.reviewControls() } : {}),
     };
   }
@@ -2057,17 +2151,36 @@ export class BeadsPane {
 
   /** The options menu; over the Client's rows it is as wide as its widest line (T-2B.5). */
   private drawMenu(
-    ui: Surface["ui"],
+    surface: Surface,
     ctx: ActionContext,
     width: number,
     popup: boolean,
   ): RenderElement {
     const menu = this.menuViewOf(ctx);
     return drawMenu(
-      ui,
+      surface,
       menu,
       popup ? menuColumns(menu, width) : width,
       (command) => this.runFromMenu(command),
+      () => this.closeMenu(),
+    );
+  }
+
+  /**
+   * The options menu the band's overview draws in place of `view` (D-36, T-2C.8): the same menu,
+   * listing what `view` offers, each item run as a press on the band.
+   */
+  drawBandMenu(surface: Surface, view: string): RenderElement {
+    const menu = this.menuViewOf(this.actionContext(surface.columns, undefined, view, "band"));
+    return drawMenu(
+      surface,
+      menu,
+      surface.columns,
+      (command) => {
+        this.menuOpen = false;
+        this.runOnBand(command, view);
+        this.host?.invalidate();
+      },
       () => this.closeMenu(),
     );
   }
@@ -2169,11 +2282,13 @@ export class BeadsPane {
     const width = surface.columns;
     const ctx = this.actionContext(width, undefined, "tasks");
     const region = surface.client;
-    const menu = this.menuOpen
-      ? this.drawMenu(surface.ui, ctx, width, region !== undefined)
-      : undefined;
-    const session = this.stores.sessionName;
     const band = surface.id === "band";
+    // On the band the overview draws an open menu in place of the view.
+    const menu =
+      this.menuOpen && !band && this.menuOn === "pane"
+        ? this.drawMenu(surface, ctx, width, region !== undefined)
+        : undefined;
+    const session = this.stores.sessionName;
     const list = band
       ? this.taskListOn(surface)
       : this.taskListAt(width, surface.short, surface.rows, region !== undefined);
@@ -2187,7 +2302,7 @@ export class BeadsPane {
       empty,
       handlers: {
         open: (id) => (bandOpen === undefined ? void this.openDetailFor(id) : bandOpen(id)),
-        menu: (id) => void this.toggleMenu(id),
+        menu: (id) => void this.toggleMenu(id, undefined, band ? "band" : "pane", "tasks"),
         more: () => this.toggleExpanded(),
       },
       ...(this.menuFor === undefined ? {} : { menuFor: this.menuFor }),
@@ -2232,7 +2347,8 @@ export class BeadsPane {
     return issue === undefined ? [] : this.gutterAt(columns)(issue);
   }
 
-  private drawSettingsView(ui: PaneUi, surface: Surface): RenderElement {
+  /** Settings (T-2B.8, D-35): the panel's, each view's surfaces, the indicators and the band's. */
+  private drawSettingsView(surface: Surface): RenderElement {
     const band = this.bandSettings;
     const view = settingsView(
       this.panel.settings,
@@ -2241,12 +2357,20 @@ export class BeadsPane {
       this.surfaceRows(),
       legendOf(INDICATORS.built()).map((line) => ({ ...line, on: indicatorOn(line.id) })),
     );
+    const ui = surface.ui as PaneUi;
     return drawSettings(surface, view, {
       color: colorOf,
       problems: this.panel.problems,
       fromFile: this.panel.fromFile,
       ...(this.settingsNotice === undefined ? {} : { notice: this.settingsNotice }),
-      ...(band === undefined ? {} : { band: band.draw(ui, colorOf, { saveButton: false }) }),
+      ...(band === undefined
+        ? {}
+        : {
+            band: {
+              block: () => band.draw(ui, colorOf, { saveButton: false }),
+              lines: () => band.lines(ui, colorOf, { saveButton: false }),
+            },
+          }),
       handlers: {
         shown: (text) => void this.setShown(text),
         choose: (key, value) => void this.chooseSetting(key, value),
@@ -2259,37 +2383,39 @@ export class BeadsPane {
    * The Timeline (T-2B.9): the store's epics and milestones, closed ones included, by due date;
    * on Mine only the session's own (D-29). Today is the day of the last read. Raster bars where
    * the surface has a Raster, Text rows elsewhere, in a window of rows the pane's body holds that
-   * follows the focus.
+   * follows the focus; on the band every item, in the band's own window.
    */
-  private drawTimeline(
-    surface: Surface,
-    width: number,
-    frame: PaneFrame,
-    raster: RasterElement | undefined,
-  ): RenderElement {
+  private drawTimeline(surface: Surface): RenderElement {
     if (!this.board.loaded) return this.drawUnread(surface, "timeline");
+    const width = surface.columns;
     const view = timelineView(this.scoped(this.timelineIssues()), {
       statuses: this.board.statuses,
       ...(this.board.loadedAt === undefined ? {} : { today: this.board.loadedAt }),
     });
-    const nav = this.navAt(frame);
+    const nav = this.navAt(this.frame);
     const room =
-      (frame.bodyRows ?? WANTED_ROWS) -
+      (this.frame.bodyRows ?? WANTED_ROWS) -
       TIMELINE_CHROME_ROWS -
       (surface.short ? 0 : SECTION_ROWS) -
       (nav.kind === "side" ? 0 : nav.rows.length);
     // A Raster bar under its label takes two rows.
-    const perItem = raster !== undefined && timelinePlacement(width) === "above" ? 2 : 1;
-    const layout = timelineLayout(view, width, {
-      ...(this.focusedId === undefined ? {} : { focusedId: this.focusedId }),
-      rows: Math.min(TASK_WINDOW_ROWS, Math.max(3, Math.floor(room / perItem))),
-    });
+    const perItem = surface.raster !== undefined && timelinePlacement(width) === "above" ? 2 : 1;
+    const layout = timelineLayout(
+      view,
+      width,
+      windowed(surface)
+        ? {}
+        : {
+            ...(this.focusedId === undefined ? {} : { focusedId: this.focusedId }),
+            rows: Math.min(TASK_WINDOW_ROWS, Math.max(3, Math.floor(room / perItem))),
+          },
+    );
     const session = this.stores.sessionName;
     const mineEmpty =
       this.scope === "mine" &&
       session !== undefined &&
       view.items.length + view.undated.length === 0;
-    return drawTimeline(
+    return timeline(
       surface,
       mineEmpty
         ? {
@@ -2300,10 +2426,7 @@ export class BeadsPane {
             ),
           }
         : layout,
-      {
-        ...(raster === undefined ? {} : { raster }),
-        open: (id) => void this.openDetailFor(id),
-      },
+      { open: (id) => void this.openOn(surface, id) },
     );
   }
 
@@ -2316,9 +2439,10 @@ export class BeadsPane {
   }
 
   /** The board as core pages it, at the pages the person stepped to. */
-  private boardViewAt(width: number): BoardView {
+  /** The board as core pages it; `columnWidth` cuts the cards' strings, a column's by default. */
+  private boardViewAt(width: number, columnWidth?: number): BoardView {
     return boardView(this.shown(), {
-      columnWidth: this.layout(width).groupWidth - 1 - CARD_FRAME_COLUMNS,
+      columnWidth: columnWidth ?? this.layout(width).groupWidth - 1 - CARD_FRAME_COLUMNS,
       swimlane: this.swimlane,
       softWipLimit: this.config.config.softWipLimit,
       filter: this.filter.filter,
@@ -2468,37 +2592,32 @@ export class BeadsPane {
     ]);
   }
 
-  /** The Filter field (the Board and Backlog only) and the quick-add New field. */
-  private drawInputs(ui: PaneUi, withFilter: boolean): RenderElement {
-    const { Box, Input } = ui;
-    return Box({
-      key: "inputs",
-      flexDirection: "column",
-      children: present<RenderElement>([
-        withFilter
-          ? Input({
-              key: "filter",
-              label: "Filter",
-              placeholder: FILTER_KEYS.map((key) => `${key}:`).join(" "),
-              value: this.filter.text,
-              submitLabel: "filter",
-              onSubmit: (value) => this.submitFilter(value),
-            })
-          : undefined,
-        Input({
-          key: "quickadd",
-          label: "New",
-          placeholder: "title p0-p4 type:task @assignee +label due:YYYY-MM-DD sprint:name",
-          value: this.quickAddText,
-          submitLabel: "create",
-          onSubmit: (value) => void this.quickAdd(value),
-        }),
-      ]),
+  /**
+   * The Filter field (the Board and Backlog only) and the quick-add New field: the controls the
+   * Tasks view, the Board and the Backlog draw outside their bodies, on either surface.
+   */
+  private drawInputs(surface: Surface, withFilter: boolean): RenderNode[] {
+    const filter = field(surface, {
+      key: "filter",
+      label: "Filter",
+      placeholder: FILTER_KEYS.map((key) => `${key}:`).join(" "),
+      value: this.filter.text,
+      submitLabel: "filter",
+      onSubmit: (value) => this.submitFilter(value),
     });
+    const quickAdd = field(surface, {
+      key: "quickadd",
+      label: "New",
+      placeholder: "title p0-p4 type:task @assignee +label due:YYYY-MM-DD sprint:name",
+      value: this.quickAddText,
+      submitLabel: "create",
+      onSubmit: (value) => void this.quickAdd(value),
+    });
+    return [...(withFilter ? [fitted(surface, 0, filter)] : []), fitted(surface, 0, quickAdd)];
   }
 
-  private drawHelp(ui: PaneUi, helpRegion: RenderElement | undefined): RenderElement {
-    const { Box, Text, Code } = ui;
+  /** The help's parts (T-1.1): every key, the grammars, the legend and the band's line. */
+  private helpParts(): HelpPart[] {
     const keys = COMMANDS.map((command) => {
       const { binding } = command;
       const key =
@@ -2511,103 +2630,33 @@ export class BeadsPane {
             : "";
       return `${key}: ${command.label}${scope}`;
     });
-    return Box({
-      key: "help",
-      flexDirection: "column",
-      borderStyle: "round",
-      paddingX: 1,
-      children: present<RenderNode>([
-        Text({ bold: true, children: "Keys" }),
-        ...keys.map((text) => Text({ children: text })),
-        Text({
-          children:
-            "Tab walks the controls; on a card, Move to opens with Enter and the arrows pick a status.",
-        }),
-        Text({
-          children: "Quick-add: title words plus p0-p4, type:, @assignee, +label, due:, sprint:",
-        }),
-        Text({ children: `Filter keys: ${FILTER_KEYS.join(", ")}` }),
-        Text({
-          children: `Review view filter keys: ${REVIEW_FILTER_KEYS.join(", ")}, and free text; it opens on ${DEFAULT_REVIEW_FILTER}`,
-        }),
-        Text({ bold: true, children: LEGEND_TITLE }),
-        ...legendLines().map((text) => Text({ children: text })),
-        Text({ bold: true, children: "Focus, hide and show" }),
-        ...USAGE_LINES.map((text) => Text({ children: text })),
-        Code({ source: KEYBINDINGS_BLOCK }),
-        Text({
-          children: `The band above the prompt: [bd] counts your own issues in every store; a firstmate's [bd][all] counts every owner's, with [fm] its own. "N unsynced" means N stores are out of step with the pair, named in the header. A line ending ${PARTIAL_GLYPH} is partial: a store could not be read. ${DIRECT_GLYPH} means this session read the counts itself because the host refresher is not running. g opens the band settings.`,
-        }),
-        Box({
-          key: "columns",
-          children: [Text({ children: `Columns: ${STATUS_CATEGORIES.join(", ")}` })],
-        }),
-        helpRegion,
-      ]),
-    });
+    const text = (line: string): HelpPart => ({ kind: "text", text: line });
+    return [
+      { kind: "title", text: "Keys" },
+      ...keys.map(text),
+      text(
+        "Tab walks the controls; on a card, Move to opens with Enter and the arrows pick a status.",
+      ),
+      text("Quick-add: title words plus p0-p4, type:, @assignee, +label, due:, sprint:"),
+      text(`Filter keys: ${FILTER_KEYS.join(", ")}`),
+      text(
+        `Review view filter keys: ${REVIEW_FILTER_KEYS.join(", ")}, and free text; it opens on ${DEFAULT_REVIEW_FILTER}`,
+      ),
+      { kind: "title", text: LEGEND_TITLE },
+      ...legendLines().map(text),
+      { kind: "title", text: "Focus, hide and show" },
+      ...USAGE_LINES.map(text),
+      { kind: "code", text: KEYBINDINGS_BLOCK },
+      text(
+        `The band above the prompt: [bd] counts your own issues in every store; a firstmate's [bd][all] counts every owner's, with [fm] its own. "N unsynced" means N stores are out of step with the pair, named in the header. A line ending ${PARTIAL_GLYPH} is partial: a store could not be read. ${DIRECT_GLYPH} means this session read the counts itself because the host refresher is not running. g opens the band settings.`,
+      ),
+      { kind: "text", key: "columns", text: `Columns: ${STATUS_CATEGORIES.join(", ")}` },
+    ];
   }
 
-  /**
-   * One card in a column `width` wide (T-2C.12): framed in its status's accent, its priority bold
-   * in the priority's colour, the frame in the focus colour under the pointer. Its Move to keeps
-   * its label while the label and the longest status fit beside each other inside the frame; a
-   * status too long for it is cut in its option label.
-   */
-  private drawCard(ui: PaneUi, card: CardView, width: number, accent: Token): RenderElement {
-    const status = this.board.issues.find((issue) => issue.id === card.id)?.status ?? "";
-    const { Box, Text, Select, Button } = ui;
-    const inner = Math.max(1, width - CARD_FRAME_COLUMNS);
-    const values = [status, ...card.moveTargets];
-    const room = Math.max(1, inner - SELECT_CHROME);
-    const longest = Math.max(0, ...values.map(textWidth));
-    const labelled = inner >= textWidth(MOVE_LABEL) + 2 + Math.min(longest, room) + SELECT_CHROME;
-    const options = values.map((value) =>
-      textWidth(value) <= room ? { value } : { value, label: truncate(value, room) },
-    );
-    const cells = this.gutterOfId(card.id, this.width);
-    return Box({
-      key: `card:${card.id}`,
-      flexDirection: "column",
-      borderStyle: "round",
-      borderColor: colorOf(accent),
-      hover: { borderColor: colorOf("surface.focus") },
-      children: [
-        cells.length === 0
-          ? Text({ ...weight("meta"), children: card.displayId })
-          : Box({
-              flexDirection: "row",
-              gap: SPACE.tight,
-              children: present<RenderNode>([
-                gutter(ui, cells),
-                Text({ ...weight("meta"), wrap: "truncate-end", children: card.displayId }),
-              ]),
-            }),
-        Text({ children: card.title }),
-        Text({
-          children: [
-            Text({ bold: true, color: colorOf(card.priorityToken), children: card.priority }),
-            ...(card.assignee === ""
-              ? []
-              : [" ", Text({ ...weight("meta"), children: card.assignee })]),
-            ...(card.pending ? [Text({ ...weight("meta"), children: ` moving${MORE}` })] : []),
-          ],
-        }),
-        Select({
-          key: `move:${card.id}`,
-          ...(labelled ? { label: MOVE_LABEL } : {}),
-          options,
-          value: status,
-          onSelect: (value) => void this.move(card.id, value),
-        }),
-        Button({
-          key: `open:${card.id}`,
-          label: "detail",
-          plain: true,
-          dimColor: true,
-          onPress: () => void this.openDetailFor(card.id),
-        }),
-      ],
-    });
+  /** The help on either surface: framed in the pane, in the band's window on the band. */
+  drawHelp(surface: Surface, helpRegion?: RenderElement): RenderElement {
+    return help(surface, this.helpParts(), helpRegion);
   }
 
   /**
@@ -2616,13 +2665,9 @@ export class BeadsPane {
    * loading line.
    */
   private drawUnread(surface: Surface, key: string): RenderElement {
-    const { Box, Text } = surface.ui;
     const failed = this.boardViewAt(surface.columns).errorLine;
     if (failed !== undefined) return errorState(surface, "error-line", failed);
-    return Box({
-      key,
-      children: [Text({ ...weight("meta"), children: `reading the store${MORE}` })],
-    });
+    return readingState(surface, key, `reading the store${MORE}`);
   }
 
   /**
@@ -2655,148 +2700,37 @@ export class BeadsPane {
     );
   }
 
-  private drawBoard(
-    surface: Surface,
-    view: BoardView,
-    groups: readonly string[],
-    perRow: number,
-    groupWidth: number,
-  ): RenderElement {
-    const ui = surface.ui as PaneUi;
-    const { Box, Text, Button } = ui;
-    if (view.loading) return this.drawUnread(surface, "board");
-    if (cardsOf(view) === 0 && view.lanePage.total <= 1) {
-      return Box({
-        key: "board",
-        flexDirection: "column",
-        children: [this.drawListEmpty(surface, "board-empty", "issue")],
-      });
-    }
-    const lanes = view.lanes.map((lane) =>
-      Box({
-        key: `lane:${lane.key === "" ? "-" : lane.key}`,
-        flexDirection: "column",
-        children: present<RenderNode>([
-          lane.label === ""
-            ? undefined
-            : Text({ ...weight("heading"), underline: true, children: lane.label }),
-          // perRow groups to a row; a narrow pane stacks the rest below (T-1B.9).
-          ...Array.from({ length: Math.ceil(groups.length / perRow) }, (_, row) =>
-            Box({
-              flexDirection: "row",
-              gap: SPACE.tight,
-              children: groups.slice(row * perRow, (row + 1) * perRow).map((category) =>
-                Box({
-                  key: `group:${lane.key}:${category}`,
-                  flexDirection: "column",
-                  width: groupWidth,
-                  children: view.columns.flatMap((column, i) => {
-                    if (column.category !== category) return [];
-                    const cards = lane.cells[i] ?? [];
-                    const page = lane.pages[i];
-                    return present<RenderNode>([
-                      Box({
-                        key: `column:${lane.key}:${column.status}`,
-                        children: [
-                          Text({
-                            bold: true,
-                            color: colorOf(column.token),
-                            children: column.label,
-                          }),
-                        ],
-                      }),
-                      ...cards.map((card) =>
-                        this.drawCard(ui, card, groupWidth, statusToken(column.category)),
-                      ),
-                      page === undefined ? undefined : this.drawPager(ui, page),
-                    ]);
-                  }),
-                }),
-              ),
-            }),
-          ),
-        ]),
-      }),
-    );
-    const unplaced =
-      view.unplaced.length === 0
-        ? undefined
-        : Box({
-            key: "unplaced",
-            flexDirection: "column",
-            children: present<RenderNode>([
-              Text({ ...weight("heading"), children: "Statuses bd statuses did not list" }),
-              ...view.unplaced.map((card) => this.drawCard(ui, card, this.width, "surface.card")),
-              this.drawPager(ui, view.unplacedPage),
-            ]),
-          });
-    const { lanePage, columnWindow } = view;
-    const columnsText =
-      columnWindow === undefined
-        ? ""
-        : `, columns ${columnWindow.from}-${columnWindow.to} of ${columnWindow.total}`;
-    const lanePager =
-      lanePage.pages === 1
-        ? undefined
-        : Box({
-            key: "lane-pager",
-            flexDirection: "row",
-            columnGap: SPACE.tight,
-            children: [
-              Button({
-                key: "lanes-back",
-                label: "back",
-                plain: true,
-                onPress: () => this.stepLanes(-1),
-              }),
-              Text({
-                ...weight("meta"),
-                children: `lanes ${lanePage.from}-${lanePage.to} of ${lanePage.total}${columnsText}`,
-              }),
-              Button({
-                key: "lanes-next",
-                label: "more lanes",
-                hotkey: "l",
-                plain: true,
-                onPress: () => this.stepLanes(1),
-              }),
-            ],
-          });
-    return Box({
-      key: "board",
-      flexDirection: "column",
-      children: present([lanePager, ...lanes, unplaced]),
-    });
-  }
-
   /**
-   * A paged cell's controls: back, the range drawn, and more. Both wrap round, so both stay drawn
-   * and a press keeps the focus ring on the control it pressed.
+   * The Board (T-1.1, T-2C.12) on either surface: before a read the loading or error state, with
+   * no card the empty state, else its lanes, cells and pagers. On the band each card's strings
+   * are cut to the band's width, not a column's.
    */
-  private drawPager(ui: PaneUi, page: PageView): RenderElement | undefined {
-    if (page.pages === 1) return undefined;
-    const { Box, Text, Button } = ui;
-    return Box({
-      key: `pager:${page.key}`,
-      flexDirection: "row",
-      flexWrap: "wrap",
-      columnGap: SPACE.tight,
-      children: [
-        Button({
-          key: `prev:${page.key}`,
-          label: page.page === 0 ? "last page" : "back",
-          plain: true,
-          dimColor: true,
-          onPress: () => this.stepCell(page.key, -1),
-        }),
-        Text({ ...weight("meta"), children: `${page.from}-${page.to} of ${page.total}` }),
-        Button({
-          key: `next:${page.key}`,
-          label: page.to < page.total ? `+${page.total - page.to} more` : "first page",
-          plain: true,
-          onPress: () => this.stepCell(page.key, 1),
-        }),
-      ],
+  private drawBoard(surface: Surface): RenderElement {
+    const width = surface.columns;
+    const band = windowed(surface);
+    const view = this.boardViewAt(width, band ? width : undefined);
+    if (view.loading) return this.drawUnread(surface, "board");
+    const empty =
+      cardsOf(view) === 0 && view.lanePage.total <= 1
+        ? this.drawListEmpty(surface, "board-empty", "issue")
+        : undefined;
+    const { groups, perRow, groupWidth } = this.layout(width);
+    const gutterWidth = band ? width : this.width;
+    return board(surface, {
+      view,
+      ...(empty === undefined ? {} : { empty }),
+      groups,
+      perRow,
+      groupWidth,
+      unplacedWidth: this.width,
+      statusOf: (id) => this.board.issues.find((issue) => issue.id === id)?.status ?? "",
+      gutterOf: (id) => this.gutterOfId(id, gutterWidth),
+      handlers: {
+        move: (id, to) => void this.move(id, to),
+        open: (id) => void this.openOn(surface, id),
+        stepCell: (key, delta) => this.stepCell(key, delta),
+        stepLanes: (delta) => this.stepLanes(delta),
+      },
     });
   }
 
@@ -2859,289 +2793,78 @@ export class BeadsPane {
   }
 
   /**
-   * The Backlog (T-2C.12): its count on the meta weight, one row an issue with the row's fill
-   * under the pointer, its pager; before a read the loading or error state, and with no row the
-   * empty state.
+   * The Backlog (T-2C.12) on either surface: before a read the loading or error state, else its
+   * count, its rows and its pager, with no row the empty state.
    */
-  private drawBacklog(surface: Surface, width: number): RenderElement {
-    const ui = surface.ui as PaneUi;
-    const { Box, Text, Button } = ui;
+  private drawBacklog(surface: Surface): RenderElement {
     if (!this.board.loaded) return this.drawUnread(surface, "backlog");
-    const view = this.backlogViewAt(width);
-    const { page, wide, idWidth, typeWidth } = view;
-    return Box({
-      key: "backlog",
-      flexDirection: "column",
-      children: present<RenderNode>([
-        Box({
-          key: "backlog-count",
-          children: [
-            Text({
-              ...weight("meta"),
-              children: `${page.total} of ${view.total} open issues, ${sortLabel(this.sort)} order`,
-            }),
-          ],
-        }),
-        view.rows.length === 0
-          ? this.drawListEmpty(surface, "backlog-empty", "open issue")
-          : undefined,
-        ...view.rows.map((row) =>
-          Box({
-            key: `row:${row.id}`,
-            flexDirection: "row",
-            gap: SPACE.tight,
-            ...rowHover(),
-            children: present<RenderNode>([
-              gutter(ui, this.gutterOfId(row.id, width)),
-              Text({ bold: true, color: colorOf(row.priorityToken), children: row.priority }),
-              Box({
-                width: idWidth,
-                children: [
-                  Text({ ...weight("meta"), wrap: "truncate-end", children: row.displayId }),
-                ],
-              }),
-              ...(wide
-                ? [Box({ width: typeWidth, children: [Text({ children: row.type })] })]
-                : []),
-              Box({
-                flexGrow: 1,
-                children: [Text({ wrap: "truncate-end", children: row.title })],
-              }),
-              ...(wide
-                ? [
-                    Text({ children: row.assignee }),
-                    Text({ ...weight("meta"), children: row.created }),
-                  ]
-                : []),
-              Button({
-                key: `open:${row.id}`,
-                label: "detail",
-                plain: true,
-                dimColor: true,
-                onPress: () => void this.openDetailFor(row.id),
-              }),
-            ]),
-          }),
-        ),
-        page.pages === 1
-          ? undefined
-          : Box({
-              key: "backlog-pager",
-              flexDirection: "row",
-              columnGap: SPACE.tight,
-              children: [
-                Button({
-                  key: "backlog-back",
-                  label: page.page === 0 ? "last page" : "back",
-                  plain: true,
-                  dimColor: true,
-                  onPress: () => void this.stepBacklog(-1),
-                }),
-                Text({
-                  ...weight("meta"),
-                  children: `rows ${page.from}-${page.to} of ${page.total}`,
-                }),
-                Button({
-                  key: "backlog-next",
-                  label: page.to < page.total ? `+${page.total - page.to} more` : "first page",
-                  plain: true,
-                  onPress: () => void this.stepBacklog(1),
-                }),
-              ],
-            }),
-      ]),
-    });
-  }
-
-  private drawDetail(ui: PaneUi, width: number, surface: Surface): RenderElement {
-    const { Box, Text, Input, Select, Markdown } = ui;
-    const id = this.detailId;
-    const reader = this.readerOn === "detail" ? this.drawReader(surface) : undefined;
-    if (reader !== undefined) return reader;
-    if (id === undefined) {
-      return Box({
-        key: "detail",
-        flexDirection: "column",
-        children: [
-          emptyState(
-            surface,
-            "detail-empty",
-            "No issue open: Tab to a card's detail button and press Enter, or focus a card and press d.",
-          ),
-        ],
-      });
-    }
-    const errorLine =
-      this.detailError === undefined
-        ? undefined
-        : errorState(surface, "detail-error", this.detailError);
-    if (this.detail === undefined) {
-      return Box({
-        key: "detail",
-        flexDirection: "column",
-        children: present([
-          errorLine ?? Text({ ...weight("meta"), children: `reading ${id}${MORE}` }),
-        ]),
-      });
-    }
-    const wide = width >= 90;
-    const left = wide ? Math.floor(width * 0.45) : width;
-    const view = detailView(this.detail, { issues: this.board.issues, width, fieldWidth: left });
-    const statuses = this.board.statuses.map((status) => ({ value: status.name }));
-    // A control's own label shares its row with the value, and on a narrow pane a long value
-    // squeezes it and cuts it in two (Claude Code 2.1.306, 53 columns). So the label is drawn
-    // beside the control in a Box that never shrinks, and the control carries none.
-    const labelled = (editable: EditableField, label: string, control: RenderElement) =>
-      Box({
-        key: `edit-row:${editable}`,
-        flexDirection: "row",
-        gap: SPACE.tight,
-        children: [
-          Box({
-            key: `label:${editable}`,
-            flexShrink: 0,
-            children: [Text({ children: `${label}:` })],
-          }),
-          control,
-        ],
-      });
-    const fields = view.fields.map((field) => {
-      const raw = field.raw ?? field.value;
-      const editable = field.editable;
-      if (editable === "status" && statuses.length > 0) {
-        return labelled(
-          editable,
-          field.label,
-          Select({
-            key: "edit:status",
-            options: statuses.some((option) => option.value === raw)
-              ? statuses
-              : [{ value: raw }, ...statuses],
-            value: raw,
-            onSelect: (value) => void this.edit("status", value),
-          }),
-        );
-      }
-      if (editable === "type") {
-        const types = [
-          ...new Set([raw, ...ISSUE_TYPES, ...this.board.issues.map((one) => one.type)]),
-        ].filter((type) => type !== "");
-        return labelled(
-          editable,
-          field.label,
-          Select({
-            key: "edit:type",
-            options: types.map((value) => ({ value })),
-            value: raw,
-            onSelect: (value) => void this.edit("type", value),
-          }),
-        );
-      }
-      if (editable === "priority") {
-        return labelled(
-          editable,
-          field.label,
-          Select({
-            key: "edit:priority",
-            options: [0, 1, 2, 3, 4].map((p) => ({ value: String(p), label: `P${p}` })),
-            value: raw,
-            onSelect: (value) => void this.edit("priority", value),
-          }),
-        );
-      }
-      if (editable !== undefined) {
-        return labelled(
-          editable,
-          field.label,
-          Input({
-            key: `edit:${editable}`,
-            value: raw,
-            ...(editable === "description"
-              ? { placeholder: "one line: \\n is a line break, \\\\ a backslash" }
-              : {}),
-            submitLabel: "save",
-            onSubmit: (value) => void this.edit(editable, value),
-          }),
-        );
-      }
-      return Box({
-        key: `field:${field.key}`,
-        children: [Text({ children: `${field.label}: ${field.value}` })],
-      });
-    });
-    // Each part of the Detail under its heading on the weight scale, a `tight` row above it.
-    const heading = (key: string, text: string) =>
-      Box({
-        key,
-        marginTop: SPACE.tight,
-        children: [Text({ ...weight("heading"), children: text })],
-      });
-    return Box({
-      key: "detail",
-      flexDirection: "column",
-      children: present<RenderNode>([
-        Box({
-          key: "detail-heading",
-          children: [Text({ ...weight("title"), children: view.heading })],
-        }),
-        view.savingLine === undefined
-          ? undefined
-          : this.line(ui, "detail-saving", view.savingLine, "text.dim"),
-        view.errorLine === undefined
-          ? undefined
-          : this.line(ui, "detail-save-error", view.errorLine, "error"),
-        errorLine,
-        this.drawReview(surface, this.detail.issue),
-        Box({
-          flexDirection: wide ? "row" : "column",
-          gap: wide ? SPACE.loose : SPACE.tight,
-          children: [
-            Box({ key: "detail-fields", flexDirection: "column", width: left, children: fields }),
-            Box({
-              key: "detail-text",
-              flexDirection: "column",
-              flexGrow: 1,
-              children: view.markdown.flatMap((block) => [
-                Text({ ...weight("heading"), children: block.label }),
-                Markdown({ key: `md:${block.key}`, text: block.text }),
-              ]),
-            }),
-          ],
-        }),
-        heading("dependencies-heading", `Dependencies (${view.dependencies.length})`),
-        ...view.dependencies.map((dep) =>
-          Box({
-            key: `dep:${dep.id}`,
-            children: [Text({ children: dep.line })],
-          }),
-        ),
-        heading("history-heading", `History, last ${view.events.length}`),
-        ...view.events.map((event, i) =>
-          Box({
-            key: `event:${i}`,
-            children: [Text({ ...weight("meta"), children: event.line })],
-          }),
-        ),
-        ...this.drawComments(ui, width, id),
-      ]),
+    const width = surface.columns;
+    return backlog(surface, {
+      view: this.backlogViewAt(width),
+      sort: sortLabel(this.sort),
+      empty: this.drawListEmpty(surface, "backlog-empty", "open issue"),
+      gutterOf: (id) => this.gutterOfId(id, width),
+      handlers: {
+        open: (id) => void this.openOn(surface, id),
+        step: (delta) => void this.stepBacklog(delta),
+      },
     });
   }
 
   /**
-   * The Detail's Review section (D-40, T-2C.5), above its description and unasked: the held items
-   * about the issue, whoever holds them (D-38), and its bd blockers. Nothing when it has neither.
+   * The Detail (T-1.3) on either surface: the reader over it while an item opened from it is
+   * read in the pane, else the issue open in it with its Review section (D-40, T-2C.5), above
+   * its description and unasked, its fields, text, dependencies, history and comments. On the
+   * band a review item opens in the pane's reader.
    */
-  private drawReview(surface: Surface, issue: Issue): RenderElement | undefined {
-    const section = this.reviewSectionOf(issue);
-    return section === undefined
-      ? undefined
-      : reviewBlock(surface, section, {
-          open: (path) => void this.openReview(path),
-          page: (delta) => {
-            this.reviewPage = Math.max(0, this.reviewPage + delta);
-            this.host?.invalidate();
-          },
-        });
+  private drawDetail(surface: Surface): RenderElement {
+    const band = windowed(surface);
+    const reader = !band && this.readerOn === "detail" ? this.drawReader(surface) : undefined;
+    if (reader !== undefined) return reader;
+    const width = surface.columns;
+    const wide = !band && width >= 90;
+    const left = wide ? Math.floor(width * 0.45) : width;
+    const id = this.detailId;
+    const issue = this.detail?.issue;
+    const section = issue === undefined ? undefined : this.reviewSectionOf(issue);
+    return detail(surface, {
+      id,
+      view:
+        this.detail === undefined
+          ? undefined
+          : detailView(this.detail, { issues: this.board.issues, width, fieldWidth: left }),
+      ...(this.detailError === undefined ? {} : { error: this.detailError }),
+      statuses: this.board.statuses.map((status) => status.name),
+      types: [...ISSUE_TYPES, ...this.board.issues.map((one) => one.type)],
+      wide,
+      fieldColumns: left,
+      ...(section === undefined
+        ? {}
+        : {
+            review: {
+              section,
+              actions: {
+                open: (path) =>
+                  band
+                    ? void this.openOrFocus().then(() => this.openReview(path))
+                    : void this.openReview(path),
+                page: (delta) => {
+                  this.reviewPage = Math.max(0, this.reviewPage + delta);
+                  this.host?.invalidate();
+                },
+              },
+            },
+          }),
+      comments: commentsView(id ?? "", this.comments ?? [], { width }),
+      ...(this.commentsError === undefined ? {} : { commentsError: this.commentsError }),
+      commentDraft: this.commentDraft,
+      commentSaving: this.commentSaving,
+      ...(this.commentError === undefined ? {} : { commentError: this.commentError }),
+      handlers: {
+        edit: (field, value) => void this.edit(field, value),
+        comment: (text) => void this.addComment(text),
+      },
+    });
   }
 
   /** The Review section's model for `issue`, as both surfaces draw it. */
@@ -3350,55 +3073,5 @@ export class BeadsPane {
     const { page, pages } = this.reviewListOn(on, per);
     this.reviewPages = { ...this.reviewPages, [on]: stepPage(page, pages, delta) };
     this.host?.invalidate();
-  }
-
-  /**
-   * The open issue's comments, newest last, and the control a new one is typed into
-   * (BU-mg2.3.15). The task panel opens a task into this view, so both read the same list.
-   */
-  private drawComments(ui: PaneUi, width: number, issueId: string): RenderNode[] {
-    const { Box, Text, Input, Markdown } = ui;
-    const view = commentsView(issueId, this.comments ?? [], { width });
-    return present<RenderNode>([
-      Box({
-        key: "comments-heading",
-        marginTop: SPACE.tight,
-        children: [Text({ ...weight("heading"), children: view.heading })],
-      }),
-      this.commentsError === undefined
-        ? undefined
-        : this.line(ui, "comments-error", this.commentsError, "error"),
-      ...view.rows.map((row) =>
-        Box({
-          key: `comment:${row.id}`,
-          flexDirection: "column",
-          children: [
-            Text({ ...weight("meta"), children: row.line }),
-            Markdown({ key: `comment-md:${row.id}`, text: row.text }),
-          ],
-        }),
-      ),
-      this.commentSaving
-        ? this.line(ui, "comment-saving", `adding the comment${MORE}`, "text.dim")
-        : undefined,
-      this.commentError === undefined
-        ? undefined
-        : this.line(ui, "comment-error", this.commentError, "error"),
-      Box({
-        key: "comment-row",
-        flexDirection: "row",
-        gap: SPACE.tight,
-        children: [
-          Box({ key: "label:comment", flexShrink: 0, children: [Text({ children: "Comment:" })] }),
-          Input({
-            key: "comment-add",
-            value: this.commentDraft,
-            placeholder: "one line: \\n is a line break, \\\\ a backslash",
-            submitLabel: "add",
-            onSubmit: (value) => void this.addComment(value),
-          }),
-        ],
-      }),
-    ]);
   }
 }
