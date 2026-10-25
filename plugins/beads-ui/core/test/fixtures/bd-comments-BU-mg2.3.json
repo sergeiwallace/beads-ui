@@ -1,0 +1,30 @@
+[
+  {
+    "id": "3ae019d7-b664-5e9f-bb8f-851e903f6c49",
+    "issue_id": "BU-mg2.3",
+    "author": "aih-ec2-3",
+    "text": "2026-10-21 Phases 0 and 1 landed on main: 50a98c3 (PR 21) and bbdf173 (PR 25); all eleven child tasks closed. Open under this epic: the Phase 1 exit gate's human steps (the Ghostty or kitty run and Sergei's own use of the MVP, recorded in the design's Approval Log) and the later mod phases.",
+    "created_at": "2026-10-21T10:01:22Z"
+  },
+  {
+    "id": "460e38c1-090e-55ff-938f-ade917c89797",
+    "issue_id": "BU-mg2.3",
+    "author": "Sergei Wallace",
+    "text": "FOUNDING-ASK AMENDMENT (Sergei, 2026-10-23T23:37:48Z; verbatim in the BU-ylx comment of that time). The beads-ui task panel sits where the CC task panel sits and is a small app inside the Claude Code TUI:\n- Navigate up and down, including into collapsed tasks beyond the ones shown. How many to show and how many to collapse is set in a config file and can be changed from the beads-ui TUI itself.\n- Select a task to open its details and edit its fields.\n- A popup options menu and keyboard shortcuts, with every action reachable from both, and with mouse control (left and right click).\n- A shortcut that moves the cursor from the Claude Code prompt box into the beads-ui panel, then back. /orchestrate a /research-doc if it is unclear whether or how that is possible.\n- Later views: kanban board, sprint and backlog, timeline, and the other Jira, Todoist and Asana-style features, reached from a menu bar or side nav, with a settings view.\n",
+    "created_at": "2026-10-23T23:39:38Z"
+  },
+  {
+    "id": "f36e3299-dced-5cab-8d5d-ed41e893ea2f",
+    "issue_id": "BU-mg2.3",
+    "author": "Sergei Wallace",
+    "text": "2026-10-24T01:05Z, aih-ec2-3 Opus coordinator. Designed on beads-ui main (PR #38, 8a0708f): Phase 2B of docs/designs/beads-ui-design.md is the task panel that replaces the Claude Code task panel, with tasks T-2B.1 to T-2B.9 and decisions D-31 (element tree plus a Client for the list and board, element-tree fallback), D-32 (a docked panel under panel.mode, both by default; cutover by the per-profile retirement switch) and D-33 (the mod runs a configured sync command after a 10-second quiet; any failure starts a turn in the session through $.prompt.submit with a fixed, truncated template, deduplicated, retries capped, plus a terminal notification). Research behind it: docs/research/claude-code-mod-panel-rendering-and-focus.md (PR #37). Build follows Phase 1B.\n",
+    "created_at": "2026-10-24T01:01:37Z"
+  },
+  {
+    "id": "e2db80eb-47b0-5976-8582-abfc09168570",
+    "issue_id": "BU-mg2.3",
+    "author": "Sergei Wallace",
+    "text": "### `#294` — **BU-beads-ui-claude-code-aeyb: beads-ui Claude Code mod, the task manager in the CC TUI with mouse control** · `BU-mg2.3` — **beads-ui Claude Code mod: the task manager inside the Claude Code TUI, with mouse control**\n\n**Description:** The beads-ui mod: band, pane and the Phase 2B task panel that replaces the Claude Code task panel.\n\n**Why it matters:** It is the surface Sergei uses to see and edit this session's tasks.\n\n**Progress (verified):** The Phase 2B design is on beads-ui main (PR #38, 8a0708f, decisions D-31 to D-33). Installed build 0.9.3 is the only beads-ui row in installed_plugins.json, per the 2026-10-24T20:46Z BU-47k check. The live band is correct on sessions restarted onto that build.\n\n**Active agents / dispatches:** None verified.\n\n**Next steps:** Restart the sessions still on old builds, then the panel cutover (BU-ydts).\n\n**Blockers, bugs, obstacles, or open questions:** None verified beyond the children reported below.\n\n\u003c!-- progress-review-hash: c15c1ad18fd3a554 --\u003e\n",
+    "created_at": "2026-10-24T21:49:34Z"
+  }
+]

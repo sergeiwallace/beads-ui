@@ -1,4 +1,5 @@
 import { historyArgv, issueIdArg, showArgv, statusArg } from "../argv.ts";
+import { textWidth } from "../layout.ts";
 import type { BdArgv, HistoryEvent, Issue, Result } from "../model.ts";
 import { isCalendarDate } from "../quickadd.ts";
 import { fitBlock, priorityBadge, truncate } from "./text.ts";
@@ -22,7 +23,7 @@ export const DETAIL_EVENT_LIMIT = 10;
 export interface FieldView {
   key: string;
   label: string;
-  /** The value as drawn, cut to the width. */
+  /** The value as drawn: whole when `label: value` fits the fields column, else cut to fit it. */
   value: string;
   editable?: EditableField;
   /**
@@ -44,6 +45,8 @@ export interface DependencyView {
   type: string;
   status: string;
   title: string;
+  /** The row as drawn: display id, status, type and title, cut only past the view's width. */
+  line: string;
 }
 
 export interface EventView {
@@ -51,6 +54,8 @@ export interface EventView {
   actor: string;
   type: string;
   summary: string;
+  /** The row as drawn: time, actor, type and summary, cut only past the view's width. */
+  line: string;
 }
 
 export interface DetailState {
@@ -269,7 +274,10 @@ function summarise(event: HistoryEvent): string {
 export interface DetailViewOptions {
   /** The board's issues, to show each dependency's display id and, when bd show had none, status. */
   issues?: readonly Issue[];
+  /** The view's columns: the heading and each dependency and history row may use all of them. */
   width: number;
+  /** The fields column's columns, where each `label: value` row is drawn; `width` when absent. */
+  fieldWidth?: number;
 }
 
 export function detailView(state: DetailState, options: DetailViewOptions): DetailView {
@@ -287,29 +295,40 @@ export function detailView(state: DetailState, options: DetailViewOptions): Deta
     .slice(0, DETAIL_EVENT_LIMIT)
     .map(({ event }) => event);
 
+  const fieldWidth = options.fieldWidth ?? width;
   const view: DetailView = {
     id: issue.id,
     heading: truncate(`${issue.displayId ?? issue.id} ${issue.title}`, width),
-    fields: fieldsOf(issue).map((field) => ({ ...field, value: truncate(field.value, width) })),
+    fields: fieldsOf(issue).map((field) => ({
+      ...field,
+      value: truncate(field.value, fieldWidth - textWidth(`${field.label}: `)),
+    })),
     markdown: markdownOf(issue),
     dependencies: issue.dependencies.map((dep): DependencyView => {
       const known = lookup.get(dep.id);
+      const displayId = known?.displayId ?? dep.id;
+      const status = dep.status ?? known?.status ?? "unknown";
+      const title = dep.title ?? known?.title ?? "";
       return {
         id: dep.id,
-        displayId: truncate(known?.displayId ?? dep.id, width),
+        displayId,
         type: dep.type,
-        status: dep.status ?? known?.status ?? "unknown",
-        title: truncate(dep.title ?? known?.title ?? "", width),
+        status,
+        title,
+        line: truncate(`${displayId}  ${status}  ${dep.type}  ${title}`, width),
       };
     }),
-    events: newest.map(
-      (event): EventView => ({
-        at: event.createdAt.replace("T", " ").slice(0, 16),
+    events: newest.map((event): EventView => {
+      const at = event.createdAt.replace("T", " ").slice(0, 16);
+      const summary = summarise(event);
+      return {
+        at,
         actor: event.actor,
         type: event.type,
-        summary: truncate(summarise(event), width),
-      }),
-    ),
+        summary,
+        line: truncate(`${at}  ${event.actor}  ${event.type}  ${summary}`, width),
+      };
+    }),
   };
   if (state.saving !== undefined) view.savingLine = `saving ${state.saving}…`;
   if (state.error !== undefined) view.errorLine = state.error;

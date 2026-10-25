@@ -52,7 +52,9 @@ describe("detailView", () => {
         displayId: "BU-epic-beads-ui-beads-task-manager-mg2",
         type: "parent-child",
         status: "in_progress",
-        title: "EPIC beads-ui: Beads task manager for t…",
+        title:
+          "EPIC beads-ui: Beads task manager for the Claude Code TUI, an MCP UI app and a web app, sharing one core",
+        line: "BU-epic-beads-ui-beads-task-manager-mg2…",
       },
     ]);
   });
@@ -68,7 +70,7 @@ describe("detailView", () => {
   test("should show the history events with a readable summary when bd history returned them", () => {
     const view = detailView(openDetail(epic(), epicEvents()), { width: 60 });
 
-    expect(view.events).toEqual([
+    expect(view.events.map(({ line: _drawn, ...event }) => event)).toEqual([
       {
         at: "2026-10-21 05:48",
         actor: "Sergei Wallace",
@@ -232,10 +234,10 @@ describe("editArgv", () => {
 describe("parseFieldEdit", () => {
   test("should start each edit control from the whole value when the drawn one is cut", () => {
     const issue = epic();
-    const view = detailView(openDetail(issue, []), { width: 12 });
+    const view = detailView(openDetail(issue, []), { width: 16 });
     const field = (key: string) => view.fields.find((candidate) => candidate.key === key);
 
-    expect(field("title")?.value).toBe("beads-ui Cl…");
+    expect(field("title")?.value).toBe("beads-ui…");
     expect(field("title")?.raw).toBe(issue.title);
     expect(field("priority")?.raw).toBe(String(issue.priority));
     expect(field("id")?.raw).toBeUndefined();
