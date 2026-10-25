@@ -531,6 +531,17 @@ export {
   summaryPieces,
   taskRowView,
 } from "./views/disclosure.ts";
+export type { BandFigures, FigureBar } from "./views/figures.ts";
+export {
+  bandFigures,
+  FIGURE_PARTS,
+  figureCells,
+  MAX_BAR_COLUMNS,
+  SPARK_CELLS,
+  SPARK_GLYPHS,
+  sparkBuckets,
+  sparkLevel,
+} from "./views/figures.ts";
 export type {
   ActionContext,
   ClientKey,
@@ -606,6 +617,30 @@ export {
   withPanelOverrides,
 } from "./views/panel.ts";
 export type {
+  ImageVerdict,
+  PictureForm,
+  TerminalFacts,
+  TimelinePicture,
+} from "./views/picture.ts";
+export {
+  PICTURE_MAX_ITEMS,
+  palettePng,
+  pictureForm,
+  terminalImages,
+  timelinePicture,
+} from "./views/picture.ts";
+export type { RasterCell } from "./views/raster.ts";
+export {
+  base64,
+  decodeRasterCells,
+  hexColor,
+  RASTER_DEFAULT_COLOR,
+  RASTER_TOKEN_COLORS,
+  RASTER_TRACK_COLOR,
+  rasterCells,
+  rasterColorFor,
+} from "./views/raster.ts";
+export type {
   BlockedTransition,
   BlockerRow,
   ReviewListEntry,
@@ -672,11 +707,11 @@ export type {
 } from "./views/timeline.ts";
 export {
   barCells,
+  barRun,
   DUE_COLUMNS,
   dayOf,
   isTimelineIssue,
   RASTER_COLORS,
-  RASTER_DEFAULT_COLOR,
   RASTER_MAX_COLUMNS,
   TIMELINE_TYPES,
   timelineLayout,
