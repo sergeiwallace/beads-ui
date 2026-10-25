@@ -4,13 +4,15 @@ import {
   DEFAULT_REVIEW_FILTER,
   type ReviewListView,
   type ReviewSection,
+  SPACE,
   stampText,
   truncate,
 } from "../../core/src/index.ts";
 import type { ReaderState } from "../review.ts";
 import { has, type Surface } from "./adapters.ts";
 import { field, markdown } from "./elements.ts";
-import { colorOf } from "./look.ts";
+import { emptyState, errorState, stateBox } from "./frame.ts";
+import { colorOf, rowHover, weight } from "./look.ts";
 
 // The Review section of a Detail and the reader of one held item (D-40, T-2C.5), drawn once for
 // both surfaces: the pane's Detail draws the section and the reader, the band's overview the
@@ -53,7 +55,7 @@ export function reviewRows(
   const rows: RenderNode[] = [
     Box({
       key: "review-heading",
-      children: [Text({ bold: true, color: colorOf("accent"), children: section.heading })],
+      children: [Text({ ...weight("title"), children: section.heading })],
     }),
   ];
   for (const row of section.rows) {
@@ -174,10 +176,11 @@ export function reviewList(
       key: k,
       children: [
         compact
-          ? Text({ dimColor: true, wrap: "truncate-end", children: truncate(text, width) })
-          : Text({ dimColor: true, children: text }),
+          ? Text({ ...weight("meta"), wrap: "truncate-end", children: truncate(text, width) })
+          : Text({ ...weight("meta"), children: text }),
       ],
     });
+  const line = (text: string) => (compact ? truncate(text, width) : text);
   const pressable = (k: string, label: string, hotkey: string, press: () => void) =>
     Button({ key: k, label, plain: true, ...key(hotkey), onPress: press });
   const scope = actions.scope;
@@ -195,7 +198,7 @@ export function reviewList(
         }),
         view.read === undefined || compact
           ? undefined
-          : Text({ dimColor: true, children: view.read }),
+          : Text({ ...weight("meta"), children: view.read }),
       ]),
     }),
     Box({
@@ -234,17 +237,26 @@ export function reviewList(
       ],
     }),
   ];
+  // T-2C.12: the filter's refusal and the snapshot's note draw as warning states, an unset
+  // command and an empty list as empty states, each in its compact form on a short surface.
   if (view.filterError !== undefined) {
     rows.push(
-      Box({
+      stateBox(surface, {
         key: "review-view:filter-error",
-        children: [Text({ color: colorOf("warning"), children: view.filterError })],
+        kind: "warning",
+        lines: [view.filterError],
       }),
     );
   }
-  if (view.unset !== undefined) rows.push(dim("review-view:unset", view.unset));
-  if (view.note !== undefined) rows.push(dim("review-view:note", view.note));
-  if (view.empty !== undefined) rows.push(dim("review-view:empty", view.empty));
+  if (view.unset !== undefined)
+    rows.push(emptyState(surface, "review-view:unset", line(view.unset)));
+  if (view.note !== undefined) {
+    rows.push(
+      stateBox(surface, { key: "review-view:note", kind: "warning", lines: [line(view.note)] }),
+    );
+  }
+  if (view.empty !== undefined)
+    rows.push(emptyState(surface, "review-view:empty", line(view.empty)));
   for (const entry of view.entries) {
     if (entry.kind === "group") {
       rows.push(
@@ -252,7 +264,7 @@ export function reviewList(
           key: `review-group:${entry.key}`,
           children: [
             Text({
-              bold: true,
+              ...weight("heading"),
               wrap: "truncate-end",
               children: truncate(`${entry.label} (${entry.count})`, width),
             }),
@@ -272,13 +284,16 @@ export function reviewList(
         Box({
           key: `review-line:${row.key}`,
           flexDirection: "row",
-          columnGap: 1,
-          children: [open, Text({ dimColor: true, wrap: "truncate-end", children: row.meta })],
+          columnGap: SPACE.tight,
+          ...rowHover(),
+          children: [open, Text({ ...weight("meta"), wrap: "truncate-end", children: row.meta })],
         }),
       );
       continue;
     }
-    rows.push(Box({ key: `review-line:${row.key}`, flexDirection: "row", children: [open] }));
+    rows.push(
+      Box({ key: `review-line:${row.key}`, flexDirection: "row", ...rowHover(), children: [open] }),
+    );
     if (row.ask !== "") {
       rows.push(
         Box({
@@ -297,7 +312,7 @@ export function reviewList(
         columnGap: 1,
         children: [
           pressable("review:earlier", "earlier items", "b", () => actions.page(-1)),
-          Text({ dimColor: true, children: `page ${view.page + 1} of ${view.pages}` }),
+          Text({ ...weight("meta"), children: `page ${view.page + 1} of ${view.pages}` }),
           pressable("review:later", "later items", "p", () => actions.page(1)),
         ],
       }),
@@ -376,19 +391,14 @@ export function reviewReader(
     children: present<RenderNode>([
       Box({
         key: "reader-title",
-        children: [Text({ bold: true, children: `${item.kind}: ${item.title}` })],
+        children: [Text({ ...weight("title"), children: `${item.kind}: ${item.title}` })],
       }),
       dim("reader-path", item.path),
       dim("reader-status", status),
       item.ask === ""
         ? undefined
         : Box({ key: "reader-ask", children: [Text({ children: `Ask: ${item.ask}` })] }),
-      state.error === undefined
-        ? undefined
-        : Box({
-            key: "reader-error",
-            children: [Text({ color: colorOf("error"), children: state.error })],
-          }),
+      state.error === undefined ? undefined : errorState(surface, "reader-error", state.error),
       pages === undefined && state.error === undefined
         ? dim("reader-reading", "reading the item")
         : undefined,

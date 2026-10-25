@@ -11,6 +11,7 @@ import {
   PRESS_OPEN,
   panelActions,
   reduceBoard,
+  SECTION_COLUMNS,
   SIDE_NAV_COLUMNS,
   settingsView,
   taskListView,
@@ -333,8 +334,11 @@ describe("the element a surface lacks (D-35, T-2C.1)", () => {
 
 describe("the view registry (D-35, T-2C.1)", () => {
   const FRAME = { width: 117, bodyColumns: 118, placement: "dock", bodyRows: 28 };
-  /** The pane's view width at FRAME: the body less the side nav and its gap. */
-  const VIEW_COLUMNS = 117 - SIDE_NAV_COLUMNS - 1;
+  /**
+   * The pane's view width at FRAME: the body less the side nav and its gap, and inside it the
+   * view's framed section (T-2C.12).
+   */
+  const VIEW_COLUMNS = 117 - SIDE_NAV_COLUMNS - 1 - SECTION_COLUMNS;
 
   async function drawnPane() {
     const pane = new BeadsPane(new StoreResolver());

@@ -15,6 +15,7 @@ import {
   boardPath,
   boardReadArgvs,
   boardView,
+  CARD_FRAME_COLUMNS,
   type CardView,
   COMMANDS,
   type Comment,
@@ -57,6 +58,7 @@ import {
   LEASE_FILE,
   legendOf,
   MAX_SHOWN,
+  MEDIUM_COLUMNS,
   type MenuView,
   menuView,
   type NavLayout,
@@ -116,9 +118,12 @@ import {
   resolveTheme,
   reviewListView,
   reviewSection,
+  SECTION_COLUMNS,
+  SECTION_ROWS,
   SHORT_ROWS,
   SNAPSHOT_FILE,
   type SortSpec,
+  SPACE,
   STALE_MS,
   STATUS_CATEGORIES,
   type StoreResolution,
@@ -135,6 +140,7 @@ import {
   sortLabel,
   stateDirOf,
   statusesArgv,
+  statusToken,
   stepPage,
   storeLabel,
   submitFilter,
@@ -168,6 +174,7 @@ import {
   type Surface,
   type TasksRegion,
 } from "./components/adapters.ts";
+import { emptyState, errorState, headerBar, section } from "./components/frame.ts";
 import {
   enabledIndicators,
   gutter,
@@ -180,7 +187,15 @@ import {
   setIndicatorSwitches,
   setReviewIndex,
 } from "./components/indicators.ts";
-import { colorOf, glyphText, setAscii, setTheme, styledUi } from "./components/look.ts";
+import {
+  colorOf,
+  glyphText,
+  rowHover,
+  setAscii,
+  setTheme,
+  styledUi,
+  weight,
+} from "./components/look.ts";
 import { navFrame } from "./components/nav.ts";
 import { type ViewEntry, ViewRegistry } from "./components/registry.ts";
 import { ANSWER_KEY, reviewBlock, reviewList, reviewReader } from "./components/review.ts";
@@ -356,6 +371,11 @@ const MORE = glyphOf("text.more");
 
 const messageOf = (reason: unknown): string =>
   reason instanceof Error ? reason.message : String(reason);
+
+/** The cards a board page draws, in its lanes and among the statuses bd did not list. */
+const cardsOf = (view: BoardView): number =>
+  view.unplaced.length +
+  view.lanes.reduce((sum, lane) => sum + lane.cells.reduce((n, cell) => n + cell.length, 0), 0);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -1835,23 +1855,37 @@ export class BeadsPane {
     // A panel.mode changed to native in beads-ui.toml shows at this draw.
     this.settleTab();
     const nav = this.navAt(frame);
-    // The view's own width: the body less the side nav when it is drawn (T-2B.1).
-    const width = nav.viewColumns;
-    this.width = width;
     const short = isShort(frame.placement, frame.bodyRows);
+    // The view's own width: the body less the side nav when it is drawn (T-2B.1), and inside it
+    // the view's framed section (T-2C.12), which a short pane does not draw.
+    const width = this.bodyColumnsAt(frame);
+    this.width = width;
     const region = this.clientFaulted ? undefined : tasksRegion;
-    // The pane adapter (D-35): what every component the pane draws through can use.
-    const surface = paneSurface(
+    const extras = {
+      ...(region === undefined ? {} : { client: region }),
+      ...(raster === undefined ? {} : { raster }),
+    };
+    // The pane adapter (D-35): what every component the pane draws through can use, at the
+    // view's width for its chrome and at the section's inner width for the view itself.
+    const surface = paneSurface(ui, {
+      columns: nav.viewColumns,
+      short,
+      ...(frame.bodyRows === undefined ? {} : { rows: frame.bodyRows }),
+    });
+    const inner = paneSurface(
       ui,
-      { columns: width, short, ...(frame.bodyRows === undefined ? {} : { rows: frame.bodyRows }) },
       {
-        ...(region === undefined ? {} : { client: region }),
-        ...(raster === undefined ? {} : { raster }),
+        columns: width,
+        short,
+        ...(frame.bodyRows === undefined
+          ? {}
+          : { rows: Math.max(1, frame.bodyRows - (this.framesView(frame) ? SECTION_ROWS : 0)) }),
       },
+      extras,
     );
     const framed = (content: readonly RenderNode[]) =>
       navFrame(surface, nav, (item) => this.pressNav(item.view), content);
-    if (this.store?.ok === false) return framed(this.drawNoStore(ui, this.store));
+    if (this.store?.ok === false) return framed(this.drawNoStore(ui, this.store, short));
     const { groups, perRow, groupWidth } = this.layout(width);
     const view = this.boardViewAt(width);
     const ctx = this.actionContext(width, view);
@@ -1860,19 +1894,26 @@ export class BeadsPane {
       this.menuOpen && this.tab !== "tasks" ? this.drawMenu(ui, ctx, width, false) : undefined;
     // A view on the component layer draws itself through the pane adapter; the rest still
     // draw here until T-2C.8 moves them.
-    const drawn = this.views.get(this.tab)?.draw;
-    const body =
+    const entry = this.views.get(this.tab);
+    const drawn = entry?.draw;
+    const content =
       drawn !== undefined
-        ? drawn(surface)
+        ? drawn(inner)
         : this.tab === "board"
-          ? this.drawBoard(ui, view, groups, perRow, groupWidth)
+          ? this.drawBoard(inner, view, groups, perRow, groupWidth)
           : this.tab === "backlog"
-            ? this.drawBacklog(ui, width)
+            ? this.drawBacklog(inner, width)
             : this.tab === "settings"
-              ? this.drawSettingsView(ui, surface)
+              ? this.drawSettingsView(ui, inner)
               : this.tab === "timeline"
-                ? this.drawTimeline(ui, width, frame, raster)
-                : this.drawDetail(ui, width, surface);
+                ? this.drawTimeline(inner, width, frame, raster)
+                : this.drawDetail(ui, width, inner);
+    const body = section(inner, {
+      key: `section:${this.tab}`,
+      title: entry === undefined ? this.tab : `${entry.glyph} ${entry.labels.wide}`,
+      framed: this.framesView(frame),
+      children: [content],
+    });
     const inputs =
       this.tab === "tasks" || this.tab === "board" || this.tab === "backlog"
         ? this.drawInputs(ui, this.tab !== "tasks")
@@ -1970,9 +2011,32 @@ export class BeadsPane {
     return isShort(this.frame.placement, this.frame.bodyRows);
   }
 
+  /**
+   * The columns a view draws in at a frame: the view's width beside or under the nav, less its
+   * framed section's border and padding (T-2C.12) where the pane is not short.
+   */
+  private bodyColumnsAt(frame: PaneFrame): number {
+    const columns = this.navAt(frame).viewColumns;
+    return this.framesView(frame) ? Math.max(1, columns - SECTION_COLUMNS) : columns;
+  }
+
+  /**
+   * Whether the open view draws in a framed section (T-2C.12): every view but the Board, whose
+   * cards are each framed in their status's accent, where the pane is neither short nor in the
+   * narrow tier. Below MEDIUM_COLUMNS a frame's four columns are what a control needs (the
+   * Review view's sort button takes 40), so the section draws its title alone there.
+   */
+  private framesView(frame: PaneFrame): boolean {
+    return (
+      !isShort(frame.placement, frame.bodyRows) &&
+      this.tab !== "board" &&
+      this.navAt(frame).viewColumns >= MEDIUM_COLUMNS
+    );
+  }
+
   /** The options menu as the view now offers it. */
   private menuAt(frame: PaneFrame): MenuView {
-    const width = this.navAt(frame).viewColumns;
+    const width = this.bodyColumnsAt(frame);
     const id = this.menuFor;
     const issue =
       id === undefined ? undefined : this.board.issues.find((candidate) => candidate.id === id);
@@ -2101,13 +2165,7 @@ export class BeadsPane {
    * its Client where the surface mounts one, and the options menu under the row it is about.
    */
   drawTasks(surface: Surface): RenderElement {
-    const { Box, Text } = surface.ui;
-    if (!this.board.loaded) {
-      return Box({
-        key: "tasks",
-        children: [Text({ dimColor: true, children: `reading the store${MORE}` })],
-      });
-    }
+    if (!this.board.loaded) return this.drawUnread(surface, "tasks");
     const width = surface.columns;
     const ctx = this.actionContext(width, undefined, "tasks");
     const region = surface.client;
@@ -2186,6 +2244,7 @@ export class BeadsPane {
     return drawSettings(surface, view, {
       color: colorOf,
       problems: this.panel.problems,
+      fromFile: this.panel.fromFile,
       ...(this.settingsNotice === undefined ? {} : { notice: this.settingsNotice }),
       ...(band === undefined ? {} : { band: band.draw(ui, colorOf, { saveButton: false }) }),
       handlers: {
@@ -2203,17 +2262,12 @@ export class BeadsPane {
    * follows the focus.
    */
   private drawTimeline(
-    ui: PaneUi,
+    surface: Surface,
     width: number,
     frame: PaneFrame,
     raster: RasterElement | undefined,
   ): RenderElement {
-    if (!this.board.loaded) {
-      return ui.Box({
-        key: "timeline",
-        children: [ui.Text({ dimColor: true, children: `reading the store${MORE}` })],
-      });
-    }
+    if (!this.board.loaded) return this.drawUnread(surface, "timeline");
     const view = timelineView(this.scoped(this.timelineIssues()), {
       statuses: this.board.statuses,
       ...(this.board.loadedAt === undefined ? {} : { today: this.board.loadedAt }),
@@ -2222,6 +2276,7 @@ export class BeadsPane {
     const room =
       (frame.bodyRows ?? WANTED_ROWS) -
       TIMELINE_CHROME_ROWS -
+      (surface.short ? 0 : SECTION_ROWS) -
       (nav.kind === "side" ? 0 : nav.rows.length);
     // A Raster bar under its label takes two rows.
     const perItem = raster !== undefined && timelinePlacement(width) === "above" ? 2 : 1;
@@ -2235,7 +2290,7 @@ export class BeadsPane {
       session !== undefined &&
       view.items.length + view.undated.length === 0;
     return drawTimeline(
-      ui,
+      surface,
       mineEmpty
         ? {
             ...layout,
@@ -2263,7 +2318,7 @@ export class BeadsPane {
   /** The board as core pages it, at the pages the person stepped to. */
   private boardViewAt(width: number): BoardView {
     return boardView(this.shown(), {
-      columnWidth: this.layout(width).groupWidth - 1,
+      columnWidth: this.layout(width).groupWidth - 1 - CARD_FRAME_COLUMNS,
       swimlane: this.swimlane,
       softWipLimit: this.config.config.softWipLimit,
       filter: this.filter.filter,
@@ -2280,20 +2335,23 @@ export class BeadsPane {
     return ui.Box({ key, children: [ui.Text({ color: colorOf(token), children: text })] });
   }
 
-  /** The store and its read time, cut at the view's edge; the nav draws the views beside it. */
+  /**
+   * The header bar (T-2C.12): the store and its read time on the header's fill, cut at the view's
+   * edge; the nav draws the views beside it.
+   */
   private drawHeader(ui: PaneUi): RenderElement {
-    const { Box, Text } = ui;
+    const { Text } = ui;
     const resolved = this.store?.ok === true;
     const store = Text({
       wrap: "truncate-end",
       children: [
         Text({
-          bold: true,
+          ...weight("heading"),
           children: truncate(this.store === undefined ? "" : storeLabel(this.store), 40),
         }),
         "  ",
         Text({
-          dimColor: true,
+          ...weight("meta"),
           children: !resolved
             ? ""
             : this.board.loadedAt === undefined
@@ -2311,11 +2369,15 @@ export class BeadsPane {
             ]),
       ],
     });
-    return Box({ key: "header", children: [store] });
+    return headerBar(ui, [store]);
   }
 
   /** D-24's empty state: what the pane looked for, and the line that points it at a store. */
-  private drawNoStore(ui: PaneUi, store: Extract<StoreResolution, { ok: false }>): RenderElement[] {
+  private drawNoStore(
+    ui: PaneUi,
+    store: Extract<StoreResolution, { ok: false }>,
+    short: boolean,
+  ): RenderElement[] {
     const { Box, Text } = ui;
     return present<RenderElement>([
       this.drawHeader(ui),
@@ -2326,8 +2388,14 @@ export class BeadsPane {
       Box({
         key: "no-store",
         flexDirection: "column",
+        ...(short
+          ? {}
+          : { borderStyle: "round", borderColor: colorOf("warning"), paddingX: SPACE.tight }),
         children: [
-          Text({ bold: true, children: "beads-ui found no Beads store for this session." }),
+          Text({
+            ...weight("heading"),
+            children: "beads-ui found no Beads store for this session.",
+          }),
           ...store.tried.map((line) => Text({ children: `- ${line}` })),
           ...store.fix.map((line, i) =>
             i === 0
@@ -2339,11 +2407,18 @@ export class BeadsPane {
     ]);
   }
 
+  /**
+   * The lines over the view: the config's problems, notices and the undo line, and the error
+   * state of a refresh that failed over a board the pane kept (T-2C.12). Before a first board the
+   * views fed by it draw that error state themselves, and an empty Board or Backlog draws Mine's
+   * empty line as its own empty state.
+   */
   private drawLines(ui: PaneUi, width: number, view: BoardView, short: boolean): RenderElement[] {
     const filterLine =
       this.filter.error === undefined ? view.filterLine : describeFilterError(this.filter.error);
     const session = this.stores.sessionName;
     const onBoard = this.tab === "board" || this.tab === "backlog";
+    const fedByBoard = onBoard || this.tab === "tasks" || this.tab === "timeline";
     const ownOpen =
       this.scope === "mine" && session !== undefined && this.board.loaded
         ? this.shown().issues.filter((issue) => issue.status !== "closed").length
@@ -2351,7 +2426,7 @@ export class BeadsPane {
     const allOpen = this.board.issues.filter((issue) => issue.status !== "closed").length;
     return present([
       ...this.config.problems.map((problem, i) => this.line(ui, `config:${i}`, problem, "warning")),
-      onBoard && ownOpen === 0
+      this.tab === "board" && ownOpen === 0 && cardsOf(view) > 0
         ? this.line(
             ui,
             "mine-empty",
@@ -2368,9 +2443,9 @@ export class BeadsPane {
             "text.dim",
           )
         : undefined,
-      view.errorLine === undefined
+      view.errorLine === undefined || (fedByBoard && !this.board.loaded)
         ? undefined
-        : this.line(ui, "error-line", view.errorLine, "error"),
+        : errorState({ ui, short }, "error-line", view.errorLine),
       view.conflictLine === undefined
         ? undefined
         : this.line(ui, "conflict-line", view.conflictLine, "conflict"),
@@ -2473,16 +2548,19 @@ export class BeadsPane {
   }
 
   /**
-   * One card in a column `width` wide. Its Move to keeps its label while the label and the longest
-   * status fit beside each other; a status too long for the column is cut in its option label.
+   * One card in a column `width` wide (T-2C.12): framed in its status's accent, its priority bold
+   * in the priority's colour, the frame in the focus colour under the pointer. Its Move to keeps
+   * its label while the label and the longest status fit beside each other inside the frame; a
+   * status too long for it is cut in its option label.
    */
-  private drawCard(ui: PaneUi, card: CardView, width: number): RenderElement {
+  private drawCard(ui: PaneUi, card: CardView, width: number, accent: Token): RenderElement {
     const status = this.board.issues.find((issue) => issue.id === card.id)?.status ?? "";
     const { Box, Text, Select, Button } = ui;
+    const inner = Math.max(1, width - CARD_FRAME_COLUMNS);
     const values = [status, ...card.moveTargets];
-    const room = Math.max(1, width - SELECT_CHROME);
+    const room = Math.max(1, inner - SELECT_CHROME);
     const longest = Math.max(0, ...values.map(textWidth));
-    const labelled = width >= textWidth(MOVE_LABEL) + 2 + Math.min(longest, room) + SELECT_CHROME;
+    const labelled = inner >= textWidth(MOVE_LABEL) + 2 + Math.min(longest, room) + SELECT_CHROME;
     const options = values.map((value) =>
       textWidth(value) <= room ? { value } : { value, label: truncate(value, room) },
     );
@@ -2490,22 +2568,29 @@ export class BeadsPane {
     return Box({
       key: `card:${card.id}`,
       flexDirection: "column",
-      marginBottom: 1,
+      borderStyle: "round",
+      borderColor: colorOf(accent),
+      hover: { borderColor: colorOf("surface.focus") },
       children: [
         cells.length === 0
-          ? Text({ dimColor: true, children: card.displayId })
+          ? Text({ ...weight("meta"), children: card.displayId })
           : Box({
               flexDirection: "row",
-              gap: 1,
+              gap: SPACE.tight,
               children: present<RenderNode>([
                 gutter(ui, cells),
-                Text({ dimColor: true, wrap: "truncate-end", children: card.displayId }),
+                Text({ ...weight("meta"), wrap: "truncate-end", children: card.displayId }),
               ]),
             }),
         Text({ children: card.title }),
         Text({
-          color: colorOf(card.priorityToken),
-          children: `${card.priority}${card.assignee === "" ? "" : ` ${card.assignee}`}${card.pending ? ` moving${MORE}` : ""}`,
+          children: [
+            Text({ bold: true, color: colorOf(card.priorityToken), children: card.priority }),
+            ...(card.assignee === ""
+              ? []
+              : [" ", Text({ ...weight("meta"), children: card.assignee })]),
+            ...(card.pending ? [Text({ ...weight("meta"), children: ` moving${MORE}` })] : []),
+          ],
         }),
         Select({
           key: `move:${card.id}`,
@@ -2525,18 +2610,66 @@ export class BeadsPane {
     });
   }
 
+  /**
+   * What a view fed by the board read draws before it holds a board (T-2C.12): the error state
+   * when the read failed, keyed as the error line the pane draws over a board it kept, else the
+   * loading line.
+   */
+  private drawUnread(surface: Surface, key: string): RenderElement {
+    const { Box, Text } = surface.ui;
+    const failed = this.boardViewAt(surface.columns).errorLine;
+    if (failed !== undefined) return errorState(surface, "error-line", failed);
+    return Box({
+      key,
+      children: [Text({ ...weight("meta"), children: `reading the store${MORE}` })],
+    });
+  }
+
+  /**
+   * The empty state of the Board and the Backlog (T-2C.12): why nothing is drawn and what to do,
+   * the scope's own line when Mine holds nothing open.
+   */
+  private drawListEmpty(surface: Surface, key: string, what: string): RenderElement {
+    const session = this.stores.sessionName;
+    if (this.filter.text.trim() !== "") {
+      return emptyState(
+        surface,
+        key,
+        `No ${what} matches the filter.`,
+        "Clear the Filter field to show every one.",
+      );
+    }
+    if (this.scope === "mine" && session !== undefined) {
+      const allOpen = this.board.issues.filter((issue) => issue.status !== "closed").length;
+      return emptyState(
+        surface,
+        "mine-empty",
+        `No open issues are assigned to ${session}; a shows all ${allOpen} open.`,
+      );
+    }
+    return emptyState(
+      surface,
+      key,
+      `No ${what} in this store yet.`,
+      "Type a title in New to add one.",
+    );
+  }
+
   private drawBoard(
-    ui: PaneUi,
+    surface: Surface,
     view: BoardView,
     groups: readonly string[],
     perRow: number,
     groupWidth: number,
   ): RenderElement {
+    const ui = surface.ui as PaneUi;
     const { Box, Text, Button } = ui;
-    if (view.loading) {
+    if (view.loading) return this.drawUnread(surface, "board");
+    if (cardsOf(view) === 0 && view.lanePage.total <= 1) {
       return Box({
         key: "board",
-        children: [Text({ dimColor: true, children: `reading the store${MORE}` })],
+        flexDirection: "column",
+        children: [this.drawListEmpty(surface, "board-empty", "issue")],
       });
     }
     const lanes = view.lanes.map((lane) =>
@@ -2546,12 +2679,12 @@ export class BeadsPane {
         children: present<RenderNode>([
           lane.label === ""
             ? undefined
-            : Text({ bold: true, underline: true, children: lane.label }),
+            : Text({ ...weight("heading"), underline: true, children: lane.label }),
           // perRow groups to a row; a narrow pane stacks the rest below (T-1B.9).
           ...Array.from({ length: Math.ceil(groups.length / perRow) }, (_, row) =>
             Box({
               flexDirection: "row",
-              gap: 1,
+              gap: SPACE.tight,
               children: groups.slice(row * perRow, (row + 1) * perRow).map((category) =>
                 Box({
                   key: `group:${lane.key}:${category}`,
@@ -2572,7 +2705,9 @@ export class BeadsPane {
                           }),
                         ],
                       }),
-                      ...cards.map((card) => this.drawCard(ui, card, groupWidth)),
+                      ...cards.map((card) =>
+                        this.drawCard(ui, card, groupWidth, statusToken(column.category)),
+                      ),
                       page === undefined ? undefined : this.drawPager(ui, page),
                     ]);
                   }),
@@ -2590,8 +2725,8 @@ export class BeadsPane {
             key: "unplaced",
             flexDirection: "column",
             children: present<RenderNode>([
-              Text({ bold: true, children: "Statuses bd statuses did not list" }),
-              ...view.unplaced.map((card) => this.drawCard(ui, card, this.width)),
+              Text({ ...weight("heading"), children: "Statuses bd statuses did not list" }),
+              ...view.unplaced.map((card) => this.drawCard(ui, card, this.width, "surface.card")),
               this.drawPager(ui, view.unplacedPage),
             ]),
           });
@@ -2606,7 +2741,7 @@ export class BeadsPane {
         : Box({
             key: "lane-pager",
             flexDirection: "row",
-            columnGap: 1,
+            columnGap: SPACE.tight,
             children: [
               Button({
                 key: "lanes-back",
@@ -2615,7 +2750,7 @@ export class BeadsPane {
                 onPress: () => this.stepLanes(-1),
               }),
               Text({
-                dimColor: true,
+                ...weight("meta"),
                 children: `lanes ${lanePage.from}-${lanePage.to} of ${lanePage.total}${columnsText}`,
               }),
               Button({
@@ -2645,7 +2780,7 @@ export class BeadsPane {
       key: `pager:${page.key}`,
       flexDirection: "row",
       flexWrap: "wrap",
-      columnGap: 1,
+      columnGap: SPACE.tight,
       children: [
         Button({
           key: `prev:${page.key}`,
@@ -2654,7 +2789,7 @@ export class BeadsPane {
           dimColor: true,
           onPress: () => this.stepCell(page.key, -1),
         }),
-        Text({ dimColor: true, children: `${page.from}-${page.to} of ${page.total}` }),
+        Text({ ...weight("meta"), children: `${page.from}-${page.to} of ${page.total}` }),
         Button({
           key: `next:${page.key}`,
           label: page.to < page.total ? `+${page.total - page.to} more` : "first page",
@@ -2723,8 +2858,15 @@ export class BeadsPane {
     await this.host?.focus(PANE_ID, `open:${first.id}`).catch(() => undefined);
   }
 
-  private drawBacklog(ui: PaneUi, width: number): RenderElement {
+  /**
+   * The Backlog (T-2C.12): its count on the meta weight, one row an issue with the row's fill
+   * under the pointer, its pager; before a read the loading or error state, and with no row the
+   * empty state.
+   */
+  private drawBacklog(surface: Surface, width: number): RenderElement {
+    const ui = surface.ui as PaneUi;
     const { Box, Text, Button } = ui;
+    if (!this.board.loaded) return this.drawUnread(surface, "backlog");
     const view = this.backlogViewAt(width);
     const { page, wide, idWidth, typeWidth } = view;
     return Box({
@@ -2735,22 +2877,28 @@ export class BeadsPane {
           key: "backlog-count",
           children: [
             Text({
-              dimColor: true,
+              ...weight("meta"),
               children: `${page.total} of ${view.total} open issues, ${sortLabel(this.sort)} order`,
             }),
           ],
         }),
+        view.rows.length === 0
+          ? this.drawListEmpty(surface, "backlog-empty", "open issue")
+          : undefined,
         ...view.rows.map((row) =>
           Box({
             key: `row:${row.id}`,
             flexDirection: "row",
-            gap: 1,
+            gap: SPACE.tight,
+            ...rowHover(),
             children: present<RenderNode>([
               gutter(ui, this.gutterOfId(row.id, width)),
-              Text({ color: colorOf(row.priorityToken), children: row.priority }),
+              Text({ bold: true, color: colorOf(row.priorityToken), children: row.priority }),
               Box({
                 width: idWidth,
-                children: [Text({ dimColor: true, wrap: "truncate-end", children: row.displayId })],
+                children: [
+                  Text({ ...weight("meta"), wrap: "truncate-end", children: row.displayId }),
+                ],
               }),
               ...(wide
                 ? [Box({ width: typeWidth, children: [Text({ children: row.type })] })]
@@ -2762,7 +2910,7 @@ export class BeadsPane {
               ...(wide
                 ? [
                     Text({ children: row.assignee }),
-                    Text({ dimColor: true, children: row.created }),
+                    Text({ ...weight("meta"), children: row.created }),
                   ]
                 : []),
               Button({
@@ -2780,7 +2928,7 @@ export class BeadsPane {
           : Box({
               key: "backlog-pager",
               flexDirection: "row",
-              columnGap: 1,
+              columnGap: SPACE.tight,
               children: [
                 Button({
                   key: "backlog-back",
@@ -2789,7 +2937,10 @@ export class BeadsPane {
                   dimColor: true,
                   onPress: () => void this.stepBacklog(-1),
                 }),
-                Text({ dimColor: true, children: `rows ${page.from}-${page.to} of ${page.total}` }),
+                Text({
+                  ...weight("meta"),
+                  children: `rows ${page.from}-${page.to} of ${page.total}`,
+                }),
                 Button({
                   key: "backlog-next",
                   label: page.to < page.total ? `+${page.total - page.to} more` : "first page",
@@ -2810,25 +2961,26 @@ export class BeadsPane {
     if (id === undefined) {
       return Box({
         key: "detail",
+        flexDirection: "column",
         children: [
-          Text({
-            dimColor: true,
-            children:
-              "No issue open: Tab to a card's detail button and press Enter, or focus a card and press d.",
-          }),
+          emptyState(
+            surface,
+            "detail-empty",
+            "No issue open: Tab to a card's detail button and press Enter, or focus a card and press d.",
+          ),
         ],
       });
     }
     const errorLine =
       this.detailError === undefined
         ? undefined
-        : this.line(ui, "detail-error", this.detailError, "error");
+        : errorState(surface, "detail-error", this.detailError);
     if (this.detail === undefined) {
       return Box({
         key: "detail",
         flexDirection: "column",
         children: present([
-          errorLine ?? Text({ dimColor: true, children: `reading ${id}${MORE}` }),
+          errorLine ?? Text({ ...weight("meta"), children: `reading ${id}${MORE}` }),
         ]),
       });
     }
@@ -2843,7 +2995,7 @@ export class BeadsPane {
       Box({
         key: `edit-row:${editable}`,
         flexDirection: "row",
-        gap: 1,
+        gap: SPACE.tight,
         children: [
           Box({
             key: `label:${editable}`,
@@ -2917,11 +3069,21 @@ export class BeadsPane {
         children: [Text({ children: `${field.label}: ${field.value}` })],
       });
     });
+    // Each part of the Detail under its heading on the weight scale, a `tight` row above it.
+    const heading = (key: string, text: string) =>
+      Box({
+        key,
+        marginTop: SPACE.tight,
+        children: [Text({ ...weight("heading"), children: text })],
+      });
     return Box({
       key: "detail",
       flexDirection: "column",
       children: present<RenderNode>([
-        Box({ key: "detail-heading", children: [Text({ bold: true, children: view.heading })] }),
+        Box({
+          key: "detail-heading",
+          children: [Text({ ...weight("title"), children: view.heading })],
+        }),
         view.savingLine === undefined
           ? undefined
           : this.line(ui, "detail-saving", view.savingLine, "text.dim"),
@@ -2932,7 +3094,7 @@ export class BeadsPane {
         this.drawReview(surface, this.detail.issue),
         Box({
           flexDirection: wide ? "row" : "column",
-          gap: wide ? 2 : 1,
+          gap: wide ? SPACE.loose : SPACE.tight,
           children: [
             Box({ key: "detail-fields", flexDirection: "column", width: left, children: fields }),
             Box({
@@ -2940,24 +3102,24 @@ export class BeadsPane {
               flexDirection: "column",
               flexGrow: 1,
               children: view.markdown.flatMap((block) => [
-                Text({ bold: true, children: block.label }),
+                Text({ ...weight("heading"), children: block.label }),
                 Markdown({ key: `md:${block.key}`, text: block.text }),
               ]),
             }),
           ],
         }),
-        Text({ bold: true, children: `Dependencies (${view.dependencies.length})` }),
+        heading("dependencies-heading", `Dependencies (${view.dependencies.length})`),
         ...view.dependencies.map((dep) =>
           Box({
             key: `dep:${dep.id}`,
             children: [Text({ children: dep.line })],
           }),
         ),
-        Text({ bold: true, children: `History, last ${view.events.length}` }),
+        heading("history-heading", `History, last ${view.events.length}`),
         ...view.events.map((event, i) =>
           Box({
             key: `event:${i}`,
-            children: [Text({ dimColor: true, children: event.line })],
+            children: [Text({ ...weight("meta"), children: event.line })],
           }),
         ),
         ...this.drawComments(ui, width, id),
@@ -3200,7 +3362,8 @@ export class BeadsPane {
     return present<RenderNode>([
       Box({
         key: "comments-heading",
-        children: [Text({ bold: true, children: view.heading })],
+        marginTop: SPACE.tight,
+        children: [Text({ ...weight("heading"), children: view.heading })],
       }),
       this.commentsError === undefined
         ? undefined
@@ -3210,7 +3373,7 @@ export class BeadsPane {
           key: `comment:${row.id}`,
           flexDirection: "column",
           children: [
-            Text({ dimColor: true, children: row.line }),
+            Text({ ...weight("meta"), children: row.line }),
             Markdown({ key: `comment-md:${row.id}`, text: row.text }),
           ],
         }),
@@ -3224,7 +3387,7 @@ export class BeadsPane {
       Box({
         key: "comment-row",
         flexDirection: "row",
-        gap: 1,
+        gap: SPACE.tight,
         children: [
           Box({ key: "label:comment", flexShrink: 0, children: [Text({ children: "Comment:" })] }),
           Input({

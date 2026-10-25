@@ -16,6 +16,7 @@ import {
   resolvePanel,
   resolveSurfaces,
   type SettingsView,
+  SPACE,
   type SurfaceOverrides,
   type SurfaceSetting,
   surfaceOverridesOf,
@@ -27,8 +28,9 @@ import {
 } from "../core/src/index.ts";
 import type { RasterElement, Surface } from "./components/adapters.ts";
 import { choice, field } from "./components/elements.ts";
+import { emptyState, stateBox } from "./components/frame.ts";
+import { rowHover, weight } from "./components/look.ts";
 import type { Host } from "./host.ts";
-import type { PaneUi } from "./pane.ts";
 
 // The task panel's settings state and the pane views not yet on the component layer (D-35):
 // the options menu, the Timeline and the Settings view, each from core's view model. The nav,
@@ -74,6 +76,8 @@ export class PanelSettingsState {
   surfaceOverrides: Record<string, SurfaceSetting> = {};
   indicatorOverrides: Record<string, boolean> = {};
   problems: string[] = [];
+  /** Whether the last read found a beads-ui.toml; Settings shows the defaults when not. */
+  fromFile = false;
   private file: PanelSettings = { ...DEFAULT_PANEL_SETTINGS };
   private fileSurfaces: Record<string, SurfaceSetting> = {};
   private fileIndicators: Record<string, boolean> = {};
@@ -118,6 +122,7 @@ export class PanelSettingsState {
     this.fileIndicators = glyphs.switches;
     this.fileAscii = glyphs.ascii;
     this.problems = [...resolved.problems, ...surfaces.problems];
+    this.fromFile = text !== undefined;
     await this.reload();
   }
 
@@ -215,7 +220,7 @@ export function drawMenu(
       ...menu.sections.flatMap((section) => [
         Box({
           key: section.key,
-          children: [Text({ bold: true, wrap: "truncate-end", children: section.title })],
+          children: [Text({ ...weight("heading"), wrap: "truncate-end", children: section.title })],
         }),
         ...section.items.map((item) =>
           Button({
@@ -245,11 +250,11 @@ export function drawMenu(
  * a row window says how many items are above and below it.
  */
 export function drawTimeline(
-  ui: PaneUi,
+  surface: Pick<Surface, "ui" | "short">,
   layout: TimelineLayout,
   options: { raster?: RasterElement; open: (id: string) => void },
 ): RenderElement {
-  const { Box, Text, Button } = ui;
+  const { Box, Text, Button } = surface.ui;
   const { raster } = options;
   const label = (id: string, text: string) =>
     Button({
@@ -272,13 +277,18 @@ export function drawTimeline(
         ];
   const rows = layout.rows.map((row) => {
     if (raster === undefined) {
-      return Box({ key: `timeline-row:${row.id}`, children: [label(row.id, row.line)] });
+      return Box({
+        key: `timeline-row:${row.id}`,
+        ...rowHover(),
+        children: [label(row.id, row.line)],
+      });
     }
     if (layout.placement === "beside") {
       return Box({
         key: `timeline-row:${row.id}`,
         flexDirection: "row",
-        gap: 1,
+        gap: SPACE.tight,
+        ...rowHover(),
         children: [
           Box({ width: layout.labelColumns, flexShrink: 0, children: [label(row.id, row.label)] }),
           ...bar(row),
@@ -288,9 +298,10 @@ export function drawTimeline(
     return Box({
       key: `timeline-row:${row.id}`,
       flexDirection: "column",
+      ...rowHover(),
       children: [
         label(row.id, row.label),
-        Box({ flexDirection: "row", gap: 1, children: bar(row) }),
+        Box({ flexDirection: "row", gap: SPACE.tight, children: bar(row) }),
       ],
     });
   });
@@ -300,23 +311,23 @@ export function drawTimeline(
     children: present<RenderNode>([
       Box({
         key: "timeline-count",
-        children: [Text({ dimColor: true, children: layout.summary })],
+        children: [Text({ ...weight("meta"), children: layout.summary })],
       }),
       layout.rows.length === 0
-        ? Box({
-            key: "timeline-empty",
-            children: [Text({ dimColor: true, children: layout.emptyLine })],
-          })
+        ? emptyState(surface, "timeline-empty", layout.emptyLine)
         : Box({
             key: "timeline-axis",
-            children: [Text({ dimColor: true, children: layout.axisLine })],
+            children: [Text({ ...weight("meta"), children: layout.axisLine })],
           }),
       layout.above === 0
         ? undefined
         : Box({
             key: "timeline-above",
             children: [
-              Text({ dimColor: true, children: `${glyphOf("list.above")} ${layout.above} above` }),
+              Text({
+                ...weight("meta"),
+                children: `${glyphOf("list.above")} ${layout.above} above`,
+              }),
             ],
           }),
       ...rows,
@@ -324,7 +335,7 @@ export function drawTimeline(
         key: "timeline-undated",
         flexDirection: "column",
         children: [
-          Text({ bold: true, children: layout.undatedHeading }),
+          Text({ ...weight("heading"), children: layout.undatedHeading }),
           ...layout.undated.map((entry) => label(entry.id, entry.label)),
         ],
       }),
@@ -333,7 +344,10 @@ export function drawTimeline(
         : Box({
             key: "timeline-below",
             children: [
-              Text({ dimColor: true, children: `${glyphOf("list.below")} ${layout.below} below` }),
+              Text({
+                ...weight("meta"),
+                children: `${glyphOf("list.below")} ${layout.below} below`,
+              }),
             ],
           }),
     ]),
@@ -354,10 +368,15 @@ const SETTINGS_LABEL_COLUMNS = Math.max(
 export const settingsOptionRoom = (width: number): number =>
   Math.max(8, width - SETTINGS_LABEL_COLUMNS - 1 - 2);
 
+/** What Settings says when no beads-ui.toml was found (T-2C.12): the view's empty state. */
+export const SETTINGS_DEFAULTS_TEXT =
+  "No beads-ui.toml yet: these are the defaults. Save to file writes them, with any you change.";
+
 /**
  * The Settings view (T-2B.8): the panel's rows from core's settings view, each view's surfaces,
  * then the band's own settings, then one Save to file that writes every table. Its fields and
  * lists draw through the element functions, so a surface with no Input or Select draws buttons.
+ * The file's problems draw as its warning state, and no file as its empty state (T-2C.12).
  */
 export function drawSettings(
   surface: Surface,
@@ -367,6 +386,8 @@ export function drawSettings(
     problems: readonly string[];
     notice?: { text: string; token: Token };
     band?: RenderElement;
+    /** Whether a beads-ui.toml was read; without one Settings draws its empty state. */
+    fromFile?: boolean;
     handlers: SettingsHandlers;
   },
 ): RenderElement {
@@ -392,13 +413,13 @@ export function drawSettings(
       children: [
         Box({
           flexDirection: "row",
-          gap: 1,
+          gap: SPACE.tight,
           children: [
             Box({ flexShrink: 0, children: [Text({ children: `${row.label}:` })] }),
             control,
           ],
         }),
-        Text({ dimColor: true, children: row.hint }),
+        Text({ ...weight("meta"), children: row.hint }),
       ],
     });
   });
@@ -406,13 +427,13 @@ export function drawSettings(
     key: "settings",
     flexDirection: "column",
     children: present<RenderNode>([
-      Text({ bold: true, children: "Task panel (every session on this machine)" }),
-      ...options.problems.map((problem, i) =>
-        Box({
-          key: `settings:problem:${i}`,
-          children: [Text({ color: options.color("warning"), children: problem })],
-        }),
-      ),
+      Text({ ...weight("heading"), children: "Task panel (every session on this machine)" }),
+      options.fromFile === false
+        ? emptyState(surface, "settings:empty", SETTINGS_DEFAULTS_TEXT)
+        : undefined,
+      options.problems.length === 0
+        ? undefined
+        : stateBox(surface, { key: "settings:problems", kind: "warning", lines: options.problems }),
       options.notice === undefined
         ? undefined
         : Box({
