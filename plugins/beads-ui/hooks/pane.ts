@@ -281,6 +281,15 @@ export const SHORT_HELP_TEXT =
 export const NO_NAME_TEXT =
   "Mine needs the session's name, which ai c sets in CLAUDE_CODE_TASK_LIST_ID; this session has none, so the board shows all issues";
 
+/** The Backlog's measured columns (backlogViewAt): the tier and each fixed column's width. */
+interface BacklogColumns {
+  wide: boolean;
+  idWidth: number;
+  typeWidth: number;
+}
+
+const assigneeLabel = (assignee: string): string => (assignee === "" ? "" : `@${assignee}`);
+
 const messageOf = (reason: unknown): string =>
   reason instanceof Error ? reason.message : String(reason);
 
@@ -2313,27 +2322,45 @@ export class BeadsPane {
     });
   }
 
-  /** The Backlog's column widths at a body width. */
-  private backlogLayout(width: number): { wide: boolean; idWidth: number; titleWidth: number } {
+  /**
+   * The Backlog as core pages it, at the page the person stepped to, with its columns sized to
+   * the page drawn: the display id, type and assignee columns take their longest value up to a
+   * cap, so a value that fits is drawn whole, and the title takes the rest of the width.
+   */
+  private backlogViewAt(width: number): BacklogView & BacklogColumns {
     const wide = width >= 90;
-    const idWidth = Math.min(32, Math.max(10, Math.floor(width * (wide ? 0.28 : 0.3))));
-    const fixed = wide ? 3 + idWidth + 8 + 12 + 10 + 8 + 6 : 3 + idWidth + 6 + 3;
-    return { wide, idWidth, titleWidth: Math.max(10, width - fixed) };
-  }
-
-  /** The Backlog as core pages it, at the page the person stepped to. */
-  private backlogViewAt(width: number): BacklogView {
-    const { idWidth, titleWidth } = this.backlogLayout(width);
-    return backlogView(this.shown().issues, {
+    const view = backlogView(this.shown().issues, {
       statuses: this.board.statuses,
       filter: this.filter,
       sort: this.sort,
-      titleWidth,
-      idWidth,
+      titleWidth: Number.POSITIVE_INFINITY,
+      idWidth: Number.POSITIVE_INFINITY,
       pageSize: BACKLOG_PAGE_SIZE,
       page: this.backlogPage,
       ...(this.readyIds === undefined ? {} : { readyIds: this.readyIds }),
     });
+    const longest = (values: readonly string[]) => Math.max(1, ...values.map(textWidth));
+    const idCap = Math.max(10, Math.floor(width * (wide ? 0.28 : 0.3)));
+    const idWidth = Math.min(idCap, longest(view.rows.map((row) => row.displayId)));
+    const typeWidth = wide ? Math.min(12, longest(view.rows.map((row) => row.type))) : 0;
+    const assigneeWidth = wide
+      ? Math.min(24, longest(view.rows.map((row) => assigneeLabel(row.assignee))))
+      : 0;
+    const fixed = wide ? 3 + idWidth + typeWidth + assigneeWidth + 10 + 8 + 6 : 3 + idWidth + 6 + 3;
+    const titleWidth = Math.max(10, width - fixed);
+    return {
+      ...view,
+      rows: view.rows.map((row) => ({
+        ...row,
+        displayId: truncate(row.displayId, idWidth),
+        type: truncate(row.type, typeWidth),
+        assignee: truncate(assigneeLabel(row.assignee), assigneeWidth),
+        title: truncate(row.title, titleWidth),
+      })),
+      wide,
+      idWidth,
+      typeWidth,
+    };
   }
 
   /**
@@ -2353,9 +2380,8 @@ export class BeadsPane {
 
   private drawBacklog(ui: PaneUi, width: number): RenderElement {
     const { Box, Text, Button } = ui;
-    const { wide, idWidth } = this.backlogLayout(width);
     const view = this.backlogViewAt(width);
-    const { page } = view;
+    const { page, wide, idWidth, typeWidth } = view;
     return Box({
       key: "backlog",
       flexDirection: "column",
@@ -2381,7 +2407,7 @@ export class BeadsPane {
                 children: [Text({ dimColor: true, wrap: "truncate-end", children: row.displayId })],
               }),
               ...(wide
-                ? [Box({ width: 8, children: [Text({ children: truncate(row.type, 8) })] })]
+                ? [Box({ width: typeWidth, children: [Text({ children: row.type })] })]
                 : []),
               Box({
                 flexGrow: 1,
@@ -2389,9 +2415,7 @@ export class BeadsPane {
               }),
               ...(wide
                 ? [
-                    Text({
-                      children: truncate(row.assignee === "" ? "" : `@${row.assignee}`, 12),
-                    }),
+                    Text({ children: row.assignee }),
                     Text({ dimColor: true, children: row.created }),
                   ]
                 : []),
@@ -2460,7 +2484,7 @@ export class BeadsPane {
     }
     const wide = width >= 90;
     const left = wide ? Math.floor(width * 0.45) : width;
-    const view = detailView(this.detail, { issues: this.board.issues, width: left - 14 });
+    const view = detailView(this.detail, { issues: this.board.issues, width, fieldWidth: left });
     const statuses = this.board.statuses.map((status) => ({ value: status.name }));
     // A control's own label shares its row with the value, and on a narrow pane a long value
     // squeezes it and cuts it in two (Claude Code 2.1.306, 53 columns). So the label is drawn
@@ -2575,29 +2599,14 @@ export class BeadsPane {
         ...view.dependencies.map((dep) =>
           Box({
             key: `dep:${dep.id}`,
-            children: [
-              Text({
-                children: truncate(
-                  `${dep.displayId}  ${dep.status}  ${dep.type}  ${dep.title}`,
-                  width,
-                ),
-              }),
-            ],
+            children: [Text({ children: dep.line })],
           }),
         ),
         Text({ bold: true, children: `History, last ${view.events.length}` }),
         ...view.events.map((event, i) =>
           Box({
             key: `event:${i}`,
-            children: [
-              Text({
-                dimColor: true,
-                children: truncate(
-                  `${event.at}  ${event.actor}  ${event.type}  ${event.summary}`,
-                  width,
-                ),
-              }),
-            ],
+            children: [Text({ dimColor: true, children: event.line })],
           }),
         ),
       ]),
