@@ -21,6 +21,15 @@ export type TasksRegion = (props: TaskClientProps, width: number, height: number
 export type RasterElement = Terminal["Raster"];
 
 /**
+ * Where the surface scrolls a list itself rather than following the focus (the band's overview,
+ * D-36): the first row drawn, and what moving it to another first row does.
+ */
+export interface SurfaceScroll {
+  readonly start: number;
+  readonly to: (start: number) => void;
+}
+
+/**
  * A surface's profile and its element constructors: the adapter interface every component draws
  * through. `columns` is the view's width, `rows` the rows it may take (undefined: as many as it
  * needs), `short` the short-height rule of T-1B.9, `elements` the kinds of ElementKind it draws.
@@ -36,6 +45,8 @@ export interface Surface {
   readonly client?: TasksRegion;
   /** Where a Raster draws: the Timeline's bars. */
   readonly raster?: RasterElement;
+  /** Where a list scrolls by its own controls, not the focus. */
+  readonly scroll?: SurfaceScroll;
 }
 
 /**
@@ -47,8 +58,15 @@ export const BAND_ELEMENTS: ReadonlySet<ElementKind> = new Set(ELEMENT_KINDS);
 /** The pane's: every element kind. */
 export const PANE_ELEMENTS: ReadonlySet<ElementKind> = new Set(ELEMENT_KINDS);
 
-/** The band adapter: the elements it was handed, its columns and its maxRows, short always. */
-export function bandSurface(ui: SurfaceUi, size: { columns: number; maxRows?: number }): Surface {
+/**
+ * The band adapter: the elements it was handed, its columns and its maxRows, short always, and
+ * where it scrolls a list by its own controls.
+ */
+export function bandSurface(
+  ui: SurfaceUi,
+  size: { columns: number; maxRows?: number },
+  scroll?: SurfaceScroll,
+): Surface {
   const { Box, Text, Button, Input, Select, Markdown } = styledUi(ui);
   return {
     id: "band",
@@ -64,6 +82,7 @@ export function bandSurface(ui: SurfaceUi, size: { columns: number; maxRows?: nu
     rows: size.maxRows,
     short: true,
     elements: BAND_ELEMENTS,
+    ...(scroll === undefined ? {} : { scroll }),
   };
 }
 

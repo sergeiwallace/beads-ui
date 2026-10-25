@@ -10,11 +10,16 @@ import {
 } from "./sync.ts";
 import { isToken, TOKENS, type Token } from "./tokens.ts";
 import {
+  BAND_LEVELS,
   BAND_PARTS,
+  type BandLevel,
   type BandPart,
   type BandSettings,
   DEFAULT_BAND_SETTINGS,
+  isBandLevel,
   isBandPart,
+  isBandRows,
+  MAX_BAND_ROWS,
 } from "./views/band.ts";
 import {
   COLLAPSE_RULES,
@@ -372,7 +377,26 @@ function windowOf(value: unknown, problems: string[], where: string): string | u
   return undefined;
 }
 
-/** The band's settings from `[band]`: `done_window`, `parts` and `debug`, read at call time. */
+function bandRowsOf(value: unknown, problems: string[], where: string): number | undefined {
+  if (isBandRows(value)) return value;
+  problems.push(
+    `${where} ${JSON.stringify(value)} is not a whole number from 1 to ${MAX_BAND_ROWS}; using the default`,
+  );
+  return undefined;
+}
+
+function bandLevelOf(value: unknown, problems: string[], where: string): BandLevel | undefined {
+  if (isBandLevel(value)) return value;
+  problems.push(
+    `${where} ${JSON.stringify(value)} is not one of ${BAND_LEVELS.join(", ")}; using the default`,
+  );
+  return undefined;
+}
+
+/**
+ * The band's settings from `[band]`: `done_window`, `parts`, `debug`, `rows` and `level`, read at
+ * call time.
+ */
 export function resolveBand(text: string | undefined): ResolvedBand {
   const settings: BandSettings = {
     ...DEFAULT_BAND_SETTINGS,
@@ -400,6 +424,14 @@ export function resolveBand(text: string | undefined): ResolvedBand {
     if (typeof band.debug === "boolean") settings.debug = band.debug;
     else problems.push("band.debug must be true or false; using false");
   }
+  if (band.rows !== undefined) {
+    const rows = bandRowsOf(band.rows, problems, "band.rows");
+    if (rows !== undefined) settings.rows = rows;
+  }
+  if (band.level !== undefined) {
+    const level = bandLevelOf(band.level, problems, "band.level");
+    if (level !== undefined) settings.level = level;
+  }
   return { settings, problems };
 }
 
@@ -408,6 +440,8 @@ export interface BandOverrides {
   doneWindow?: string;
   parts?: BandPart[];
   debug?: boolean;
+  rows?: number;
+  level?: BandLevel;
 }
 
 /** Reads the pane's stored band settings, dropping anything malformed. */
@@ -425,6 +459,8 @@ export function bandOverridesOf(value: unknown): BandOverrides {
     if (parts !== undefined) overrides.parts = parts;
   }
   if (typeof record.debug === "boolean") overrides.debug = record.debug;
+  if (isBandRows(record.rows)) overrides.rows = record.rows;
+  if (isBandLevel(record.level)) overrides.level = record.level;
   return overrides;
 }
 
@@ -433,6 +469,8 @@ export const withOverrides = (settings: BandSettings, overrides: BandOverrides):
   ...(overrides.doneWindow === undefined ? {} : { doneWindow: overrides.doneWindow }),
   ...(overrides.parts === undefined ? {} : { parts: [...overrides.parts] }),
   ...(overrides.debug === undefined ? {} : { debug: overrides.debug }),
+  ...(overrides.rows === undefined ? {} : { rows: overrides.rows }),
+  ...(overrides.level === undefined ? {} : { level: overrides.level }),
 });
 
 const HEADER = /^\s*\[([^\]]*)\]\s*(?:#.*)?$/;
@@ -460,6 +498,8 @@ export function withBandTable(text: string | undefined, settings: BandSettings):
     `done_window = ${JSON.stringify(settings.doneWindow)}`,
     `parts = [${settings.parts.map((part) => JSON.stringify(part)).join(", ")}]`,
     `debug = ${settings.debug ? "true" : "false"}`,
+    `rows = ${settings.rows}`,
+    `level = ${JSON.stringify(settings.level)}`,
   ]);
 }
 

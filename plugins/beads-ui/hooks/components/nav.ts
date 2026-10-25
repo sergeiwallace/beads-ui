@@ -1,10 +1,12 @@
 import type { RenderElement, RenderNode } from "claude-code";
 
 import {
+  buttonWidth,
   type NavEntry,
   type NavItem,
   type NavLayout,
   navLayout,
+  packRows,
   SIDE_NAV_COLUMNS,
   SIDE_NAV_GAP,
 } from "../../core/src/index.ts";
@@ -16,7 +18,7 @@ const navButton = (surface: Surface, item: NavItem, press: (item: NavItem) => vo
   surface.ui.Button({
     key: item.key,
     label: item.label,
-    hotkey: item.hotkey,
+    ...(item.hotkey === "" ? {} : { hotkey: item.hotkey }),
     plain: true,
     ...(item.planned || !item.active ? { dimColor: true } : {}),
     onPress: () => press(item),
@@ -85,6 +87,12 @@ export function navFrame(
   });
 }
 
-/** The band's nav (D-36's overview): a bar, as above the prompt, of the views the band draws. */
-export const bandNav = (columns: number, entries: readonly NavEntry[], active: string): NavLayout =>
-  navLayout(columns, "inline", undefined, active, columns, entries);
+/**
+ * The band's nav (D-36's overview): a bar, as above the prompt, of the views the band draws. It
+ * carries no hotkeys: the pane's are digits, and a band button's digit fires from the prompt.
+ */
+export function bandNav(columns: number, entries: readonly NavEntry[], active: string): NavLayout {
+  const nav = navLayout(columns, "inline", undefined, active, columns, entries);
+  const items = nav.items.map((item) => ({ ...item, hotkey: "", width: buttonWidth(item.label) }));
+  return { ...nav, items, rows: packRows(items, columns, nav.gap) };
+}

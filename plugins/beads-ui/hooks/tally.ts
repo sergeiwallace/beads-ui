@@ -5,12 +5,15 @@ import {
   type BandRead,
   type BandSettings,
   type BandStore,
+  type BandTask,
+  type BandTotal,
   BEAT_MS,
   bandLine,
   bandReads,
   bandTotal,
   buildOf,
   clockStamp,
+  countTasksArgv,
   type FileLease,
   failureOf,
   type HostSnapshot,
@@ -21,9 +24,11 @@ import {
   leaseOf,
   MANIFEST_PATH,
   type PendingSubmit,
+  parseBdList,
   parseFileLease,
   parseSnapshot,
   type ReadAnswer,
+  type RowGroup,
   refresherRunning,
   resolveSync,
   SESSIONS_DIR,
@@ -45,6 +50,7 @@ import {
   WAKE_DIR,
   wakeFileName,
   wakeText,
+  windowMs,
 } from "../core/src/index.ts";
 import type { BandSettingsPanel } from "./bandSettings.ts";
 import type { Host } from "./host.ts";
@@ -90,6 +96,13 @@ export class BandTally {
   last: Tallied | undefined;
   /** The last lines, as drawBand draws them. */
   lines: BandLine[] = [];
+  /** Each line's counts, as last drawn, in the order of `last.reads`. */
+  private totals: BandTotal[] = [];
+  /**
+   * The counts were drawn again, or (`wrote`) this session wrote: the band's levels read a
+   * count's rows again when its count moved, and after a write whatever the counts say.
+   */
+  onRecount: ((wrote: boolean) => void) | undefined;
   private refreshing = false;
   private queued = false;
   private timer: Timer | undefined;
@@ -107,6 +120,11 @@ export class BandTally {
   private rechecks: Timer[] = [];
   /** The settings the band last drew with, for a redraw the publishing state asks for. */
   private drawnWith: BandSettings | undefined;
+
+  /** The band's settings as last drawn; undefined before the band first drew. */
+  get drawnSettings(): BandSettings | undefined {
+    return this.drawnWith;
+  }
   /** The session's publishing state (T-2B.6): the unpublished count and the failure mark. */
   sync: SyncState | undefined;
   /** The plugin build this session runs, from its manifest: read once, when it can be read. */
@@ -219,6 +237,7 @@ export class BandTally {
    */
   afterWrite(store: string): void {
     void this.wake(store);
+    this.onRecount?.(true);
   }
 
   /** `store` is the directory the write ran in: the marker names it, not the band's own store. */
@@ -304,6 +323,7 @@ export class BandTally {
       return;
     }
     const totals = last.reads.map((read) => bandTotal(read, last.stores, settings.doneWindow));
+    this.totals = totals;
     if (!totals.some((total) => total.answered > 0)) {
       this.lines = [];
       return;
@@ -323,6 +343,56 @@ export class BandTally {
         ...(read.key === "all" ? {} : own),
       }),
     );
+    this.onRecount?.(false);
+  }
+
+  /** The line `key`'s read: its stores, and the session it counts for. */
+  readOf(key: string): BandRead | undefined {
+    return this.last?.reads.find((read) => read.key === key);
+  }
+
+  /** The count line `key` draws for `group`, as last drawn. */
+  countOf(key: string, group: RowGroup): number | undefined {
+    const at = this.last?.reads.findIndex((read) => read.key === key) ?? -1;
+    return at < 0 ? undefined : this.totals[at]?.counts[group];
+  }
+
+  /**
+   * A count's tasks (D-36): `bd list` of its status in every store line `key` sums, the line's
+   * session's alone when it counts one, the done count's over the done window, as the count's
+   * own reads select them. A store whose read fails is named in `failed`.
+   */
+  async readTasks(
+    key: string,
+    group: RowGroup,
+  ): Promise<{ tasks: BandTask[]; failed: string[] } | undefined> {
+    const host = this.host;
+    const read = this.readOf(key);
+    const settings = this.drawnWith;
+    if (host === undefined || read === undefined || settings === undefined) return undefined;
+    const now = await host.now();
+    const span = windowMs(settings.doneWindow) ?? 0;
+    const argv = countTasksArgv(group === "done" ? "closed" : group, {
+      ...(read.assignee === undefined ? {} : { assignee: read.assignee }),
+      ...(group === "done" ? { closedAfter: new Date(now - span).toISOString() } : {}),
+    });
+    const stores = unique(read.stores);
+    // In the line's store order, whichever read lands first, so equal tasks list the same way.
+    const answers = await Promise.all(
+      stores.map(async (store) => {
+        const ran = await host.runIn(store.path, argv, COUNT_TIMEOUT_MS).catch(() => undefined);
+        const parsed = ran?.exitCode === 0 ? parseBdList(ran.stdout) : undefined;
+        return parsed?.ok === true ? parsed.value : undefined;
+      }),
+    );
+    const tasks: BandTask[] = [];
+    const failed: string[] = [];
+    stores.forEach((store, i) => {
+      const issues = answers[i];
+      if (issues === undefined) failed.push(store.name);
+      else for (const issue of issues) tasks.push({ issue, store: store.path });
+    });
+    return { tasks, failed };
   }
 
   /**

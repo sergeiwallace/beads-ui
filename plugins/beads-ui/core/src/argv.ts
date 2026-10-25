@@ -43,6 +43,27 @@ export function boardReadArgvs(): [open: BdArgv, closed: BdArgv] {
 }
 
 /**
+ * A band count's tasks (D-36): the issues of one stored status, `assignee`'s alone when given,
+ * and for the done count those closed after `closedAfter`, as the count's own `bd count` reads.
+ */
+export function countTasksArgv(
+  status: string,
+  options: { assignee?: string; closedAfter?: string } = {},
+): BdArgv {
+  return [
+    "bd",
+    "list",
+    "--json",
+    "--brief",
+    "--limit",
+    "0",
+    `--status=${statusArg(status)}`,
+    ...(options.assignee === undefined ? [] : [`--assignee=${options.assignee}`]),
+    ...(options.closedAfter === undefined ? [] : [`--closed-after=${options.closedAfter}`]),
+  ];
+}
+
+/**
  * The Timeline's own reads (T-2B.9): every closed issue of each of `types`, one read a type, as
  * bd 1.3 takes one `--type` a call. The board's reads hold the open ones and only the newest
  * closed page, so an epic or milestone closed before that page comes from these.

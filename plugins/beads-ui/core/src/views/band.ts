@@ -94,18 +94,40 @@ export const BAND_PART_LABELS: Readonly<Record<BandPart, string>> = {
 export const isBandPart = (value: string): value is BandPart =>
   (BAND_PARTS as readonly string[]).includes(value);
 
+/**
+ * The band's disclosure levels (D-36): the summary line alone, a count's task rows under it, or
+ * the overview of the views the band draws.
+ */
+export const BAND_LEVELS = ["summary", "rows", "overview"] as const;
+export type BandLevel = (typeof BAND_LEVELS)[number];
+export const isBandLevel = (value: unknown): value is BandLevel =>
+  typeof value === "string" && (BAND_LEVELS as readonly string[]).includes(value);
+
+/** The rows a press on a count draws, and "+M more" adds, unless `band.rows` says otherwise. */
+export const DEFAULT_BAND_ROWS = 5;
+/** The most `band.rows` may be. */
+export const MAX_BAND_ROWS = 50;
+export const isBandRows = (value: unknown): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= MAX_BAND_ROWS;
+
 /** What `beads-ui.toml`'s `[band]` table, or the pane's band settings, set. */
 export interface BandSettings {
   doneWindow: string;
   parts: BandPart[];
   /** Debug mode: each line ends with the time its counts were read (T-1B.5). */
   debug: boolean;
+  /** The task rows a press on a count draws at a time (D-36). */
+  rows: number;
+  /** The level the band opens at (D-36). */
+  level: BandLevel;
 }
 
 export const DEFAULT_BAND_SETTINGS: BandSettings = {
   doneWindow: DEFAULT_DONE_WINDOW,
   parts: [...DEFAULT_BAND_PARTS],
   debug: false,
+  rows: DEFAULT_BAND_ROWS,
+  level: "summary",
 };
 
 /** The glyph a line ends with when a store it sums could not be read (T-1B.10). */
@@ -245,6 +267,8 @@ export interface BandSegment {
   token?: Token;
   bold?: boolean;
   dim?: boolean;
+  /** The count part this segment draws: the band draws it as a button (D-36). */
+  part?: BandPart;
 }
 
 export interface BandLine {
@@ -298,14 +322,16 @@ export function bandLine(
   const list = (into: BandSegment[]) =>
     counts.forEach(({ part, token }, i) => {
       if (i > 0) into.push({ text: ", " });
-      into.push({ text: countText(part), token });
+      into.push({ text: countText(part), token, part });
     });
 
   const groups: BandSegment[][] = [];
   let listed = false;
   for (const part of parts) {
     if (part === "total") {
-      const group: BandSegment[] = [{ text: `${sum} ${sum === 1 ? "task" : "tasks"}` }];
+      const group: BandSegment[] = [
+        { text: `${sum} ${sum === 1 ? "task" : "tasks"}`, part: "total" },
+      ];
       if (counts.length > 0) {
         group.push({ text: " (" });
         list(group);
@@ -315,11 +341,11 @@ export function bandLine(
       listed = true;
     } else if (part === "drift") {
       if ((read.drift ?? 0) > 0)
-        groups.push([{ text: `${read.drift} unsynced`, token: "warning" }]);
+        groups.push([{ text: `${read.drift} unsynced`, token: "warning", part: "drift" }]);
     } else if (part === "unpublished") {
       const count = options.unpublished ?? 0;
       const group: BandSegment[] =
-        count > 0 ? [{ text: `${count} unpublished`, token: "accent" }] : [];
+        count > 0 ? [{ text: `${count} unpublished`, token: "accent", part: "unpublished" }] : [];
       if (options.syncFailed === true) {
         if (group.length > 0) group.push({ text: " " });
         group.push({ text: SYNC_FAILED_MARK, token: "error" });

@@ -22,9 +22,11 @@ import { colorOf, pressKey } from "./components/look.ts";
 import { bandNav, navBar } from "./components/nav.ts";
 import { taskList, taskRow } from "./components/tasks.ts";
 import type { Host } from "./host.ts";
+import { BandLevels } from "./levels.ts";
 import { BeadsPane, type PaneUi } from "./pane.ts";
 import { drawSettings } from "./panel.ts";
 import { StoreResolver } from "./store.ts";
+import type { BandTally } from "./tally.ts";
 import { test } from "./tests/kit.ts";
 import { CWD } from "./tests/world.ts";
 
@@ -424,6 +426,40 @@ describe("the view registry (D-35, T-2C.1)", () => {
     expect(pane.tab).toBe("probe");
     expect(textOf(pane.draw(UI, FRAME))).toContain("probe on the pane");
     expect(textOf(pane.views.get("probe")?.draw?.(band()))).toEqual(["probe on the band"]);
+  });
+
+  test("should draw a view registered once in the band's overview, under the band's nav, with no other change", async () => {
+    const pane = await drawnPane();
+    pane.views.register(PROBE);
+    const tally = {
+      lines: [{ key: "own", segments: [{ text: "[bd]", bold: true }], line: "[bd]" }],
+      drawnSettings: DEFAULT_BAND_SETTINGS,
+      countOf: () => 0,
+      readOf: () => undefined,
+      readTasks: async () => undefined,
+    } as unknown as BandTally;
+    const levels = new BandLevels(tally, pane, () => undefined);
+    levels.host = pane.host;
+    const drawBand = () =>
+      levels.draw(
+        UI,
+        { columns: COLUMNS, maxRows: 12 },
+        {
+          open: false,
+          onOpen: () => undefined,
+          onClose: () => undefined,
+        },
+      );
+
+    const overview = nodes(drawBand()).find((node) => node.props.key === "press:band:overview");
+    const press = nodes(overview).find((node) => node.type === "Button")?.props.onPress;
+    (press as () => void)();
+    expect(navIn(drawBand())).toContain("probe");
+
+    const nav = nodes(drawBand()).find((node) => node.props.key === "tab:probe")?.props.onPress;
+    (nav as () => void)();
+    expect(textOf(drawBand())).toContain("probe on the band");
+    expect(pane.tab).not.toBe("probe");
   });
 
   test("should draw a view on one surface only when Settings sets it to band or pane, and on both again for both", async () => {

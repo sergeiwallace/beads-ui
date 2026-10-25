@@ -23,6 +23,11 @@ registered once and drawn on the band and the pane alike; `[surfaces]` in `beads
 view's row in Settings, limits a view to `band` or `pane`
 ([docs/procedures/mod-install.md](docs/procedures/mod-install.md#configuration)). Everything you can
 press is drawn between accent-coloured brackets, and the band's pane button is the icon `[◨]`. The
+band has three levels: the summary line, every count in it a button; a pressed count's tasks under
+its line, `[band] rows` at a time with `[+M more]`, `[collapse]` and `[summary]`; and the overview
+(`[◫]`), the band's views under a nav from the same registry as the pane's. Its keys are letters
+(`p`, `b`, `o`, `d`, `t`, `e`, `v`, `m`, `c`, `s`), and `[band] level` sets the level it opens at
+([docs/procedures/mod-install.md](docs/procedures/mod-install.md#the-bands-settings)). The
 colours follow your Claude Code theme, and `[theme]` sets any of them to a hex value;
 `[indicators] ascii = true` draws every glyph as ASCII
 ([docs/procedures/mod-install.md](docs/procedures/mod-install.md#the-look)).

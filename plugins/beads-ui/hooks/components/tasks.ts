@@ -7,6 +7,7 @@ import {
   type TaskListView,
   type TaskRowView,
   type Token,
+  truncate,
 } from "../../core/src/index.ts";
 import type { Surface } from "./adapters.ts";
 
@@ -167,34 +168,42 @@ export function taskList(
               ]),
             }),
           ];
+  // At short height (the band always) a line that wrapped would take a row the list does not
+  // have, so the count and the empty line are cut to the surface's columns instead.
+  const line = (text: string) => (surface.short ? truncate(text, surface.columns) : text);
   const menuElsewhere =
     options.menu !== undefined && !list.rows.some((row) => row.id === options.menuFor);
+  const scroll = surface.scroll;
+  const page = Math.max(1, list.rows.length);
+  // Where the surface scrolls the list itself, the rows above and below are buttons that move it.
+  const edge = (key: "above" | "below", count: number) => {
+    const text = `${glyphOf(key === "above" ? "list.above" : "list.below")} ${count} ${key}`;
+    if (scroll === undefined) {
+      return Box({ key: `tasks-${key}`, children: [Text({ dimColor: true, children: text })] });
+    }
+    const start = key === "above" ? scroll.start - page : scroll.start + page;
+    return Button({
+      key: `tasks:${key}`,
+      label: text,
+      plain: true,
+      onPress: () => scroll.to(Math.max(0, start)),
+    });
+  };
   return Box({
     key: "tasks",
     flexDirection: "column",
     children: present<RenderNode>([
-      Box({ key: "tasks-count", children: [Text({ dimColor: true, children: summary })] }),
+      Box({ key: "tasks-count", children: [Text({ dimColor: true, children: line(summary) })] }),
       menuElsewhere ? options.menu : undefined,
       list.total === 0
-        ? Box({ key: "tasks-empty", children: [Text({ dimColor: true, children: options.empty })] })
+        ? Box({
+            key: "tasks-empty",
+            children: [Text({ dimColor: true, children: line(options.empty) })],
+          })
         : undefined,
-      list.above === 0
-        ? undefined
-        : Box({
-            key: "tasks-above",
-            children: [
-              Text({ dimColor: true, children: `${glyphOf("list.above")} ${list.above} above` }),
-            ],
-          }),
+      list.above === 0 ? undefined : edge("above", list.above),
       ...rows,
-      list.below === 0
-        ? undefined
-        : Box({
-            key: "tasks-below",
-            children: [
-              Text({ dimColor: true, children: `${glyphOf("list.below")} ${list.below} below` }),
-            ],
-          }),
+      list.below === 0 ? undefined : edge("below", list.below),
       list.collapsible
         ? Button({
             key: "tasks:more",

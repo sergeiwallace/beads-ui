@@ -18,6 +18,7 @@ import {
   ok,
   onBoard,
   PANE_PROPS,
+  plainLine,
   type Script,
   SESSION,
   SHOW,
@@ -129,7 +130,7 @@ describe("the store a session reads", () => {
     expect(new Set(cwdsOf(w, LIST))).toEqual(new Set([mapped]));
     expect(new Set(cwdsOf(w, "bd count "))).toEqual(new Set([mapped]));
     expect((await ui.find({ key: "header" }))?.text).toContain("kg-store");
-    expect((await (await band($)).find({ key: "beads-band:own" }))?.text).toBe(
+    expect(plainLine((await (await band($)).find({ key: "beads-band:own" }))?.text)).toBe(
       "[bd] 1 task (0 in progress, 0 blocked, 1 open, 0 done last 24h) *",
     );
   });
