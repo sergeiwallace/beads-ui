@@ -138,6 +138,8 @@ export {
 export type { Labels, Tier } from "./layout.ts";
 export {
   buttonWidth,
+  CARD_FRAME_COLUMNS,
+  CARD_FRAME_TREE_CHARS,
   groupLayout,
   isShort,
   labels,
@@ -148,7 +150,10 @@ export {
   PRESS_OPEN,
   PRESS_TREE_CHARS,
   packRows,
+  SECTION_COLUMNS,
+  SECTION_ROWS,
   SHORT_ROWS,
+  SPACE,
   textWidth,
   tierOf,
   WIDE_COLUMNS,
