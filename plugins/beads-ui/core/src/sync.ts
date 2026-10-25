@@ -126,7 +126,7 @@ export const inlineText = (text: string): string =>
   text.replace(ESCAPE, "").replace(LINE_BREAKING, "");
 
 /** A fence longer than any run of backticks in `text`, so the text cannot close it. */
-function fenceFor(text: string): string {
+export function fenceFor(text: string): string {
   const longest = Math.max(0, ...[...text.matchAll(/`+/g)].map((run) => run[0].length));
   return "`".repeat(Math.max(3, longest + 1));
 }
