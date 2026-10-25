@@ -435,6 +435,61 @@ export const countScript =
       : countOf(issues, argv);
   };
 
+/**
+ * A band line's text with each count button read as the count it draws (D-36): `◒[1 in
+ * progress]` as `1 in progress`, the status glyph before it and the button's brackets dropped.
+ * The format tests read the counts through it; levels.test.ts pins the buttons themselves.
+ */
+export const plainLine = (text: string | undefined): string | undefined =>
+  text?.replace(/[◒◉◦✓]?\[(\d+ [^\]]*)\]/g, "$1");
+
+/** An issue a band count's rows list (D-36): `Counted`, with the id, title and priority bd lists. */
+export interface Listed extends Counted {
+  id: string;
+  title?: string;
+  priority?: number;
+}
+
+/** `listed` as `bd list --json --brief` rows, in bd 1.3's shape (the core's fixtures). */
+export function listRowsOf(listed: readonly Listed[]): Record<string, unknown>[] {
+  return listed.map((one, i) => ({
+    id: one.id,
+    title: one.title ?? `task ${one.id}`,
+    status: one.status,
+    priority: one.priority ?? 2,
+    issue_type: "task",
+    ...(one.assignee === undefined ? {} : { assignee: one.assignee }),
+    created_at: new Date(START_MS - (1_000 - i) * 60_000).toISOString(),
+    updated_at: new Date(START_MS - (1_000 - i) * 60_000).toISOString(),
+    ...(one.closedAt === undefined ? {} : { closed_at: new Date(one.closedAt).toISOString() }),
+    labels: [],
+    dependencies: [],
+  }));
+}
+
+/**
+ * `bd list --brief --limit 0 --status=<s> [--assignee=<a>] [--closed-after=<t>]`, the band's
+ * row reads (core's countTasksArgv), over each store's `listed` issues by the directory bd runs in.
+ */
+export const listScript =
+  (stores: Readonly<Record<string, readonly Listed[]>>): Script =>
+  (key, argv, cwd) => {
+    if (!key.startsWith("bd list ") || flagOf(argv, "--status") === undefined) return undefined;
+    const issues = cwd === undefined ? undefined : stores[cwd];
+    if (issues === undefined) return exit(1, "Error: no beads database found\n");
+    const assignee = flagOf(argv, "--assignee");
+    const status = flagOf(argv, "--status");
+    const after = flagOf(argv, "--closed-after");
+    const since = after === undefined ? undefined : Date.parse(after);
+    const held = issues.filter(
+      (issue) =>
+        (assignee === undefined || issue.assignee === assignee) &&
+        issue.status === status &&
+        (since === undefined || (issue.closedAt !== undefined && issue.closedAt > since)),
+    );
+    return ok(JSON.stringify(listRowsOf(held)));
+  };
+
 /** The store inventory under the world's HOME. */
 export const INVENTORY_PATH = "/home/me/.beads/shared-server/publish-sweep.json";
 

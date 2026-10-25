@@ -110,6 +110,28 @@ async function started($: Engine, on: On, files: Record<string, string> = {}) {
   return w;
 }
 
+/**
+ * The band at each of its levels (D-36): the summary, a count's rows, the overview and a task's
+ * detail in it, each as Claude Code mounts it.
+ */
+async function eachBandLevel($: Engine): Promise<[string, unknown][]> {
+  const drawings: [string, unknown][] = [["band", await (await band($)).drawn()]];
+  for (const [name, key] of [
+    ["band rows", "band-count:own:in_progress"],
+    ["band overview", "band:overview"],
+  ] as const) {
+    await (await band($)).press({ key });
+    drawings.push([name, await (await band($)).drawn()]);
+  }
+  const row = (await (await band($)).findAll({}))
+    .map((element) => element.key ?? "")
+    .find((key) => key.startsWith("task:"));
+  await (await band($)).press({ key: row ?? "task:missing" });
+  drawings.push(["band detail", await (await band($)).drawn()]);
+  await (await band($)).press({ key: "band:summary" });
+  return drawings;
+}
+
 const keysIn = async (ui: Mounted) =>
   (await ui.findAll({})).map((element) => element.key ?? "").filter((key) => key !== "");
 
@@ -190,7 +212,7 @@ describe("the clickable affordance (D-43, T-2C.14)", () => {
     test(`should draw every pressable element of every ${surface} pane view and overlay, and the band, in the affordance`, async ($, on) => {
       await started($, on);
       const drawings = [
-        ["band", await (await band($)).drawn()] as [string, unknown],
+        ...(await eachBandLevel($)),
         ...(await eachPaneDrawing(await paneOn($, surface))),
       ];
 
@@ -261,7 +283,7 @@ describe("the glyphs drawn (D-43, T-2C.10)", () => {
     test(`should draw only glyphs of the table on every ${surface} pane view and the band`, async ($, on) => {
       await started($, on);
       const drawings = [
-        ["band", await (await band($)).drawn()] as [string, unknown],
+        ...(await eachBandLevel($)),
         ...(await eachPaneDrawing(await paneOn($, surface))),
       ];
 
@@ -277,7 +299,7 @@ describe("the glyphs drawn (D-43, T-2C.10)", () => {
     test(`should draw every table glyph in its ASCII form on every ${surface} pane view and the band under [indicators] ascii`, async ($, on) => {
       await started($, on, ASCII);
       const drawings = [
-        ["band", await (await band($)).drawn()] as [string, unknown],
+        ...(await eachBandLevel($)),
         ...(await eachPaneDrawing(await paneOn($, surface))),
       ];
 

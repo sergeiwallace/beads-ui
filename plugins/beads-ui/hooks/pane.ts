@@ -201,6 +201,8 @@ const WANTED_ROWS = 24;
 
 /** At short height, the rows the nav, the header, the toolbar and the list's summary take. */
 const SHORT_CHROME_ROWS = 6;
+/** In the band's overview, the rows the list's count, its two edges and its "+M more" take. */
+const BAND_LIST_CHROME_ROWS = 4;
 /**
  * The most task rows the Tasks view draws at once: Claude Code keeps only a tree's first 100,000
  * characters, so a longer list draws a window of rows that follows the focus. 80, not the 100 it
@@ -378,6 +380,11 @@ export class BeadsPane {
    * (T-1B.5) and the store publishes (T-2B.6); wired by register.ts.
    */
   onWrite: ((store: string) => void) | undefined;
+  /**
+   * A task row pressed in the band's overview (D-36): the band opens its detail there; wired by
+   * register.ts. Unset, a band press opens it in the pane, as the pane's own rows do.
+   */
+  onBandOpen: ((id: string) => void) | undefined;
   /** The inventory's stores out of step with the pair (D-34), named in the header. */
   unsynced: string[] = [];
   /** Display ids minted after a create whose write has not succeeded, retried on each refresh. */
@@ -1913,6 +1920,21 @@ export class BeadsPane {
   }
 
   /**
+   * The Tasks view's list on the band (D-36): as many rows as the band's rows leave beside the
+   * list's count, its edges and its "+M more", from the first row the band scrolled to.
+   */
+  private taskListOn(surface: Surface): TaskListView {
+    return taskListView(this.shown().issues, {
+      statuses: this.board.statuses,
+      settings: this.panel.settings,
+      expanded: this.expanded,
+      width: Math.max(1, surface.columns - rowControlColumns(false)),
+      windowRows: Math.max(1, (surface.rows ?? SHORT_ROWS) - BAND_LIST_CHROME_ROWS),
+      windowStart: surface.scroll?.start ?? 0,
+    });
+  }
+
+  /**
    * The Client path (T-2B.5): the rows as the Client's props, the room it leaves under the row
    * the menu is about, and the column the menu opens at, kept inside the view.
    */
@@ -1965,7 +1987,11 @@ export class BeadsPane {
       ? this.drawMenu(surface.ui, ctx, width, region !== undefined)
       : undefined;
     const session = this.stores.sessionName;
-    const list = this.taskListAt(width, surface.short, surface.rows, region !== undefined);
+    const band = surface.id === "band";
+    const list = band
+      ? this.taskListOn(surface)
+      : this.taskListAt(width, surface.short, surface.rows, region !== undefined);
+    const bandOpen = band ? this.onBandOpen : undefined;
     const empty =
       this.scope === "mine" && session !== undefined
         ? `No task in progress, blocked or open is assigned to ${session}; a shows every owner's.`
@@ -1974,7 +2000,7 @@ export class BeadsPane {
       color: colorOf,
       empty,
       handlers: {
-        open: (id) => void this.openDetailFor(id),
+        open: (id) => (bandOpen === undefined ? void this.openDetailFor(id) : bandOpen(id)),
         menu: (id) => void this.toggleMenu(id),
         more: () => this.toggleExpanded(),
       },

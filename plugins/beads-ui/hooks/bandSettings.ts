@@ -1,14 +1,18 @@
 import type { RenderElement, RenderNode } from "claude-code";
 
 import {
+  BAND_LEVELS,
   BAND_PART_LABELS,
   BAND_PARTS,
+  type BandLevel,
   type BandOverrides,
   type BandPart,
   type BandSettings,
   bandOverridesOf,
   configCandidates,
   glyphOf,
+  isBandRows,
+  MAX_BAND_ROWS,
   resolveBand,
   type Token,
   windowMs,
@@ -108,6 +112,26 @@ export class BandSettingsPanel {
       return;
     }
     await this.change({ doneWindow: window });
+  }
+
+  /** The rows a press on a count draws at a time (D-36); refuses a number it cannot use. */
+  async setRows(text: string): Promise<void> {
+    const trimmed = text.trim();
+    const rows = /^\d+$/.test(trimmed) ? Number(trimmed) : Number.NaN;
+    if (!isBandRows(rows)) {
+      this.notice = {
+        text: `${JSON.stringify(trimmed)} is not a whole number from 1 to ${MAX_BAND_ROWS}`,
+        token: "error",
+      };
+      this.host?.invalidate();
+      return;
+    }
+    await this.change({ rows });
+  }
+
+  /** The level the band opens at (D-36). */
+  async setLevel(level: BandLevel): Promise<void> {
+    await this.change({ level });
   }
 
   /** Debug mode (T-1B.5, T-2B.8): the band shows its read time. */
@@ -231,6 +255,31 @@ export class BandSettingsPanel {
           value: settings?.doneWindow ?? "",
           submitLabel: "set",
           onSubmit: (value) => void this.setWindow(value),
+        }),
+        Input({
+          key: "band:rows",
+          label: "Rows per press",
+          placeholder: `1 to ${MAX_BAND_ROWS}`,
+          value: String(settings?.rows ?? ""),
+          submitLabel: "set",
+          onSubmit: (value) => void this.setRows(value),
+        }),
+        Box({
+          key: "band:levels",
+          flexDirection: "row",
+          columnGap: 1,
+          children: [
+            Text({ children: "Opens at:" }),
+            ...BAND_LEVELS.map((level) =>
+              Button({
+                key: `band:level:${level}`,
+                label: level,
+                plain: true,
+                ...(settings?.level === level ? {} : { dimColor: true }),
+                onPress: () => void this.setLevel(level),
+              }),
+            ),
+          ],
         }),
         Text({ children: "On the band, in order:" }),
         ...parts.map((part) => row(part, true)),

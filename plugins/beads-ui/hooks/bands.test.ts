@@ -31,6 +31,7 @@ import {
   ok,
   onBoard,
   PANE_PROPS,
+  plainLine,
   REFRESHER_TOKEN,
   type Script,
   SESSION,
@@ -59,8 +60,12 @@ const band = ($: Engine, columns = 120, hasSurvey = false) =>
     viewport: { ...VIEWPORT, columns },
   });
 
+/**
+ * A line's text as its counts read, from a band 364 columns wide: each count is a button with
+ * its hotkey (D-36), so at 120 columns a long line's tail is cut short, which levels.test.ts pins.
+ */
 const line = async ($: Engine, key: string) =>
-  (await (await band($)).find({ key: `beads-band:${key}` }))?.text;
+  plainLine((await (await band($, 364)).find({ key: `beads-band:${key}` }))?.text);
 
 const pane = ($: Engine) =>
   $.ui

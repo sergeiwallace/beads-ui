@@ -5,6 +5,7 @@ import { BandSettingsPanel } from "./bandSettings.ts";
 import { drawBand } from "./bands.ts";
 import { CONFIRM_ID, DeleteConfirm } from "./confirm.ts";
 import type { Host } from "./host.ts";
+import { BandLevels } from "./levels.ts";
 import { BeadsPane, PANE_ID, type TasksRegion } from "./pane.ts";
 import { TASKS_CLIENT_KEY } from "./panel.ts";
 import { StoreResolver } from "./store.ts";
@@ -38,6 +39,7 @@ export function register(on: On) {
   const bandSettings = new BandSettingsPanel(stores);
   const pane = new BeadsPane(stores, bandSettings);
   const tally = new BandTally(stores, bandSettings);
+  const levels = new BandLevels(tally, pane, () => stores.sessionName);
   const sync = new EditSync(stores);
   tally.sync = sync.state;
   sync.onChange = () => tally.syncChanged();
@@ -112,6 +114,7 @@ export function register(on: On) {
     await bandSettings.bind(host);
     await pane.bind(host);
     await tally.bind(host);
+    await levels.bind(host);
     sync.bind(host);
     // T-2B.7: the task panel opens at session start under panel.mode. Claude Code's own task
     // panel is retired when the settings deny TaskCreate by name, as ai-harness's switch does (D-21).
@@ -157,12 +160,17 @@ export function register(on: On) {
 
   on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
     if (e.surface !== "terminal" || e.props.hasSurvey) return next(e);
-    const { Box, Text, Button } = await $.ui.resolve(e);
-    const band = drawBand({ Box, Text, Button }, tally, {
-      open: pane.isOpen,
-      onOpen: () => void pane.openOrFocus(),
-      onClose: () => void pane.close(),
-    });
+    const { Box, Text, Button, Input, Select, Markdown } = await $.ui.resolve(e);
+    const band = drawBand(
+      { Box, Text, Button, Input, Select, Markdown },
+      levels,
+      { columns: e.props.bodyColumns, maxRows: e.props.maxRows },
+      {
+        open: pane.isOpen,
+        onOpen: () => void pane.openOrFocus(),
+        onClose: () => void pane.close(),
+      },
+    );
     if (band === undefined) return next(e);
 
     return Box({ flexDirection: "column", children: [band, await next(e)] });

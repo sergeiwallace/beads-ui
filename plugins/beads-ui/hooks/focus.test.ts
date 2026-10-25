@@ -75,8 +75,9 @@ describe("the band's pane toggle (D-43, T-2C.14)", () => {
     expect((await ui.findAll({ type: "Button" })).map((one) => one.props.label)).not.toContain(
       "beads",
     );
+    // D-36: the counts are buttons, and the expand and overview controls come before the toggle.
     expect(await firstLine($)).toBe(
-      `[bd] 1 task (0 in progress, 0 blocked, 1 open, 0 done last 24h) * [${glyphOf("pane.open")}]`,
+      `[bd] [t: 1 task] (◒[p: 0 in progress], ◉[b: 0 blocked], ◦[o: 1 open], ✓[d: 0 done last 24h]) * [e: ▾] [v: ◫] [${glyphOf("pane.open")}]`,
     );
   });
 
@@ -87,7 +88,9 @@ describe("the band's pane toggle (D-43, T-2C.14)", () => {
     await w.clock.settle();
 
     expect(await firstLine($)).toMatch(
-      new RegExp(`24h\\) \\* \\[${glyphOf("pane.open")}\\] \\[${glyphOf("pane.close")}\\]$`),
+      new RegExp(
+        `24h\\]\\) \\* \\[e: ▾\\] \\[v: ◫\\] \\[${glyphOf("pane.open")}\\] \\[${glyphOf("pane.close")}\\]$`,
+      ),
     );
     await (await band($)).press({ key: PANE_CLOSE_KEY });
     await w.clock.settle();
@@ -103,7 +106,7 @@ describe("the band's pane toggle (D-43, T-2C.14)", () => {
     await $.command.run(SHOW);
     await w.clock.settle();
 
-    expect(await firstLine($)).toMatch(/24h\) \* \[\+\] \[x\]$/);
+    expect(await firstLine($)).toMatch(/24h\]\) \* \[e: v\] \[v: =\] \[\+\] \[x\]$/);
   });
 
   for (const columns of [40, 48, 64, 72, 80, 120]) {
