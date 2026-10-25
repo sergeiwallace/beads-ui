@@ -119,8 +119,10 @@ describe("the band's summary level (D-36, T-2C.2)", () => {
   test("should draw every count as a button inside the summary text and the expand, overview and pane controls right after it", async ($, on) => {
     await started($, on);
 
+    // The figures row under it (T-2C.11): the Raster's cells, a bar's filled cell as `#`.
     expect(await lines($)).toEqual([
       "[bd] [t: 10 tasks] (◒[p: 7 in progress], ◉[b: 1 blocked], ◦[o: 1 open], ✓[d: 1 done last 24h]) * [e: ▾] [v: ◫] [◨]",
+      "✓⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⣿ ◒###########..... ◉##.............. ◦##.............. ✓##..............",
     ]);
     expect(await keysOf($, "band-count:")).toEqual([
       "band-count:own:total",
@@ -144,9 +146,11 @@ describe("the band's summary level (D-36, T-2C.2)", () => {
     };
     await started($, on, as(FM, { files }));
 
+    // The figures row draws the first line's, the totals the controls follow.
     expect(await lines($, 200)).toEqual([
       "[bd][all] [a: 13 tasks] (◒[i: 9 in progress], ◉[k: 1 blocked], ◦[l: 2 open], ✓[j: 1 done last 24h]) [u: 1 unsynced] * [e: ▾] [v: ◫] [◨]",
       "     [fm] [t: 2 tasks] (◒[p: 1 in progress], ◉[b: 0 blocked], ◦[o: 1 open], ✓[d: 0 done last 24h]) *",
+      "✓⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⣿ ◒###########..... ◉#............... ◦##.............. ✓#...............",
     ]);
     // At 120 columns the first line's tail is cut short and its controls stay right after it.
     expect((await lines($, 120))[0]).toMatch(/24h\]\) ⋯ \[e: ▾\] \[v: ◫\] \[◨\]$/);
@@ -178,9 +182,10 @@ describe("the band's rows level (D-36, T-2C.2)", () => {
     await press($, w, "band:collapse");
     expect(await rowIds($)).toHaveLength(5);
 
+    // Back at the summary: its line and its figures row (T-2C.11).
     await press($, w, "band:summary");
     expect(await rowIds($)).toEqual([]);
-    expect(await lines($)).toHaveLength(1);
+    expect(await lines($)).toHaveLength(2);
   });
 
   test("should give every count and control a letter hotkey, and close a count's rows on a second press of it", async ($, on) => {

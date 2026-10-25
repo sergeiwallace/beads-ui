@@ -78,4 +78,9 @@ export interface Host {
   closePane: (id: string) => Promise<void>;
   /** `$.ui.focus`: moves the pane's focus ring onto one of its elements. */
   focus: (requestId: string, key: string) => Promise<unknown>;
+  /**
+   * `$.ui.blit`: repaints the Raster keyed `key` that the site `requestId` drew, in place, with
+   * `cells`. Resolves false when the engine refused it.
+   */
+  blit: (requestId: string, key: string, cells: string) => Promise<boolean>;
 }
