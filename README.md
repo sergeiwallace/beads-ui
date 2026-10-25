@@ -33,14 +33,21 @@ colours follow your Claude Code theme, and `[theme]` sets any of them to a hex v
 ([docs/procedures/mod-install.md](docs/procedures/mod-install.md#the-look)). Every task row, in
 the band, the Tasks view, the Backlog and on Board cards, starts with a gutter of row indicators:
 `⟳` while an agent is working on the issue (dimmed when that agent's session is no longer live on
-the host) and `⊘` when it is blocked. The help and Settings list them, and `[indicators]` or
+the host), `⊘` when it is blocked and `✎` when it has an open review item. The help and Settings list them, and `[indicators]` or
 Settings switches each one off
 ([docs/procedures/mod-install.md](docs/procedures/mod-install.md#row-indicators)). With
 `[review] command` set in your own `beads-ui.toml` to a held store's tool (on the fleet,
 ai-harness's `held_cli.py`), an issue's Detail opens with a Review section above its description:
 the held decisions, blockers and other items about the issue that you must review or act on, and
 its bd blockers. An item opens in a reader with its whole body, where you can answer it; the
-answer is recorded by the held store's own `answer` verb and handed to the session
+answer is recorded by the held store's own `answer` verb and handed to the session. The Review
+view (key `7` in the pane, `[Rev]` in the band's overview) lists every held item in the
+session's scope: the items it holds and those about issues it owns, or, for the firstmate, every
+item of its machine pair, with `a` switching to its own. Its filter takes `kind:`, `status:`,
+`selection:`, `session:`, `machine:`, `task:`, `epic:`, `label:`, `priority:` and free text,
+opening on `status:open selection:current`; `o` sorts by updated, created, priority, task, epic,
+kind or session, and `s` groups by task, epic, kind or session. A row whose issue has an open,
+current item shows `✎`, and its options menu opens the first
 ([docs/procedures/mod-install.md](docs/procedures/mod-install.md#review-items)).
 
 The MCP UI app for Claude Desktop and claude.ai, and the web app, are [TODO]: neither has been
