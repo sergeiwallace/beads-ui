@@ -245,6 +245,8 @@ The Detail view shows the issue's fields as controls. Tab to one, change it and 
 
 The description is shown as Markdown and is also edited in the one-line `Description` field. There, a line break is written `\n`, a tab `\t`, a carriage return `\r` and a backslash `\\`; the mod turns them back into those characters when you save, so the text round-trips exactly, and saving it unchanged writes nothing. A backslash before any other character is kept as typed. A description longer than 20,000 characters in that form is not edited inline; the field says so and names the `bd update` command to use.
 
+The issue's comments follow its history, oldest first and newest last, each under its author and time; opening a task from the task panel shows the same list. To add one, Tab to the `Comment` field, type it (`\n` is a line break, as in the description) and press Enter: the mod writes it with `bd comments add` as the session (`--actor` set to the session's name), reads the comments again and draws the new one, and it is published like any other edit ([Publishing edits](#publishing-edits)). If the write fails, the field keeps what you typed and a line says why; an empty comment writes nothing. The comment bodies share about 30,000 characters of the drawing; an older one past that keeps its author and time and names the `bd comments` command that shows it whole.
+
 ## Configuration
 
 The mod reads `beads-ui.toml` each time it refreshes. It uses the first of these that exists:

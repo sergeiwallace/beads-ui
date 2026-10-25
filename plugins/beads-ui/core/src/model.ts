@@ -65,6 +65,15 @@ export interface HistoryEvent {
   comment?: string;
 }
 
+/** One comment on an issue, as `bd comments <id> --json` returns it. */
+export interface Comment {
+  id: string;
+  issueId: string;
+  author: string;
+  text: string;
+  createdAt: string;
+}
+
 export interface DeletePreview {
   issueIds: string[];
   cascade: boolean;

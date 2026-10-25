@@ -18,7 +18,11 @@ import {
   buttonWidth,
   type CardView,
   COMMANDS,
+  type Comment,
   clockStamp,
+  commentAddArgv,
+  commentsArgv,
+  commentsView,
   createArgv,
   DEFAULT_BAND_SETTINGS,
   DEFAULT_CONFIG,
@@ -60,6 +64,7 @@ import {
   type PlannedView,
   packRows,
   panelActions,
+  parseBdComments,
   parseBdCreatedId,
   parseBdHistoryEvents,
   parseBdList,
@@ -67,6 +72,7 @@ import {
   parseBdShow,
   parseBdStatuses,
   parseBoardSnapshot,
+  parseCommentDraft,
   parseFieldEdit,
   parseFileLease,
   parseIssueRows,
@@ -339,6 +345,13 @@ export class BeadsPane {
   detailId: string | undefined;
   detail: DetailState | undefined;
   detailError: string | undefined;
+  /** The open issue's comments (BU-mg2.3.15), read with its detail; undefined until read. */
+  comments: Comment[] | undefined;
+  commentsError: string | undefined;
+  /** What the comment control holds: kept when its write fails, so no typed text is lost. */
+  commentDraft = "";
+  commentSaving = false;
+  commentError: string | undefined;
   undo: UndoClose | undefined;
   notice: Notice | undefined;
   focusedId: string | undefined;
@@ -1462,21 +1475,37 @@ export class BeadsPane {
       this.host?.invalidate();
       return;
     }
+    if (id !== this.detailId) {
+      this.commentDraft = "";
+      this.commentError = undefined;
+    }
     this.focusedId = id;
     this.detailId = id;
     this.detail = undefined;
     this.detailError = undefined;
+    this.comments = undefined;
+    this.commentsError = undefined;
     this.setTab("detail");
     await this.loadDetail(id);
     this.host?.invalidate();
   }
 
   private async loadDetail(id: string): Promise<void> {
-    const [shown, history] = await Promise.all([
+    const [shown, history, comments] = await Promise.all([
       this.run(showArgv(id), READ_TIMEOUT_MS),
       this.run(historyArgv(id), READ_TIMEOUT_MS),
+      this.run(commentsArgv(id), READ_TIMEOUT_MS),
     ]);
     if (this.detailId !== id) return;
+    const parsedComments = comments.ok ? parseBdComments(comments.stdout) : undefined;
+    if (parsedComments?.ok === true) {
+      this.comments = parsedComments.value;
+      this.commentsError = undefined;
+    } else {
+      this.commentsError = comments.ok
+        ? `bd comments ${id} returned nothing beads-ui can read`
+        : this.failure(`bd comments ${id}`, comments);
+    }
     const issue = shown.ok ? parseBdShow(shown.stdout) : undefined;
     const first = issue?.ok === true ? issue.value.find((one) => one.id === id) : undefined;
     if (first === undefined) {
@@ -1525,6 +1554,42 @@ export class BeadsPane {
     await this.wrote(ran.dir);
     await this.loadDetail(detail.issue.id);
     await this.refresh({ direct: true });
+  }
+
+  /**
+   * A comment typed in the Detail view (BU-mg2.3.15): `bd comments add` as the session's actor,
+   * then the publish hears of the write (D-33) and the comments are read again. A failed write
+   * keeps the typed text in the control and says why.
+   */
+  async addComment(text: string): Promise<void> {
+    const issue = this.detail?.issue;
+    if (issue === undefined || this.commentSaving) return;
+    this.commentDraft = text;
+    const parsed = parseCommentDraft(text);
+    if (!parsed.ok) {
+      this.commentError = parsed.error;
+      this.host?.invalidate();
+      return;
+    }
+    this.commentError = undefined;
+    this.commentSaving = true;
+    this.host?.invalidate();
+    const ran = await this.run(
+      commentAddArgv(issue.id, parsed.value, this.stores.sessionName),
+      WRITE_TIMEOUT_MS,
+    );
+    this.commentSaving = false;
+    if (!ran.ok) {
+      this.commentError = this.failure("adding the comment", ran);
+      this.host?.invalidate();
+      return;
+    }
+    await this.wrote(ran.dir);
+    if (this.detailId === issue.id) {
+      this.commentDraft = "";
+      await this.loadDetail(issue.id);
+    }
+    this.host?.invalidate();
   }
 
   requestDelete(): void {
@@ -2609,7 +2674,57 @@ export class BeadsPane {
             children: [Text({ dimColor: true, children: event.line })],
           }),
         ),
+        ...this.drawComments(ui, width, id),
       ]),
     });
+  }
+
+  /**
+   * The open issue's comments, newest last, and the control a new one is typed into
+   * (BU-mg2.3.15). The task panel opens a task into this view, so both read the same list.
+   */
+  private drawComments(ui: PaneUi, width: number, issueId: string): RenderNode[] {
+    const { Box, Text, Input, Markdown } = ui;
+    const view = commentsView(issueId, this.comments ?? [], { width });
+    return present<RenderNode>([
+      Box({
+        key: "comments-heading",
+        children: [Text({ bold: true, children: view.heading })],
+      }),
+      this.commentsError === undefined
+        ? undefined
+        : this.line(ui, "comments-error", this.commentsError, "error"),
+      ...view.rows.map((row) =>
+        Box({
+          key: `comment:${row.id}`,
+          flexDirection: "column",
+          children: [
+            Text({ dimColor: true, children: row.line }),
+            Markdown({ key: `comment-md:${row.id}`, text: row.text }),
+          ],
+        }),
+      ),
+      this.commentSaving
+        ? this.line(ui, "comment-saving", "adding the comment…", "text.dim")
+        : undefined,
+      this.commentError === undefined
+        ? undefined
+        : this.line(ui, "comment-error", this.commentError, "error"),
+      Box({
+        key: "comment-row",
+        flexDirection: "row",
+        gap: 1,
+        children: [
+          Box({ key: "label:comment", flexShrink: 0, children: [Text({ children: "Comment:" })] }),
+          Input({
+            key: "comment-add",
+            value: this.commentDraft,
+            placeholder: "one line: \\n is a line break, \\\\ a backslash",
+            submitLabel: "add",
+            onSubmit: (value) => void this.addComment(value),
+          }),
+        ],
+      }),
+    ]);
   }
 }
