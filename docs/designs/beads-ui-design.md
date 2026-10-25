@@ -702,8 +702,9 @@ Each phase carries its scope, deliverables, tasks with EARS acceptance criteria 
     - [ ] `While the band's surface draws Raster (the terminal), the band's summary level shall carry at most one Raster row inside maxRows: a done-in-window sparkline and one bar per count, repainted through $.ui.blit no more than once per band redraw; on a surface without Raster it shall draw the same figures as Text.`
     - [ ] `When the Raster row is drawn, the cost of one blit shall be measured and recorded in the design doc's as-built note.`
   - **T-2C.12 The pane's visual pass** (D-43, BU-mg2.3.21.6.4)
-    - [ ] `When the pane draws any view, it shall draw framed sections, a header bar, board cards with priority and status accents, one spacing scale, one weight scale, hover styles on pressable rows, and an empty and an error state per view, through the shared components, and the width tests at 40, 48, 64, 72, 80 and 120 columns shall pass.`
+    - [x] `When the pane draws any view, it shall draw framed sections, a header bar, board cards with priority and status accents, one spacing scale, one weight scale, hover styles on pressable rows, and an empty and an error state per view, through the shared components, and the width tests at 40, 48, 64, 72, 80 and 120 columns shall pass.`
     - [ ] `When the pass lands, the design doc shall carry before and after captures of each restyled view in both themes.`
+    - As built (T-2C.12, BU-mg2.3.21.6.4): the scales, the sections and their compact form, the header bar, the cards, the row hover, the states per view, the token table for the light and dark themes and the text captures of every view before and after, in D-43's as-built note. The second criterion holds for the text captures and the per-theme token record; the live captures in each theme are still to be taken, by the launcher.
   - **T-2C.13 Image and Svg where the surface draws them** (D-43, BU-mg2.3.21.6.5)
     - [ ] `When a view offers a picture (the Timeline, a burndown), it shall draw an Image only where the surface profile says the terminal can show one, Svg on the desktop, VS Code and mobile surfaces, and the alt text elsewhere; a test shall cover each fallback.`
     - [ ] `Before Image is enabled on a host, this host's tmux allow-passthrough setting shall be probed and the result recorded in the design doc.`
@@ -711,7 +712,7 @@ Each phase carries its scope, deliverables, tasks with EARS acceptance criteria 
     - [x] `When any component draws a Button, or any element with an onPress, it shall draw the shared clickable affordance (a button frame or bracket, a theme-accent colour and a hover style where the surface supports hover), and a test over every view's drawn tree, on both surfaces, shall fail on a pressable element drawn without it.`
     - [x] `When the band draws its pane control, it shall draw an icon-first button with one glyph for open and another for close, from the glyph table, with its ASCII form, the affordance above and the same hotkey, and no text label "beads".`
     - [x] `When this task lands, the design doc's visual language (D-43) shall state the standard and list each interactive element of the band and the pane with the affordance it draws.`
-    - As built (T-2C.14, BU-mg2.3.21.6.6 and .6.7): the affordance, the pane toggle's glyphs and why, the list of interactive elements and the before and after captures, in D-43's as-built note.
+    - As built (T-2C.14, BU-mg2.3.21.6.6 and .6.7): the affordance, the pane toggle's glyphs and why, the list of interactive elements and the before and after captures, in D-43's as-built note. The per-element audit, each element's look at 473b5ff and after, is the table in D-43's T-2C.12 note.
 - **Exit gate:** `npm run lint` and `npm test` green in beads-ui and the ai-harness pytest green for T-2C.4; the plugin version raised by each release; on sem-kg-ec2, after the chief installs each release and the session runs `/reload-plugins`, recorded in the Approval Log: no pane opening at session start or after `/reload-plugins` unless `[panel] open_at_start` is set; the summary line with its controls at the left; a count expanding rows, "+M more", collapse and summary; the overview; an issue with a held item showing its Review section and the reader; the firstmate's Review view holding an `acn-mac` item and no `fw-lnx` or `mac` item; the indicators on a blocked issue and on an issue with a live agent row.
 
 ### Phase 3: The web app, locally and as the queue dashboard's board
@@ -3288,6 +3289,464 @@ After:
 ```
 
 - Not done here, by D-43's order: the colours beyond the brackets and the rest of the pane's look (T-2C.12), the band's disclosure levels and its count buttons (T-2C.2, which draw through this affordance), the indicator entries (T-2C.3) and Raster in the band (T-2C.11). Not yet checked live in a session: how the brackets and ◨ ⊠ draw in the fleet's terminals and fonts; the `ascii` switch is the fallback until they are.
+
+**As built (T-2C.12, BU-mg2.3.21.6.4; the per-element audit of BU-mg2.3.21.6.7; the theme record of BU-mg2.3.21.6.1).**
+
+- The spacing scale is `SPACE` in `core/src/layout.ts`: `none` 0, `tight` 1 and `loose` 2 cells. `tight` sits between the parts of one thing (a label and its control, a card's lines), `loose` between things (the toolbar's buttons, the Detail's two columns). A hooks-entry walk of every view, the Detail and the three overlays fails on any gap, padding or margin off the scale, and its negative arm is checked against a Box with `gap: 3`. Claude Code 2.1.310's tree validator also takes a named scale (`xs` to `xl`, which it turns into cells) and a Text `size` and `weight`, read from the binary. I chose plain cells because core packs rows and the width tests measure from numbers, and because the terminal draws bold and dim on every font, so the weight scale is built from them.
+- The weight scale is `weight()` in `hooks/components/look.ts`: `title` (bold, in `accent`), `heading` (bold), `body` (plain) and `meta` (dim, for counts, times and hints). A view's title is on `title`. The header's store, the Board's lane labels, the Detail's Dependencies, History and Comments headings, Settings' first heading and the options menu's section titles are on `heading`.
+- Framed sections, `section()` in `hooks/components/frame.ts`: the pane draws each view in a section keyed `section:<view>`, with a rounded border in `surface.card`, `tight` padding and the view's glyph and name as its title (`≣ Backlog`). The frame takes 4 columns and 3 rows (`SECTION_COLUMNS`, `SECTION_ROWS`), so each view is drawn at the section's inner width. The Board is the exception: its section draws the title over the view with no border, because its cards each carry a frame and a frame inside another costs 4 columns that the cards' Move to label needs at 118 columns. Compact form: where the pane is short (inline, or under 12 rows) the section draws no frame and no title, and below 48 columns it draws the title with no frame, since a frame's 4 columns are what the Review view's sort button needs at 40. This applies D-43's rule that a narrow tier keeps a compact form and never drops it.
+- The header bar, `headerBar()`: the store and its read time on `surface.header`'s fill with `tight` padding, the store on `heading` and the time on `meta`.
+- Board cards: each card has a rounded frame in its column's status token (`statusToken` of the column's category, not the WIP limit's warning), and the frame turns `surface.focus` under the pointer. The priority is bold in its priority token, and the display id and assignee are on `meta`. A card's frame takes 2 columns (`CARD_FRAME_COLUMNS`), which the board takes out of each column's text width. It also adds 86 serialized characters, measured for `card:BU-2zw` (1,160 before, 1,246 after) and priced at 100 (`CARD_FRAME_TREE_CHARS`) in the page budget. So a cell page of the 200-card test store holds 13 cards where it held 14.
+- Hover on pressable rows: task rows (`taskrow:<id>`), Backlog rows (`row:<id>`), Timeline rows (`timeline-row:<id>`) and Review rows (`review-line:<key>`) fill with `surface.hover` under the pointer, through `rowHover()`. Each row's buttons keep their own inverse hover from the clickable affordance. VS Code ignores hover, and the rows still draw.
+- The empty and error states, `emptyState()`, `errorState()` and `stateBox()`. An empty state is a rounded frame in `text.dim` around what is missing and what to do. An error state is a frame in `error`, and a warning state a frame in `warning`. On a short surface each draws the same text in the same colour with no frame, so the band's rows budget is unchanged. Per view:
+
+| View | Empty state | Error state |
+| --- | --- | --- |
+| Tasks | `tasks-empty`: no task in progress, blocked or open, and on Mine how to show every owner's | `error-line`: the first board read failed (exit code and bd's message) |
+| Board | `board-empty`: no issue in this store yet, type a title in New; or no issue matches the filter; or Mine's `mine-empty` line | `error-line`, the same |
+| Backlog | `backlog-empty`, as the Board's for open issues | `error-line`, the same |
+| Timeline | `timeline-empty`: no epic or milestone has a due date, or the store holds none | `error-line`, the same |
+| Detail | `detail-empty`: no issue open, and how to open one | `detail-error`: the issue's read or a save failed |
+| Settings | `settings:empty`: no beads-ui.toml yet, these are the defaults and Save to file writes them | `settings:problems`: the file's problems, one line each (warning) |
+| Review | `review-view:empty` and `review-view:unset` | `review-view:filter-error` (an unknown filter key) and `review-view:note` (the snapshot's own failure), as warnings |
+| Sprint | planned: its press says so (`SPRINT_PLANNED_TEXT`), and no view is drawn | none: it reads nothing |
+
+  Before this pass, a first board read that failed left Tasks, Board, Backlog and Timeline drawing "reading the store⋯" for ever, with the error as one line above the inputs. Now the view draws the error in its own frame where its rows would be, keyed `error-line` as before. Over a board the pane kept, a failed refresh still draws `error-line` above the view, framed, and the board stays.
+- Both themes. The test kit draws text, not colour, so each token's light and dark value is recorded here from Claude Code 2.1.310's own theme objects: `light` (the `case "light"` object) and `dark` (the default). It covers the 21 tokens, with the two this pass added (`surface.header`, `surface.hover`). Live captures of the pane in each theme are left to my launcher, because a live session is a Claude process the host's load cap has not allotted here.
+
+| Token | Claude Code theme key | Light theme | Dark theme | Where the pane draws it |
+| --- | --- | --- | --- | --- |
+| `status.active` | `suggestion` | `rgb(87,105,247)` | `rgb(177,185,249)` | Board: the header and card frames of an active status (open) |
+| `status.wip` | `claude` | `rgb(215,119,87)` | `rgb(215,119,87)` | Board: the header and card frames of a wip status (in_progress, blocked, hooked, review, uat) |
+| `status.frozen` | `inactive` | `rgb(102,102,102)` | `rgb(153,153,153)` | Board: the header and card frames of a frozen status (deferred, pinned) |
+| `status.done` | `success` | `rgb(44,122,57)` | `rgb(78,186,101)` | Board: the header and card frames of closed |
+| `priority.p0` | `error` | `rgb(171,43,63)` | `rgb(255,107,128)` | the priority on a card and a Backlog row: P0 |
+| `priority.p1` | `warning` | `rgb(150,108,30)` | `rgb(255,193,7)` | the same, P1 |
+| `priority.p2` | `text` | `rgb(0,0,0)` | `rgb(255,255,255)` | the same, P2 |
+| `priority.p3` | `inactive` | `rgb(102,102,102)` | `rgb(153,153,153)` | the same, P3 |
+| `priority.p4` | `subtle` | `rgb(175,175,175)` | `rgb(80,80,80)` | the same, P4 |
+| `surface.card` | `promptBorder` | `rgb(138,138,138)` | `rgb(136,136,136)` | every view's section frame; a card of a status bd did not list |
+| `surface.focus` | `permission` | `rgb(87,105,247)` | `rgb(177,185,249)` | a card's frame under the pointer; the Client's focused row |
+| `surface.header` | `userMessageBackground` | `rgb(240,240,240)` | `rgb(55,55,55)` | the header bar's fill |
+| `surface.hover` | `userMessageBackgroundHover` | `rgb(252,252,252)` | `rgb(70,70,70)` | a task row, Backlog row, Timeline row or Review row under the pointer |
+| `text.default` | `text` | `rgb(0,0,0)` | `rgb(255,255,255)` | a notice that names no token |
+| `text.dim` | `inactive` | `rgb(102,102,102)` | `rgb(153,153,153)` | an empty state's frame |
+| `accent` | `claude` | `rgb(215,119,87)` | `rgb(215,119,87)` | each view's title, the Review heading, the undo line |
+| `success` | `success` | `rgb(44,122,57)` | `rgb(78,186,101)` | a notice that a write landed |
+| `warning` | `warning` | `rgb(150,108,30)` | `rgb(255,193,7)` | the config's problems, the filter line, Settings' and the Review filter's warning states, the no-store state, the unsynced stores |
+| `error` | `error` | `rgb(171,43,63)` | `rgb(255,107,128)` | every error state's frame and text, a failed save's line |
+| `conflict` | `merged` | `rgb(135,0,255)` | `rgb(175,135,255)` | the conflict line after bd exits 13 |
+| `control` | `claude` | `rgb(215,119,87)` | `rgb(215,119,87)` | the clickable brackets of every button |
+
+- The per-element audit (BU-mg2.3.21.6.7's Done-when). Each interactive element of the band and the pane is listed with the look it drew at 473b5ff (before the visual base, PR #68's parent) and after this pass. Each rendering is the element's button, or its press frame, laid out by `hooks/tests/render.ts` from the tree Claude Code 2.1.310's test kit drew. The walk covered the band at each level, every pane view, a task's Detail, the help, the band settings, the options menus, the delete confirmation, the large store's pagers and a configured Review view and reader. "Not drawn yet" marks an element added after 473b5ff. A plain button drew `{hotkey}: {label}` with nothing to say it could be pressed; every one now draws between the control-token brackets. Beyond the brackets, a row differs where PR #68 replaced a glyph that failed the width rule (`←` and `→` became `◂` and `▸`, `◐` became `◒`), where a page now holds a different count (`+175 more` became `+187 more`), at the pane toggle (`beads` became `[◨]`, T-2C.14) and at the delete confirmation's Close instead (a framed `[ Close instead ]` became `[c: Close instead]`, its hotkey shown).
+
+| Element | Where | Before (473b5ff) | After |
+| --- | --- | --- | --- |
+| `band-count:own:<part>` | band | not drawn yet | `[t: 3 tasks]` |
+| `band-detail:pane:<id>` | band | not drawn yet | `[◨ open in the pane]` |
+| `band:back` | band | not drawn yet | `[back]` |
+| `band:expand` | band | not drawn yet | `[e: ▾]` |
+| `band:overview` | band | not drawn yet | `[v: ◫]` |
+| `band:summary` | band | not drawn yet | `[s: summary]` |
+| `beads-band:close` | band | not drawn yet | `[⊠]` |
+| `beads-band:open` | band | `beads` | `[◨]` |
+| `tab:<view>` | band | not drawn yet | `[Tasks]` |
+| `task:<id>` | band | not drawn yet | `[◒ P1 BU-epic-beads-ui-beads-task-manager-mg2 EPIC beads-ui: Beads task manager for the Claude Code TUI, an MC⋯]` |
+| `taskmenu:<id>` | band | not drawn yet | `[⋮]` |
+| `tasks:below` | band | not drawn yet | `[⇣ 7 below]` |
+| `tasks:more` | band | not drawn yet | `[r: +5 more]` |
+| `backlog-back` | pane | `last page` | `[last page]` |
+| `backlog-next` | pane | `+140 more` | `[+140 more]` |
+| `band-settings` | pane | `g: Band` | `[g: Band]` |
+| `band:left:<part>` | pane | `←` | `[◂]` |
+| `band:level:<level>` | pane | not drawn yet | `[summary]` |
+| `band:right:<part>` | pane | `→` | `[▸]` |
+| `band:save` | pane | `Save to file` | `[Save to file]` |
+| `band:toggle:<part>` | pane | `remove` | `[remove]` |
+| `delete` | pane | `x: Delete` | `[x: Delete]` |
+| `detail` | pane | `d: Open` | `[d: Open]` |
+| `edit` | pane | `e: Edit` | `[e: Edit]` |
+| `help` | pane | `h: Help` | `[h: Help]` |
+| `lanes-back` | pane | `back` | `[back]` |
+| `lanes-next` | pane | `l: more lanes` | `[l: more lanes]` |
+| `menu` | pane | `k: Menu` | `[k: Menu]` |
+| `menu:close` | pane | `close the menu` | `[close the menu]` |
+| `menu:item:<command>` | pane | `d: Detail` | `[d: Detail]` |
+| `move` | pane | `m: Status` | `[m: Status]` |
+| `new` | pane | `n: New` | `[n: New]` |
+| `next:<cell>` | pane | `+175 more` | `[+187 more]` |
+| `open:<id>` | pane | `detail` | `[detail]` |
+| `page-back` | pane | `b: Page back` | `[b: Page back]` |
+| `page-next` | pane | `p: Next page` | `[p: Next page]` |
+| `prev:<cell>` | pane | `last page` | `[last page]` |
+| `reader:close` | pane | not drawn yet | `[Close]` |
+| `reader:issue` | pane | not drawn yet | `[Go to issue]` |
+| `reader:send` | pane | not drawn yet | `[Send to session]` |
+| `review-item:<item>` | pane | not drawn yet | `[blocker: a blocker on my issue]` |
+| `review:group` | pane | not drawn yet | `[s: Group: none]` |
+| `review:scope` | pane | not drawn yet | `[a: Showing: the pair's]` |
+| `review:sort` | pane | not drawn yet | `[o: Sort: updated (answered, else held)]` |
+| `scope` | pane | `a: Showing: mine` | `[a: Showing: mine]` |
+| `settings:save` | pane | `Save to file` | `[Save to file]` |
+| `sort` | pane | `o: Sort: priority` | `[o: Sort: priority]` |
+| `swimlane` | pane | `s: Swimlane: none` | `[s: Swimlane: none]` |
+| `tab:<view>` | pane | `t: Tasks` | `[t: Tasks]` |
+| `task:<id>` | pane | `▸` | `[▸]` |
+| `taskmenu:<id>` | pane | `⋮` | `[⋮]` |
+| `tasks:more` | pane | `r: +5 more` | `[r: +5 more]` |
+| `timeline:<id>` | pane | `BU-epic-beads-ui-beads-task-manager-mg2` | `[BU-epic-beads-ui-beads-task-manager-mg2]` |
+| `task:<id>` | pane, VS Code | `◐ P1 BU-epic-beads-ui-beads-task-manager-mg2 EPIC beads-ui: Beads task manager for the Claude Code T…` | `[◒ P1 BU-epic-beads-ui-beads-task-manager-mg2 EPIC beads-ui: Beads task manager for the⋯]` |
+| `close-instead` | delete confirmation | `[ Close instead ]` | `[c: Close instead]` |
+
+  Elements the walk did not reach, each drawn by a component through the same `pressable`, so `[<label>]`, and each added after 473b5ff: the Review section's item rows in a Detail (`review:<key>`) and its page controls; the Review view's `review:earlier` and `review:later`; the reader's `reader:earlier` and `reader:later`; the band's `tasks:above`; and the button forms of `choice`, `field` and `markdown` (`<key>:<value>`, `<key>:elsewhere`), which a surface without Select, Input or Markdown draws. The tree walks of `hooks/look.test.ts` and `hooks/components.test.ts` check each of them for the affordance.
+- Captures at 120 columns, from the test kit. The before tree is 2b4da0c (the base this pass started from, after the visual base) and the after tree is this pass, both laid out by the same `hooks/tests/render.ts`. Colour, fill and hover are not drawn. The Tasks view is drawn in VS Code, where the element tree draws its rows, and the rest on the terminal. Long views are cut to their first lines.
+
+  The Board, before, at 2b4da0c, its first 16 lines:
+
+```text
+╭─────────────╮ beads-ui  as of 21:12:04
+│[t: Tasks]   │ [a: Showing: all]  [s: Swimlane: none]  [o: Sort: priority]  [n: New]  [d: Detail]  [m: Move to]
+│[1: Board]   │ [x: Delete]  [g: Band]  [k: Menu]  [h: Help]
+│[2: Backlog] │ Filter: _
+│[3: Sprint]  │ New: _
+│[4: Detail]  │ open 20                   in_progress 2             deferred 0                closed 8
+│[5: Timeline]│     BU-t-0-1-core-module-     BU-epic-beads-ui-bead pinned 0                      BU-research-beads-ui-
+│[6: Settings]│ T-0.1: core module and⋯   EPIC beads-ui: Beads ta⋯                            Research for beads-ui:⋯
+│[7: Review]  │ P1                        P1 @aih-ec2-3                                       P1 @aih-3
+╰─────────────╯ Move to: open v           Move to: in_progress v                              Move to: closed v
+                [detail]                  [detail]                                            [detail]
+                    BU-t-0-2-bd-node-nrrb     BU-beads-ui-claude-co                               BU-doc-beads-ui-prd-f
+                T-0.2: bd-node adapter    beads-ui Claude Code mo⋯                            Design doc for beads-ui⋯
+                P1                        P1                                                  P1 @aih-ec2-3
+                Move to: open v           Move to: in_progress v                              Move to: closed v
+                [detail]                  [detail]                                            [detail]
+```
+
+  The Board, after, its first 16 lines:
+
+```text
+╭─────────────╮  beads-ui  as of 21:12:04
+│[t: Tasks]   │ [a: Showing: all]  [s: Swimlane: none]  [o: Sort: priority]  [n: New]  [d: Detail]  [m: Move to]
+│[1: Board]   │ [x: Delete]  [g: Band]  [k: Menu]  [h: Help]
+│[2: Backlog] │ Filter: _
+│[3: Sprint]  │ New: _
+│[4: Detail]  │ ⊞ Board
+│[5: Timeline]│ open 20                   in_progress 2             deferred 0                closed 8
+│[6: Settings]│ ╭───────────────────────╮ ╭───────────────────────╮ pinned 0                  ╭───────────────────────╮
+│[7: Review]  │ │    BU-t-0-1-core-modul│ │    BU-epic-beads-ui-be│                           │    BU-research-beads-u│
+╰─────────────╯ │T-0.1: core module an⋯ │ │EPIC beads-ui: Beads⋯  │                           │Research for beads-ui⋯ │
+                │P1                     │ │P1 @aih-ec2-3          │                           │P1 @aih-3              │
+                │Move to: open v        │ │Move to: in_progress v │                           │Move to: closed v      │
+                │[detail]               │ │[detail]               │                           │[detail]               │
+                ╰───────────────────────╯ ╰───────────────────────╯                           ╰───────────────────────╯
+                ╭───────────────────────╮ ╭───────────────────────╮                           ╭───────────────────────╮
+                │    BU-t-0-2-bd-node-nr│ │    BU-beads-ui-claude-│                           │    BU-doc-beads-ui-prd│
+```
+
+  The Tasks view, in VS Code, before, at 2b4da0c:
+
+```text
+╭─────────────╮ beads-ui  as of 21:12:04
+│[t: Tasks]   │ [a: Showing: all]  [n: New]  [d: Open]  [m: Status]  [e: Edit]  [x: Delete]  [k: Menu]  [g: Band]
+│[1: Board]   │ [h: Help]
+│[2: Backlog] │ New: _
+│[3: Sprint]  │ 22 tasks: 2 in progress, 0 blocked, 20 open
+│[4: Detail]  │     [◒ P1 BU-epic-beads-ui-beads-task-manager-mg2 EPIC beads-ui: Beads task manager for the Claud⋯] [⋮]
+│[5: Timeline]│     [◒ P1 BU-beads-ui-claude-code-aeyb beads-ui Claude Code mod: the task manager inside the Clau⋯] [⋮]
+│[6: Settings]│     [◦ P1 BU-t-0-1-core-module-gset T-0.1: core module and purity gate] [⋮]
+│[7: Review]  │     [◦ P1 BU-t-0-2-bd-node-nrrb T-0.2: bd-node adapter] [⋮]
+╰─────────────╯     [◦ P1 BU-t-0-3-mod-plugin-fumv T-0.3: mod plugin and marketplace] [⋮]
+                    [◦ P1 BU-t-0-4-repository-zach T-0.4: repository hygiene for a public repo] [⋮]
+                    [◦ P1 BU-t-1-1-board-tab-nxdt T-1.1: Board tab with keyboard Move to] [⋮]
+                    [◦ P1 BU-t-1-2-backlog-tab-vptb T-1.2: Backlog tab with sort and filter] [⋮]
+                    [◦ P1 BU-t-1-3-detail-tab-ymtx T-1.3: Detail tab and inline edit] [⋮]
+                    [◦ P1 BU-t-1-4-quick-add-fskv T-1.4: quick-add and display-id minting] [⋮]
+                [r: +12 more]
+                t Tasks ⋅ 1 Board ⋅ 2 Backlog ⋅ 3 Sprint ⋅ 4 Detail ⋅ 5 Timeline ⋅ 6 Settings ⋅ 7 Review ⋅ k menu ⋅ r m
+```
+
+  The Tasks view, in VS Code, after:
+
+```text
+╭─────────────╮  beads-ui  as of 21:12:04
+│[t: Tasks]   │ [a: Showing: all]  [n: New]  [d: Open]  [m: Status]  [e: Edit]  [x: Delete]  [k: Menu]  [g: Band]
+│[1: Board]   │ [h: Help]
+│[2: Backlog] │ New: _
+│[3: Sprint]  │ ╭─────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[4: Detail]  │ │ ✓ Tasks                                                                                             │
+│[5: Timeline]│ │ 22 tasks: 2 in progress, 0 blocked, 20 open                                                         │
+│[6: Settings]│ │     [◒ P1 BU-epic-beads-ui-beads-task-manager-mg2 EPIC beads-ui: Beads task manager for the C⋯] [⋮] │
+│[7: Review]  │ │     [◒ P1 BU-beads-ui-claude-code-aeyb beads-ui Claude Code mod: the task manager inside the⋯] [⋮]  │
+╰─────────────╯ │     [◦ P1 BU-t-0-1-core-module-gset T-0.1: core module and purity gate] [⋮]                         │
+                │     [◦ P1 BU-t-0-2-bd-node-nrrb T-0.2: bd-node adapter] [⋮]                                         │
+                │     [◦ P1 BU-t-0-3-mod-plugin-fumv T-0.3: mod plugin and marketplace] [⋮]                           │
+                │     [◦ P1 BU-t-0-4-repository-zach T-0.4: repository hygiene for a public repo] [⋮]                 │
+                │     [◦ P1 BU-t-1-1-board-tab-nxdt T-1.1: Board tab with keyboard Move to] [⋮]                       │
+                │     [◦ P1 BU-t-1-2-backlog-tab-vptb T-1.2: Backlog tab with sort and filter] [⋮]                    │
+                │     [◦ P1 BU-t-1-3-detail-tab-ymtx T-1.3: Detail tab and inline edit] [⋮]                           │
+                │     [◦ P1 BU-t-1-4-quick-add-fskv T-1.4: quick-add and display-id minting] [⋮]                      │
+                │ [r: +12 more]                                                                                       │
+                ╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                t Tasks ⋅ 1 Board ⋅ 2 Backlog ⋅ 3 Sprint ⋅ 4 Detail ⋅ 5 Timeline ⋅ 6 Settings ⋅ 7 Review ⋅ k menu ⋅ r m
+```
+
+  The Backlog, before, at 2b4da0c, its first 14 lines:
+
+```text
+╭─────────────╮ beads-ui  as of 21:12:04
+│[t: Tasks]   │ [a: Showing: all]  [s: Swimlane: none]  [o: Sort: priority]  [n: New]  [d: Detail]  [m: Move to]
+│[1: Board]   │ [x: Delete]  [g: Band]  [k: Menu]  [h: Help]
+│[2: Backlog] │ Filter: _
+│[3: Sprint]  │ New: _
+│[4: Detail]  │ 20 of 20 open issues, priority order
+│[5: Timeline]│     P1 BU-t-0-1-core-module-gset    task T-0.1: core module and purity gate         2026-10-21 [detail]
+│[6: Settings]│     P1 BU-t-0-2-bd-node-nrrb        task T-0.2: bd-node adapter                     2026-10-21 [detail]
+│[7: Review]  │     P1 BU-t-0-3-mod-plugin-fumv     task T-0.3: mod plugin and marketplace          2026-10-21 [detail]
+╰─────────────╯     P1 BU-t-0-4-repository-zach     task T-0.4: repository hygiene for a public⋯    2026-10-21 [detail]
+                    P1 BU-t-1-1-board-tab-nxdt      task T-1.1: Board tab with keyboard Move to     2026-10-21 [detail]
+                    P1 BU-t-1-2-backlog-tab-vptb    task T-1.2: Backlog tab with sort and filter    2026-10-21 [detail]
+                    P1 BU-t-1-3-detail-tab-ymtx     task T-1.3: Detail tab and inline edit          2026-10-21 [detail]
+                    P1 BU-t-1-4-quick-add-fskv      task T-1.4: quick-add and display-id minting    2026-10-21 [detail]
+```
+
+  The Backlog, after, its first 14 lines:
+
+```text
+╭─────────────╮  beads-ui  as of 21:12:04
+│[t: Tasks]   │ [a: Showing: all]  [s: Swimlane: none]  [o: Sort: priority]  [n: New]  [d: Detail]  [m: Move to]
+│[1: Board]   │ [x: Delete]  [g: Band]  [k: Menu]  [h: Help]
+│[2: Backlog] │ Filter: _
+│[3: Sprint]  │ New: _
+│[4: Detail]  │ ╭─────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[5: Timeline]│ │ ≣ Backlog                                                                                           │
+│[6: Settings]│ │ 20 of 20 open issues, priority order                                                                │
+│[7: Review]  │ │     P1 BU-t-0-1-core-module-gset   task T-0.1: core module and purity gate      2026-10-21 [detail] │
+╰─────────────╯ │     P1 BU-t-0-2-bd-node-nrrb       task T-0.2: bd-node adapter                  2026-10-21 [detail] │
+                │     P1 BU-t-0-3-mod-plugin-fumv    task T-0.3: mod plugin and marketplace       2026-10-21 [detail] │
+                │     P1 BU-t-0-4-repository-zach    task T-0.4: repository hygiene for a pub⋯    2026-10-21 [detail] │
+                │     P1 BU-t-1-1-board-tab-nxdt     task T-1.1: Board tab with keyboard Move⋯    2026-10-21 [detail] │
+                │     P1 BU-t-1-2-backlog-tab-vptb   task T-1.2: Backlog tab with sort and fi⋯    2026-10-21 [detail] │
+```
+
+  The Timeline (two epics given due dates), before, at 2b4da0c:
+
+```text
+╭─────────────╮ beads-ui  as of 21:12:04
+│[t: Tasks]   │ [a: Showing: all]  [d: Open]  [k: Menu]  [g: Band]  [h: Help]
+│[1: Board]   │ 9 epics and milestones: 2 with a due date, 7 without
+│[2: Backlog] │ 2026-10-20 to 2026-12-15
+│[3: Sprint]  │ [BU-beads-ui-claude-code-a⋯] ############################################################### 2026-11-02
+│[4: Detail]  │ [BU-epic-beads-ui-beads-ta⋯] ############################################################### 2026-12-15
+│[5: Timeline]│ No due date (7)
+│[6: Settings]│ [BU-beads-ui-mcp-ui-app-zcew]
+│[7: Review]  │ [BU-beads-ui-web-app-sxdx]
+╰─────────────╯ [BU-beads-ui-ios-djvt]
+                [BU-beads-ui-android-skfz]
+                [BU-beads-ui-macos-xtum]
+                [BU-beads-ui-linux-pbff]
+                [BU-beads-ui-windows-efuk]
+                t Tasks ⋅ 1 Board ⋅ 2 Backlog ⋅ 3 Sprint ⋅ 4 Detail ⋅ 5 Timeline ⋅ 6 Settings ⋅ 7 Review ⋅ k menu ⋅ r m
+```
+
+  The Timeline (two epics given due dates), after:
+
+```text
+╭─────────────╮  beads-ui  as of 21:12:04
+│[t: Tasks]   │ [a: Showing: all]  [d: Open]  [k: Menu]  [g: Band]  [h: Help]
+│[1: Board]   │ ╭─────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[2: Backlog] │ │ ⇢ Timeline                                                                                          │
+│[3: Sprint]  │ │ 9 epics and milestones: 2 with a due date, 7 without                                                │
+│[4: Detail]  │ │ 2026-10-20 to 2026-12-15                                                                            │
+│[5: Timeline]│ │ [BU-beads-ui-claude-code-a⋯] ########################################################### 2026-11-02 │
+│[6: Settings]│ │ [BU-epic-beads-ui-beads-ta⋯] ########################################################### 2026-12-15 │
+│[7: Review]  │ │ No due date (7)                                                                                     │
+╰─────────────╯ │ [BU-beads-ui-mcp-ui-app-zcew]                                                                       │
+                │ [BU-beads-ui-web-app-sxdx]                                                                          │
+                │ [BU-beads-ui-ios-djvt]                                                                              │
+                │ [BU-beads-ui-android-skfz]                                                                          │
+                │ [BU-beads-ui-macos-xtum]                                                                            │
+                │ [BU-beads-ui-linux-pbff]                                                                            │
+                │ [BU-beads-ui-windows-efuk]                                                                          │
+                ╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                t Tasks ⋅ 1 Board ⋅ 2 Backlog ⋅ 3 Sprint ⋅ 4 Detail ⋅ 5 Timeline ⋅ 6 Settings ⋅ 7 Review ⋅ k menu ⋅ r m
+```
+
+  The Detail of BU-mg2.3, before, at 2b4da0c, its first 18 lines:
+
+```text
+╭─────────────╮ beads-ui  as of 21:12:04
+│[t: Tasks]   │ [a: Showing: all]  [s: Swimlane: none]  [o: Sort: priority]  [n: New]  [d: Detail]  [m: Move to]
+│[1: Board]   │ [x: Delete]  [g: Band]  [k: Menu]  [h: Help]
+│[2: Backlog] │ BU-beads-ui-claude-code-aeyb beads-ui Claude Code mod: the task manager inside the Claude Code TUI, wi⋯
+│[3: Sprint]  │ Title: beads-ui Claude Code mod: the task mana  Description
+│[4: Detail]  │ Description: The first surface and the first M  The first surface and the first MVP target: board, back
+│[5: Timeline]│ Id: BU-mg2.3
+│[6: Settings]│ Display id: BU-beads-ui-claude-code-aeyb
+│[7: Review]  │ Status: in_progress v
+╰─────────────╯ Priority: 1 v
+                Type: epic v
+                Assignee: _
+                Labels: id:BU-beads-ui-claude-code-aeyb_
+                Parent: BU-mg2
+                Due: _
+                Estimate: _
+                Created: 2026-10-14T23:31:37Z
+                Updated: 2026-10-21T05:48:55Z
+```
+
+  The Detail of BU-mg2.3, after, its first 18 lines:
+
+```text
+╭─────────────╮  beads-ui  as of 21:12:04
+│[t: Tasks]   │ [a: Showing: all]  [s: Swimlane: none]  [o: Sort: priority]  [n: New]  [d: Detail]  [m: Move to]
+│[1: Board]   │ [x: Delete]  [g: Band]  [k: Menu]  [h: Help]
+│[2: Backlog] │ ╭──────────────────────────────────────────────────────────────────────────────────────────────────────
+│[3: Sprint]  │ │ ⊡ Detail
+│[4: Detail]  │ │ BU-beads-ui-claude-code-aeyb beads-ui Claude Code mod: the task manager inside the Claude Code TUI⋯
+│[5: Timeline]│ │ Title: beads-ui Claude Code mod: the task ma  Description
+│[6: Settings]│ │ Description: The first surface and the first  The first surface and the first MVP target: board, ba
+│[7: Review]  │ │ Id: BU-mg2.3
+╰─────────────╯ │ Display id: BU-beads-ui-claude-code-aeyb
+                │ Status: in_progress v
+                │ Priority: 1 v
+                │ Type: epic v
+                │ Assignee: _
+                │ Labels: id:BU-beads-ui-claude-code-aeyb_
+                │ Parent: BU-mg2
+                │ Due: _
+                │ Estimate: _
+```
+
+  Settings, before, at 2b4da0c, its first 12 lines:
+
+```text
+╭─────────────╮ beads-ui  as of 21:12:04
+│[t: Tasks]   │ [k: Menu]  [h: Help]
+│[1: Board]   │ Task panel (every session on this machine)
+│[2: Backlog] │ Shown tasks: 10_
+│[3: Sprint]  │ 1 to 200; the rest collapse behind +N more
+│[4: Detail]  │ Collapse: rest v
+│[5: Timeline]│ which tasks the shown count holds back
+│[6: Settings]│ Panel mode: both v
+│[7: Review]  │ both and beads draw the Tasks view; native hides it
+╰─────────────╯ Open at start: off v
+                on opens the pane by itself at session start and at each plugin reload
+                Debug mode: off v
+```
+
+  Settings, after, its first 12 lines:
+
+```text
+╭─────────────╮  beads-ui  as of 21:12:04
+│[t: Tasks]   │ [k: Menu]  [h: Help]
+│[1: Board]   │ ╭─────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[2: Backlog] │ │ ⊛ Settings                                                                                          │
+│[3: Sprint]  │ │ Task panel (every session on this machine)                                                          │
+│[4: Detail]  │ │ ╭──────────────────────────────────────────────────────────────────────────────────────────────╮    │
+│[5: Timeline]│ │ │ No beads-ui.toml yet: these are the defaults. Save to file writes them, with any you change. │    │
+│[6: Settings]│ │ ╰──────────────────────────────────────────────────────────────────────────────────────────────╯    │
+│[7: Review]  │ │ Shown tasks: 10_                                                                                    │
+╰─────────────╯ │ 1 to 200; the rest collapse behind +N more                                                          │
+                │ Collapse: rest v                                                                                    │
+                │ which tasks the shown count holds back                                                              │
+```
+
+  The Review view, with no `[review] command`, before, at 2b4da0c:
+
+```text
+╭─────────────╮ beads-ui  as of 21:12:04
+│[t: Tasks]   │ [k: Menu]  [g: Band]  [h: Help]
+│[1: Board]   │ Review: 0 of 0 items, this session's own
+│[2: Backlog] │ [o: Sort: updated (answered, else held)]  [s: Group: none]
+│[3: Sprint]  │ Filter: status:open selection:current_
+│[4: Detail]  │ Held items are not read: set [review] command in your own beads-ui.toml, such as command = ["held_cli.p
+│[5: Timeline]│ t Tasks ⋅ 1 Board ⋅ 2 Backlog ⋅ 3 Sprint ⋅ 4 Detail ⋅ 5 Timeline ⋅ 6 Settings ⋅ 7 Review ⋅ k menu ⋅ r m
+│[6: Settings]│
+│[7: Review]  │
+╰─────────────╯
+```
+
+  The Review view, with no `[review] command`, after:
+
+```text
+╭─────────────╮  beads-ui  as of 21:12:04
+│[t: Tasks]   │ [k: Menu]  [g: Band]  [h: Help]
+│[1: Board]   │ ╭─────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[2: Backlog] │ │ ⁇ Review                                                                                            │
+│[3: Sprint]  │ │ Review: 0 of 0 items, this session's own                                                            │
+│[4: Detail]  │ │ [o: Sort: updated (answered, else held)]  [s: Group: none]                                          │
+│[5: Timeline]│ │ Filter: status:open selection:current_                                                              │
+│[6: Settings]│ │ ╭─────────────────────────────────────────────────────────────────────────────────────────────────╮ │
+│[7: Review]  │ │ │ Held items are not read: set [review] command in your own beads-ui.toml, such as command = ["he │ │
+╰─────────────╯ │ ╰─────────────────────────────────────────────────────────────────────────────────────────────────╯ │
+                ╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                t Tasks ⋅ 1 Board ⋅ 2 Backlog ⋅ 3 Sprint ⋅ 4 Detail ⋅ 5 Timeline ⋅ 6 Settings ⋅ 7 Review ⋅ k menu ⋅ r m
+```
+
+  An empty state: the Tasks view of an empty store, before, at 2b4da0c:
+
+```text
+╭─────────────╮ beads-ui  as of 21:12:04
+│[t: Tasks]   │ [a: Showing: all]  [n: New]  [d: Open]  [m: Status]  [e: Edit]  [x: Delete]  [k: Menu]  [g: Band]
+│[1: Board]   │ [h: Help]
+│[2: Backlog] │ New: _
+│[3: Sprint]  │ 0 tasks: 0 in progress, 0 blocked, 0 open
+│[4: Detail]  │ No task is in progress, blocked or open.
+│[5: Timeline]│ t Tasks ⋅ 1 Board ⋅ 2 Backlog ⋅ 3 Sprint ⋅ 4 Detail ⋅ 5 Timeline ⋅ 6 Settings ⋅ 7 Review ⋅ k menu ⋅ r m
+│[6: Settings]│
+│[7: Review]  │
+╰─────────────╯
+```
+
+  An empty state: the Tasks view of an empty store, after:
+
+```text
+╭─────────────╮  beads-ui  as of 21:12:04
+│[t: Tasks]   │ [a: Showing: all]  [n: New]  [d: Open]  [m: Status]  [e: Edit]  [x: Delete]  [k: Menu]  [g: Band]
+│[1: Board]   │ [h: Help]
+│[2: Backlog] │ New: _
+│[3: Sprint]  │ ╭──────────────────────────────────────────────╮
+│[4: Detail]  │ │ ✓ Tasks                                      │
+│[5: Timeline]│ │ 0 tasks: 0 in progress, 0 blocked, 0 open    │
+│[6: Settings]│ │ ╭──────────────────────────────────────────╮ │
+│[7: Review]  │ │ │ No task is in progress, blocked or open. │ │
+╰─────────────╯ │ ╰──────────────────────────────────────────╯ │
+                ╰──────────────────────────────────────────────╯
+                t Tasks ⋅ 1 Board ⋅ 2 Backlog ⋅ 3 Sprint ⋅ 4 Detail ⋅ 5 Timeline ⋅ 6 Settings ⋅ 7 Review ⋅ k menu ⋅ r m
+```
+
+  An error state: the Board when the first `bd list` fails, before, at 2b4da0c:
+
+```text
+╭─────────────╮ beads-ui  loading⋯
+│[t: Tasks]   │ [a: Showing: all]  [s: Swimlane: none]  [o: Sort: priority]  [n: New]  [d: Detail]  [m: Move to]
+│[1: Board]   │ [x: Delete]  [g: Band]  [k: Menu]  [h: Help]
+│[2: Backlog] │ bd list failed (exit 1): Error: database is locked; retrying on the next refresh
+│[3: Sprint]  │ Filter: _
+│[4: Detail]  │ New: _
+│[5: Timeline]│ reading the store⋯
+│[6: Settings]│ t Tasks ⋅ 1 Board ⋅ 2 Backlog ⋅ 3 Sprint ⋅ 4 Detail ⋅ 5 Timeline ⋅ 6 Settings ⋅ 7 Review ⋅ k menu ⋅ r m
+│[7: Review]  │
+╰─────────────╯
+```
+
+  An error state: the Board when the first `bd list` fails, after:
+
+```text
+╭─────────────╮  beads-ui  loading⋯
+│[t: Tasks]   │ [a: Showing: all]  [s: Swimlane: none]  [o: Sort: priority]  [n: New]  [d: Detail]  [m: Move to]
+│[1: Board]   │ [x: Delete]  [g: Band]  [k: Menu]  [h: Help]
+│[2: Backlog] │ Filter: _
+│[3: Sprint]  │ New: _
+│[4: Detail]  │ ⊞ Board
+│[5: Timeline]│ ╭──────────────────────────────────────────────────────────────────────────────────╮
+│[6: Settings]│ │ bd list failed (exit 1): Error: database is locked; retrying on the next refresh │
+│[7: Review]  │ ╰──────────────────────────────────────────────────────────────────────────────────╯
+╰─────────────╯ t Tasks ⋅ 1 Board ⋅ 2 Backlog ⋅ 3 Sprint ⋅ 4 Detail ⋅ 5 Timeline ⋅ 6 Settings ⋅ 7 Review ⋅ k menu ⋅ r m
+```
+
+- Tests changed by this pass, each by the frame. `hooks/fields.test.ts`: the two "whole at 140 columns" tests move to 144, where the framed Detail has the 123 columns that 140 gave it before. `hooks/components.test.ts`: the view registry's parity test draws the band at the pane's inner width. `hooks/pane.test.ts`: a 200-card page holds 13 cards, and the conflict test reads a display id cut 2 cells shorter inside the card frame. New: `hooks/visual.test.ts`. `hooks/tests/render.ts` now cuts a row at its box's inner width, as the engine cuts a truncated Text.
+- Not done here: moving Board, Backlog, Detail, Timeline and Settings onto the framework (T-2C.8). The frames, cards and states are drawn where those views are drawn today, in `pane.ts` and `panel.ts`, through the shared components in `hooks/components/frame.ts`, so T-2C.8 moves them unchanged. Also not done: Raster in the band (T-2C.11), Image and Svg (T-2C.13), and the live captures in each theme, which my launcher takes.
 
 ---
 
