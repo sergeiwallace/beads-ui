@@ -194,8 +194,26 @@ export class BandSettingsPanel {
   draw(
     ui: PaneUi,
     color: (token: Token) => string,
-    { saveButton = true }: { saveButton?: boolean } = {},
+    options: { saveButton?: boolean } = {},
   ): RenderElement {
+    return ui.Box({
+      key: "band:settings",
+      flexDirection: "column",
+      borderStyle: "round",
+      paddingX: 1,
+      children: this.lines(ui, color, options),
+    });
+  }
+
+  /**
+   * The band's settings as lines of one row each: the Settings view's band form draws them in
+   * its window (T-2C.8), and `draw` frames them.
+   */
+  lines(
+    ui: Pick<PaneUi, "Box" | "Text" | "Button" | "Input">,
+    color: (token: Token) => string,
+    { saveButton = true }: { saveButton?: boolean } = {},
+  ): RenderNode[] {
     const { Box, Text, Button, Input } = ui;
     const settings = this.shown;
     const parts = settings?.parts ?? [];
@@ -234,67 +252,61 @@ export class BandSettingsPanel {
           }),
         ]),
       });
-    return Box({
-      key: "band:settings",
-      flexDirection: "column",
-      borderStyle: "round",
-      paddingX: 1,
-      children: present<RenderNode>([
-        Text({ bold: true, children: "Band settings (every session on this machine)" }),
-        ...this.problems.map((problem) => Text({ color: color("warning"), children: problem })),
-        this.notice === undefined
-          ? undefined
-          : Box({
-              key: "band:notice",
-              children: [Text({ color: color(this.notice.token), children: this.notice.text })],
-            }),
-        Input({
-          key: "band:window",
-          label: "Done window",
-          placeholder: "24h, 90m, 7d or 2w",
-          value: settings?.doneWindow ?? "",
-          submitLabel: "set",
-          onSubmit: (value) => void this.setWindow(value),
-        }),
-        Input({
-          key: "band:rows",
-          label: "Rows per press",
-          placeholder: `1 to ${MAX_BAND_ROWS}`,
-          value: String(settings?.rows ?? ""),
-          submitLabel: "set",
-          onSubmit: (value) => void this.setRows(value),
-        }),
-        Box({
-          key: "band:levels",
-          flexDirection: "row",
-          columnGap: 1,
-          children: [
-            Text({ children: "Opens at:" }),
-            ...BAND_LEVELS.map((level) =>
-              Button({
-                key: `band:level:${level}`,
-                label: level,
-                plain: true,
-                ...(settings?.level === level ? {} : { dimColor: true }),
-                onPress: () => void this.setLevel(level),
-              }),
-            ),
-          ],
-        }),
-        Text({ children: "On the band, in order:" }),
-        ...parts.map((part) => row(part, true)),
-        hidden.length === 0 ? undefined : Text({ children: "Not drawn:" }),
-        ...hidden.map((part) => row(part, false)),
-        saveButton
-          ? Button({
-              key: "band:save",
-              label: "Save to file",
+    return present<RenderNode>([
+      Text({ bold: true, children: "Band settings (every session on this machine)" }),
+      ...this.problems.map((problem) => Text({ color: color("warning"), children: problem })),
+      this.notice === undefined
+        ? undefined
+        : Box({
+            key: "band:notice",
+            children: [Text({ color: color(this.notice.token), children: this.notice.text })],
+          }),
+      Input({
+        key: "band:window",
+        label: "Done window",
+        placeholder: "24h, 90m, 7d or 2w",
+        value: settings?.doneWindow ?? "",
+        submitLabel: "set",
+        onSubmit: (value) => void this.setWindow(value),
+      }),
+      Input({
+        key: "band:rows",
+        label: "Rows per press",
+        placeholder: `1 to ${MAX_BAND_ROWS}`,
+        value: String(settings?.rows ?? ""),
+        submitLabel: "set",
+        onSubmit: (value) => void this.setRows(value),
+      }),
+      Box({
+        key: "band:levels",
+        flexDirection: "row",
+        columnGap: 1,
+        children: [
+          Text({ children: "Opens at:" }),
+          ...BAND_LEVELS.map((level) =>
+            Button({
+              key: `band:level:${level}`,
+              label: level,
               plain: true,
-              onPress: () => void this.save(),
-            })
-          : undefined,
-      ]),
-    });
+              ...(settings?.level === level ? {} : { dimColor: true }),
+              onPress: () => void this.setLevel(level),
+            }),
+          ),
+        ],
+      }),
+      Text({ children: "On the band, in order:" }),
+      ...parts.map((part) => row(part, true)),
+      hidden.length === 0 ? undefined : Text({ children: "Not drawn:" }),
+      ...hidden.map((part) => row(part, false)),
+      saveButton
+        ? Button({
+            key: "band:save",
+            label: "Save to file",
+            plain: true,
+            onPress: () => void this.save(),
+          })
+        : undefined,
+    ]);
   }
 }
 

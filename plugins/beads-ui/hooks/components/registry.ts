@@ -1,4 +1,4 @@
-import type { RenderElement } from "claude-code";
+import type { RenderElement, RenderNode } from "claude-code";
 
 import {
   entriesOn,
@@ -11,12 +11,15 @@ import type { Surface } from "./adapters.ts";
 
 /**
  * A view, registered once (D-35): its nav entry (id, COMMANDS id, labels, glyph, planned and the
- * surfaces it draws on, both unless named) and the drawing of its body through the components,
- * on whichever surface it is handed. A view with no `draw` is one the pane still draws itself,
- * until T-2C.8 moves it.
+ * surfaces it draws on, both unless named), the drawing of its body through the components on
+ * whichever surface it is handed, and its controls drawn outside the body (the Filter and New
+ * fields), which each surface's frame places. Every built view has a `draw` (T-2C.8); a planned
+ * one has none.
  */
 export interface ViewEntry extends NavEntry {
   draw?: (surface: Surface) => RenderElement;
+  /** Its controls, one row each. */
+  controls?: (surface: Surface) => RenderNode[];
 }
 
 /** The views every surface's nav and drawing come from, in nav order. */
@@ -34,10 +37,16 @@ export class ViewRegistry {
     else this.list[at] = entry;
   }
 
-  /** Gives a registered view its drawing, keeping its entry. */
-  drawWith(view: string, draw: (surface: Surface) => RenderElement): void {
+  /** Gives a registered view its drawing, and its controls when given, keeping its entry. */
+  drawWith(
+    view: string,
+    draw: (surface: Surface) => RenderElement,
+    controls?: (surface: Surface) => RenderNode[],
+  ): void {
     const entry = this.get(view);
-    if (entry !== undefined) this.register({ ...entry, draw });
+    if (entry !== undefined) {
+      this.register({ ...entry, draw, ...(controls === undefined ? {} : { controls }) });
+    }
   }
 
   get(view: string): ViewEntry | undefined {

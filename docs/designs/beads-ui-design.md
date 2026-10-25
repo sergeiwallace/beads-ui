@@ -654,7 +654,7 @@ Each phase carries its scope, deliverables, tasks with EARS acceptance criteria 
     - [x] `When a band row is pressed, or receives Enter, the band shall open that task's detail in the overview level.`
     - [x] `When band.rows or band.level (summary, rows or overview) is set in beads-ui.toml or in Settings, the band shall apply it at its next redraw; the level the user last chose shall persist in $.store per session.`
     - [x] `No drawn band line shall exceed the band's columns at 40, 80, 120 and 364 columns, and at no level shall the band's tree exceed maxRows rows.`
-    - As built (T-2C.2, BU-mg2.3.21.2, .3 and .4): the reducer, the drawing, the row reads, the keys, `[band] rows` and `level`, and the captures, in D-36's as-built note. The overview draws the Tasks view and any view registered later through the framework; Board, Backlog, Timeline and Settings each draw a button that opens them in the pane until T-2C.8.
+    - As built (T-2C.2, BU-mg2.3.21.2, .3 and .4): the reducer, the drawing, the row reads, the keys, `[band] rows` and `level`, and the captures, in D-36's as-built note. The overview draws the Tasks view and any view registered later through the framework; Board, Backlog, Timeline and Settings each drew a button that opened them in the pane until T-2C.8, which draws them in the overview.
   - **T-2C.3 Row indicators: the registry, blocked and agent working** (D-41, D-42, BU-mg2.3.18.1, BU-mg2.3.18.2)
     - [x] `When a task row draws in the band, the Tasks view, the Backlog or a Board card, it shall draw a left gutter of one cell per enabled indicator, in registry order, each its glyph or a blank, so that rows stay aligned.`
     - [x] `When an issue's status is blocked, or an open issue blocks it through a blocks dependency, the blocked indicator shall show.`
@@ -688,9 +688,10 @@ Each phase carries its scope, deliverables, tasks with EARS acceptance criteria 
     - [x] `When an issue has at least one open, current review item, the review indicator shall show on its rows, and the row's options menu shall name the count and open the first.`
     - As built (T-2C.7, BU-mg2.3.18.1): `detectReview`, the index the pane hands the gutter at every refresh, and the menu row, in D-41's as-built note.
   - **T-2C.8 Every pane view on the framework** (D-35, BU-mg2.3.21.5)
-    - [ ] `When this task lands, every view the pane draws (Tasks, Board, Backlog, Detail with its fields, comments and Review section, Timeline, Settings, Review) shall be a view registry entry drawn by both adapters, and hooks/pane.ts and hooks/panel.ts shall hold no view drawing outside the framework.`
-    - [ ] `When any view is drawn in the band's overview, every action it offers in the pane shall be reachable there, by a button or a menu, and a test shall enumerate each view's actions on both surfaces and fail on one reachable on one surface alone, unless [surfaces] limits the view.`
-    - [ ] `When the migration lands, every existing pane, panel, Detail, comment and Timeline test shall pass, with any expectation the migration changes named in the pull request.`
+    - [x] `When this task lands, every view the pane draws (Tasks, Board, Backlog, Detail with its fields, comments and Review section, Timeline, Settings, Review) shall be a view registry entry drawn by both adapters, and hooks/pane.ts and hooks/panel.ts shall hold no view drawing outside the framework.`
+    - [x] `When any view is drawn in the band's overview, every action it offers in the pane shall be reachable there, by a button or a menu, and a test shall enumerate each view's actions on both surfaces and fail on one reachable on one surface alone, unless [surfaces] limits the view.`
+    - [x] `When the migration lands, every existing pane, panel, Detail, comment and Timeline test shall pass, with any expectation the migration changes named in the pull request.`
+    - As built (T-2C.8, BU-mg2.3.21.5 and .4): the components each view moved into, the band's form of a view, its fields, menu and Detail, the parity test and the expectations it changed, in D-35's as-built note; the overview's layout and the captures of the Board, the Backlog and the Detail, in D-36's. No view is registered `pane` alone.
   - **T-2C.9 Theme tokens on Claude Code theme keys** (D-43, BU-mg2.3.21.6.1)
     - [x] `When the band or the pane draws a colour, it shall draw a token from core's token set, each token resolving to a Claude Code theme key by default, so the drawing follows the person's light or dark theme; a test shall fail on any raw colour (a hex value or a named colour) in hooks/ or client/ outside the token map.`
     - [x] `Where beads-ui.toml [theme] sets a hex value for a token, the system shall draw that value from the next redraw; an invalid value shall be ignored with one notice naming the key.`
@@ -2461,6 +2462,17 @@ Sergei's ask decides the shape, one implementation with surfaces both by default
 - On the framework now: the task row, the task list, the action bar (the pane's toolbar), the nav, Settings' fields and lists, and the whole Tasks view, drawn by both adapters. Board, Backlog, Detail, Timeline and Settings are registry entries whose bodies the pane still draws; T-2C.8 moves them.
 - Settings has one surfaces row a view, Settings' own left out, since that row would take Settings off the surface it is set from (`settings = "band"` in the file still does). Until T-2C.2 draws the band's overview, a view set to `band` draws nowhere live.
 
+**As built (T-2C.8, BU-mg2.3.21.5 and .4).**
+
+- Every view is a registry entry with a `draw`: Tasks, Board, Backlog, Detail, Timeline, Settings and Review, registered in `BeadsPane`'s constructor. The pane's `draw` takes every view's body from its entry; the switch that drew Board, Backlog, Detail, Timeline and Settings itself is gone. No view is registered `pane` alone: each draws in the band's overview, so the exception this decision allows is unused.
+- The drawing moved into components, each from its core model: `board.ts` (`board`, `boardCard`, `boardPager`), `backlog.ts`, `detail.ts` (the fields, description and notes, dependencies, history, comments and the comment field, and the Review section through `reviewBlock` and `reviewRows`), `timeline.ts`, `settings.ts` (`drawSettings`, from `panel.ts`), `menu.ts` (`drawMenu`, from `panel.ts`) and `help.ts` (the help's parts, which `BeadsPane.helpParts` lists). `panel.ts` keeps the panel settings' state alone; `pane.ts` keeps the state, the bd reads and writes, and the pane's own frame (its header, notice lines, no-store state and footer), which no view draws. A view's model is built in `pane.ts` (`drawBoard`, `drawBacklog`, `drawDetail` and so on build each from the pane's state) and handed to its component.
+- An entry can name its `controls`, one row each, drawn outside its body: the Tasks view's New field, and the Board's and the Backlog's Filter and New fields. The pane draws them where it drew `inputs`; the band's overview draws them above the view. Both draw through `field`, which now carries the Input's label and placeholder, as `choice` carries a Select's label (the Board card's Move to).
+- The band's form of a view. A surface that scrolls a view by its own controls (`Surface.scroll`, the overview's) is `windowed`, and on it every view draws as lines of one row each in `lineWindow` (`components/window.ts`), a window of `surface.rows` with `[⇡ N above]` and `[⇣ N below]` buttons keyed `<view>:above` and `<view>:below`. A choice made here: a Board card in the band is one line, its gutter, priority, display id, title and assignee and then its Move to and `[detail]`, or two lines where those controls leave the title under 12 columns, since a framed card takes five rows of a band that has at most half the terminal; its strings are cut to the band's width, not a column's. A Detail field is one line, its label and its control; the description, notes and each comment are their source as lines, as `markdown`'s button form draws them. An Input sits in a box the width its line leaves (`fitted`), so a long value never passes the band's columns. The Tasks view keeps its own window (D-36). Only what a window draws is in the tree, so a band stays under the 100,000-character limit whatever the store holds.
+- The overview's menu. The controls row carries `[⋮ menu]` (`band:menu`), which opens the view's options menu, the same `drawMenu` and `menuView`, in place of the view; it closes on a second press, `close the menu`, summary or a view change. The menu lists the band's view's actions and the band's nav (`actionContext` takes the surface). Its items run through `runOnBand(command, view)`: a view's command opens it in the overview; Open, Status and Edit open the task's Detail there, whose controls edit it; New says to type in the New field the band draws; Help draws the help in the overview; the band settings open Settings there; every other command runs as the pane runs it, for the band's view, and never moves the pane's view or its keyboard. A task row's menu opened on the band draws on the band (`menuOn`), not in the pane as before. The pane's last notice is a line above the view, so what a press on the band did is drawn there.
+- The Detail on the band. A row pressed at the rows level or in the overview, or a card's `[detail]`, opens the Detail view (`showDetail`): the issue the band read is drawn at once, then read again with its history and comments in the task's own store, the store its edits and comments are then written to (`runForDetail`), so a task of another store opens, edits and comments in its store. The pane's own open view does not change. One Detail is open at a time, the same on both surfaces. A review item pressed in it opens the reader in the pane, as the Review view's do (T-2C.6).
+- The parity test, `hooks/parity.test.ts`, at the hooks entry point: for each of the seven views it opens the view in the pane and in the overview, each tall enough to draw the fixture whole, and enumerates from the drawn trees every Button, Select and Input. In the pane: the view's section, its fields and its options menu, and each toolbar button's key found among the menu's items. In the band: everything the overview draws but its nav, controls row and window edges, and its menu. It fails on an action one surface offers and the other does not; a view `[surfaces]` keeps to one surface leaves the other's nav. With the band's Board card left without its `[detail]`, the Board's case failed and the other six passed.
+- Expectations this changed: `levels.test.ts`' pressed row opens the Detail view (its heading, `edit:status`, `edit:assignee`, read in the task's store) in place of the band's own summary of the task (`band-detail`); its test of the note that opened the pane on the Board (`band-overview:note`, `band-pane:board`) is now one test a view finding the Board, the Backlog, the Timeline and Settings drawn in the overview with no pane opened. `components.test.ts`' affordance test opens a Detail first and counts a Select or an Input as something to press, since the Detail draws no Button on the pane, and draws each view on a windowed band as well; its Tasks test finds a band row's menu on the band (`menuOn` band) and none in the pane. The disclosure reducer's `open` now starts the detail at its first row and keeps the list's (`listStart`), which `back` restores.
+
 ---
 
 <a id="d-36"></a>
@@ -2588,6 +2600,66 @@ The firstmate's two lines at the summary, and with the `[bd][all]` line's in-pro
 ```
 
 The `*` ends each line because the test world runs no host refresher, so the session read its counts itself.
+
+**As built (T-2C.8, BU-mg2.3.21.4 and .5).**
+
+- The overview draws every view from its registry entry through the band adapter (D-35's T-2C.8 note): the Board, the Backlog, the Detail, the Timeline and Settings each in place of the line and button that opened the pane. Under its nav it draws, in order, the pane's last notice, the view's fields (the New field, and on the Board and the Backlog the Filter field), the view in the rows left, and the controls row, which now carries `[⋮ menu]` before `[summary]`. Where the notice and the fields would leave the view fewer than `MIN_VIEW_ROWS` (5), the view keeps the rows and they are left out; with fewer still, the note and its button to the pane stay, for every view alike.
+- A view scrolls by the same buttons the Tasks view's list has, `[⇡ N above]` and `[⇣ N below]`, from the state's `start`. Opening a task's Detail starts it at its first row and keeps the list's first row in `listStart`, which `[back]` restores.
+- The detail of a task pressed in the band is the Detail view, no longer a summary of its own: every field with its control, the description, notes, dependencies, history and comments, the comment field and the Review section, read from the task's own store. `[back]` returns to the view it was opened from.
+
+The overview at 120 columns from Claude Code 2.1.310's test kit, a 14-row band, laid out from the drawn tree by `hooks/tests/render.ts` (colour and hover not shown), for the core's fixture store with the session owning fifteen of its tasks and the pane open. The Board, its first column's cards with their Move to (`open v`) and `[detail]`:
+
+```text
+[bd] [t: 15 tasks] (◒[p: 2 in progress], ◉[b: 1 blocked], ◦[o: 12 open], ✓[d: 0 done last 24h]) * [e: ▾] [v: ◫] [◨] [⊠]
+[Tasks]  [Board]  [Bklg]  [Spr]  [Dtl]  [Time]  [Set]  [Rev]
+Filter: _
+New: _
+open 12
+    P1 BU-t-0-1-core-module-gset T-0.1: core module and purity gate @aih-ec2-3 open v [detail]
+    P1 BU-t-0-2-bd-node-nrrb T-0.2: bd-node adapter @aih-ec2-3 open v [detail]
+    P1 BU-t-0-3-mod-plugin-fumv T-0.3: mod plugin and marketplace @aih-ec2-3 open v [detail]
+    P1 BU-t-0-4-repository-zach T-0.4: repository hygiene for a public repo @aih-ec2-3 open v [detail]
+    P1 BU-t-1-1-board-tab-nxdt T-1.1: Board tab with keyboard Move to @aih-ec2-3 open v [detail]
+    P1 BU-t-1-2-backlog-tab-vptb T-1.2: Backlog tab with sort and filter @aih-ec2-3 open v [detail]
+[⇣ 18 below]
+  [⋮ menu] [s: summary]
+```
+
+The Backlog:
+
+```text
+[bd] [t: 15 tasks] (◒[p: 2 in progress], ◉[b: 1 blocked], ◦[o: 12 open], ✓[d: 0 done last 24h]) * [e: ▾] [v: ◫] [◨] [⊠]
+[Tasks]  [Board]  [Bklg]  [Spr]  [Dtl]  [Time]  [Set]  [Rev]
+Filter: _
+New: _
+12 of 12 open issues, priority order
+    P1 BU-t-0-1-core-module-gset         task T-0.1: core module and purity gate          @aih-ec2-3 2026-10-21 [detail]
+    P1 BU-t-0-2-bd-node-nrrb             task T-0.2: bd-node adapter                      @aih-ec2-3 2026-10-21 [detail]
+    P1 BU-t-0-3-mod-plugin-fumv          task T-0.3: mod plugin and marketplace           @aih-ec2-3 2026-10-21 [detail]
+    P1 BU-t-0-4-repository-zach          task T-0.4: repository hygiene for a public re⋯  @aih-ec2-3 2026-10-21 [detail]
+    P1 BU-t-1-1-board-tab-nxdt           task T-1.1: Board tab with keyboard Move to      @aih-ec2-3 2026-10-21 [detail]
+    P1 BU-t-1-2-backlog-tab-vptb         task T-1.2: Backlog tab with sort and filter     @aih-ec2-3 2026-10-21 [detail]
+[⇣ 6 below]
+  [⋮ menu] [s: summary]
+```
+
+The Detail of BU-mg2.3, opened from its row in the overview's Tasks view, its fields' controls drawn (a Select as `value v`, an Input as `value_`, cut at the band's edge):
+
+```text
+[bd] [t: 15 tasks] (◒[p: 2 in progress], ◉[b: 1 blocked], ◦[o: 12 open], ✓[d: 0 done last 24h]) * [e: ▾] [v: ◫] [◨] [⊠]
+[Tasks]  [Board]  [Bklg]  [Spr]  [Dtl]  [Time]  [Set]  [Rev]
+BU-beads-ui-claude-code-aeyb beads-ui Claude Code mod: the task manager inside the Claude Code TUI, with mouse control
+Title: beads-ui Claude Code mod: the task manager inside the Claude Code TUI, with mouse control_
+Description: The first surface and the first MVP target: board, backlog, sprint and roadmap views inside the Claude Code
+Id: BU-mg2.3
+Display id: BU-beads-ui-claude-code-aeyb
+Status: in_progress v
+Priority: 1 v
+Type: epic v
+Assignee: _
+[⇣ 49 below]
+  [back] [⋮ menu] [s: summary]
+```
 
 ---
 

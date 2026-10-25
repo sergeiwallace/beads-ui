@@ -14,7 +14,9 @@ import {
   INVENTORY_PATH,
   inventoryOf,
   type Listed,
+  listRowsOf,
   listScript,
+  ok,
   PANE_PROPS,
   type Script,
   SESSION,
@@ -287,22 +289,34 @@ describe("the band's overview level (D-36, T-2C.2)", () => {
     expect(drawn[1]).toMatch(/^\[Tasks\] {2}\[Board\]/);
   });
 
-  test("should open a pressed row's detail in the overview, from the rows level and from the overview's own list", async ($, on) => {
-    const w = await started($, on);
+  test("should open a pressed row's Detail view in the overview, read from the task's own store, from the rows level and from the overview's own list", async ($, on) => {
+    const harness = STORES[HARNESS] ?? [];
+    const shows: Script = (key, _argv, cwd) => {
+      if (cwd !== HARNESS) return undefined;
+      if (key === "bd show AIH-1") {
+        return ok(JSON.stringify(listRowsOf(harness.filter((one) => one.id === "AIH-1"))));
+      }
+      return key === "bd history AIH-1 --events" || key === "bd comments AIH-1"
+        ? ok("[]")
+        : undefined;
+    };
+    const w = await started($, on, as(ME, { script: shows }));
 
     await press($, w, "band-count:own:in_progress");
     await press($, w, "band-open:AIH-1");
-    const detail = (await (await band($)).find({ key: "band-detail" }))?.text ?? "";
-    expect(detail).toContain("AIH-1 harness work");
-    expect(detail).toContain("in_progress, task, @aih-ec2-3");
-    expect(detail).toContain("ai-harness, updated");
-    expect(await (await band($)).find({ key: "band:back" })).toBeDefined();
+    const shown = await band($, 120, 24);
+    expect((await shown.find({ key: "detail-heading" }))?.text).toBe("AIH-1 harness work");
+    expect((await shown.find({ key: "edit:status" }))?.props.value).toBe("in_progress");
+    expect((await shown.find({ key: "edit:assignee" }))?.props.value).toBe(ME);
+    expect(await shown.find({ key: "detail-error" })).toBeUndefined();
+    expect(w.cwds[w.keys().indexOf("bd show AIH-1")]).toBe(HARNESS);
+    expect(await shown.find({ key: "band:back" })).toBeDefined();
 
     await press($, w, "band:back");
-    expect(await (await band($)).find({ key: "band-detail" })).toBeUndefined();
+    expect(await (await band($)).find({ key: "detail" })).toBeUndefined();
     const [row] = await keysOf($, "task:");
     await press($, w, row ?? "task:missing");
-    expect((await (await band($)).find({ key: "band-detail" }))?.text).toContain("@aih-ec2-3");
+    expect(await (await band($, 120, 24)).find({ key: "detail-heading" })).toBeDefined();
   });
 
   test("should scroll the overview's list with its above and below buttons, within maxRows", async ($, on) => {
@@ -320,19 +334,25 @@ describe("the band's overview level (D-36, T-2C.2)", () => {
     expect(await keysOf($, "task:")).toEqual(before);
   });
 
-  test("should say a view the pane still draws itself opens there, and open the pane on it when pressed", async ($, on) => {
-    const w = await started($, on);
-    await press($, w, OVERVIEW_KEY);
+  for (const [view, key] of [
+    ["board", "board"],
+    ["backlog", "backlog"],
+    ["timeline", "timeline"],
+    ["settings", "settings"],
+  ] as const) {
+    test(`should draw the ${view} view in the overview through its registry entry, within maxRows, and open no pane`, async ($, on) => {
+      const w = await started($, on);
+      await press($, w, OVERVIEW_KEY);
 
-    await press($, w, "tab:board");
-    expect((await (await band($)).find({ key: "band-overview:note" }))?.text).toContain(
-      "Board draws in the pane until it moves onto the shared components.",
-    );
-    await press($, w, "band-pane:board");
+      await press($, w, `tab:${view}`);
 
-    expect((await lines($)).length).toBeLessThanOrEqual(BAND_PROPS.maxRows);
-    expect(w.opened.at(-1)?.id).toBe(PANE_ID);
-  });
+      const shown = await band($);
+      expect(await shown.find({ key }), view).toBeDefined();
+      expect(await shown.find({ key: "band-overview:note" })).toBeUndefined();
+      expect((await lines($)).length).toBeLessThanOrEqual(BAND_PROPS.maxRows);
+      expect(w.opened).toEqual([]);
+    });
+  }
 });
 
 describe("band.rows and band.level (D-36, T-2C.2)", () => {

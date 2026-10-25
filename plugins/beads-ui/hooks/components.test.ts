@@ -7,6 +7,7 @@ import {
   INDICATORS,
   INITIAL_BOARD_STATE,
   labels,
+  openDetail,
   PRESS_CLOSE,
   PRESS_OPEN,
   panelActions,
@@ -22,11 +23,11 @@ import { bandSurface, paneSurface, type Surface } from "./components/adapters.ts
 import { choice, field, markdown } from "./components/elements.ts";
 import { colorOf, pressKey } from "./components/look.ts";
 import { bandNav, navBar } from "./components/nav.ts";
+import { drawSettings } from "./components/settings.ts";
 import { taskList, taskRow } from "./components/tasks.ts";
 import type { Host } from "./host.ts";
 import { BandLevels } from "./levels.ts";
 import { BeadsPane, type PaneUi } from "./pane.ts";
-import { drawSettings } from "./panel.ts";
 import { StoreResolver } from "./store.ts";
 import type { BandTally } from "./tally.ts";
 import { test } from "./tests/kit.ts";
@@ -150,6 +151,9 @@ const bareButtons = (tree: unknown): string[] => {
 const COLUMNS = 80;
 const band = (columns = COLUMNS): Surface => bandSurface(UI, { columns, maxRows: 10 });
 const pane = (columns = COLUMNS): Surface => paneSurface(UI, { columns, rows: 28, short: false });
+/** The band's overview: a band that scrolls each view's lines itself (T-2C.8). */
+const windowedBand = (columns = COLUMNS, maxRows = 10): Surface =>
+  bandSurface(UI, { columns, maxRows }, { start: 0, to: () => undefined });
 /** A band handed Box, Text and Button alone, as drawBand's is: no Select, Input or Markdown. */
 const bare = (columns = COLUMNS): Surface =>
   bandSurface({ Box: UI.Box, Text: UI.Text, Button: UI.Button }, { columns, maxRows: 10 });
@@ -381,15 +385,29 @@ describe("the view registry (D-35, T-2C.1)", () => {
 
   test("should draw every pressable element of every view the framework draws in the clickable affordance, on the band and on the pane", async () => {
     const beads = await drawnPane();
+    const [issue] = beads.board.issues;
+    if (issue === undefined) throw new Error("the fixture has no issue");
+    beads.detailId = issue.id;
+    beads.detail = openDetail(issue, []);
     const drawn = beads.views.all().filter((entry) => entry.draw !== undefined);
-    expect(drawn.length).toBeGreaterThan(0);
+    expect(drawn.map((entry) => entry.view)).toEqual(
+      beads.views
+        .all()
+        .filter((entry) => !entry.planned)
+        .map((entry) => entry.view),
+    );
 
     for (const entry of drawn) {
-      for (const surface of [band(VIEW_COLUMNS), pane(VIEW_COLUMNS), bare(VIEW_COLUMNS)]) {
+      for (const surface of [
+        band(VIEW_COLUMNS),
+        windowedBand(VIEW_COLUMNS),
+        pane(VIEW_COLUMNS),
+        bare(VIEW_COLUMNS),
+      ]) {
         const tree = entry.draw?.(surface);
         expect(
-          nodes(tree).some((node) => node.type === "Button"),
-          entry.view,
+          nodes(tree).some((node) => ["Button", "Select", "Input"].includes(node.type)),
+          `${entry.view} on the ${surface.id}`,
         ).toBe(true);
         expect(bareButtons(tree), `${entry.view} on the ${surface.id}`).toEqual([]);
       }
@@ -414,8 +432,13 @@ describe("the view registry (D-35, T-2C.1)", () => {
     (press as () => void)();
     await Promise.resolve();
     expect(pane.menuOpen).toBe(true);
+    expect(pane.menuOn).toBe("band");
     expect(pane.menuFor).toBe(String(menuKey).slice("taskmenu:".length));
-    expect(keysOf(pane.draw(UI, FRAME), "options-menu")).toEqual(["options-menu"]);
+    // A menu opened on the band draws there, in the overview, and not in the pane.
+    expect(
+      keysOf(pane.drawBandMenu(windowedBand(VIEW_COLUMNS, 80), "tasks"), "menu:item:"),
+    ).toEqual(keysOf(pane.drawBandMenu(band(VIEW_COLUMNS), "tasks"), "menu:item:"));
+    expect(keysOf(pane.draw(UI, FRAME), "options-menu")).toEqual([]);
   });
 
   test("should find a view registered with no surfaces in the pane's nav and the band's nav, and draw it on both", async () => {
