@@ -15,9 +15,13 @@ const scratch = mkdtempSync(join(tmpdir(), "plugin-version-test-"));
 after(() => rmSync(scratch, { recursive: true, force: true }));
 
 // Inside a git hook, git exports GIT_DIR, GIT_INDEX_FILE and friends; inherited, they point every
-// git call here at the repository being committed instead of the throwaway one.
+// git call here at the repository being committed instead of the throwaway one. Inside a push,
+// pre-commit exports PRE_COMMIT_TO_REF and friends too, naming the pushed commit, which the
+// script under test reads and the throwaway repository does not hold.
 const inherited = Object.fromEntries(
-  Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")),
+  Object.entries(process.env).filter(
+    ([key]) => !key.startsWith("GIT_") && !key.startsWith("PRE_COMMIT_"),
+  ),
 );
 const ENV = {
   ...inherited,
