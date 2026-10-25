@@ -40,9 +40,11 @@ The raw record is `docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md` in this
 | Sergei, 2026-10-23T23:44Z, relayed by aih-ec2-3 (how to enter, use, hide and close the pane; separate skills or shortcuts) | Answered in chat at 23:50Z, then D-27 and T-1B.6: the usage section in `docs/procedures/mod-install.md`, the README and the pane's help. |
 | ai-harness ask record A006, 2026-10-24T00:36:40Z, and A007, 2026-10-24T00:39:54Z (a CORRECTION of A006's format) | The band reads `[bd] {N} tasks ({N} in progress, {N} blocked, {N} open, {N} done last 24h)`, in progress and blocked first (A007), with no session name and no store count: D-30 and T-1B.10. The read time only in a dev, test or debug mode: T-1B.5. The done window, and the order and set of the band's parts, set from the config file and from the pane: T-1B.11. "build the rest of our own version of the beads-ui task panel ... to replace the entire cc task panel. i'd prefer that": R-20, R-21 and Phase 2B. "what should we call this component": the band, Claude Code's `AbovePrompt` render site, as the Architecture section says; the side panel is a `Pane`. A002's firstmate second line is kept under the new format (D-30). |
 | ai-harness ask record A008, 2026-10-24T01:03:49Z | The firstmate's lines: `[bd][all]` totals over an aligned `[fm]` line with the firstmate's own counts, both in A007's part order: D-34 (superseding D-30's `all repos:` label) and T-1B.10. A001's totals label is met by `[all]`. The sync-drift signal today's line 1 carries is kept as a short marker shown only while a store is out of step, recorded in D-34. |
+| Sergei, 2026-10-25, in chat to aih-ec2-3, before 01:32:17Z and 01:32Z to 01:38:10Z, verbatim in the bodies of BU-mg2.3.16, BU-mg2.3.17 and BU-mg2.3.18 (no ask record entry yet) | Fields cut short and the missing comments: BU-mg2.3.14 and BU-mg2.3.15, built by a parallel leaf. The name of the two surfaces: the band (`AbovePrompt`) and the pane, as Feedback Round 4 answered. The old band format: fixed by the D-26 version rule (0.9.4). "all the decisions / blockers etc (anything that i need to review and action basically) and all that info from the held docs inside the beads-ui pane": R-26, R-27, D-37, D-39, D-40 and T-2C.4 to T-2C.6, with every held kind and bd blockers in scope and the full body readable. Per issue, "select a tab / pane / option ... or they just appear by default in the task details pane": D-40's Review section, shown by default (T-2C.5). "an icon system ... next to task rows on the left side ... agent working ... blocked ... review items ... we can build out": R-29, D-41, D-42, T-2C.3 and T-2C.7. "its own tab ... filter / organize / sort them by task or epic or priority or last updated / created date or label": the Review view, D-40 and T-2C.6. The firstmate's "own beads tasks and also all of them in the fleet for its machine host pair": R-28, D-38. "eventually ... all my machine hosts with some access control restrictiosn for client repos": BU-mg2.3.17.4, later, as Sergei placed it; D-38 keeps the pair filter in the data so the later scope has one place to widen. |
+| Sergei, 2026-10-25, in chat to aih-ec2-3, shortly before 01:53Z and about 01:58Z, verbatim in the bodies of BU-mg2.3.20 and BU-mg2.3.21 (no ask record entry yet) | "add more rows under band and actually build out the task panel there under the band which is separate from the pane": R-30, D-36's row level, T-2C.2. The docked panel missing after `/reload-plugins` (BU-mg2.3.20 part 2): reversed by Sergei shortly before 02:27Z, "i don't want it to open by default or whenever i reload the plugin", so the pane opens only when asked, built by aih-ec2-3 (`[panel] open_at_start`, default false). "all the buttons should appear to the left", clickable counts that expand rows, "N amount and the rest collapse", "keep expanding", "collapse back to the default amount or ... to just the top band row(s)": D-36 and T-2C.2. "as much interactive funcitonality as we can add into bands", "the pane does possibly have advantages at scale. so we cna keep that surface": D-36's overview level, with the pane kept. "components that can be shared / reused / combined / stacked ... adapters ... for each tui surface": R-31, D-35, T-2C.1. "proper progressive disclosure": D-36's three levels. "then we can start to work towards retiring the cc task panel": Phase 5, after this phase. The 02:02Z amendment (verbatim in BU-mg2.3.21's comment): "same for all the others, not just in progress": D-36's every count; "i don't want two separate implementations for the bands views and pane views ... by default should render in both surfaces": D-35's view registry with `surfaces` both by default and the `[surfaces]` switch, T-2C.1 and T-2C.8 (BU-mg2.3.21.1 to .5). |
 | ai-harness ask record A005, 2026-10-23T23:51:05Z (on an ai-harness PR not yet merged at this writing) | Tab `3`: D-28 and T-1B.7. "performance and caching or loading fast", "by default actually show useful stuff": D-29 and T-1B.8, fed by D-26's snapshots. Reflow to the terminal and pane size with no overflow and compact labels: T-1B.9 now, and R-24 in Phase 2B. Buttons, dropdowns, side nav and menu bars, icons when space is short, a richer stack (TypeScript, JavaScript, CSS or a framework) if it is fast and light, and "i saw someone load an entire browser": R-24, R-25 and Open Question 10, whose research comes first. |
 
-**Status:** Approved by Sergei on 2026-10-21 (Feedback Round 1); Phases 0 and 1 built under run `beads-ui-build-2026-10-21-aih-ec2-3`; Feedback Rounds 3 to 5 (D-24 to D-34, Phase 1B, Phase 2B) under run `beads-ui-band-pane-panel-2026-10-24-aih-ec2-3`
+**Status:** Approved by Sergei on 2026-10-21 (Feedback Round 1); Phases 0 and 1 built under run `beads-ui-build-2026-10-21-aih-ec2-3`; Feedback Rounds 3 to 5 (D-24 to D-34, Phase 1B, Phase 2B) under run `beads-ui-band-pane-panel-2026-10-24-aih-ec2-3`; Feedback Round 6 (D-35 to D-42, Phase 2C) under run `beads-ui-review-band-2026-10-25-aih-ec2-3`
 
 **Created:** 2026-10-15
 
@@ -79,6 +81,7 @@ The raw record is `docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md` in this
   - [Phase 1B: Feedback Round 3, the store a session reads, owned counts and a shared refresh](#phase-1b-feedback-round-3-the-store-a-session-reads-owned-counts-and-a-shared-refresh)
   - [Phase 2: Mod enhancements, pointer drag, sprints and sparklines](#phase-2-mod-enhancements-pointer-drag-sprints-and-sparklines)
   - [Phase 2B: The beads-ui task panel, beside and then in place of the CC task panel](#phase-2b-the-beads-ui-task-panel-beside-and-then-in-place-of-the-cc-task-panel)
+  - [Phase 2C: The band as the primary surface, review items and row indicators](#phase-2c-the-band-as-the-primary-surface-review-items-and-row-indicators)
   - [Phase 3: The web app, locally and as the queue dashboard's board](#phase-3-the-web-app-locally-and-as-the-queue-dashboards-board)
   - [Phase 4: The MCP App in Claude Desktop](#phase-4-the-mcp-app-in-claude-desktop)
   - [Phase 5: Retire the Claude Code task panel, per machine profile (lands in ai-harness)](#phase-5-retire-the-claude-code-task-panel-per-machine-profile-lands-in-ai-harness)
@@ -127,6 +130,14 @@ The raw record is `docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md` in this
     - [D-32: Where the panel sits and how it lives beside the CC task panel](#d-32)
     - [D-33: How a panel edit is published, and what happens on failure](#d-33)
     - [D-34: The firstmate's two band lines and the sync-drift signal](#d-34)
+    - [D-35: One component layer for the band and the pane](#d-35)
+    - [D-36: The band's disclosure levels and where its controls sit](#d-36)
+    - [D-37: Where review items come from](#d-37)
+    - [D-38: Whose review items a session sees](#d-38)
+    - [D-39: Acting on a review item from the pane](#d-39)
+    - [D-40: Where review items are shown](#d-40)
+    - [D-41: The row indicator registry](#d-41)
+    - [D-42: How "an agent is working on it" is detected](#d-42)
 - [Feedback Rounds](#feedback-rounds)
 - [Approval Log](#approval-log)
 
@@ -207,6 +218,12 @@ Each row derives from the founding ask (entries A001 to A004 in `docs/asks/BU-ep
 | R-23 | The pane opens fast and shows useful content by default, from a cache, never a bare "loading" line | ylx A005 | 1B |
 | R-24 | The pane and panel reflow to the terminal's and the pane's size with no text overflow; labels shorten, and become icons or glyphs, when space is short; controls look like buttons, dropdowns, a side nav and menu bars; later views (kanban, sprint, backlog, timeline, settings) sit behind a nav bar | ylx A002, A005 | 1B (reflow), 2B |
 | R-25 | A richer rendering stack (TypeScript, JavaScript, CSS or a framework) is allowed where it is fast, light and low-latency | ylx A005 | 2B |
+| R-26 | Every item Sergei must review or act on is in the pane: every held item (decisions, blockers, briefings, other items, and open questions, which the fleet holds as decisions) and each issue's bd blockers; per issue in its Detail, shown by default, and all of them in a Review view that filters, sorts and groups by task, epic, priority, updated and created dates, label, kind and session, with each item's full text readable | Sergei 2026-10-25 (BU-mg2.3.16, BU-mg2.3.17) | 2C |
+| R-27 | Sergei can act on a review item from the pane: answer a held item, and comment on a blocked issue | Sergei 2026-10-25 (BU-mg2.3.16, BU-mg2.3.17) | 2C |
+| R-28 | The firstmate sees its own review items and every item from its machine pair, the pairs read from ai-harness's configuration; every other session sees its own; a scope over all hosts with client-repo access control comes later | Sergei 2026-10-25 (BU-mg2.3.17) | 2C (pair), later (all hosts) |
+| R-29 | Task rows carry indicators at their left: an agent is working on it, it is blocked, it has review items; the set grows by adding a registry entry, with a legend and a switch per indicator | Sergei 2026-10-25 (BU-mg2.3.18) | 2C |
+| R-30 | The band is the primary interactive surface: its controls sit at the left, right after the summary text; each count expands rows of its tasks (N shown, configurable, a "+M more" row, collapse to N or to the summary); an overview shows as much of the pane as fits; the pane stays for scale | Sergei 2026-10-25 (BU-mg2.3.20, BU-mg2.3.21) | 2C |
+| R-31 | One implementation of every view: each is registered once and drawn in the band and the pane through a thin adapter per surface, in both by default and switchable per surface in config and Settings, so a feature added to one surface appears in the other | Sergei 2026-10-25 (BU-mg2.3.21 and its 02:02Z amendment) | 2C |
 
 ### Acceptance criteria
 
@@ -374,6 +391,8 @@ soft_wip_limit = { in_progress = 5 }
 [theme]
 preset = "claude"                          # claude | plain | custom
 ```
+
+Phase 2C adds four tables, each read at call time: `[band]` with `rows` (5) and `level` (`summary`, `rows` or `overview`; D-36); `[surfaces]`, one key per view naming `both` (the default), `band` or `pane` (D-35); `[indicators]`, one boolean per registry entry plus `ascii` (D-41); and `[review]` with `command`, the held store's CLI as an argument array, read only from the user's own file as `[sync]` is, and written there by the ai-harness install step (D-37).
 
 The ai-harness switch for the task panel (phase 5) is a per-machine-profile key in ai-harness's machine configuration, declared where the renderer composes `env` and `permissions.deny`; the exact file and key come from the second design spike and are recorded in D-21.
 
@@ -598,6 +617,61 @@ Each phase carries its scope, deliverables, tasks with EARS acceptance criteria 
     - As built (slice 2B-e, beads-ui #56, c3c1b7f, plugin 0.9.0): the view model is `core/src/views/timeline.ts` (`timelineView` picks type `epic` or `milestone`, sorts by due day, then priority and age; `timelineLayout` fits labels and bars to the width; `barCells` encodes a one-row Raster). `hooks/panel.ts` `drawTimeline` draws it; `register.ts` passes the terminal's `Raster` only on the terminal surface, so the desktop and VS Code draw Text rows. The axis starts at the earliest due date, or at the day of the last read when every due date is later. Bars are coloured by status category; the label sits beside the bar from the wide tier and above it below that. Key `5` opens it; Enter, a click or `d` opens an item's detail. It reads the board's bounded read (open issues plus the 25 newest closed), so an older closed epic is not drawn. Tested at 40 to 120 columns on both paths. Not yet checked live: the Raster cell encoding on a real terminal, and a store with due dates (none on this host had one at build time); both belong to this phase's exit gate.
 - **Exit gate:** `npm run lint` and `npm test` green; a live run on sem-kg-ec2 in tmux over SSM and in one local terminal covering T-2B.1 to T-2B.9, including left and right clicks reaching the `Client` in the local terminal and, inside tmux, either the `Client` or each row's menu button answering a left click (Open Question 2), recorded in the Approval Log; one profile run with panel.mode beads and the CC task panel retired for one day.
 
+### Phase 2C: The band as the primary surface, review items and row indicators
+
+- **Scope:** Feedback Round 6, R-26 to R-31, under D-35 to D-42: one component layer with a band adapter and a pane adapter (D-35); the band's three disclosure levels, its controls at the left and its clickable counts (D-36); the pane no longer opening unasked, which Sergei ruled shortly before 02:27Z (BU-mg2.3.20 part 2 reversed) and aih-ec2-3 builds in its own PR with `[panel] open_at_start` defaulting to false; review items read from the ai-harness held store at refresh (D-37), scoped per session and per machine pair (D-38), answerable from the pane (D-39), drawn in the Detail by default and in a Review view (D-40); left-side row indicators from a registry (D-41), with agent detection by D-42. One task lands in ai-harness (T-2C.4). Order, as Sergei and aih-ec2-3 set it: the framework first (T-2C.1), then T-2C.2, T-2C.3, T-2C.4, T-2C.5, T-2C.6, T-2C.7 built on it, and T-2C.8 moving every remaining pane view onto it, the parallel leaf's Detail fields and comments (BU-mg2.3.14, BU-mg2.3.15) included; one leaf at a time under the host's load cap, each merged before the next starts. Sub-epic BU-mg2.3.21's children map as: .1 to T-2C.1, .2 and .3 to T-2C.2, .4 to T-2C.2's overview with T-2C.8, .5 to T-2C.8.
+- **Deliverables:**
+  - Files created: `plugins/beads-ui/hooks/components/` (the shared drawing components and the two adapters, D-35), `plugins/beads-ui/core/src/views/disclosure.ts` (the band's levels as a reducer), `plugins/beads-ui/core/src/indicators.ts` (the registry), `plugins/beads-ui/core/src/review.ts` (the review snapshot's parser, scope, filter grammar, sorts and groups), `plugins/beads-ui/core/src/views/review.ts` (the Review view model). In ai-harness: the `review` verb in `scripts/held_cli.py`, and the `[review]` lines in the install step that writes `[sync]` (AIH-qsmn3u's step).
+  - Files changed: `plugins/beads-ui/hooks/{register,pane,panel,bands,tally}.ts`, `plugins/beads-ui/refresher/refresher.mjs`, `plugins/beads-ui/core/src/{config,snapshot,argv,parsers}.ts`, `plugins/beads-ui/core/src/views/{detail,panel,nav,menu,settings,band}.ts`, `plugins/beads-ui/validate-allowlist.json` when a call or environment read is added, `docs/procedures/mod-install.md`, `README.md`.
+  - Tests added: component parity tests that draw one model through both adapters; hooks-entry tests for each disclosure level, each indicator, the Detail section, the reader and the answer path (with a stub held command), the Review view's every filter, sort and group, and the scope rule; refresher tests for the review beat; ai-harness pytest for the verb and the install lines.
+- **Tasks + acceptance criteria:**
+  - **T-2C.1 The component framework** (D-35, BU-mg2.3.21.1)
+    - [ ] `When the band and the pane draw a task row, a task list or an action bar, both shall draw it through the same component in hooks/components from the same core model, and a test shall draw one model through both adapters and find the same text and the same actions.`
+    - [ ] `When a view is added to the view registry with no surfaces named, it shall appear in the pane's nav and in the band's overview nav with no other change, and a test shall register a test view and find it in both.`
+    - [ ] `When [surfaces] in beads-ui.toml, or Settings, sets a view to band or pane, that view shall be drawn only on that surface from the next redraw; both, or no setting, shall draw it on both.`
+    - [ ] `When the components replace the duplicated band and pane drawing, every existing band, pane and panel test shall pass unchanged, except tests the criteria of this phase change, each named in the pull request.`
+    - [ ] `If a component is given an element the band cannot draw (Select, Input, Markdown), then the band adapter shall draw its button or menu form, and a test shall cover each such element.`
+  - **T-2C.2 The band's disclosure levels** (D-36, BU-mg2.3.21.2, .3 and .4)
+    - [ ] `When the band draws its summary line, every count it draws (in progress, blocked, open, done, and any count part configured under T-1B.11) shall be a button inside the summary text, on each of the firstmate's lines too, and the expand and overview controls shall sit directly after the text, at the left; no beads-ui control shall sit at the line's right end.`
+    - [ ] `When the user presses a count, by click, by Enter after Ctrl+X Tab, or by its hotkey, the band shall draw rows of that count's tasks under the summary, band.rows of them (5 unless configured), then a "+M more" row while more remain; "+M more" shall add band.rows more; "collapse" shall return to band.rows; "summary" shall return to the summary line alone. The expand control shall do the same for every status the session owns, in the Tasks view's order.`
+    - [ ] `When the user presses the overview control, the band shall draw a nav row generated from the view registry (every view whose surfaces include the band) and the chosen view through the framework, within the band's maxRows, with an "n more" row and scrolling past it.`
+    - [ ] `When a band row is pressed, or receives Enter, the band shall open that task's detail in the overview level.`
+    - [ ] `When band.rows or band.level (summary, rows or overview) is set in beads-ui.toml or in Settings, the band shall apply it at its next redraw; the level the user last chose shall persist in $.store per session.`
+    - [ ] `No drawn band line shall exceed the band's columns at 40, 80, 120 and 364 columns, and at no level shall the band's tree exceed maxRows rows.`
+  - **T-2C.3 Row indicators: the registry, blocked and agent working** (D-41, D-42, BU-mg2.3.18.1, BU-mg2.3.18.2)
+    - [ ] `When a task row draws in the band, the Tasks view, the Backlog or a Board card, it shall draw a left gutter of one cell per enabled indicator, in registry order, each its glyph or a blank, so that rows stay aligned.`
+    - [ ] `When an issue's status is blocked, or an open issue blocks it through a blocks dependency, the blocked indicator shall show.`
+    - [ ] `When an issue has an in_progress child that is an agent row (label agent, or a title of the form "<name> agent: " or "<name> coordinator agent: "), or is itself one, the agent indicator shall show; while that row's assignee is a session the host's session registry does not hold live, the glyph shall be dimmed.`
+    - [ ] `Each glyph shall take one terminal cell and lie outside Unicode's East Asian ambiguous-width set and its emoji-presentation set, checked by a test; where indicators.ascii is true, each indicator shall draw its ASCII form.`
+    - [ ] `When the help or Settings draws, it shall list each indicator's glyph, ASCII form and meaning, and Settings shall switch each on or off; a test shall add a registry entry and find it drawn, in the legend and on a row, with no other change.`
+    - [ ] `While bodyColumns is below 48, the gutter shall be one cell, showing the first indicator in registry order that fires.`
+  - **T-2C.4 The held store's review verb and its config** (ai-harness; D-37, D-38)
+    - [ ] `When held_cli.py review --scope pair --json runs, it shall print every open and answered held item, from every routed store and landing pad, whose machine is a member of this host's pair in config/message-transports.json, each with its frontmatter, store, path and selection (current; superseded, with the path that supersedes it; escalated to a decider; ai-resolved), selected by the same functions compile and replay use.`
+    - [ ] `When --if-changed is given the fingerprint that the store and landing-pad heads still give, the verb shall print only {"unchanged": true, "fingerprint": <it>}.`
+    - [ ] `If this host is a member of no pair, then --scope pair shall cover this host alone and the output shall say so.`
+    - [ ] `When the install step that writes beads-ui's [sync] runs, it shall also write [review] command, the absolute held_cli.py invocation, into the user's beads-ui.toml, and a second run shall change nothing.`
+  - **T-2C.5 Review items in the Detail, and answering** (D-37, D-39, D-40, BU-mg2.3.17.1)
+    - [ ] `While [review] command is set in the user's beads-ui.toml, the refresher shall run it once a beat with --if-changed and write the host's review snapshot under its token, each item's task joined to its issue (title, status, priority, labels, parent, assignee, updated_at) through the store inventory, re-joined when that store's Dolt head moves.`
+    - [ ] `When the Detail draws an issue that has review items (held items whose task is the issue's id or display id, or which its latest [blocked] transition waits on) or bd blockers (open blocked-by links, and the latest [blocked] transition's why, waits on, to done and to in_progress), it shall draw a Review section above the description, unasked, one row per item with its kind, title, ask, status, session, and created and updated times.`
+    - [ ] `When the user opens a review item, the system shall show its full body from held_cli.py show --json in a reader, paged so that no drawing passes the 100,000-character tree limit, with Answer, Send to session, Go to issue and Close.`
+    - [ ] `When the user submits an answer, the system shall run held_cli.py answer on the item with the text exactly as typed, and on success shall start a turn in the session from a fixed template naming the item's path, its owner session and the answer commit, asking the session to record the answer's durable home and ship it when it holds the item, or to tell the owner session when another session does.`
+    - [ ] `If the answer command fails or refuses, then the system shall show its message, keep the typed text in the reader, and offer Send to session, which starts the same turn with the text and no answer commit.`
+    - [ ] `While [review] command is unset, the Detail shall draw its bd blockers alone, and the Review view shall say how to set the command.`
+  - **T-2C.6 The Review view: scope, filters, sorts and groups** (D-38, D-40, BU-mg2.3.17.2, BU-mg2.3.17.3)
+    - [ ] `When a non-firstmate session opens the Review view, it shall list the items that session holds and the items whose task is an issue it owns; the firstmate's view shall list every item in the snapshot, its pair, with one key switching to its own and back.`
+    - [ ] `When the filter holds kind:, status:, selection:, session:, machine:, task:, epic:, label: or priority: terms, or free text, the list shall keep only the matching items; an unknown key shall keep the previous filter and name the accepted keys; the default filter shall be status:open selection:current.`
+    - [ ] `When the sort is updated, created, priority, task, epic, kind or session, the list shall order by it, with ties ordered by updated, newest first; when grouping by task, epic, kind or session, it shall draw a header with a count per group.`
+    - [ ] `When the user opens an item in the Review view, the reader of T-2C.5 shall show it, and Go to issue shall open its issue's Detail.`
+    - [ ] `When the band's overview shows Review, it shall draw the same list, filters and sorts through the shared components.`
+    - [ ] `If an item's machine is outside the snapshot's pair, then no session shall draw it; and a non-firstmate session shall draw no item it neither holds nor owns, outside an issue's own Detail.`
+  - **T-2C.7 The review indicator** (D-41, BU-mg2.3.18.1)
+    - [ ] `When an issue has at least one open, current review item, the review indicator shall show on its rows, and the row's options menu shall name the count and open the first.`
+  - **T-2C.8 Every pane view on the framework** (D-35, BU-mg2.3.21.5)
+    - [ ] `When this task lands, every view the pane draws (Tasks, Board, Backlog, Detail with its fields, comments and Review section, Timeline, Settings, Review) shall be a view registry entry drawn by both adapters, and hooks/pane.ts and hooks/panel.ts shall hold no view drawing outside the framework.`
+    - [ ] `When any view is drawn in the band's overview, every action it offers in the pane shall be reachable there, by a button or a menu, and a test shall enumerate each view's actions on both surfaces and fail on one reachable on one surface alone, unless [surfaces] limits the view.`
+    - [ ] `When the migration lands, every existing pane, panel, Detail, comment and Timeline test shall pass, with any expectation the migration changes named in the pull request.`
+- **Exit gate:** `npm run lint` and `npm test` green in beads-ui and the ai-harness pytest green for T-2C.4; the plugin version raised by each release; on sem-kg-ec2, after the chief installs each release and the session runs `/reload-plugins`, recorded in the Approval Log: no pane opening at session start or after `/reload-plugins` unless `[panel] open_at_start` is set; the summary line with its controls at the left; a count expanding rows, "+M more", collapse and summary; the overview; an issue with a held item showing its Review section and the reader; the firstmate's Review view holding an `acn-mac` item and no `fw-lnx` or `mac` item; the indicators on a blocked issue and on an issue with a live agent row.
+
 ### Phase 3: The web app, locally and as the queue dashboard's board
 
 - **Scope:** the web app with Board, Backlog, Sprints, Roadmap, Analytics, Sessions and Issue detail; the local one-command run; Docker Compose; the queue adapter; and, if D-11 resolves to the member-app option, app-portal registration.
@@ -690,6 +764,7 @@ iOS and Android (shared or separate), macOS, Linux and Windows native apps follo
 | 5 | 2 | D-8 drag in a Client; D-5 sprint convention; D-16 metrics source | - [ ] | |
 | 5a | 1B | D-24 store resolution; D-25 ownership on claim; D-26 host refresher; D-27 focus and visibility; D-28 tab 3; D-29 first paint and default view; D-30 band format; D-34 firstmate lines and drift marker | - [ ] | |
 | 5b | 2B | D-31 panel drawing; D-32 placement and co-existence; D-33 edit publishing; R-20 to R-22, R-24, R-25 | - [ ] | |
+| 5c | 2C | D-35 component layer; D-36 band disclosure; D-37 review source; D-38 review scope; D-39 acting on an item; D-40 review surfaces; D-41 indicator registry; D-42 agent detection; R-26 to R-31 | - [ ] | |
 | 6 | 3 | D-10 web stack; D-6 rank; D-11 queue relationship; D-17 session identity | - [ ] | |
 | 7 | 4 | D-14 MCP topology | - [ ] | |
 | 8 | 5 | D-21 retirement switch; D-12 backup destination | - [ ] | |
@@ -714,6 +789,11 @@ iOS and Android (shared or separate), macOS, Linux and Windows native apps follo
 | 11 | Two refreshers race when two sessions take the lease in the same second, or a stalled refresher wakes after another took over | Duplicate reads, the cost D-26 removes; a clobbered lease | Built (PR #43): per-token lease files with `lease.json` as a hard link moved only by atomic rename and released only after an inode check, tested by pausing a holder across a takeover. Hardened (PR #58, 92a117f, 0.9.2): each refresher writes `counts-<token>.json` and its board files under its own token, re-checks the lease after writing before it replaces the shared files, and drops other tokens' files; sessions accept counts and boards only from the token the current lease names. Store reads run four at a time under a 28-second cycle deadline, so snapshots are at most 88 seconds apart, and a store that has not answered by then is marked unread (a board keeps its last entry). Residual: an ousted refresher that stalls between its last lease check and the rename can still replace the shared `counts.json`, which sessions read only when no lease file exists |
 | 12 | Setting the assignee on claim overwrites a human assignee | A human's name on an issue is replaced by a session name | D-17 already keeps the human in `metadata.owner`; the claim path copies a non-session assignee there before writing; the reconcile only fills empty assignees |
 | 13 | A session hosted by Claude Code's background daemon runs in a worker whose environment copies the daemon's, so `CLAUDE_CODE_TASK_LIST_ID` names whichever session started the daemon (seen 2026-10-24: two aih sessions drew the firstmate's `[bd][all]` and `[fm]` rows and registered under its id) | Another session's counts, scope and registry id; the firstmate's form on a session that is not the firstmate | Built (PR #57, 73cbcda, 0.9.1): `sessionNameOf` in `hooks/store.ts` takes the name from `CLAUDE_CODE_SESSION_NAME` (less a ` (N)` copy suffix) when `CLAUDE_CODE_SESSION_KIND=bg` or `CLAUDE_BG_BACKEND=daemon`, and a hosted session with no name counts as unnamed, never as the firstmate; band, scope, tally and registry id read that one name. Residual: `CLAUDE_CODE_SESSION_NAME` is undocumented and a claimed spare may carry the spare's own id, which fails safe to one `[bd]` line. The daemon trigger and a session-start detector are tracked in ai-harness |
+| 14 | The held store's read is heavy: `held_cli.py list --status open --json` took 3.7 s and wrote 541,233 bytes for 641 open items across 2 stores on sem-kg-ec2 at a LOOK reading (2026-10-25T01:50Z) | Host load grows if every session runs it, or if it runs every beat | One run per host, in the refresher (D-37); `--if-changed` makes an unchanged beat a few `git rev-parse` calls; the snapshot is pair-scoped and carries no bodies, which are read one at a time when the reader opens |
+| 15 | The pair partner's items reach this host only when this host's ai-harness main tree moves: an `acn-mac` item exists on sem-kg-ec2 once its PR is merged and the main tree is fast-forwarded | The firstmate's view lags the partner host | The snapshot records its read time and fingerprint, drawn in the Review view's header; the chief already keeps the main tree in step (AIH-x99vg) |
+| 16 | An answer written from the pane commits in the owning session's landing pad while that session may be using it | One of the two writes is refused | `held_cli.py answer` refuses a pad with any uncommitted change, so a race refuses one write and corrupts nothing; the pane keeps the text and offers Send to session (T-2C.5) |
+| 17 | The agent-row convention is new: measured 2026-10-25, 8 of 89 beads-ui issues and 7 of 7,228 ai-harness issues carry the `<name> agent:` title, every one filed by aih-ec2-3, while 33 of 78 in-progress CC panel rows on the host name an agent owner | Agents launched by other sessions show no indicator until those sessions file agent rows | D-42 reads the label `agent` as well as the title, and ai-harness AIH-7m40p6 asks the launch path to set it; the CC panel signal stays out because its rows outlive their agents (rows owned by `bu-ylx6-coordinator`, long finished, still read in progress) |
+| 18 | The band takes rows from the transcript: at most half the terminal's rows (maxRows), and every row it adds is one fewer line of conversation | A tall band crowds the session | The band opens at the summary level by default (D-36); rows and overview appear only when the user presses a control; band.rows is configurable; summary is one press away |
 
 ## Open Questions
 
@@ -767,6 +847,7 @@ This design doc hosts the `/auto-flow` Run Ledger for the beads-ui epic's resear
 | `beads-ui-auto-flow-2026-10-14-aih-3` | `auto-flow/AIH-701#d-7` | `["adn:in-scope"]` | `true` |
 | `beads-ui-build-2026-10-21-aih-ec2-3` | `auto-flow/AIH-701#d-7` | `["adn:in-scope"]` | `true` |
 | `beads-ui-band-pane-panel-2026-10-24-aih-ec2-3` | `auto-flow/AIH-701#d-7` | `["adn:in-scope"]` | `true` |
+| `beads-ui-review-band-2026-10-25-aih-ec2-3` | `auto-flow/AIH-701#d-7` | `["adn:in-scope"]` | `true` |
 
 The launcher granted integration ownership (land on `main` by PR, self-merge on green, sync, reap), so `push` is `true`. `adn:in-scope` records that design decisions are resolved through `/decision-framework` by default; what the Authority test escalates goes to the launcher for Sergei.
 
@@ -780,6 +861,7 @@ The launcher granted integration ownership (land on `main` by PR, self-merge on 
 | `impl-audit` (Phase 0) | 1 | `converged` | `findings-closed` | Codex review of 12a870f..cad816b (5 major, 2 minor) and of packages/bd-node 155981f..8d3e524 (4 major); every finding fixed in PR #20 or justified (the leaf delete preview stays text because the confirm pane shows it verbatim); a fresh-context verifier passed every Phase 0 AC and every fix at dad9a35 | `session` | `dad9a35` |
 | `impl-audit` (Phase 1) | 2 | `converged` | `findings-closed` | Round 1: Codex review and a fresh-context Opus verifier of the Phase 1 branch at f6c71ec. Eight findings fixed in PR #23 (board and Backlog paging, so Move to reaches every card; inline description edit; slug budget overrides; display-id retry; full cascade re-check; doc labels; a positive filter test). Justified: the 15-second process timeout (time inside `$` calls is outside the hook budget), analytics (Phases 2 and 3), the band's `blocked` count, and the human steps. The employer-infrastructure-name finding was escalated to the launcher and closed by option (b) in 9e21420. Round 2: Codex review of the fixes at 032a5de, plus the coordinator's tmux run. Five findings fixed in PR #24 (status-priced card cost with column windows, re-read before a retry write, Unicode-digit budget parity, whole Detail labels, the stale hint). The residual metadata race is justified: bd 1.3.1 has no compare-and-set | `session` | `9d7148c` |
 | `entry->doc` (Feedback Round 3) | 0 | `doc-run` | `explicit` | Sergei's ylx entries A002 and A004 name the stages: "/research-doc --refine ... and updates to /doc --kind design and all the rest of /auto-flow ... end-to-end, all phases". Run `beads-ui-band-pane-panel-2026-10-24-aih-ec2-3`, Opus coordinator for aih-ec2-3; this doc's D-24 to D-33, Phase 1B and Phase 2B; Open Question 10's research (`docs/research/claude-code-mod-panel-rendering-and-focus.md`) came first, and a Codex review of the changes returned eleven findings, each fixed in the same PR | `session` | pending (this change) |
+| `entry->doc` (Feedback Round 6) | 0 | `doc-run` | `explicit` | Sergei's 2026-10-25 messages (verbatim on BU-mg2.3.16, BU-mg2.3.17, BU-mg2.3.18, BU-mg2.3.20 and BU-mg2.3.21) close with "do all this as autonomoulsy as possible now via /orchestrate /implement / /bug-fix / /auto-flow"; aih-ec2-3's brief names design first, then build. Run `beads-ui-review-band-2026-10-25-aih-ec2-3`, Opus coordinator (architect profile) for aih-ec2-3; D-35 to D-42 and Phase 2C | `session` | pending (this change) |
 
 <!-- /doc:region name="overview" -->
 
@@ -827,6 +909,14 @@ Every decision below ran through `/decision-framework` in its fresh-authoring co
 | D-32 | Where the panel sits and how it lives beside the CC task panel | (a) a docked pane opened at session start under `panel.mode` (`both` by default, `beads`, `native`), the cutover being D-21's per-profile switch plus `beads`; (b) open only on `/bu`; (c) replace the CC task panel on every profile at once | (a) | | | Sergei asked for co-existence by config and a later cutover (ylx A002) and prefers the full replacement (A006); a requested feature ships enabled | `✅ Resolved by aih-ec2-3 Opus coordinator` |
 | D-33 | How a panel edit is published, and what happens on failure | (a) the mod runs a configured `sync.command` after a 10-second quiet, and hands any failure to the session with `$.prompt.submit` and a notification; (b) the host refresher publishes on its minute beat; (c) leave publishing to the session's own hooks | (a) | | | The failure must reach the session that made the edit, and only the mod can start a turn there; the fleet's publish tool already serializes per store | `✅ Resolved by aih-ec2-3 Opus coordinator` |
 | D-34 | The firstmate's two band lines and the sync-drift signal | (a) `[bd][all]` then an indented `[fm]` line, as Sergei wrote them, with a short drift marker on line 1 only while a store is out of step and the stores named in the pane; (b) the same lines with drift moved to the pane only; (c) keep D-30's `all repos:` label | (a) | | | Sergei's format (ylx A008); A001's totals label is met by `[all]`; the drift signal stays on the band because an unsynced store makes the totals wrong | `✅ Resolved by aih-ec2-3 Opus coordinator` |
+| D-35 | One component layer for the band and the pane | (a) one framework: every view registered once with its surfaces (both by default, switchable in config and Settings), composed of shared components fed by core models, drawn by a band adapter and a pane adapter; (b) shared core models only, each surface drawing its own elements, as today; (c) one surface, the pane's drawing put inside the band | (a) | | | Sergei asked for one implementation with adapters, a feature in one surface appearing in the other, both by default (BU-mg2.3.21 and its 02:02Z amendment) | `✅ Resolved by aih-ec2-3 Opus coordinator` |
+| D-36 | The band's disclosure levels and where its controls sit | (a) three levels, summary, rows and overview, with the counts as buttons in the summary text and the controls right after it; (b) a fixed task list always under the summary; (c) the summary line only, with the pane for everything else | (a) | | | Sergei's words set every part: left controls, clickable counts, N rows with "+M more", collapse to N or to the summary, an overview, progressive disclosure | `✅ Resolved by aih-ec2-3 Opus coordinator` |
+| D-37 | Where review items come from | (a) a new `held_cli.py review` verb that applies the held README's read-time rules and the pair scope, run once a beat by the host refresher behind a fingerprint, its command set in the user's `beads-ui.toml` by the ai-harness install step; (b) the refresher runs `held_cli.py list` and the core re-implements the selection rules; (c) the mod parses the `docs/held` trees itself | (a) | | | The selection rules (supersession, escalation, AI-resolved) and the pair table belong to ai-harness, so the tool that owns them applies them; one read per host, as D-26 set for counts | `✅ Resolved by aih-ec2-3 Opus coordinator` |
+| D-38 | Whose review items a session sees | (a) the snapshot holds only the host pair's items; the firstmate's Review view lists all of them with a key for its own; any other session's lists the items it holds and those about issues it owns; an issue's Detail lists every pair item about that issue; (b) every session sees every pair item; (c) every session, the firstmate included, sees only items it holds | (a) | | | Sergei's firstmate rule, with the pair filter applied before anything is written so the later all-hosts scope has one place to widen | `✅ Resolved by aih-ec2-3 Opus coordinator` |
+| D-39 | Acting on a review item from the pane | (a) an Answer control that records Sergei's text with `held_cli.py answer`, then starts a turn in the session to record, ship and act, or to tell the owner; comments for bd blockers; (b) send the text to the session, which runs `answer` itself; (c) read in the pane, act in chat | (a) | | | Sergei asked to review and act from the pane (Gate 0 keeps the action); Sergei's exact bytes are recorded at once by the store's own verb, and the follow-through stays with a session | `✅ Resolved by aih-ec2-3 Opus coordinator` |
+| D-40 | Where review items are shown | (a) a Review section at the top of the Detail, shown unasked when an issue has items, and a Review view in the pane's nav and the band's overview, with a filter grammar, sorts and groups; (b) a Detail sub-tab and a Review view; (c) the Review view only | (a) | | | Sergei offered "a tab ... or they just appear by default"; shown by default needs no key to find them, and the view meets "its own tab ... filter / organize / sort" | `✅ Resolved by aih-ec2-3 Opus coordinator` |
+| D-41 | The row indicator registry | (a) a data registry in core, each entry a detection function, a one-cell glyph, an ASCII form and a label, drawn as a left gutter on every task row, with a legend and a switch per entry; (b) icons coded into each view; (c) colour only | (a) | | | "we can build out the task icon / status / indicator system": a new indicator is one registry entry | `✅ Resolved by aih-ec2-3 Opus coordinator` |
+| D-42 | How "an agent is working on it" is detected | (a) an in-progress agent-row child issue (label `agent`, or the `<name> agent:` title), dimmed when its session is not live on the host; (b) the CC task panel's rows with an agent owner; (c) agent transcripts and worktree liveness | (a) | | | Beads is the record and the fleet files one child issue per agent launch (AIH-813, owner-sync D-9); the panel is a mirror being retired and its rows outlive their agents | `✅ Resolved by aih-ec2-3 Opus coordinator` |
 
 ### Decision Details
 
@@ -2267,6 +2357,380 @@ Gate 0: A008 sets the labels, A001's totals label is met by `[all]`, and A002's 
 
 ---
 
+<a id="d-35"></a>
+
+#### D-35: One component layer for the band and the pane — `✅ Resolved by aih-ec2-3 Opus coordinator`
+
+**Context.** "we can can properly abstract it so that there are components that can be shared / reused / combined / stacked or whatever in modular ways so we don't have to implement two separate surfaces for both bands and pane interfaces. if we can have underlying shared code / components etc and just have adapters or whatever for each tui surface, then do that" (BU-mg2.3.21). About 02:02Z Sergei added (BU-mg2.3.21's amendment comment, verbatim there): "i don't want two separate implementations for the bands views and pane views. it should be modular, abstract, library / framework / inheritance / class etc system. whatever abstraction makes sense so that when we add something to the pane it gets automatically added to the band and vice versa (perhaps we can configure it to be enabled / disabled for one or the other or both, but by default should render in both surfaces unless there's a reason not to, and should have proper adapters over re-used components / code etc to render and be properly usable and interactive and viewable etc in bands vs pane." Today the core holds the view models (`core/src/views/*`) and each surface draws its own elements: `hooks/bands.ts` draws the band from `Box`, `Text` and `Button` (its `BandUi` type picks those three), and `hooks/pane.ts` (2,606 lines) and `hooks/panel.ts` draw the pane from the same three plus `Select`, `Input`, `Markdown` and the `Client` task list. Review items, indicators and the band's task rows (D-36, D-40, D-41) would each be drawn twice under that split.
+
+##### (a) One component framework: views registered once, each declaring its surfaces, drawn by a band adapter and a pane adapter
+
+Two layers in `hooks/components/`:
+
+- Components: functions that take a core model, a surface profile (columns, the row budget, which elements exist, whether a `Client` can mount) and the element constructors, and return elements: a task row with its indicator gutter, a task list with its "+M more" and collapse rows, an action bar, a filter line, a review row, a field form.
+- Views: every view (Tasks, Board, Backlog, Detail, Timeline, Settings, Review, and any later one) is one registry entry `{ id, label, key, surfaces, model, draw }`, where `draw` composes components and `surfaces` is `both` unless the entry names a reason for `band` or `pane` alone. `[surfaces]` in `beads-ui.toml` and Settings override it per view (`review = "both"`).
+
+The band adapter draws a view inside the band's overview level (D-36) with the band's profile (maxRows, no `Select`, `Input` or `Markdown`); the pane adapter draws it in the pane. A component that wants an element the band lacks asks the profile and draws a button or a menu instead. A view added to the registry appears in both surfaces with no other change, and the nav of each surface is generated from the registry.
+
+**Pros:**
+- One implementation of every view, as Sergei asked: a feature added for the pane is in the band, and the reverse, unless config turns it off for one.
+- A test can draw one model through both adapters and compare their text and actions.
+- It fits what exists: the core models stay, and the components are the drawing `bands.ts`, `pane.ts` and `panel.ts` already repeat.
+
+**Cons:**
+- A refactor of every pane view onto the framework, with the risk of changing what is drawn today.
+- The profile check is one more branch in each component that wants a pane-only element.
+
+##### (b) Shared core models only, each surface drawing its own elements, as today
+
+**Pros:**
+- Nothing to refactor.
+
+**Cons:**
+- Every new feature is drawn twice, which Sergei asked to avoid.
+
+##### (c) One surface: the pane's drawing put inside the band
+
+**Pros:**
+- A single drawing path.
+
+**Cons:**
+- The band has no `Select`, `Input` or `Markdown` and at most half the terminal's rows; the pane, which Sergei keeps "at scale", would lose those controls.
+
+##### Recommendation
+
+> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-25); confidence: high — (a) One component framework in `hooks/components/`: views registered once with `surfaces` (`both` by default, overridable in `[surfaces]` and Settings), composed of shared components fed by the core models, drawn by a band adapter and a pane adapter, each surface's nav generated from the registry
+<!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
+<!-- decision-lineage: decision-id=BU-mg2.2/D-35; decision-topic=how the band and the pane share their views and drawing; governs=claude-mod:band,pane,panel,plugins:beads-ui/hooks/components,config:surfaces; normalized-proposition=every view is registered once with the surfaces it draws on, both by default and overridable in config, and is drawn from shared components by a band adapter and a pane adapter that state what each surface can draw; applicability=surface:tui; outcome-id=view-registry-two-adapters; relation=refines; related-decision-id=BU-mg2.2/D-31; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+
+Sergei's ask decides the shape, one implementation with surfaces both by default; criterion 2 (one source for a feature both surfaces show) decides the level. Mitigations for the chosen Cons: the framework is its own slice (T-2C.1) with parity as a criterion, so every existing band, pane and panel test passes unchanged and any changed expectation is named in the pull request; it lands with the components the new features need (rows, lists, bars) and the views moved onto it one at a time, the remainder in T-2C.8, including the Detail fields and comments the parallel leaf (BU-mg2.3.14, BU-mg2.3.15) lands meanwhile, which T-2C.8 migrates as it stands; the profile check is one function per element kind, tested once for each element the band lacks. The `Client` task list (D-31) is the pane adapter's drawing of the task list component on the terminal surface, from the same row model.
+
+---
+
+<a id="d-36"></a>
+
+#### D-36: The band's disclosure levels and where its controls sit — `✅ Resolved by aih-ec2-3 Opus coordinator`
+
+**Context.** Sergei, about 01:58Z on 2026-10-25 (BU-mg2.3.21): "can you add the expand button right after the rest of the text on the left side at the end of the task summary text? or just add it to the left of the band text? ... all the buttons should appear to the left. also, can we make it so that the {N} in progress can be clicked and expand band rows to show some of them (can be configured via config file / beads-ui pane settings to display N amount and the rest collapse with it displaying how many are still collapsed) and i should be able to click to keep expanding to view more or should be able to collapse back to the default amount or collapse back to just the top band row(s) ... with proper progressive disclosure so that we can start from just the summary band". Shortly before 01:53Z (BU-mg2.3.20): "add more rows under band and actually build out the task panel there under the band which is separate from the pane". The `beads [-]` at the right end of the line Sergei pasted is Claude Code's own mark for the band, in the five cells the engine reserves, so beads-ui cannot move it; the beads button beads-ui draws is the one at the end of its text (D-27). A band may take up to its `maxRows`: in fullscreen, what the bottom slot has left above the prompt, capped at half the terminal's rows with the prompt included, and a taller tree scrolls with an "n more" row (BU-mg2.3.20, from the 2.1.310 types).
+
+##### (a) Three levels, with the counts as buttons in the summary text and the controls right after it
+
+- Summary (the default): today's `[bd]` line, every count a button inside the text (in progress, blocked, open, done, and any count part T-1B.11 adds), then the expand and overview controls directly after the text, at the left.
+- Rows: pressing a count draws that count's tasks under the line, `band.rows` at a time (5 unless configured), a "+M more" row while more remain, and "collapse" (back to `band.rows`) and "summary" (back to the line alone) controls. The expand control opens the same rows for every status the session owns, in the Tasks view's order.
+- Overview: a nav row generated from the view registry (every view whose surfaces include the band, D-35) and the chosen view, the full task manager as far as maxRows allows, scrolling past it.
+
+About 02:02Z Sergei generalized the counts: "(and same for all the others, not just in progress, but make it generalized, that was just an example)" (BU-mg2.3.21's amendment comment).
+
+The firstmate's `[bd][all]` and `[fm]` lines each carry their own count buttons; a press on the `[all]` line lists every owner's tasks, on the `[fm]` line the firstmate's own.
+
+**Pros:**
+- Every interaction Sergei listed, in Sergei's words, and the band stays one line until a press asks for more.
+- The overview is the pane's views through the shared components (D-35), so it costs one layout over code that already exists.
+
+**Cons:**
+- Rows and overview take conversation lines while open.
+- Count buttons inside the text change how the line wraps and truncates at narrow widths.
+
+##### (b) A fixed task list always under the summary
+
+**Pros:**
+- Nothing to press.
+
+**Cons:**
+- Always takes rows; no progressive disclosure, which Sergei asked for.
+
+##### (c) The summary line only, with the pane for everything else
+
+**Pros:**
+- No change.
+
+**Cons:**
+- Drops the band rows Sergei asked for, which Gate 0 forbids.
+
+##### Recommendation
+
+> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-25); confidence: high — (a) Summary, rows and overview levels; each count a button inside the summary text; the expand and overview controls directly after the text; `band.rows` (5) and `band.level` (summary) set in `beads-ui.toml` and Settings
+<!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
+<!-- decision-lineage: decision-id=BU-mg2.2/D-36; decision-topic=what the band shows at each level and where its controls sit; governs=claude-mod:band,config:band.rows,config:band.level; normalized-proposition=the band opens at a one-line summary whose counts are buttons and whose controls follow the text at the left, expands a pressed count into N task rows with more and collapse controls, and offers an overview of the pane's views within maxRows; applicability=surface:tui; outcome-id=band-three-levels-left-controls; relation=refines; related-decision-id=BU-mg2.2/D-34; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+
+Gate 0: each part of the chosen option is a clause of Sergei's message, and the pane stays, as Sergei asked. Mitigations: the band opens at the summary, so rows appear only on a press, and "summary" is one press from any level (Risk 18); the level a session last chose persists, so a user who wants rows open keeps them; the summary text keeps `truncate-end`, and the count buttons are `plain` buttons drawn in the line's own text, so a narrow band truncates the tail as today and a test pins each width from 40 to 364 columns. The beads button of D-27 moves to the left with the other controls. Claude Code's own `[-]` mark at the right end is untouched.
+
+---
+
+<a id="d-37"></a>
+
+#### D-37: Where review items come from — `✅ Resolved by aih-ec2-3 Opus coordinator`
+
+**Context.** Every output Sergei must review or act on is a held item in ai-harness's held store (`docs/held/README.md` there): a Markdown file under `docs/held/<host>--<slug>/` with `kind` (decision, blocker, exit-goal, progress-review, summary, fleet-brief, other), `status` (open, answered), `session`, `machine`, `task`, `title`, `ask` and timestamps, routed to one of several stores (`ai-harness`, and `sw-bms-workspace` for employer work) and written first into each session's landing pad. `held_cli.py list --json` walks every routed store and pad; `show <path> --json` prints one body. Measured on sem-kg-ec2, 2026-10-25T01:50Z, at a LOOK reading: `list --status open --json` ran 3.7 s and printed 541,233 bytes, 641 open items, 552 in ai-harness and 89 in sw-bms-workspace, from five machines (`sem-kg-ec2` 251, `fw-lnx` 330, `acn-mac` 31, `mac` 29), 186 of them with `task: none`. The README also sets read-time rules that `list` does not apply: only the newest open briefing of each kind per session is current, the rest superseded (142 of `fw-lnx`'s open items are summaries); an item addressed to a decider is not Sergei's; an AI-resolved decision is left out (`held_output.briefing_kinds`, `escalated`, `ai_resolved_decision`, used by `compile`). Pair membership is `config/message-transports.json`'s `pairs` block (one pair is `acn-mac` and `sem-kg-ec2`, the other `fw-lnx` and `mac`, the machine Sergei calls sw-mac). The aih-ec2-3 brief named the data source as the held store's read verbs and the git-tracked held tree, read at refresh.
+
+##### (a) A `held_cli.py review` verb, run once a beat by the host refresher behind a fingerprint, its command set by the ai-harness install step
+
+The verb (T-2C.4) prints every open and answered item of every routed store and pad whose machine is in this host's pair, each tagged with its selection (current, superseded and by which path, escalated, ai-resolved) by the same functions `compile` and replay call, plus a fingerprint of the store and pad heads; `--if-changed <fingerprint>` prints only `unchanged`. The refresher runs it on its beat, writes `review-<token>.json` (no bodies), and joins each item's task to its issue through the store inventory (title, status, priority, labels, parent, assignee, updated_at). Sessions read the snapshot as they read counts. The command is `[review] command` in the user's own `beads-ui.toml`, never a repository's (as `[sync]` is, PR #58), written by the ai-harness install step that writes `[sync]`. Unset, the mod shows bd blockers alone and says how to set it.
+
+**Pros:**
+- The rules that decide what Sergei is shown stay in the one tool that owns them, so beads-ui never drifts from `compile` and replay.
+- One read per host whatever the number of sessions, and an unchanged beat costs a few `git rev-parse` calls.
+- The public plugin names no ai-harness path; an outside user sets a command or none.
+
+**Cons:**
+- A new ai-harness verb and install lines, a second repository's change before the pane shows anything.
+- Up to a minute between an item being held and the pane showing it.
+
+##### (b) The refresher runs `held_cli.py list`, and the core re-implements the selection rules
+
+**Pros:**
+- No ai-harness change.
+
+**Cons:**
+- A second copy of the supersession, escalation and AI-resolved rules in TypeScript, which drifts when ai-harness changes them; the AI-resolved test reads the body, which `list` does not print.
+
+##### (c) The mod parses the `docs/held` trees itself
+
+**Pros:**
+- No subprocess.
+
+**Cons:**
+- Re-implements the routing table, the pads and the frontmatter schema, the tools the store already ships.
+
+##### Recommendation
+
+> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-25); confidence: high — (a) A `held_cli.py review --scope pair --json` verb with a fingerprint, run once a beat by the host refresher into a pair-scoped snapshot joined to its issues, its command in the user's `beads-ui.toml` `[review]`, written by ai-harness's install step
+<!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
+<!-- decision-lineage: decision-id=BU-mg2.2/D-37; decision-topic=the source of the review items beads-ui shows; governs=plugins:beads-ui/refresher,config:review.command,repo:ai-harness/held_cli; normalized-proposition=review items come from an ai-harness held store verb that applies the store's own selection rules and the host pair scope, read once a beat by the host refresher behind a fingerprint, its command configured in the user's beads-ui config by the ai-harness install; applicability=surface:tui; outcome-id=held-review-verb-refresher; relation=different-question; related-decision-id=BU-mg2.2/D-26; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+
+Criterion 2: the selection rules are the held store's, so its own tool applies them, and the read is host infrastructure, so the refresher does it once (D-26). Mitigations: the ai-harness change is T-2C.4, a small verb over functions `compile` already calls, with its own pytest, landed first so that nothing in beads-ui waits on it; the install writes the command where it writes `[sync]` (ai-harness's AIH-qsmn3u step), so the feature ships on wherever `[sync]` does; the minute's lag is the band's own (D-26), a write from the pane drops a wake marker that re-reads at once, and the Review view's header shows the snapshot's read time. Bodies are never in the snapshot: the reader runs `show --json` for one item when it opens.
+
+---
+
+<a id="d-38"></a>
+
+#### D-38: Whose review items a session sees — `✅ Resolved by aih-ec2-3 Opus coordinator`
+
+**Context.** "for firstmate cc sesion, it should be able to view all of them for both its own beads tasks and also all of them in the fleet for its machine host pair (and eventually we can expand it to all my machine hosts with some access control restrictiosn for client repos / information so that doesn't get shared on my acn-mac or sw-mac or fw-lnx machine host cc sessions in beads-ui. so we'll eventually get there. but for now firstmate cc session should just be able to see everythign across its machine profile pair" (BU-mg2.3.17). The ai-harness held tree on every host carries every host's items once synced (D-37's measurement holds `fw-lnx` and `mac` items on sem-kg-ec2), and `sw-bms-workspace`, an employer-work store, exists only on the employer pair. Sergei does not say what a non-firstmate session sees. A session is the firstmate when its name ends `-firstmate-<N>` (`isFirstmate`, D-30).
+
+##### (a) A pair-scoped snapshot; the firstmate lists all of it, any other session its own; an issue's Detail lists every pair item about it
+
+- The verb writes only the pair's items (D-37), so nothing from another pair reaches this host's beads-ui state.
+- Firstmate: the Review view lists every item in the snapshot, with one key for its own (items it holds, and items about issues it owns), as D-29's Mine and All key does on the board.
+- Any other session: the Review view lists the items it holds (`session` is `<name>@<host>`) and the items whose task is an issue it owns (assignee is its name, D-25).
+- Any session's Detail of an issue lists every pair item whose task names that issue, whoever holds it, since the issue is the scope there.
+
+**Pros:**
+- Sergei's firstmate rule exactly, and a non-firstmate view of what is its own, by both of the ways a session owns work.
+- The filter sits before any file is written, so the later all-hosts scope (BU-mg2.3.17.4) widens one place and adds its access control there.
+
+**Cons:**
+- A non-firstmate's Detail can show an item another session holds.
+- An item with `task: none` (186 of 641) reaches a non-firstmate's view only if that session holds it.
+
+##### (b) Every session sees every pair item
+
+**Pros:**
+- Simplest.
+
+**Cons:**
+- Every session's view is the firstmate's; Sergei gave the pair view to the firstmate.
+
+##### (c) Every session, the firstmate included, sees only items it holds
+
+**Pros:**
+- Strict.
+
+**Cons:**
+- Drops the firstmate's pair view, which Gate 0 forbids.
+
+##### Recommendation
+
+> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-25); confidence: high — (a) The snapshot holds the host pair's items; the firstmate's Review view lists all of them with a key for its own; any other session's lists the items it holds and those about issues it owns; every session's Detail lists the pair's items about that issue
+<!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
+<!-- decision-lineage: decision-id=BU-mg2.2/D-38; decision-topic=which review items each session sees; governs=packages:core/review,claude-mod:review,repo:ai-harness/held_cli; normalized-proposition=the review snapshot holds only the host pair's items, the firstmate lists all of them, another session lists the items it holds or whose issue it owns, and an issue's detail lists the pair's items about that issue; applicability=surface:tui; outcome-id=pair-snapshot-firstmate-all; relation=refines; related-decision-id=BU-mg2.2/D-25; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+
+Gate 0 keeps the firstmate's own items and its pair. Mitigations: a Detail is opened on one issue, and every item it lists is one Sergei must act on for that issue, inside the same pair the firstmate already sees, so it crosses no boundary Sergei drew; `task: none` items held by a session reach it through the session's own list, and the firstmate sees all of them; a test proves that no session draws an item from outside the pair and that a non-firstmate's Review view holds nothing it neither holds nor owns (T-2C.6).
+
+---
+
+<a id="d-39"></a>
+
+#### D-39: Acting on a review item from the pane — `✅ Resolved by aih-ec2-3 Opus coordinator`
+
+**Context.** "anything that i need to review and action basically ... i want to be able to use the beads-ui pane" (BU-mg2.3.16, BU-mg2.3.17); the sub-epic's Done-when reads "Sergei can review and act on a held decision from the pane". The held lifecycle (README § Lifecycle): Sergei's answer is written verbatim under `## Answer` by `held_cli.py answer <path> --text-file <f>`, which commits in the owning session's landing pad, refuses an item that is not open and refuses a pad with any uncommitted change; the owning session then records the answer in its durable home, ships and retires; an answered item a session has not acted on shows at its next window start and is a prod condition for the chief. `answer` checks authority only when the text makes a Gate 0 claim. `$.prompt.submit` starts a turn in the session once it is idle (D-33). Leaf BU-mg2.3.15 adds posting a bd comment from the pane.
+
+##### (a) An Answer control that records the text with `held_cli.py answer`, then a turn in the session
+
+The reader (D-40) carries an Answer input. On submit the mod writes the text, byte for byte, to a file in its state directory and runs `answer`. On success it starts a turn from a fixed template naming the item's path, kind, title, owner session and answer commit, with Sergei's text in a fence: when the session holds the item, record the answer's durable home, ship and act; when another session does, tell that session by the fleet's messaging ladder (the firstmate is the chief). A bd blocker is acted on by a comment on the issue, through the comment control BU-mg2.3.15 builds.
+
+**Pros:**
+- Sergei's exact bytes are recorded at once, by the store's own verb, whether or not the session is busy.
+- The follow-through stays where the lifecycle puts it, in a session.
+
+**Cons:**
+- The mod writes into another session's landing pad when that session holds the item.
+- A second write path into the held store, from a public plugin.
+
+##### (b) Send the text to the session, which runs `answer` itself
+
+**Pros:**
+- No new write path in the mod.
+
+**Cons:**
+- The answer waits for the session to be idle, and is re-typed into a file by the model, which the README forbids for a held body.
+
+##### (c) Read in the pane, act in chat
+
+**Pros:**
+- Nothing to build.
+
+**Cons:**
+- Drops acting from the pane, which Gate 0 forbids.
+
+##### Recommendation
+
+> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-25); confidence: medium — (a) An Answer control that runs `held_cli.py answer` with Sergei's text exactly as typed, then a fixed-template turn in the session to record, ship and act, or to tell the owner; a comment for a bd blocker
+<!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
+<!-- decision-lineage: decision-id=BU-mg2.2/D-39; decision-topic=how Sergei acts on a review item from the pane; governs=claude-mod:review,config:review.command; normalized-proposition=the pane records Sergei's typed answer with the held store's answer verb and then hands the follow-through to the session in a fixed-template turn, and a bd blocker is answered with a comment; applicability=surface:tui; outcome-id=answer-verb-then-session-turn; relation=refines; related-decision-id=BU-mg2.2/D-33; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+
+Gate 0 keeps the action in the pane. Medium confidence because the answer path has not run against a live pad. Mitigations: a race with the owning session is refused by `answer`'s own clean-pad check, so it corrupts nothing, and the reader keeps the text and offers Send to session (Risk 16); the write path is the store's own verb, named by the user's own config (D-37), never a repository's, so a checkout cannot redirect it, and the text reaches the verb as a file, never through a shell; the turn's template is fixed, like D-33's, and Sergei's text is fenced and marked as Sergei's answer. Tests drive the path with a stub held command at the hooks entry point; the live proof answers a throwaway item in a scratch store, never one of Sergei's.
+
+---
+
+<a id="d-40"></a>
+
+#### D-40: Where review items are shown — `✅ Resolved by aih-ec2-3 Opus coordinator`
+
+**Context.** "all decisions / blockers etc that i need to review per issue so if i click a beads task and go to the details, i can select a tab / pane / option or whatever and veiw those. or they just appear by default in the task details pane ... also i want to be able to view all decisions / blockers / open questions (held doc info) in the beads-ui not just in task details view, but also as its own tab where i can view all of them and can filter / organize / sort them by task or epic or priority or last updated / created date or label or whatever teh case may be" (BU-mg2.3.17). The pane's keys are `t`, `1` to `6`, `k`, `r`, `e` and `m` (T-2B.4). A held item has `created_at` and `answered_at` and no updated time of its own; its issue has `updated_at`, priority, labels and parent. The fleet holds an open question that needs Sergei as a held decision, so open questions arrive as decisions.
+
+##### (a) A Review section at the top of the Detail, shown unasked, and a Review view in the pane's nav and the band's overview
+
+- Detail: when the issue has review items or bd blockers, a Review section above the description, one row per item (kind, title, ask, status, session, created and updated time); Enter or a click opens the reader (the body from `show --json`, paged under the tree limit, with Answer, Send to session, Go to issue and Close).
+- The Review view: key `7` in the nav and an entry in the band's overview. A filter line with the Backlog's grammar: `kind:`, `status:`, `selection:` (current, superseded, escalated, ai-resolved, all), `session:`, `machine:`, `task:`, `epic:` (the issue's parent), `label:`, `priority:`, and free text over title and ask; default `status:open selection:current`. Sorts: updated (the item's answered or created time), created, priority, task, epic, kind, session. Groups: none, task, epic, kind, session, each with a count.
+
+**Pros:**
+- Nothing to find: an issue's items are on its Detail when it opens.
+- Every filter and sort Sergei named, and Sergei's "or whatever" as session, machine and selection, so superseded and AI-resolved items stay reachable.
+
+**Cons:**
+- The Detail grows taller for an issue with many items.
+- "Updated" for an item is its answered or created time, since the store records no other.
+
+##### (b) A Detail sub-tab and a Review view
+
+**Pros:**
+- A short Detail.
+
+**Cons:**
+- One more key to find the items Sergei asked to see by default.
+
+##### (c) The Review view only
+
+**Pros:**
+- One place.
+
+**Cons:**
+- Drops the per-issue view Sergei asked for, which Gate 0 forbids.
+
+##### Recommendation
+
+> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-25); confidence: high — (a) A Review section at the top of the Detail, shown unasked when the issue has items, and a Review view (key `7`, and the band's overview) with the filter grammar, sorts and groups above
+<!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
+<!-- decision-lineage: decision-id=BU-mg2.2/D-40; decision-topic=where review items are drawn; governs=claude-mod:pane,claude-mod:band,packages:core/views/review; normalized-proposition=an issue's review items show by default at the top of its detail, and every item in scope is listed in a review view with filters, sorts and groups by task, epic, priority, dates, label, kind and session; applicability=surface:tui; outcome-id=detail-section-review-view; relation=different-question; related-decision-id=BU-mg2.2/D-38; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+
+Criterion 5: per-issue and all-item views are both definite requirements. Mitigations: the Detail's section draws a row per item and only the opened item's body, so its height grows by one row an item and pages like the Board past its page; the issue's own `updated_at` is a sort through `priority`, `task` and `epic` grouping, and the item's time is labelled "held" or "answered" where it is drawn, so the sort says what it orders by.
+
+---
+
+<a id="d-41"></a>
+
+#### D-41: The row indicator registry — `✅ Resolved by aih-ec2-3 Opus coordinator`
+
+**Context.** "i want an icon system to appear next to task rows on the left side so i can know if they have an agent working on them, if they are blocked, if they have any review items (blockers / decisions / open questions etc) or anythign else. i think those are the main ones for now but we can build out the task icon / status / indicator system" (BU-mg2.3.17, BU-mg2.3.18). Task rows draw in the band (D-36), the Tasks view, the Backlog and on Board cards. A glyph of ambiguous East Asian width, or one with emoji presentation, takes two cells on some terminals and breaks alignment.
+
+##### (a) A data registry in core, drawn as a left gutter on every task row
+
+`core/src/indicators.ts` holds an ordered list; each entry has an id, a `detect(context)` function (the issue, its children in the read, its review items, the session registry), a one-cell glyph, an ASCII form, a label and a config key. Every task row draws a gutter of one cell per enabled entry, glyph or blank, through the shared row component (D-35). The help and Settings draw the legend from the same list and switch each entry. First entries: agent working (D-42; candidate `⟳`, ASCII `*`), blocked (status blocked, or an open blocks dependency; candidate `⊘`, ASCII `!`), review items (an open, current review item, T-2C.7; candidate `✎`, ASCII `?`). Below 48 columns the gutter is one cell, the first entry that fires.
+
+**Pros:**
+- A new indicator is one entry, which "we can build out" asks for; the legend cannot drift from what is drawn.
+- Detection is a pure function per entry, tested on its own.
+
+**Cons:**
+- A gutter of three cells on every row, even rows with no indicator.
+- The candidate glyphs may still draw two cells somewhere.
+
+##### (b) Icons coded into each view
+
+**Pros:**
+- No abstraction.
+
+**Cons:**
+- Each new indicator touches every view.
+
+##### (c) Colour only
+
+**Pros:**
+- No width.
+
+**Cons:**
+- Three states cannot share one colour, and colour is lost under `NO_COLOR`.
+
+##### Recommendation
+
+> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-25); confidence: high — (a) An ordered indicator registry in `core/src/indicators.ts`, drawn as a left gutter of one cell per enabled entry on every task row through the shared row component, with a legend and a switch per entry
+<!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
+<!-- decision-lineage: decision-id=BU-mg2.2/D-41; decision-topic=how row status indicators are defined and drawn; governs=packages:core/indicators,claude-mod:rows,config:indicators; normalized-proposition=row indicators are entries of one ordered registry, each a detection function, a one-cell glyph, an ASCII form and a label, drawn as a left gutter on every task row with a generated legend; applicability=surface:tui; outcome-id=indicator-registry-gutter; relation=different-question; related-decision-id=BU-mg2.2/D-19; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+
+Criterion 5: an extensible indicator system is a stated requirement, so the registry is built now. Mitigations: the gutter keeps rows aligned, which is what makes a glyph readable at a glance, and Settings turns off any entry a user does not want, shrinking the gutter by one cell; the width risk is covered by a test: each glyph must lie outside Unicode's ambiguous-width and emoji-presentation sets, the ASCII forms are one config key away, and the candidates are replaced by the build if the test or a live terminal refuses them.
+
+---
+
+<a id="d-42"></a>
+
+#### D-42: How "an agent is working on it" is detected — `✅ Resolved by aih-ec2-3 Opus coordinator`
+
+**Context.** The signals, measured on sem-kg-ec2 on 2026-10-25 between 01:50Z and 01:58Z:
+
+- Agent-row child issues. Each agent launch files its own child issue under the issue it works on, in progress at launch and closed at collection (AIH-813 Step 7c in ai-harness's `agent-delegation.md`; owner-sync design D-9). Titles of the form `<name> agent: <task>` or `<name> coordinator agent: <task>`: 8 of 89 beads-ui issues (2 in progress) and 7 of 7,228 ai-harness issues, every one filed by aih-ec2-3. Free-text matching on "agent" is useless: 459 other ai-harness titles carry the word ("Agent Mail", "agent-process ledger"). No child carries a lease or heartbeat.
+- The CC task panel. 78 in-progress rows across the host's ten named panels, 33 with an owner other than the session: agent ids, agent names, and also old session names (`aih-4`, `ai-cli-1`), `Sergei`, and coordinators long finished (`bu-ylx6-coordinator` on four rows). The panel is a mirror being retired (R-15).
+- Agent worktree liveness. ai-harness's `agent_worktree_liveness.py` answers whether a path is live from its transcript and `git worktree lock`; it is keyed on a path, and a path names no issue. One session's `subagents/` directory held 20,371 files.
+- The beads-ui session registry. Each live session with the mod registers in the refresher's state directory (D-26), so the host knows which sessions are live.
+
+##### (a) An in-progress agent-row child, dimmed when its session is not live
+
+An issue shows the agent indicator when it has an in-progress child that is an agent row (label `agent`, or a title matching `^<name>( coordinator)? agent: `), or is one itself. While the row's assignee is a session the host's session registry does not hold live, the glyph is dimmed (the agent may be finished and its row not yet closed). ai-harness AIH-7m40p6 asks the launch path to set the `agent` label, so every session's agents are seen whatever their title.
+
+**Pros:**
+- Beads is the record, and the fleet's launch rule files exactly this row, so the indicator and the band's in-progress count agree.
+- No read beyond the board's: children are issues with a `parent` field in the read.
+
+**Cons:**
+- Today only aih-ec2-3's agents carry the title, so other sessions' agents show nothing until they file agent rows or the label lands.
+- A row left in progress after its agent ended shows the indicator, dimmed only once its session is gone.
+
+##### (b) The CC task panel's rows with an agent owner
+
+**Pros:**
+- Covers more sessions today (33 rows).
+
+**Cons:**
+- Its rows outlive their agents, it is per host, and it is being retired.
+
+##### (c) Agent transcripts and worktree liveness
+
+**Pros:**
+- The only positive evidence that an agent is alive at this moment.
+
+**Cons:**
+- Keyed on paths, never issues; reads Claude Code's undocumented files at a scale of thousands per session.
+
+##### Recommendation
+
+> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-25); confidence: medium — (a) An in-progress agent-row child issue (label `agent`, or the `<name> agent:` and `<name> coordinator agent:` titles), or the issue being one, dimmed while its assignee session is not live in the host's session registry; ai-harness asked to set the label at launch
+<!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
+<!-- decision-lineage: decision-id=BU-mg2.2/D-42; decision-topic=the signal behind the agent-working indicator; governs=packages:core/indicators,convention:agent-row,repo:ai-harness/agent-launch; normalized-proposition=an issue has an agent working when it has an in-progress agent-row child issue marked by label or title, dimmed when that row's session is not live on the host; applicability=surface:tui; outcome-id=agent-row-child-liveness-dim; relation=refines; related-decision-id=BU-mg2.2/D-25; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+
+Criterion 2: the indicator reads the record every surface reads. Medium confidence because coverage depends on a convention most sessions have not used yet (Risk 17). Mitigations: the label route lets the launch path mark every agent row whatever its title, and AIH-7m40p6 is filed in ai-harness for the owner-sync work that already prints the launch command (its T-2.3 hook); the dimmed state separates a row whose session is live from one whose session is gone, and a row whose session is live but whose agent has ended is the launching session's own collection duty (AIH-813: close the row at collection); the rule is one registry entry (D-41), so a better signal replaces it without touching a view. One such signal exists for a session's own rows: the mods API's `$.agent.list()` returns this session's subagents with a status (`running`, `idle`, `completed` and others; mods reference, read 2026-10-25T02:15Z), which could later confirm that an agent row's agent is still running; it sees one session only and names no issue, so it would refine the dimmed state and leave the Beads rule in place.
+
+---
+
 > **Feedback Round 1:** Your approval or feedback on each decision, D-1 to D-23 (D-7, D-11 and D-12 need your choice):
 > - <enter feedback here>
 
@@ -2335,6 +2799,28 @@ Recorded in ai-harness as `docs/asks/BU-epic-agentic-ai-native-beads-ylx.md`, en
 > `     [fm] {N} tasks ({N} in progress, {N} blocked, {N} open, {N} done last 24h)`
 
 Resolution: D-34 and T-1B.10. Line 1 is `[bd][all]` over every store, line 2 the firstmate's own counts under `[fm]`, aligned; both follow A007's part order and T-1B.11's configurable parts; no store count, no session name; the read time only in debug mode. The sync-drift signal today's line 1 carries is kept as a short marker shown only while a store is out of step, with the stores named in the pane.
+
+### Feedback Round 6 (Sergei, 2026-10-25, in chat)
+
+Five messages to aih-ec2-3, each recorded verbatim in the body of the issue it opened, not yet in an ask record: before 01:32:17Z (BU-mg2.3.16), 01:32Z to 01:38:10Z (BU-mg2.3.17 and BU-mg2.3.18), shortly before 01:53Z (BU-mg2.3.20), about 01:58Z (BU-mg2.3.21) and about 02:02Z (BU-mg2.3.21's amendment comment). The raw text governs; the lines that concern this design:
+
+> also, i need to see any blockers / decisions / held doc info surfaced in the beads-ui pane.
+
+> and to be clear, i want all the decisions / blockers etc (anything that i need to review and action basically) and all that info from the held docs inside the beads-ui pane. [...] also, i want an icon system to appear next to task rows on the left side so i can know if they have an agent working on them, if they are blocked, if they have any review items [...] also i want to be able to view all decisions / blockers / open questions (held doc info) in the beads-ui not just in task details view, but also as its own tab [...] and for firstmate cc sesion, it should be able to view all of them for both its own beads tasks and also all of them in the fleet for its machine host pair
+
+> can we actually add more rows under band and actually build out the task panel there under the band which is separate from the pane? how much can we just do directly in bands?
+
+> so all the buttons should appear to the left. also, can we make it so that the {N} in progress can be clicked and expand band rows to show some of them [...] if we can have underlying shared code / components etc and just have adapters or whatever for each tui surface, then do that.
+
+> i don't want two separate implementations for the bands views and pane views. [...] by default should render in both surfaces unless there's a reason not to
+
+Resolution: the fields and comments are BU-mg2.3.14 and BU-mg2.3.15, built by a parallel leaf and moved onto the framework in T-2C.8. Review items: D-37 to D-40, T-2C.4 to T-2C.6. Row indicators: D-41, D-42, T-2C.3, T-2C.7. The band: D-36, T-2C.2. The docked panel after a reload was first filed as a bug (BU-mg2.3.20 part 2), then reversed by Sergei (below). One implementation: D-35, T-2C.1 and T-2C.8. The scope over all hosts with client-repo access control is BU-mg2.3.17.4, later, as Sergei placed it.
+
+A sixth message, shortly before 02:27Z, relayed verbatim by aih-ec2-3, reverses BU-mg2.3.20 part 2 and D-32's open at session start:
+
+> can you update the beads-ui plugin so that on session-start or plugin reload or whatever, it doesn't default try to open the pane. i'll open the pane with the button if i want to but i don't want it to open by default or whenever i reload the plugin or whatever. and especially as we're building out the bands surface to be interactive and to be a primary viewing and interaction surface for beads-ui anyway.
+
+Resolution: aih-ec2-3 builds it in its own PR (`[panel] open_at_start`, false by default) and records it against D-32; Phase 2C carries no reload criterion, and its exit gate checks that no pane opens unasked.
 
 <!-- /doc:region name="feedback_rounds" -->
 
