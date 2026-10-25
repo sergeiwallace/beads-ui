@@ -1,4 +1,5 @@
 import {
+  type Comment,
   type DeletePreview,
   type Dependency,
   type HistoryEvent,
@@ -17,6 +18,7 @@ export interface ParseError {
     | "bd statuses"
     | "bd ready"
     | "bd history"
+    | "bd comments"
     | "bd delete"
     | "bd create"
     | "bd count";
@@ -277,6 +279,26 @@ function parseEvent(value: unknown, path: string): HistoryEvent {
 export function parseBdHistoryEvents(text: string): ParseResult<HistoryEvent[]> {
   return run("bd history", text, (json) =>
     asArray(json, "$").map((entry, i) => parseEvent(entry, `$[${i}]`)),
+  );
+}
+
+function parseComment(value: unknown, path: string): Comment {
+  const raw = asObject(value, path);
+  const text = raw.text;
+  if (typeof text !== "string") throw new Invalid(`${path}.text`, "expected a string");
+  return {
+    id: requiredString(raw, "id", path),
+    issueId: requiredString(raw, "issue_id", path),
+    author: requiredString(raw, "author", path),
+    text,
+    createdAt: requiredString(raw, "created_at", path),
+  };
+}
+
+/** Reads `bd comments <id> --json`: every comment on the issue, oldest first as bd lists them. */
+export function parseBdComments(text: string): ParseResult<Comment[]> {
+  return run("bd comments", text, (json) =>
+    asArray(json, "$").map((entry, i) => parseComment(entry, `$[${i}]`)),
   );
 }
 
