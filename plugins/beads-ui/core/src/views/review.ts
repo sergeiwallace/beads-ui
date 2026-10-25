@@ -4,6 +4,17 @@
 
 import type { Comment, Issue } from "../model.ts";
 import type { ReviewItem } from "../review.ts";
+import {
+  describeReviewFilterError,
+  groupReviewItems,
+  matchesReview,
+  REVIEW_SORT_LABELS,
+  type ReviewFilterState,
+  type ReviewGroup,
+  type ReviewScope,
+  type ReviewSort,
+  sortReviewItems,
+} from "../reviewList.ts";
 import { fenceFor, inlineText } from "../sync.ts";
 
 /** The heading of the Detail's Review section. */
@@ -168,6 +179,15 @@ const metaOf = (item: ReviewItem): string =>
     .filter((part): part is string => part !== undefined && part !== "")
     .join(", ");
 
+const reviewRowOf = (item: ReviewItem, meta: string, waitedOn: boolean): ReviewRow => ({
+  key: itemKey(item),
+  path: item.path,
+  label: `${item.kind}: ${item.title === "" ? itemKey(item) : item.title}`,
+  ask: item.ask,
+  meta,
+  waitedOn,
+});
+
 /** The issue's bd blockers: each open blocked-by link, then its blocked transition's fields. */
 export function blockerRows(
   issue: Pick<Issue, "dependencies">,
@@ -226,14 +246,7 @@ export function reviewSection(input: {
   const page = Math.min(Math.max(0, input.page ?? 0), pages - 1);
   const rows = held
     .slice(page * REVIEW_PAGE_ROWS, (page + 1) * REVIEW_PAGE_ROWS)
-    .map(({ item, waitedOn }) => ({
-      key: itemKey(item),
-      path: item.path,
-      label: `${item.kind}: ${item.title === "" ? itemKey(item) : item.title}`,
-      ask: item.ask,
-      meta: metaOf(item),
-      waitedOn,
-    }));
+    .map(({ item, waitedOn }) => reviewRowOf(item, metaOf(item), waitedOn));
   const count = held.length + blockers.length;
   const section: ReviewSection = {
     heading: `${REVIEW_HEADING} (${count})`,
@@ -321,4 +334,149 @@ export function answerTurn(input: {
     );
   }
   return lines.join("\n");
+}
+
+// The Review view (D-38, D-40, T-2C.6): every item in the session's scope through the filter,
+// sorted and grouped, a page at a time. The pane and the band's overview draw the same model.
+
+/** The view's heading, and its nav label. */
+export const REVIEW_VIEW_TITLE = "Review";
+/**
+ * Items a pane page draws. A row is three lines and about 900 characters of tree, so a page of
+ * 25 stays far under the 100,000-character limit beside the pane's chrome.
+ */
+export const REVIEW_LIST_PAGE_ITEMS = 25;
+
+export type ReviewListEntry =
+  | { kind: "group"; key: string; label: string; count: number }
+  | { kind: "item"; row: ReviewRow };
+
+export interface ReviewListView {
+  /** `Review: 3 of 12 items, the pair's (acn-mac, sem-kg-ec2)`. */
+  heading: string;
+  /** What the scope control says, and what its key switches to; undefined without a toggle. */
+  scope?: { label: string; next: string };
+  sort: string;
+  group: string;
+  /** When the refresher last read the held store, and its last run's failure. */
+  read?: string;
+  filterError?: string;
+  entries: ReviewListEntry[];
+  page: number;
+  pages: number;
+  /** Items the filter kept, of `total` in scope. */
+  shown: number;
+  total: number;
+  /** Said in place of the rows when the filter kept none. */
+  empty?: string;
+  /** The line saying how to set `[review] command`, while it is unset. */
+  unset?: string;
+  note?: string;
+}
+
+const listMeta = (item: ReviewItem): string =>
+  [
+    metaOf(item),
+    item.task === "none" || item.task === ""
+      ? "no task"
+      : `task ${item.issue?.displayId ?? item.task}`,
+    item.issue === undefined ? undefined : `P${item.issue.priority}`,
+  ]
+    .filter((part): part is string => part !== undefined)
+    .join(", ");
+
+const isoOf = (ms: number): string => {
+  const date = new Date(ms);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString();
+};
+
+/**
+ * The Review view's model. `items` are the snapshot's, inside its pair; `scoped` the ones the
+ * session's scope keeps (D-38). `firstmate` draws the scope control: `pair` lists every item,
+ * `mine` the session's own.
+ */
+export function reviewListView(input: {
+  scoped: readonly ReviewItem[];
+  scope: ReviewScope;
+  firstmate: boolean;
+  pair: readonly string[];
+  filter: ReviewFilterState;
+  sort: ReviewSort;
+  group: ReviewGroup;
+  page?: number;
+  pageItems?: number;
+  configured: boolean;
+  readAt?: number;
+  note?: string;
+  titleOf?: (id: string) => string | undefined;
+}): ReviewListView {
+  const per = Math.max(1, input.pageItems ?? REVIEW_LIST_PAGE_ITEMS);
+  const kept = input.configured
+    ? sortReviewItems(
+        input.scoped.filter((item) => matchesReview(item, input.filter.filter)),
+        input.sort,
+      )
+    : [];
+  const groups = groupReviewItems(kept, input.group, input.titleOf);
+  const pages = Math.max(1, Math.ceil(kept.length / per));
+  const page = Math.min(Math.max(0, input.page ?? 0), pages - 1);
+  const first = page * per;
+  const entries: ReviewListEntry[] = [];
+  let at = 0;
+  for (const group of groups) {
+    const start = Math.max(first, at);
+    const end = Math.min(first + per, at + group.items.length);
+    if (start < end) {
+      if (input.group !== "none") {
+        entries.push({
+          kind: "group",
+          key: group.key === "" ? "-" : group.key,
+          label: group.label,
+          count: group.items.length,
+        });
+      }
+      for (const item of group.items.slice(start - at, end - at)) {
+        entries.push({ kind: "item", row: reviewRowOf(item, listMeta(item), false) });
+      }
+    }
+    at += group.items.length;
+  }
+  const whose =
+    input.scope === "pair"
+      ? `the pair's${input.pair.length === 0 ? "" : ` (${input.pair.join(", ")})`}`
+      : "this session's own";
+  const view: ReviewListView = {
+    heading: `${REVIEW_VIEW_TITLE}: ${kept.length} of ${input.scoped.length} items, ${whose}`,
+    sort: REVIEW_SORT_LABELS[input.sort],
+    group: input.group,
+    entries,
+    page,
+    pages,
+    shown: kept.length,
+    total: input.scoped.length,
+  };
+  if (input.firstmate) {
+    view.scope =
+      input.scope === "pair"
+        ? { label: "Showing: the pair's", next: "mine" }
+        : { label: "Showing: mine", next: "the pair's" };
+  }
+  if (input.filter.error !== undefined) {
+    view.filterError = describeReviewFilterError(input.filter.error);
+  }
+  if (!input.configured) {
+    view.unset = REVIEW_UNSET_TEXT;
+    return view;
+  }
+  if (input.readAt !== undefined) view.read = `held items read ${stampText(isoOf(input.readAt))}`;
+  if (input.note !== undefined) view.note = input.note;
+  if (kept.length === 0) {
+    view.empty =
+      input.scoped.length === 0
+        ? input.scope === "pair"
+          ? "No held item in the pair."
+          : "No held item is this session's: none it holds, and none about an issue it owns."
+        : "No item matches the filter.";
+  }
+  return view;
 }
