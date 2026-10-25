@@ -35,7 +35,13 @@ the band, the Tasks view, the Backlog and on Board cards, starts with a gutter o
 `⟳` while an agent is working on the issue (dimmed when that agent's session is no longer live on
 the host) and `⊘` when it is blocked. The help and Settings list them, and `[indicators]` or
 Settings switches each one off
-([docs/procedures/mod-install.md](docs/procedures/mod-install.md#row-indicators)).
+([docs/procedures/mod-install.md](docs/procedures/mod-install.md#row-indicators)). With
+`[review] command` set in your own `beads-ui.toml` to a held store's tool (on the fleet,
+ai-harness's `held_cli.py`), an issue's Detail opens with a Review section above its description:
+the held decisions, blockers and other items about the issue that you must review or act on, and
+its bd blockers. An item opens in a reader with its whole body, where you can answer it; the
+answer is recorded by the held store's own `answer` verb and handed to the session
+([docs/procedures/mod-install.md](docs/procedures/mod-install.md#review-items)).
 
 The MCP UI app for Claude Desktop and claude.ai, and the web app, are [TODO]: neither has been
 started. They are the planned future state in

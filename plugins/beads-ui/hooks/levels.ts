@@ -44,6 +44,7 @@ import {
 import { enabledIndicators, gutterFor } from "./components/indicators.ts";
 import { colorOf } from "./components/look.ts";
 import { bandNav, navBar } from "./components/nav.ts";
+import { reviewRows } from "./components/review.ts";
 import type { Host } from "./host.ts";
 import type { BeadsPane } from "./pane.ts";
 import type { BandTally } from "./tally.ts";
@@ -133,6 +134,8 @@ export class BandLevels {
   /** A press on the band: the new state, kept for the session, and its rows read. */
   press(event: DisclosureEvent): void {
     this.kept = reduceDisclosure(this.state(), event, this.settings);
+    // A task's detail draws its review items (T-2C.5): the host's snapshot is read as it opens.
+    if (event.type === "open") void this.pane.review.load().then(() => this.host?.invalidate());
     this.save();
     this.recount(false);
     this.host?.invalidate();
@@ -477,7 +480,10 @@ export class BandLevels {
     });
   }
 
-  /** A task's detail in the overview: its row, its fields, and a button to open it in the pane. */
+  /**
+   * A task's detail in the overview: its row, its fields, a button to open it in the pane, and
+   * its Review section's rows (T-2C.5), as many as the band's rows hold.
+   */
   private drawDetail(surface: Surface, id: string, rows: number): RenderElement {
     const { Box, Text, Button } = surface.ui;
     const width = surface.columns;
@@ -496,6 +502,12 @@ export class BandLevels {
       `${storeName(task.store)}, updated ${issue.updatedAt}${issue.closedAt === undefined ? "" : `, closed ${issue.closedAt}`}`,
     ].filter((one): one is string => one !== undefined);
     const ownStore = task.store.replace(/\/+$/, "") === this.pane.storePath().replace(/\/+$/, "");
+    const section = this.pane.reviewSectionOf(
+      issue,
+      this.pane.detail?.issue.id === issue.id ? this.pane.comments : [],
+    );
+    const open = (path: string) =>
+      void this.pane.openOrFocus().then(() => this.pane.openReview(path));
     const children = present<RenderNode>([
       Text({ bold: true, color: colorOf(head.token), wrap: "truncate-end", children: head.label }),
       ...fields.map((field) =>
@@ -516,6 +528,15 @@ export class BandLevels {
               void this.pane.openOrFocus().then(() => this.pane.openDetailFor(issue.id)),
           })
         : undefined,
+      ...(section === undefined
+        ? []
+        : reviewRows(surface, section, {
+            open,
+            page: (delta) => {
+              this.pane.reviewPage = Math.max(0, this.pane.reviewPage + delta);
+              this.host?.invalidate();
+            },
+          })),
     ]);
     return Box({ key: "band-detail", flexDirection: "column", children: children.slice(0, rows) });
   }

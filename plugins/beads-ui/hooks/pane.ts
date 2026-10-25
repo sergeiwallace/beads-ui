@@ -100,6 +100,7 @@ import {
   resolveConfig,
   resolveGlyphs,
   resolveTheme,
+  reviewSection,
   SHORT_ROWS,
   SNAPSHOT_FILE,
   type SortSpec,
@@ -163,6 +164,7 @@ import {
 import { colorOf, glyphText, setAscii, setTheme, styledUi } from "./components/look.ts";
 import { navFrame } from "./components/nav.ts";
 import { type ViewEntry, ViewRegistry } from "./components/registry.ts";
+import { ANSWER_KEY, reviewBlock, reviewReader } from "./components/review.ts";
 import {
   rowControlColumns,
   TASKS_CLIENT_KEY,
@@ -179,6 +181,7 @@ import {
   PanelSettingsState,
   settingsOptionRoom,
 } from "./panel.ts";
+import { ReviewFeed, ReviewReader } from "./review.ts";
 import type { StoreResolver } from "./store.ts";
 
 export const PANE_ID = "beads";
@@ -383,6 +386,12 @@ export class BeadsPane {
   commentDraft = "";
   commentSaving = false;
   commentError: string | undefined;
+  /** The host's held items (D-37), read with each Detail. */
+  readonly review: ReviewFeed;
+  /** The held item open in the reader, over the Detail (T-2C.5). */
+  readonly reader: ReviewReader;
+  /** The Review section's page of held items. */
+  reviewPage = 0;
   undo: UndoClose | undefined;
   notice: Notice | undefined;
   focusedId: string | undefined;
@@ -451,10 +460,15 @@ export class BeadsPane {
     private readonly bandSettings?: BandSettingsPanel,
   ) {
     this.views.drawWith("tasks", (surface) => this.drawTasks(surface));
+    this.review = new ReviewFeed(stores);
+    this.reader = new ReviewReader(stores, this.review);
+    this.reader.onChange = () => this.host?.invalidate();
   }
 
   async bind(host: Host): Promise<void> {
     this.host = host;
+    this.review.bind(host);
+    this.reader.bind(host);
     await this.panel.bind(host);
     await this.loadPrefs();
     void this.refresh();
@@ -1568,7 +1582,9 @@ export class BeadsPane {
     if (id !== this.detailId) {
       this.commentDraft = "";
       this.commentError = undefined;
+      this.reviewPage = 0;
     }
+    this.reader.state = undefined;
     this.focusedId = id;
     this.detailId = id;
     this.detail = undefined;
@@ -1585,6 +1601,7 @@ export class BeadsPane {
       this.run(showArgv(id), READ_TIMEOUT_MS),
       this.run(historyArgv(id), READ_TIMEOUT_MS),
       this.run(commentsArgv(id), READ_TIMEOUT_MS),
+      this.review.load().catch(() => undefined),
     ]);
     if (this.detailId !== id) return;
     const parsedComments = comments.ok ? parseBdComments(comments.stdout) : undefined;
@@ -1800,7 +1817,7 @@ export class BeadsPane {
               ? this.drawSettingsView(ui, surface)
               : this.tab === "timeline"
                 ? this.drawTimeline(ui, width, frame, raster)
-                : this.drawDetail(ui, width);
+                : this.drawDetail(ui, width, surface);
     const inputs =
       this.tab === "tasks" || this.tab === "board" || this.tab === "backlog"
         ? this.drawInputs(ui, this.tab !== "tasks")
@@ -2720,9 +2737,20 @@ export class BeadsPane {
     });
   }
 
-  private drawDetail(ui: PaneUi, width: number): RenderElement {
+  private drawDetail(ui: PaneUi, width: number, surface: Surface): RenderElement {
     const { Box, Text, Input, Select, Markdown } = ui;
     const id = this.detailId;
+    const reading = this.reader.state;
+    if (reading !== undefined) {
+      return reviewReader(surface, reading, {
+        step: (delta) => this.reader.step(delta),
+        answer: (text) => void this.reader.answer(text),
+        type: (text) => this.reader.type(text),
+        send: () => void this.reader.send(),
+        issue: () => void this.goToIssue(),
+        close: () => this.closeReader(),
+      });
+    }
     if (id === undefined) {
       return Box({
         key: "detail",
@@ -2845,6 +2873,7 @@ export class BeadsPane {
           ? undefined
           : this.line(ui, "detail-save-error", view.errorLine, "error"),
         errorLine,
+        this.drawReview(surface, this.detail.issue),
         Box({
           flexDirection: wide ? "row" : "column",
           gap: wide ? 2 : 1,
@@ -2878,6 +2907,65 @@ export class BeadsPane {
         ...this.drawComments(ui, width, id),
       ]),
     });
+  }
+
+  /**
+   * The Detail's Review section (D-40, T-2C.5), above its description and unasked: the held items
+   * about the issue, whoever holds them (D-38), and its bd blockers. Nothing when it has neither.
+   */
+  private drawReview(surface: Surface, issue: Issue): RenderElement | undefined {
+    const section = this.reviewSectionOf(issue);
+    return section === undefined
+      ? undefined
+      : reviewBlock(surface, section, {
+          open: (path) => void this.openReview(path),
+          page: (delta) => {
+            this.reviewPage = Math.max(0, this.reviewPage + delta);
+            this.host?.invalidate();
+          },
+        });
+  }
+
+  /** The Review section's model for `issue`, as both surfaces draw it. */
+  reviewSectionOf(issue: Issue, comments: readonly Comment[] | undefined = this.comments) {
+    const known = (id: string) => this.board.issues.find((one) => one.id === id);
+    const note = this.review.note;
+    return reviewSection({
+      issue,
+      items: this.review.items,
+      comments: comments ?? [],
+      configured: this.review.configured,
+      page: this.reviewPage,
+      ...(note === undefined ? {} : { note }),
+      known,
+    });
+  }
+
+  /** Opens a held item in the reader, over the Detail (T-2C.5). */
+  async openReview(path: string): Promise<void> {
+    if (this.review.item(path) === undefined) await this.review.load().catch(() => undefined);
+    this.setTab("detail");
+    await this.reader.open(path);
+    void this.host?.focus(PANE_ID, ANSWER_KEY).catch(() => undefined);
+  }
+
+  private closeReader(): void {
+    this.reader.close();
+    void this.host?.focus(PANE_ID, `tab:${this.tab}`).catch(() => undefined);
+  }
+
+  /**
+   * Go to issue: the reader closes onto the Detail of the item's issue, the joined one or its
+   * task, and onto the Detail already open when that is the item's.
+   */
+  private async goToIssue(): Promise<void> {
+    const item = this.reader.state?.item;
+    this.reader.close();
+    if (item === undefined) return;
+    const target = item.issue?.id ?? (item.task === "none" ? undefined : item.task);
+    const open = this.detail?.issue;
+    if (target === undefined || target === open?.id || target === open?.displayId) return;
+    await this.openDetailFor(target);
   }
 
   /**

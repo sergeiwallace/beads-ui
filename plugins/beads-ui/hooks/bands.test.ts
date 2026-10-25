@@ -404,6 +404,8 @@ describe("one refresher for the host (T-1B.4)", () => {
       "/home/me",
       "--token",
       token,
+      "--config",
+      "/home/me/.config/beads-ui/beads-ui.toml",
     ]);
     expect(w.store.get(LEASE_KEY)).toEqual({ token, at: START_MS });
     // The last snapshot draws while the new refresher starts; the session reads nothing itself.

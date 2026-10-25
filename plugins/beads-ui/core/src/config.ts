@@ -69,7 +69,10 @@ const INTEGER = /^[+-]?(?:0|[1-9](?:_?[0-9])*)$/;
 const FLOAT = /^[+-]?(?:0|[1-9](?:_?[0-9])*)\.[0-9](?:_?[0-9])*$/;
 
 class TomlInvalid {
-  constructor(readonly message: string) {}
+  readonly message: string;
+  constructor(message: string) {
+    this.message = message;
+  }
 }
 
 const isTable = (value: TomlValue | undefined): value is TomlTable =>
@@ -794,4 +797,45 @@ export function resolveSync(text: string | undefined): ResolvedSync {
     }
   }
   return { settings, problems };
+}
+
+/** The `beads-ui.toml` table naming the held store's command (D-37, T-2C.5). */
+export const REVIEW_TABLE = "review";
+
+export interface ResolvedReview {
+  /** Undefined when `review.command` is unset or empty: no held items are read or shown. */
+  command: string[] | undefined;
+  /** One line per review setting the file got wrong. */
+  problems: string[];
+}
+
+/**
+ * `[review] command` from the user's own `beads-ui.toml`, read at call time: an argument list that
+ * runs the held store's tool (on the fleet, `held_cli.py`), whose `review`, `show` and `answer`
+ * verbs the mod and the host refresher run with no shell. Unset, empty or not a list of strings,
+ * nothing is read.
+ */
+export function resolveReview(text: string | undefined): ResolvedReview {
+  const problems: string[] = [];
+  if (text === undefined) return { command: undefined, problems };
+  const parsed = parseToml(text);
+  if (!parsed.ok) return { command: undefined, problems };
+  const review = parsed.value[REVIEW_TABLE];
+  if (review === undefined) return { command: undefined, problems };
+  if (!isTable(review)) {
+    problems.push(`${REVIEW_TABLE} must be a table; no held items are read`);
+    return { command: undefined, problems };
+  }
+  const command = review.command;
+  if (command === undefined) return { command: undefined, problems };
+  if (!Array.isArray(command) || !command.every((arg) => typeof arg === "string")) {
+    problems.push(
+      `review.command must be a list of arguments such as ["held_cli.py"]; no held items are read`,
+    );
+    return { command: undefined, problems };
+  }
+  if (command.length === 0 || (command[0] ?? "").trim() === "") {
+    return { command: undefined, problems };
+  }
+  return { command: [...command], problems };
 }
