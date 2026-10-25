@@ -120,6 +120,7 @@ export {
   DEFAULT_INDICATORS,
   detectAgent,
   detectBlocked,
+  detectReview,
   EMPTY_READ,
   GUTTER_TREE_CHARS,
   gutterCells,

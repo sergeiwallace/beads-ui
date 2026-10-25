@@ -9,6 +9,8 @@ import {
   type Issue,
   legendOf,
   legendText,
+  openItemsOf,
+  type ReviewItem,
   type TaskClientSpan,
 } from "../../core/src/index.ts";
 import type { Surface } from "./adapters.ts";
@@ -21,6 +23,7 @@ import { colorOf } from "./look.ts";
 
 let switches: Readonly<Record<string, boolean>> = {};
 let live: ReadonlySet<string> | undefined;
+let review: ReadonlyMap<string, readonly ReviewItem[]> | undefined;
 
 /** Takes the switches just read and set; true when they differ from those drawn. */
 export function setIndicatorSwitches(next: Readonly<Record<string, boolean>>): boolean {
@@ -40,6 +43,28 @@ export function setLiveSessions(next: ReadonlySet<string> | undefined): boolean 
   return before !== after;
 }
 
+/**
+ * Takes the pair's open, current review items by task (T-2C.7, core's `openReviewIndex`), as the
+ * pane last read the review snapshot; undefined while none is read. True when it changed.
+ */
+export function setReviewIndex(
+  next: ReadonlyMap<string, readonly ReviewItem[]> | undefined,
+): boolean {
+  const key = (index: typeof next) =>
+    index === undefined
+      ? undefined
+      : [...index]
+          .map(([task, items]) => `${task}=${items.map((one) => one.path).join(",")}`)
+          .join("\n");
+  const changed = key(next) !== key(review);
+  review = next;
+  return changed;
+}
+
+/** The open, current review items about `issue`, oldest first, as the gutter counts them. */
+export const reviewItemsOf = (issue: { id: string; displayId?: string }): readonly ReviewItem[] =>
+  review === undefined ? [] : openItemsOf(review, issue);
+
 /** The indicators drawn now, in registry order: every built one not switched off. */
 export const enabledIndicators = (): Indicator[] => INDICATORS.enabled(switches);
 
@@ -48,7 +73,11 @@ export const indicatorOn = (id: string): boolean => switches[id] !== false;
 
 /** `issue`'s gutter at `columns`, from the read it came from. */
 export const gutterFor = (issue: Issue, read: IndicatorRead, columns: number): GutterCell[] =>
-  gutterOf({ issue, read, live }, enabledIndicators(), columns);
+  gutterOf(
+    { issue, read, live, ...(review === undefined ? {} : { review }) },
+    enabledIndicators(),
+    columns,
+  );
 
 /**
  * A gutter (D-41): one Text, its blanks as spaces and each glyph a nested Text in its token,
