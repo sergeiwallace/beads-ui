@@ -470,7 +470,10 @@ export interface ResolvedPanel {
   problems: string[];
 }
 
-/** The task panel's settings from `[panel]`: `shown`, `collapse` and `mode`, read at call time. */
+/**
+ * The task panel's settings from `[panel]`: `shown`, `collapse`, `mode` and `open_at_start`,
+ * read at call time.
+ */
 export function resolvePanel(text: string | undefined): ResolvedPanel {
   const settings: PanelSettings = { ...DEFAULT_PANEL_SETTINGS };
   const problems: string[] = [];
@@ -504,6 +507,13 @@ export function resolvePanel(text: string | undefined): ResolvedPanel {
         `panel.mode ${JSON.stringify(panel.mode)} is not one of ${PANEL_MODES.join(", ")}; using ${DEFAULT_PANEL_SETTINGS.mode}`,
       );
   }
+  if (panel.open_at_start !== undefined) {
+    if (typeof panel.open_at_start === "boolean") settings.openAtStart = panel.open_at_start;
+    else
+      problems.push(
+        `panel.open_at_start must be true or false; using ${DEFAULT_PANEL_SETTINGS.openAtStart}`,
+      );
+  }
   return { settings, problems };
 }
 
@@ -513,6 +523,7 @@ export function withPanelTable(text: string | undefined, settings: PanelSettings
     `shown = ${settings.shown}`,
     `collapse = ${JSON.stringify(settings.collapse)}`,
     `mode = ${JSON.stringify(settings.mode)}`,
+    `open_at_start = ${settings.openAtStart}`,
   ]);
 }
 

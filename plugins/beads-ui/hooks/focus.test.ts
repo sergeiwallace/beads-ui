@@ -69,11 +69,8 @@ describe("show and hide (T-1B.6)", () => {
     await ui.press({ key: BEADS_BUTTON_KEY });
     await w.clock.settle();
 
-    // First the session-start open, which Claude Code held unplaced at 120 columns (T-2B.7).
-    expect(w.opened.map((open) => [open.id, open.focus])).toEqual([
-      [PANE_ID, undefined],
-      [PANE_ID, true],
-    ]);
+    // The session start opened nothing (BU-ylx.10): the button's open is the only one.
+    expect(w.opened.map((open) => [open.id, open.focus])).toEqual([[PANE_ID, true]]);
     expect(w.focused).toEqual([]);
   });
 

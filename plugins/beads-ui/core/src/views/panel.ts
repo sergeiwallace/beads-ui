@@ -31,9 +31,16 @@ export interface PanelSettings {
   shown: number;
   collapse: CollapseRule;
   mode: PanelMode;
+  /** The pane opens by itself at session start and at each plugin reload; off by default. */
+  openAtStart: boolean;
 }
 
-export const DEFAULT_PANEL_SETTINGS: PanelSettings = { shown: 10, collapse: "rest", mode: "both" };
+export const DEFAULT_PANEL_SETTINGS: PanelSettings = {
+  shown: 10,
+  collapse: "rest",
+  mode: "both",
+  openAtStart: false,
+};
 /** The most tasks `panel.shown` may draw before the rest collapse. */
 export const MAX_SHOWN = 200;
 
@@ -208,6 +215,7 @@ export interface PanelOverrides {
   shown?: number;
   collapse?: CollapseRule;
   mode?: PanelMode;
+  openAtStart?: boolean;
 }
 
 export function panelOverridesOf(value: unknown): PanelOverrides {
@@ -217,6 +225,7 @@ export function panelOverridesOf(value: unknown): PanelOverrides {
     ...(isShownCount(record.shown) ? { shown: record.shown } : {}),
     ...(isCollapseRule(record.collapse) ? { collapse: record.collapse } : {}),
     ...(isPanelMode(record.mode) ? { mode: record.mode } : {}),
+    ...(typeof record.openAtStart === "boolean" ? { openAtStart: record.openAtStart } : {}),
   };
 }
 
