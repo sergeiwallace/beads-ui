@@ -1009,6 +1009,47 @@ process.stdout.write(JSON.stringify({ ...payload, fingerprint }) + "\\n");
       expect(rejoined.readAt).toBe(first.readAt);
     });
 
+    it("should run the review verb again within a few seconds of a session's review wake marker, not at the next beat", async () => {
+      const h = reviewHost([item(1, "S-0")]);
+      register(h, "aih-ec2-3");
+      // The default minute beat: only the marker can bring a run sooner.
+      launch(h, "token-review05", [
+        "--renew-ms",
+        "100",
+        "--idle-ms",
+        "60000",
+        "--config",
+        h.configPath,
+      ]);
+      const first = await until(() => reviewOf(h));
+
+      writeFileSync(join(h.held, "fingerprint"), "fp-2");
+      writeFileSync(
+        join(h.held, "review.json"),
+        JSON.stringify(payloadOf([item(1, "S-0", { status: "answered" })])),
+      );
+      const woke = Date.now();
+      writeFileSync(
+        join(h.state, "wake", "review.json"),
+        JSON.stringify({ path: first.items[0].path, at: woke }),
+      );
+      const read = await until(() =>
+        reviewOf(h)?.fingerprint === "fp-2" ? reviewOf(h) : undefined,
+      );
+
+      expect(Date.now() - woke).toBeLessThan(10_000);
+      expect(read.items[0].status).toBe("answered");
+      expect(h.heldCalls()[1]?.args).toEqual([
+        "review",
+        "--scope",
+        "pair",
+        "--json",
+        "--if-changed",
+        "fp-1",
+      ]);
+      expect(existsSync(join(h.state, "wake", "review.json"))).toBe(false);
+    });
+
     it("should run no held command and write no review snapshot while [review] command is unset", async () => {
       const h = reviewHost([item(1, "S-0")], false);
       register(h, "aih-ec2-3");
