@@ -80,14 +80,20 @@ function box(props: Record<string, unknown>, children: unknown[], outer: number)
     const grower = parts.findIndex((part) => part.grow);
     if (grower >= 0 && used < inner) widths[grower] = (widths[grower] ?? 0) + inner - used;
     const height = Math.max(0, ...parts.map((part) => part.lines.length));
+    // A row is cut at its box's inner width, as the engine cuts a truncated Text in it.
     lines = Array.from({ length: height }, (_, row) =>
-      parts.map((part, i) => pad(part.lines[row] ?? "", widths[i] ?? 0)).join(" ".repeat(gap)),
+      cut(
+        parts.map((part, i) => pad(part.lines[row] ?? "", widths[i] ?? 0)).join(" ".repeat(gap)),
+        inner,
+      ),
     );
   } else {
     lines = children.flatMap((child) => block(child, inner));
   }
   if (padX > 0) lines = lines.map((line) => " ".repeat(padX) + line + " ".repeat(padX));
-  if (typeof props.width === "number") lines = lines.map((line) => pad(line, own - frame));
+  if (typeof props.width === "number") {
+    lines = lines.map((line) => cut(pad(line, own - frame), own - frame));
+  }
   if (frame === 0) return lines;
   const span = Math.max(0, ...lines.map(widthOf));
   return [

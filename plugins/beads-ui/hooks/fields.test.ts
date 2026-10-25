@@ -62,18 +62,19 @@ async function mountAt(
 const textOf = async (ui: Awaited<ReturnType<typeof mountAt>>["ui"], key: string) =>
   String((await ui.find({ key }))?.text ?? "");
 
-// The view's width at each body width: the body less one column (register.ts), and from 72
-// columns less the side nav's 13 and its gap (T-2B.1): 140 draws 125, 48 draws 47.
+// The view's width at each body width: the body less one column (register.ts), from 72 columns
+// less the side nav's 15 and its gap (T-2B.1), and from 48 columns less the view's framed
+// section's border and padding, 4 (T-2C.12): 144 draws 123, 48 draws 47.
 describe("fields drawn whole when the pane has room (BU-mg2.3.14)", () => {
-  test("should draw the Detail heading and a field whole at 140 columns, where each fits", async ($, on) => {
-    const ui = await detailAt($, on, 140);
+  test("should draw the Detail heading and a field whole at 144 columns, where each fits", async ($, on) => {
+    const ui = await detailAt($, on, 144);
 
     expect(await textOf(ui, "detail-heading")).toBe(HEADING);
     expect(await textOf(ui, "field:metadata")).toBe(`Metadata: ${METADATA}`);
   });
 
-  test("should cut only the dependency row too long for 140 columns, with an ellipsis at the view's edge", async ($, on) => {
-    const ui = await detailAt($, on, 140);
+  test("should cut only the dependency row too long for 144 columns, with an ellipsis at the view's edge", async ($, on) => {
+    const ui = await detailAt($, on, 144);
 
     expect(await textOf(ui, "dep:BU-mg2")).toBe(
       "BU-epic-beads-ui-beads-task-manager-mg2 in_progress parent-child EPIC beads-ui: Beads task manager for the Claude Code TUI⋯",

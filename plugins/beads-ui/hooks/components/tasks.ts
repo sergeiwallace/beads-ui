@@ -4,13 +4,16 @@ import {
   glyphOf,
   hotkeyOf,
   PRESS_FRAME_COLUMNS,
+  SPACE,
   type TaskListView,
   type TaskRowView,
   type Token,
   truncate,
 } from "../../core/src/index.ts";
 import type { Surface } from "./adapters.ts";
+import { emptyState } from "./frame.ts";
 import { gutter } from "./indicators.ts";
+import { rowHover, weight } from "./look.ts";
 
 // The task row and the task list (T-2B.2, D-35): drawn from core's TaskListView on any surface.
 
@@ -60,7 +63,10 @@ const menuButton = (surface: Surface, id: string, handlers: TaskListHandlers) =>
     onPress: () => handlers.menu(id),
   });
 
-/** One task: its indicator gutter, its label a button that opens it, and its menu button. */
+/**
+ * One task: its indicator gutter, its label a button that opens it, and its menu button, the
+ * row's fill under the pointer (T-2C.12).
+ */
 export function taskRow(
   surface: Surface,
   row: TaskRowView,
@@ -70,7 +76,8 @@ export function taskRow(
   return Box({
     key: `taskrow:${row.id}`,
     flexDirection: "row",
-    gap: 1,
+    gap: SPACE.tight,
+    ...rowHover(),
     children: present<RenderNode>([
       gutter(surface.ui, row.gutter),
       Button({
@@ -181,7 +188,7 @@ export function taskList(
   const edge = (key: "above" | "below", count: number) => {
     const text = `${glyphOf(key === "above" ? "list.above" : "list.below")} ${count} ${key}`;
     if (scroll === undefined) {
-      return Box({ key: `tasks-${key}`, children: [Text({ dimColor: true, children: text })] });
+      return Box({ key: `tasks-${key}`, children: [Text({ ...weight("meta"), children: text })] });
     }
     const start = key === "above" ? scroll.start - page : scroll.start + page;
     return Button({
@@ -195,14 +202,9 @@ export function taskList(
     key: "tasks",
     flexDirection: "column",
     children: present<RenderNode>([
-      Box({ key: "tasks-count", children: [Text({ dimColor: true, children: line(summary) })] }),
+      Box({ key: "tasks-count", children: [Text({ ...weight("meta"), children: line(summary) })] }),
       menuElsewhere ? options.menu : undefined,
-      list.total === 0
-        ? Box({
-            key: "tasks-empty",
-            children: [Text({ dimColor: true, children: line(options.empty) })],
-          })
-        : undefined,
+      list.total === 0 ? emptyState(surface, "tasks-empty", line(options.empty)) : undefined,
       list.above === 0 ? undefined : edge("above", list.above),
       ...rows,
       list.below === 0 ? undefined : edge("below", list.below),

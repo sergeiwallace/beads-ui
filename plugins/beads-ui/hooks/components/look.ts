@@ -34,6 +34,26 @@ export const colorOf = (token: Token): string => colorFor(token, theme);
 /** `text` as drawn: each glyph of the table in its ASCII form under `[indicators] ascii`. */
 export const glyphText = (text: string): string => (ascii ? asciiOf(text) : text);
 
+/**
+ * The weight scale (D-43, T-2C.12), one style a text role: a view's title, a heading inside a
+ * view, the body, and the meta line (counts, times, hints). The terminal draws bold and dim on
+ * every font, so the scale is built from them and the accent.
+ */
+export type Weight = "title" | "heading" | "body" | "meta";
+
+/** The `Text` props of `role` on the weight scale. */
+export function weight(role: Weight): { bold?: true; dimColor?: true; color?: string } {
+  if (role === "title") return { bold: true, color: colorOf("accent") };
+  if (role === "heading") return { bold: true };
+  if (role === "meta") return { dimColor: true };
+  return {};
+}
+
+/** What the pointer over a pressable row changes (T-2C.12): its background, on a surface with hover. */
+export const rowHover = (): { hover: { backgroundColor: string } } => ({
+  hover: { backgroundColor: colorOf("surface.hover") },
+});
+
 // biome-ignore lint/suspicious/noExplicitAny: element props differ per element kind
 type Props = Record<string, any>;
 // biome-ignore lint/suspicious/noExplicitAny: the engine's constructors, any element kind

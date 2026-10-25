@@ -13,6 +13,8 @@ export const TOKENS = [
   "priority.p4",
   "surface.card",
   "surface.focus",
+  "surface.header",
+  "surface.hover",
   "text.default",
   "text.dim",
   "accent",
@@ -34,7 +36,10 @@ const theme = (key: string): TerminalColor => ({ kind: "theme", key });
  * the 2.1.306 binary on 2026-10-21 (text, inactive, subtle, suggestion, success, error, warning,
  * claude, permission, promptBorder) and `merged` from the 2.1.310 binary on 2026-10-25; they
  * follow the user's light or dark theme. `control` colours the bracket every pressable element
- * draws (T-2C.14), on the accent's key. `[theme]` sets any token to a hex value (resolveTheme).
+ * draws (T-2C.14), on the accent's key. `surface.header` fills the pane's header bar and
+ * `surface.hover` a pressable row under the pointer (T-2C.12), on the keys Claude Code fills its
+ * own message rows and their hover with, read from the 2.1.310 binary on 2026-10-25. `[theme]`
+ * sets any token to a hex value (resolveTheme).
  */
 export const TERMINAL_THEME: Readonly<Record<Token, TerminalColor>> = {
   "status.active": theme("suggestion"),
@@ -48,6 +53,8 @@ export const TERMINAL_THEME: Readonly<Record<Token, TerminalColor>> = {
   "priority.p4": theme("subtle"),
   "surface.card": theme("promptBorder"),
   "surface.focus": theme("permission"),
+  "surface.header": theme("userMessageBackground"),
+  "surface.hover": theme("userMessageBackgroundHover"),
   "text.default": theme("text"),
   "text.dim": theme("inactive"),
   accent: theme("claude"),

@@ -46,6 +46,30 @@ export const PRESS_FRAME_COLUMNS = 2;
 export const PRESS_TREE_CHARS = 300;
 
 /**
+ * The spacing scale (D-43, T-2C.12): every gap, padding and margin the pane draws, in terminal
+ * cells. `tight` sits between the parts of one thing (a label and its control, a card's lines),
+ * `loose` between things (the toolbar's buttons, the Detail's columns).
+ */
+export const SPACE = { none: 0, tight: 1, loose: 2 } as const;
+
+/**
+ * A framed section (T-2C.12): a one-cell border each side and `tight` padding inside it, the
+ * columns it takes from the view, and its rows: the top border, its title and the bottom border.
+ */
+export const SECTION_COLUMNS = 2 * (1 + SPACE.tight);
+export const SECTION_ROWS = 3;
+
+/** A Board card's frame (T-2C.12): a one-cell border each side, no padding, so a card keeps its text. */
+export const CARD_FRAME_COLUMNS = 2;
+
+/**
+ * The serialized characters a card's look (T-2C.12) adds to a drawn tree: its border style, its
+ * accent, its hover style and its priority's own Text, 86 measured with `claude plugin test`
+ * (2026-10-25) for the card `card:BU-2zw` (1,160 before, 1,246 after), so 100.
+ */
+export const CARD_FRAME_TREE_CHARS = 100;
+
+/**
  * The columns a pressable element takes: Claude Code draws its plain `Button` `{hotkey}: {label}`
  * (or the label alone without a hotkey) and never shrinks it, inside the affordance's brackets,
  * so a row of them is as wide as its sum.
