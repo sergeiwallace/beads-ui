@@ -18,6 +18,9 @@ import { gutter } from "./indicators.ts";
 /** The columns a row under a line is indented by, under the line's label. */
 export const ROW_INDENT = 2;
 
+/** The overview's menu control (T-2C.8). */
+export const BAND_MENU_KEY = "band:menu";
+
 const present = <T>(items: readonly (T | undefined | false)[]): T[] =>
   items.filter((item): item is T => item !== undefined && item !== false);
 
@@ -70,6 +73,8 @@ export interface LevelControls {
   collapse?: () => void;
   /** Leaves a task's detail for the view it was opened from. */
   back?: () => void;
+  /** The overview's options menu (T-2C.8): every action the view offers, open or closed. */
+  menu?: { open: boolean; press: () => void };
   summary: () => void;
   /** A note after the controls, such as how many rows the band's height leaves out above. */
   note?: string;
@@ -108,6 +113,14 @@ export function controlsRow(surface: Surface, key: string, controls: LevelContro
               label: "back",
               plain: true,
               onPress: controls.back,
+            }),
+        controls.menu === undefined
+          ? undefined
+          : Button({
+              key: BAND_MENU_KEY,
+              label: controls.menu.open ? "close the menu" : `${glyphOf("row.menu")} menu`,
+              plain: true,
+              onPress: controls.menu.press,
             }),
         Button({
           key: "band:summary",

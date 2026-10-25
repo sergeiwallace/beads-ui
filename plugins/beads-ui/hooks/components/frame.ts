@@ -88,6 +88,12 @@ export function stateBox(
   });
 }
 
+/** What a view draws while its read is under way: one line on the meta weight. */
+export function readingState(surface: Framing, key: string, text: string): RenderElement {
+  const { Box, Text } = surface.ui;
+  return Box({ key, children: [Text({ ...weight("meta"), children: text })] });
+}
+
 /** The empty state: nothing to show, and what to do about it. */
 export const emptyState = (surface: Framing, key: string, ...lines: string[]): RenderElement =>
   stateBox(surface, { key, kind: "empty", lines });

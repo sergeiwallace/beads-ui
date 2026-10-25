@@ -7,6 +7,8 @@ import { has, type Surface } from "./adapters.ts";
 
 export interface ChoiceProps {
   key: string;
+  /** The Select's own label; the button form draws it before the buttons. */
+  label?: string;
   options: readonly { value: string; label?: string }[];
   value: string;
   onSelect: (value: string) => void;
@@ -14,10 +16,11 @@ export interface ChoiceProps {
 
 /** A `Select`; without one, a button per option, the chosen one undimmed. */
 export function choice(surface: Surface, props: ChoiceProps): RenderElement {
-  const { Select, Box, Button } = surface.ui;
+  const { Select, Box, Text, Button } = surface.ui;
   if (has(surface, "Select") && Select !== undefined) {
     return Select({
       key: props.key,
+      ...(props.label === undefined ? {} : { label: props.label }),
       options: [...props.options],
       value: props.value,
       onSelect: (value) => props.onSelect(value),
@@ -28,21 +31,27 @@ export function choice(surface: Surface, props: ChoiceProps): RenderElement {
     flexDirection: "row",
     flexWrap: "wrap",
     columnGap: 1,
-    children: props.options.map((option) =>
-      Button({
-        key: `${props.key}:${option.value}`,
-        label: option.label ?? option.value,
-        plain: true,
-        ...(option.value === props.value ? {} : { dimColor: true }),
-        onPress: () => props.onSelect(option.value),
-      }),
-    ),
+    children: [
+      ...(props.label === undefined ? [] : [Text({ children: `${props.label}:` })]),
+      ...props.options.map((option) =>
+        Button({
+          key: `${props.key}:${option.value}`,
+          label: option.label ?? option.value,
+          plain: true,
+          ...(option.value === props.value ? {} : { dimColor: true }),
+          onPress: () => props.onSelect(option.value),
+        }),
+      ),
+    ],
   });
 }
 
 export interface FieldProps {
   key: string;
   value: string;
+  /** The Input's own label and placeholder; the button form draws the label before the value. */
+  label?: string;
+  placeholder?: string;
   submitLabel?: string;
   onSubmit: (value: string) => void;
   /** Values the button form offers, one button each, in place of typing. */
@@ -57,6 +66,8 @@ export function field(surface: Surface, props: FieldProps): RenderElement {
   if (has(surface, "Input") && Input !== undefined) {
     return Input({
       key: props.key,
+      ...(props.label === undefined ? {} : { label: props.label }),
+      ...(props.placeholder === undefined ? {} : { placeholder: props.placeholder }),
       value: props.value,
       ...(props.submitLabel === undefined ? {} : { submitLabel: props.submitLabel }),
       onSubmit: (value) => props.onSubmit(value),
@@ -69,7 +80,9 @@ export function field(surface: Surface, props: FieldProps): RenderElement {
     flexWrap: "wrap",
     columnGap: 1,
     children: [
-      Text({ children: props.value }),
+      Text({
+        children: props.label === undefined ? props.value : `${props.label}: ${props.value}`,
+      }),
       ...(props.presets ?? []).map((preset) =>
         Button({
           key: `${props.key}:${preset}`,
