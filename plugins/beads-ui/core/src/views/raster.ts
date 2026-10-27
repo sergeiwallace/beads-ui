@@ -1,4 +1,4 @@
-// A Raster's cells (T-2B.9, T-2C.11): each cell a code point, a foreground and a background,
+// A Raster's cells (T-2B.9): each cell a code point, a foreground and a background,
 // three little-endian 32-bit numbers, the whole grid base64, as Claude Code's Raster reads them.
 
 import type { Token } from "../tokens.ts";
@@ -88,7 +88,7 @@ export const RASTER_TOKEN_COLORS: Readonly<Partial<Record<Token, number>>> = {
   "text.dim": 0x585858,
 };
 
-/** The colour of a cell past a bar's end, and of a sparkline cell with nothing in it. */
+/** The colour of a cell past a bar's end. */
 export const RASTER_TRACK_COLOR = 0x585858;
 
 /** `#rgb` or `#rrggbb` as 0xRRGGBB; undefined for anything else. */

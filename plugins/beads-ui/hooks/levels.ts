@@ -1,13 +1,11 @@
 import type { RenderElement, RenderNode } from "claude-code";
 
 import {
-  type BandFigures,
   type BandLine,
   type BandPart,
   type BandRowView,
   type BandSettings,
   type BandTask,
-  bandFigures,
   bandRowsView,
   buttonWidth,
   CONTROL_HOTKEYS,
@@ -15,7 +13,6 @@ import {
   type Disclosure,
   type DisclosureEvent,
   disclosureOf,
-  figureCells,
   glyphOf,
   gutterColumns,
   type IndicatorRead,
@@ -28,32 +25,23 @@ import {
   reduceDisclosure,
   rowLabelColumns,
   settleDisclosure,
-  sparkBuckets,
   storeName,
   summaryPieces,
   taskRowView,
   truncate,
-  windowMs,
 } from "../core/src/index.ts";
-import {
-  bandSurface,
-  type RasterElement,
-  type Surface,
-  type SurfaceUi,
-} from "./components/adapters.ts";
+import { bandSurface, type Surface, type SurfaceUi } from "./components/adapters.ts";
 import {
   aboveNote,
   controlsRow,
   countRows,
-  FIGURES_RASTER_KEY,
-  figuresRow,
   type LevelControls,
   moreLabel,
   ROW_INDENT,
   summaryLine,
 } from "./components/band.ts";
 import { enabledIndicators, gutterFor } from "./components/indicators.ts";
-import { colorOf, isAscii, rasterColorOf } from "./components/look.ts";
+import { colorOf } from "./components/look.ts";
 import { bandNav, navBar } from "./components/nav.ts";
 import { textLine } from "./components/window.ts";
 import type { Host } from "./host.ts";
@@ -76,12 +64,6 @@ const DEFAULT_MAX_ROWS = 10;
  * and "+M more" take 4 of them, so it draws at least one task. Below it, the view's note says so.
  */
 export const MIN_VIEW_ROWS = 5;
-
-/** The band site's Raster, on the terminal, and the site's id a blit names (T-2C.11). */
-export interface BandRaster {
-  Raster: RasterElement;
-  requestId: string;
-}
 
 /** One count's rows as last read: its tasks, the stores that failed, and the count they match. */
 interface Read {
@@ -111,19 +93,6 @@ export class BandLevels {
   private readonly reads = new Map<string, Read>();
   /** The task whose Detail the overview last asked the pane to read. */
   private asked: string | undefined;
-  /**
-   * The figures row's done tasks (T-2C.11): by store, the done count their close times were
-   * read at and the times, for the line the figures draw. A store is read while its count is
-   * above zero, and again only when the count moves.
-   */
-  private readonly doneTimes = new Map<string, { done: number; times: number[] }>();
-  private readonly doneReading = new Set<string>();
-  /** The figures Raster the last redraw drew: where a blit repaints it, and the cells it holds. */
-  private drawnRaster: { requestId: string; cells: string; key: string } | undefined;
-  /** A blit was sent since that redraw: the next one waits for the next redraw. */
-  private blitted = false;
-  /** The band's columns at the last redraw that drew the figures Raster. */
-  private drawnColumns = 0;
 
   constructor(
     private readonly tally: BandTally,
@@ -216,7 +185,6 @@ export class BandLevels {
       }
     }
     if (!this.loaded) return;
-    this.readDone();
     const state = this.state();
     const wanted = state.level === "rows" ? this.groupsOf(state.part) : [];
     for (const group of wanted) {
@@ -246,88 +214,6 @@ export class BandLevels {
         })
         .catch(() => this.reads.delete(key));
     }
-  }
-
-  /** The line the figures row draws: the band's first, the one its controls follow. */
-  private figuresLine(): string | undefined {
-    return this.tally.lines[0]?.key;
-  }
-
-  /**
-   * Reads the close times of the figures line's done tasks in each store whose done count is
-   * above zero and moved since its times were read (T-2C.11). A store whose count fell to zero
-   * keeps no times. Each read that lands repaints the figures.
-   */
-  private readDone(): void {
-    const key = this.figuresLine();
-    if (key === undefined) return;
-    for (const { store, done } of this.tally.doneByStore(key)) {
-      const id = `${key}:${store.path}`;
-      const held = this.doneTimes.get(id);
-      if (done === 0) {
-        if (held !== undefined) {
-          this.doneTimes.delete(id);
-          this.repaint();
-        }
-        continue;
-      }
-      if (held?.done === done || this.doneReading.has(id)) continue;
-      this.doneReading.add(id);
-      void this.tally
-        .readDoneTimes(key, store)
-        .then((times) => {
-          if (times !== undefined) this.doneTimes.set(id, { done, times });
-          this.repaint();
-        })
-        .catch(() => undefined)
-        .finally(() => this.doneReading.delete(id));
-    }
-  }
-
-  /** The figures of the figures line in `columns`, at the time its counts were read. */
-  private figures(columns: number): BandFigures | undefined {
-    const key = this.figuresLine();
-    const total = key === undefined ? undefined : this.tally.totalOf(key);
-    if (key === undefined || total === undefined) return undefined;
-    const settings = this.settings;
-    const now = this.tally.last?.readAt ?? 0;
-    const times = [...this.doneTimes.entries()]
-      .filter(([id]) => id.startsWith(`${key}:`))
-      .flatMap(([, held]) => held.times);
-    const buckets = sparkBuckets(times, now, windowMs(settings.doneWindow) ?? 0);
-    return bandFigures(total.counts, settings.parts, buckets, {
-      columns,
-      doneWindow: settings.doneWindow,
-    });
-  }
-
-  /** The figures Raster's cells now, in the columns the last redraw drew it at. */
-  private cellsOf(figures: BandFigures): string {
-    return figureCells(figures, rasterColorOf, isAscii());
-  }
-
-  /**
-   * New figures after a read landed: the Raster the last redraw drew is repainted in place
-   * through `$.ui.blit`, at most once until the band redraws (the minute beat, a press or a
-   * write redraws it); with no Raster drawn, or a blit refused, the band redraws.
-   */
-  private repaint(): void {
-    const host = this.host;
-    if (host === undefined) return;
-    const drawn = this.drawnRaster;
-    if (drawn === undefined) {
-      host.invalidate();
-      return;
-    }
-    if (this.blitted) return;
-    const figures = this.figures(this.drawnColumns);
-    const cells = figures === undefined ? undefined : this.cellsOf(figures);
-    if (cells === undefined || cells === drawn.cells) return;
-    this.blitted = true;
-    drawn.cells = cells;
-    void host.blit(drawn.requestId, drawn.key, cells).then((painted) => {
-      if (!painted) host.invalidate();
-    });
   }
 
   /**
@@ -426,10 +312,7 @@ export class BandLevels {
     elements: SurfaceUi,
     size: { columns: number; maxRows?: number },
     toggle: { open: boolean; onOpen: () => void; onClose: () => void },
-    raster?: BandRaster,
   ): RenderElement | undefined {
-    this.drawnRaster = undefined;
-    this.blitted = false;
     const lines = this.tally.lines;
     if (lines.length === 0) return undefined;
     const columns = Math.max(1, size.columns);
@@ -488,35 +371,8 @@ export class BandLevels {
       blocks.splice(at + 1, 0, this.drawRows(surface, state, columns, left));
     } else if (state.level === "overview" && left >= 1) {
       blocks.push(this.drawOverview(elements, state, columns, left));
-    } else if (state.level === "summary" && left >= 1) {
-      const row = this.drawFigures(surface, columns, raster);
-      if (row !== undefined) blocks.push(row);
     }
     return Box({ key: "beads-band", flexDirection: "column", children: blocks });
-  }
-
-  /**
-   * The summary level's figures row (D-43, T-2C.11): one Raster row where the band has a Raster,
-   * else the same figures as Text. The Raster drawn is recorded, so a read landing before the
-   * next redraw repaints it through `$.ui.blit`.
-   */
-  private drawFigures(
-    surface: Surface,
-    columns: number,
-    raster: BandRaster | undefined,
-  ): RenderElement | undefined {
-    const figures = this.figures(columns);
-    if (figures === undefined) return undefined;
-    const doneWindow = this.settings.doneWindow;
-    if (raster === undefined) return figuresRow(surface, figures, { color: colorOf, doneWindow });
-    const cells = this.cellsOf(figures);
-    this.drawnColumns = columns;
-    this.drawnRaster = { requestId: raster.requestId, key: FIGURES_RASTER_KEY, cells };
-    return figuresRow(surface, figures, {
-      color: colorOf,
-      doneWindow,
-      raster: { Raster: raster.Raster, cells },
-    });
   }
 
   /** The rows level: the open count's rows under its line and their controls, in `budget` rows. */

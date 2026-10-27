@@ -26,7 +26,6 @@
         "$.settings.read",
         "$.store.get",
         "$.store.set",
-        "$.ui.blit",
         "$.ui.close",
         "$.ui.focus",
         "$.ui.invalidate",

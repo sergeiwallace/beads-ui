@@ -189,8 +189,6 @@ export interface WorldOptions {
   refresherBuild?: string;
   /** The version the plugin's manifest names, read under `$.plugin.root`; no manifest when not given. */
   build?: string;
-  /** Why the engine refuses every `$.ui.blit`; each one paints when not given. */
-  blitAnswer?: string;
 }
 
 /** The host refresher's state directory under the world's HOME, and the files in it. */
@@ -330,14 +328,12 @@ export function world(on: On, options: WorldOptions = {}) {
     return {};
   });
   on("ui.render", { component: "AbovePrompt" }, () => ({ type: "Box", children: [] }));
-  // The test kit answers no blit (Claude Code 2.1.310): the world keeps each one, and answers as
-  // the engine does a blit it painted, or refuses it when `blitAnswer` names a reason.
+  // The test kit answers no blit (Claude Code 2.1.310): the world keeps each one, so a test can
+  // show the band sends none.
   const blits: Args<"ui.blit">[] = [];
   on("ui.blit", (_engine, e) => {
     blits.push(e);
-    return options.blitAnswer === undefined
-      ? { value: {} }
-      : { value: { deny: options.blitAnswer } };
+    return { value: {} };
   });
 
   const keys = () => runs.map(keyOf);
