@@ -1,3 +1,5 @@
+// Archived 2026-10-27 from plugins/beads-ui/core/src/views/figures.ts at 45d7da1 (see README.md).
+
 // The band's figures row (D-43, T-2C.11): under the summary line, a sparkline of the tasks done
 // in the done window and one bar per status count the line draws. The terminal draws it as one
 // Raster row; a surface without Raster draws the same figures as Text. Pure: built from the

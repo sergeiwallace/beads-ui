@@ -32,10 +32,7 @@ the same actions as in the pane and an options menu for the rest. Its keys are l
 ([docs/procedures/mod-install.md](docs/procedures/mod-install.md#the-bands-settings)). The
 colours follow your Claude Code theme, and `[theme]` sets any of them to a hex value;
 `[indicators] ascii = true` draws every glyph as ASCII
-([docs/procedures/mod-install.md](docs/procedures/mod-install.md#the-look)). At the summary the
-band adds a figures row when it has a row to spare: in the terminal a Raster row with a sparkline
-of the done window and a bar for each status count, and in Claude Desktop the same figures as text
-([docs/procedures/mod-install.md](docs/procedures/mod-install.md#what-it-does)). The pane's
+([docs/procedures/mod-install.md](docs/procedures/mod-install.md#the-look)). The pane's
 Timeline draws a picture of its dated items: an image where the terminal draws one (kitty, Ghostty,
 iTerm2 3.5 or later, and inside tmux only with `allow-passthrough on`), an SVG in Claude Desktop
 and VS Code, and its alt text everywhere else

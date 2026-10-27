@@ -463,8 +463,6 @@ describe("the view registry (D-35, T-2C.1)", () => {
       lines: [{ key: "own", segments: [{ text: "[bd]", bold: true }], line: "[bd]" }],
       drawnSettings: DEFAULT_BAND_SETTINGS,
       countOf: () => 0,
-      totalOf: () => undefined,
-      doneByStore: () => [],
       readOf: () => undefined,
       readTasks: async () => undefined,
     } as unknown as BandTally;

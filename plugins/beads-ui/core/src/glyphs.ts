@@ -51,11 +51,6 @@ export const GLYPHS = {
   "text.more": entry("⋯", ".", "text", "text cut short, or a read still running"),
   "text.separator": entry("⋅", "|", "text", "between two hints"),
   "text.becomes": entry("⇾", ">", "text", "a field's new value"),
-  "spark.0": entry("⡀", ".", "text", "a sparkline part with nothing done in it"),
-  "spark.1": entry("⣀", "_", "text", "a sparkline part, up to a quarter of the busiest"),
-  "spark.2": entry("⣤", "-", "text", "a sparkline part, up to half of the busiest"),
-  "spark.3": entry("⣶", "=", "text", "a sparkline part, up to three quarters of the busiest"),
-  "spark.4": entry("⣿", "#", "text", "the busiest sparkline part"),
 } as const satisfies Record<string, Glyph>;
 
 export type GlyphId = keyof typeof GLYPHS;

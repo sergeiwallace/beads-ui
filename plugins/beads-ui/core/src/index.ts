@@ -531,17 +531,6 @@ export {
   summaryPieces,
   taskRowView,
 } from "./views/disclosure.ts";
-export type { BandFigures, FigureBar } from "./views/figures.ts";
-export {
-  bandFigures,
-  FIGURE_PARTS,
-  figureCells,
-  MAX_BAR_COLUMNS,
-  SPARK_CELLS,
-  SPARK_GLYPHS,
-  sparkBuckets,
-  sparkLevel,
-} from "./views/figures.ts";
 export type {
   ActionContext,
   ClientKey,

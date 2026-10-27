@@ -109,11 +109,6 @@ export function register(on: On) {
       openPane: (args) => $.ui.open(args),
       closePane: (id) => $.ui.close({ id }),
       focus: (requestId, key) => $.ui.focus({ requestId, key }),
-      blit: (requestId, key, cells) =>
-        $.ui
-          .blit({ requestId, key, cells })
-          .then((answer: unknown) => (answer as { deny?: unknown } | undefined)?.deny === undefined)
-          .catch(() => false),
       terminalEnv: async () => ({
         term: await $.env.get("TERM"),
         termProgram: await $.env.get("TERM_PROGRAM"),
@@ -179,13 +174,12 @@ export function register(on: On) {
   }).catch((_$, e, next) => next(e));
 
   // The band draws on the two surfaces Claude Code 2.1.310 draws the site on, the terminal and
-  // the desktop. Only the terminal draws a Raster (the desktop resolves one that draws nothing),
-  // so the desktop draws the summary's figures as Text (T-2C.11).
+  // the desktop.
   on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
     if ((e.surface !== "terminal" && e.surface !== "desktop") || e.props.hasSurvey) {
       return next(e);
     }
-    const { Box, Text, Button, Input, Select, Markdown, Raster } = await $.ui.resolve(e);
+    const { Box, Text, Button, Input, Select, Markdown } = await $.ui.resolve(e);
     const band = drawBand(
       { Box, Text, Button, Input, Select, Markdown },
       levels,
@@ -195,7 +189,6 @@ export function register(on: On) {
         onOpen: () => void pane.openOrFocus(),
         onClose: () => void pane.close(),
       },
-      e.surface === "terminal" ? { Raster, requestId: e.requestId } : undefined,
     );
     if (band === undefined) return next(e);
 
