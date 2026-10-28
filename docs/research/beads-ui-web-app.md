@@ -181,9 +181,92 @@ Put anything that decides what to show or what a key does in core. Put anything 
 
 ## Appendix: Research Prompt
 
-```text
-None
-```
+**Registry ID:** none (no ai-core prompt registry on this host); the prompts below were assembled by the Opus coordinator from `ai-harness/docs/research/prompts/TEMPLATE.md`
+**Model:** `us.anthropic.claude-opus-5-5` for the three research leaves (persona `researcher`, effort high) and for the coordinator's synthesis (persona `architect`, effort high)
+**Date:** 2026-10-27 (legs 1 and 2 launched 23:57 UTC) to 2026-10-28 (leg 3 launched 01:16 UTC)
+
+Each leaf's brief opened with the Tier 3 founding-ask carrier (the canonical root JSON and digest recorded in Founding Ask Coverage above, the resolved record path, and the full verbatim text of entry A001), then a stage framing naming its leg and issue, an alignment obligation, and the destructive-operation floor. It then carried the research prompt below with its leg's fills, an output contract (one findings file under `docs/research/findings/`, at most 9,000 words, with Summary, one section per question, Recommendations with options and pros and cons, Gaps, Flagged items, Files read and Sources), the tools and scope fence (one writable beads-ui worktree, every other repo read-only, no pushes, no messages), the sub-agent completion contract and the fix-what-you-find rule. Legs 1 and 2 were told afterwards, and leg 3 in its brief, that beads-ui is a public repository whose hook refuses employer infrastructure names.
+
+````text
+## RESEARCH PROMPT (canonical research-prompt template blocks, reproduced verbatim with fills)
+
+<grounding_instructions>
+[Role identity, per leg:
+ Leg 1 (UX, stack and shared code): "You are a principal product designer and front-end architect who has shipped keyboard-first issue trackers and review queues used daily by engineering teams, and who has built React design systems in production."
+ Leg 2 (event-based dispatch): "You are a principal engineer who has built event-driven notification and job-dispatch systems for long-running agent processes, with production experience in pub/sub delivery semantics, idempotent receipts and token-cost accounting for LLM agents."
+ Leg 3 (backend, app-portal and access): "You are a principal platform engineer who has shipped internal developer web apps behind zero-trust access (cloud session tunnels, tailnets, identity-aware proxies) and built Node backends over git-backed and SQL data stores."
+ Each leg continued: "You have strong opinions backed by evidence. When you cannot find a source, you say so explicitly."]
+
+Temporal scope: Weight sources by recency — 2026 (primary) → 2025 → 2024.
+Pre-2024 sources are background context only unless foundational to the topic.
+If post-2024 literature is genuinely sparse for a subtopic, state
+"[subtopic]: no significant post-2024 developments found" rather than
+backfilling with older sources. Backfilling is a failure mode, not a hedge.
+
+[The remainder of the canonical <grounding_instructions> block followed verbatim: the
+Chain-of-Verification four-step inner process, the four claim tags with rationale-before-tag,
+the citation format and integrity rules, the never-invent-a-citation hard constraint, the
+source-vetting rule, the diagram rule and the writing-rules mirror, closing with
+</grounding_instructions>. The block is in ai-harness docs/research/prompts/TEMPLATE.md.]
+
+## Scope note — questions, examples, and named references are a starting point, not a checklist
+[verbatim from the canonical template]
+
+## Independent exploration (gaps, blindspots, emergent threads) — required
+[verbatim from the canonical template]
+
+Retrieval: for each load-bearing claim, make at least one web search or web fetch call; never
+return [VERIFIABLE] without a URL you fetched in this session. Do not stop after one round. [Legs
+1 and 2 were pointed at a web-search tool that turned out not to reach sub-agents; leg 3 was told
+to plan for web fetch only, with a public search results page for discovery.] For internal fleet
+claims (legs 2 and 3), cite the repo file and line read, with its commit.
+
+## Leg 1 research questions
+1. Triage and review queues: which products and patterns let one person clear a queue of
+   blockers, decisions and open questions fastest (Linear Triage and Inbox, GitHub notifications
+   and review queue, Superhuman and Gmail keyboard triage, Jira, Asana Inbox, Height, Plane, Huly,
+   code-review tools): keyboard-first navigation, split list and detail, a decision card that
+   picks the recommended option in one action, an answer composer, snooze, bulk actions, undo,
+   sorting and grouping by priority, impact, type, size, epic and goal, saved filters, progress.
+2. The per-task prompt composer: typing a prompt for the owning session, seeing its liveness and
+   delivery state, changing the owner so a handoff runs; analogues in Linear's agent delegation,
+   GitHub Copilot coding agent, Devin and Cursor background agents, Claude Code remote control and
+   web, OpenAI Codex cloud, Jules.
+3. Rendering held-doc decision blocks, open questions and blockers inside a task detail.
+4. The 2025-2026 board delta beyond the prior beads-ui findings.
+5. A recheck of D-10's stack as of late 2026, and any better choice for a Linear-quality look.
+6. Which layers the web app, the MCP App and the mod can share given D-35's view registry.
+
+## Leg 2 research questions
+1. The delivery contract the event-driven wake gives a producer outside the harness: event
+   kinds, wake versus passive, latency bounds, receipts, dedupe identity, the kill switch, and
+   what is built versus designed.
+2. The candidate routes (Agent Mail, explicit poke, hook context injection, the shared
+   prompt-injection library, the mod's $.prompt.submit, the work queue's claim and lease API,
+   Claude Code native primitives), each with mechanism, idle token cost, latency, cross-host
+   reach and failure modes; a configurable ladder with fallbacks.
+3. Cross-host reach between the paired machines and its authentication.
+4. Owner change and the receiver-first /handoff.
+5. Arming /start-goal without resuming a paused or human-gated goal.
+6. The write path for answers to held decisions and blockers, and the event that follows.
+7. Authority and safety: who may prompt a session, verified versus unverified instructions,
+   audit trail, rate limits.
+8. The delivery states the UI can show and the source of truth for each.
+
+## Leg 3 research questions
+1. Backend over Beads: bd --json, bd serve, Dolt SQL directly or the ai-core queue service; many
+   stores on one host, guarded writes, change feeds, performance; whether D-4 should change.
+2. Which ai-core services the web app should use, and how D-11 divides beads-ui from ai-core.
+3. app-portal fit: registration, routing, authentication, the shell, the bundle, tokens.
+4. Access for sem-kg-ec2 and acn-mac: Session Manager port forwarding, SSH over Session Manager,
+   VS Code forwarding, the existing fleet helper; latency, reconnects, user authentication.
+5. Access for fw-lnx and sw-mac: Tailscale Serve and Funnel, ACLs, MagicDNS, certificates,
+   identity headers; one config shape for both pairs.
+6. Security: loopback binding, auth layers, CSRF and origin checks, the queue API's missing
+   credential, the signed dispatch envelope.
+7. Whether D-14 and Phase 6's cloud templates still hold in 2026, and what a privacy-safe hosted
+   option must exclude.
+````
 
 <!-- /doc:region name="appendix_research_prompt" -->
 
