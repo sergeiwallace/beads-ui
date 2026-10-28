@@ -1,15 +1,22 @@
 ---
 title: "beads-ui web app: review and triage UX, event-based prompt dispatch, stack, shared code, backend and access"
 category: research
-tags: [research]
-status: stub
-source: "None"
+tags: [research, beads-ui, web-app, triage, dispatch, idle-wake, agent-mail, app-portal, access]
+status: complete
+source: "claude-opus-5-5-2026-10-28"
 template_version: "research-1.2.0"
 delegation_provenance:
   version: 2
   contributors: []
 task: BU-mg2.5.1
-stub: true
+stub: false
+related_docs:
+  - docs/research/goals-system.md
+  - docs/research/beads-ui-task-manager-landscape.md
+  - docs/designs/beads-ui-design.md
+  - docs/research/findings/beads-ui-web-app-ux-stack-and-shared-code.md
+  - docs/research/findings/beads-ui-web-app-event-dispatch.md
+  - docs/research/findings/beads-ui-web-app-backend-portal-and-access.md
 ---
 
 # beads-ui web app: review and triage UX, event-based prompt dispatch, stack, shared code, backend and access
@@ -40,9 +47,9 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 | A001: goals system, goal views, goal research and the privacy guard | Out of this doc by split, covered in full by [the goals system research](goals-system.md) |
 | A001: the process clauses (orchestrate, research, wait for aih-fw-2's compile, merge, sync, reap, then design through /auto-flow, then Sergei's review) | Process, not content. Recorded in the Run History of this doc and the coordinator's report |
 
-**Status:** stub
+**Status:** complete
 
-**Created:** None
+**Created:** 2026-10-27
 
 <!-- doc:region name="context" kind="immutable" -->
 
@@ -61,7 +68,31 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
      `scripts/check_doc_toc.py <this-doc>`, which fails on an anchor that does not resolve.
      Manual `<!-- toc:skip -->` / `<!-- toc:include -->` override. -->
 
+- [Founding Ask Coverage](#founding-ask-coverage)
 - [Context](#context)
+- [Temporal Scope](#temporal-scope)
+- [Executive Summary](#executive-summary)
+- [1. Review and triage of blockers, decisions and open questions](#1-review-and-triage-of-blockers-decisions-and-open-questions)
+  - [When to use](#when-to-use)
+- [2. Board, backlog and sprint: the 2025-2026 delta](#2-board-backlog-and-sprint-the-2025-2026-delta)
+- [3. Per-task prompts and event-based dispatch](#3-per-task-prompts-and-event-based-dispatch)
+  - [When to use](#when-to-use-1)
+- [4. Owner change, /handoff and /start-goal](#4-owner-change-handoff-and-start-goal)
+  - [When to use](#when-to-use-2)
+- [5. Front-end stack recheck](#5-front-end-stack-recheck)
+  - [When to use](#when-to-use-3)
+- [6. Shared code across the web app, the MCP App and the mod](#6-shared-code-across-the-web-app-the-mcp-app-and-the-mod)
+  - [When to use](#when-to-use-4)
+- [7. Backend over Beads and ai-core](#7-backend-over-beads-and-ai-core)
+  - [When to use](#when-to-use-5)
+- [8. app-portal fit](#8-app-portal-fit)
+  - [When to use](#when-to-use-6)
+- [9. Hosting and access for each machine pair](#9-hosting-and-access-for-each-machine-pair)
+  - [When to use](#when-to-use-7)
+- [Comparison](#comparison)
+- [Recommendation](#recommendation)
+- [Open Questions](#open-questions)
+- [Sources](#sources)
 - [Ambiguous Items from Auto-Remediation (Post-Run Review)](#ambiguous-items-from-auto-remediation-post-run-review)
 - [Appendix: Research Prompt](#appendix-research-prompt)
 - [Appendix: Provenance Ledger](#appendix-provenance-ledger)
@@ -84,7 +115,13 @@ The beads-ui design doc already decides the web stack (D-10), the queue member-a
 
 Product, library and platform claims weight 2026 first, then 2025, then 2024; earlier sources appear only as background. Fleet claims (the event-driven wake, Agent Mail, the work queue, the prompt-injection library, the held-doc store, the beads-ui design) are read from ai-harness, ai-core and beads-ui at the commits each findings file names, measured on 2026-10-27 and 2026-10-28 UTC. Each research leg's full evidence, with its footnoted sources, is in its findings file under [findings/](findings/); this doc synthesizes them and cites the findings file for detail.
 
-<!-- exec-summary-slot -->
+## Executive Summary
+
+1. The web app's new core is a keyboard-first triage queue for blockers, held decisions and open questions, sorted by priority and grouped by next action, with option cards whose number keys pick a decision's option. No product has a queue built for answering decisions; Linear Triage and Gmail's keyboard triage are the patterns to copy ([§1](#1-review-and-triage-of-blockers-decisions-and-open-questions)).
+2. A prompt typed on a task reaches its owning session by event: the server writes a durable dispatch record to the ai-core queue, then sends addressed Agent Mail that the target host's notifier admits as a wake. The shared prompt-injection library, the mod's `$.prompt.submit` and the queue's turn-end pull are fallbacks, all under one kill switch, and nothing costs tokens while nothing is pending ([§3](#3-per-task-prompts-and-event-based-dispatch)).
+3. The auto-trigger depends on fleet work not yet done: every automatic idle wake is off on sem-kg-ec2 until Phase 4 of the event-driven wake seeds its policy file, and web-app prompts need a signed dispatch envelope or receiving sessions treat them as unverified ([§3](#3-per-task-prompts-and-event-based-dispatch)).
+4. D-4, D-10, D-11 and D-14 hold. The server reads Beads through `bd --json` and the host refresher, detects change across every store with one Dolt heads query, uses the ai-core queue for sessions and prompts, and registers with app-portal as a Node upstream ([§5](#5-front-end-stack-recheck), [§7](#7-backend-over-beads-and-ai-core), [§8](#8-app-portal-fit)).
+5. Each pair reaches a loopback-bound server through its existing transport: a Session Manager port forward from acn-mac to the employer host, and `tailscale serve` on fw-lnx for sw-mac. The server adds its own Host, Origin and token checks, and a per-host repository allowlist keeps personal stores off the employer host ([§7](#7-backend-over-beads-and-ai-core), [§9](#9-hosting-and-access-for-each-machine-pair)).
 
 ## 1. Review and triage of blockers, decisions and open questions
 
@@ -120,14 +157,14 @@ The recommended dispatch path follows the transactional outbox pattern: write th
 | 1 | Agent Mail addressed to `<session>@<host>`, admitted by the target host's notifier: an idle session wakes through the hook, a busy one sees a header at its next tool call | Primary |
 | 2 | Buzz, then git-inbox, as cross-host carriers when Agent Mail is unavailable; git-inbox carries a pointer only | Agent Mail unavailable |
 | 3 | The shared prompt-injection library types a one-line, harness-authored pointer to the dispatch on the target host | Rung 1 published but no shown receipt within a bound (proposed 60 s), and the session has a tmux pane |
-| 4 | The beads-ui mod's `$.prompt.submit`, when the mod is loaded in the target session | No pane the library can resolve |
+| 4 | The beads-ui mod's `$.prompt.submit`, when the mod is loaded in the target session; the mods API documents it with timers and refused-call results [VERIFIABLE][^24] | No pane the library can resolve |
 | 5 | The work queue's `Stop`-hook pull and the passive header at the next turn end | Floor: nothing is lost when every wake rung is off |
 
 This keeps all three routes the founding ask names. Agent Mail admitted by the notifier is the "hook context injection ... event-based" route through aih-fw-1's work, the shared prompt-injection library is rung 3, and git-inbox and Buzz carry Agent Mail's role across hosts [INFERENCE][^2][^17][^18]. Claude Code's native channels and remote control stay out of the ladder: channels are a research preview with provider limits, and Remote Control requires a subscription login that excludes the Bedrock route this host uses [VERIFIABLE][^7][^27].
 
 Every rung costs zero model tokens while nothing is pending, because the waiting runs in a daemon, a hook watcher or a mod timer. Each delivery costs one model turn over the session's cached context, measured at a median of 365,551 cache-read tokens per response window, so coalescing several dispatches to one session into one turn is the main cost lever during bulk review [VERIFIABLE][^14][^2].
 
-Authority is the open design problem. The fleet's peer-relay `VERIFIED` check reads the sending session's transcript for Sergei's typed turn; a web app has no transcript, so its prompts would arrive `UNVERIFIED` and a receiving session would treat them as coordination only [VERIFIABLE][^17]. The web app needs a dispatch envelope signed by the server after it authenticates Sergei and verified on the receiving host [INFERENCE][^2]. The same leg found the ai-core queue API answering on loopback with no credential, which the web app's auth design must account for [VERIFIABLE][^16].
+Authority is the open design problem. The fleet's peer-relay `VERIFIED` check reads the sending session's transcript for Sergei's typed turn; a web app has no transcript, so its prompts would arrive `UNVERIFIED` and a receiving session would treat them as coordination only [VERIFIABLE][^17]. The web app needs a dispatch envelope signed by the server after it authenticates Sergei and verified on the receiving host [INFERENCE][^2]. The web app's own browser auth layer (§9) therefore matters as much as the envelope [INFERENCE].
 
 The composer itself should be ported, not redesigned. The work queue's dashboard in ai-core already has a Sergei-approved composer (Lexical rich text, a `/skill` typeahead, an explicit "Queue prompt" button and a secret-guard refusal), and under D-11 the beads-ui web app replaces that dashboard [INFERENCE][^1][^25]. Every agent-delegation product surveyed shows a per-session state beside a follow-up box; Linear's agent sessions have six states (`pending`, `active`, `error`, `awaitingInput`, `complete`, `stale`), and Claude Code's Remote Control docs warn that a disconnected banner says nothing about whether work continues [VERIFIABLE][^6][^7]. The composer should therefore show three separate indicators: session liveness, delivery state (queued, shown, taken, acted on, failed, each with its source of truth in the queue record) and the session's response [INFERENCE][^1][^2].
 
@@ -165,7 +202,139 @@ One limit matters for the MCP App. MCP Apps' `ui/message` posts into the Claude 
 
 Put anything that decides what to show or what a key does in core. Put anything that draws in the surface package.
 
-<!-- sections-7-9-slot -->
+## 7. Backend over Beads and ai-core
+
+D-4 holds for the web server. Reads come from the host refresher's snapshots (D-26) plus `bd ... --json` for detail, and writes stay guarded `bd` calls (`--if-status`, exit 13 on a stale write) [VERIFIABLE][^28][^25]. `bd serve` 1.3.2 now has bearer tokens with live rotation and a DNS-rebinding Host check, but it still runs one process per store, fires no hooks and has no TLS, so nothing measured reopens D-4 [VERIFIABLE][^28][^29].
+
+A change feed across every store on a host costs one query. The shared Dolt server answers `SELECT @@AIH_head, @@BU_head, ...` for all stores in one call, measured at 0.42 s as a `bd sql` process; that is the cheapest live-update trigger, and it sees changes that arrived by sync, which the events journal does not (the journal is off on every store checked) [VERIFIABLE][^29][^30]. The server polls the heads, re-reads only the stores that moved and pushes Server-Sent Events to the browser [INFERENCE][^28].
+
+The ai-core work-queue API is the fleet's only cross-store read model and the only home of sessions, leases and durable prompts. It served the full task projection in 0.27 to 1.04 s [VERIFIABLE][^29][^43]. Under D-11 the web app should read sessions, prompts, review items and events from it on the pair where it runs, keep `bd` as the source of truth for task fields, and write each dispatch to the queue's prompt store (§3, rung 0); where the queue is not configured, a local append-only store takes its place [INFERENCE][^28][^19].
+
+A data-scope issue in the ai-core queue on the work host is tracked privately and constrains the backend design: the web app's backend must filter every store and queue read through a per-host repository allowlist, so a host never shows a store its class does not allow [INFERENCE][^28]. The allowlist is a requirement for the design (see [the goals research § 8](goals-system.md#8-privacy-and-access-control-for-personal-goals)).
+
+### When to use
+
+Use `bd` for every task field and every write. Use the queue for sessions, prompts and cross-store lists where it runs. Use the heads query to decide when to refresh.
+
+## 8. app-portal fit
+
+app-portal's member contract assumes a FastAPI process serving a static single-page app under a `tailscale serve` path, with no Node at runtime (its D-5) [VERIFIABLE][^41][^42]. beads-ui's Node server (D-10) can still join through `apps.yaml`, which accepts any loopback upstream, but it must re-implement in Node the duties app-portal's `attach_portal()` performs for a Python member [VERIFIABLE][^28][^42]. The recommendation is beads-ui's own Node server registered as a `kind: portal` upstream, because D-10 already chose a Node server and the public project must run without the portal [INFERENCE][^28].
+
+Two facts bound this. The ai-core queue dashboard member app (Board, Decisions, Epics, Inbox, Review, Sessions, Task detail and the Lexical composer) is already built in ai-core `web/` but is not mounted on the employer host; under D-11 it is the port source for the beads-ui web app, and the overlap in scope needs an owner ruling on which code survives [VERIFIABLE][^29][^43]. And the work pair has no portal origin at all, because the employer host runs no Tailscale, so on that pair the app is reached directly through its tunnel (§9) rather than through the portal shell [VERIFIABLE][^29].
+
+app-portal uses Radix and Vite 7 while D-10 picks Base UI and Vite 8; a member app ships its own bundle, so this costs only a shared token set, not a shared component library [VERIFIABLE][^1][^42].
+
+### When to use
+
+Register the web app in `apps.yaml` on the personal pair, where the portal runs. Run it standalone on the work pair.
+
+## 9. Hosting and access for each machine pair
+
+On the work pair, the server binds to loopback on the employer-provisioned host, and acn-mac reaches it through one more entry in the pair transport's `forwards` map: the supervised AWS Systems Manager Session Manager port forward the fleet already runs [VERIFIABLE][^31][^44]. An SSH `LocalForward` over the existing SSH-over-Session-Manager alias is the measured fallback (`ssh -L` returned exit 0 from acn-mac) [VERIFIABLE][^29][^44]. No inbound port opens on the host, which keeps its zero-inbound design [VERIFIABLE][^31].
+
+On the personal pair, the server binds to loopback on fw-lnx and is published with `tailscale serve --bg --set-path /beads` from `apps.yaml`. The app reads the `Tailscale-User-Login` header for identity, and can read an app capability granted in the tailnet policy (`--accept-app-caps`, Tailscale 1.92 or later) to decide who may dispatch prompts [VERIFIABLE][^32][^33][^34].
+
+Neither transport authenticates the browser request. Any web page or local process on the laptop can reach `localhost:<port>` through the forward, and a server that sends prompts to shell-capable agents is a target for cross-site requests. The server therefore needs its own layer: a Host allowlist, an Origin and `Sec-Fetch-Site` check on every write, and on the work pair a per-host session token in a cookie [VERIFIABLE][^35][^36] for the mechanisms; the combination is [INFERENCE][^28].
+
+For cloud hosting later, Phase 6's templates need one change. Fly.io's `fly.toml` and Render's `render.yaml` are current, but Railway's `railway.json` config-as-code is deprecated and Railway stops reading it on 2026-12-01 in favour of `.railway/railway.ts` infrastructure as code [VERIFIABLE][^37][^38][^39][^40]. A hosted copy must never mount a private store or an employer store, and should join the tailnet before it gets a public origin [INFERENCE][^28].
+
+```mermaid
+flowchart LR
+  subgraph work["Work pair"]
+    L1["acn-mac browser"] -->|"Session Manager port forward (pair transport)"| S1["beads-ui server on loopback, employer host"]
+    S1 -->|"bd --json, heads query"| B1["Work Beads stores"]
+    S1 -->|"sessions, prompts"| Q1["ai-core queue (loopback)"]
+  end
+  subgraph personal["Personal pair"]
+    L2["sw-mac browser"] -->|"tailscale serve /beads, identity header"| S2["beads-ui server on loopback, fw-lnx"]
+    S2 -->|"bd --json, heads query"| B2["Personal and private Beads stores"]
+  end
+```
+
+Legend: each server binds to loopback only; the browser layer on both pairs adds a Host allowlist and Origin checks, and the work pair adds a per-host session token.
+
+### When to use
+
+Use the pair transport's forward on the work pair and `tailscale serve` on the personal pair. Use the SSH forward only when the pair transport is down.
+
+## Comparison
+
+The dispatch routes, compared on the criteria the founding ask sets (event-based, no wasted tokens, works across the pair, auto-triggers work) [INFERENCE][^2]:
+
+| # | Criterion | Agent Mail via the notifier (rung 1) | Prompt-injection library pointer (rung 3) | Mod `$.prompt.submit` (rung 4) | Queue turn-end pull (rung 5) | Claude Code channels |
+|---|---|---|---|---|---|---|
+| 1 | Idle token cost | Zero until delivery | Zero until delivery | Zero until delivery | Zero | Zero until delivery |
+| 2 | Wakes an idle session | Yes, once the policy switch is on | Yes, through the same switch | Yes, while the mod is loaded | No, waits for a turn end | Yes |
+| 3 | Reaches the paired machine | Yes, Agent Mail is cross-host | No, local to the target host | No, local to the session | No | No |
+| 4 | Built today | Yes (Phases 1 to 3 of the wake design) | Yes | Yes | Yes | Research preview; Bedrock route excluded |
+| 5 | Delivery receipt | Shown receipt | Prompt record | Mod result | Queue `consumed` | None |
+| 6 | Role in the ladder | Primary | Fallback when unshown past the bound | Fallback without a pane | Floor | Excluded for now |
+
+## Recommendation
+
+Build the web app on the decided beads-ui stack and data path, and spend the new design effort on four things.
+
+- The Review triage queue and the per-task composer, ported from the ai-core dashboard's composer, with three separate status indicators and a WCAG-compliant shortcut setting (§1, §3).
+- The dispatch path: a durable record in the ai-core queue, Agent Mail as the primary event, the ladder of fallbacks under one call-time kill switch, coalescing per session, and a signed dispatch envelope verified on the receiving host (§3).
+- Owner change as a receiver-first handoff request, and `/start-goal` armed by a flag the receiving session acts on, holding dispatches to a paused goal (§4).
+- Access through each pair's existing transport, a server-side browser auth layer, and a per-host repository allowlist on every store and queue read (§7, §9).
+
+The source-vetting rule is met for every external pattern adopted here: Linear and Gmail triage, the transactional outbox, Tailscale Serve and Session Manager port forwarding are each documented by their vendors and in production use, and the libraries carry the maintenance signals recorded in the UX leg's evidence file [VERIFIABLE][^1][^10].
+
+## Open Questions
+
+1. When will Phase 4 of the event-driven idle wake seed `idle-wake.json` on each host, and until it does, is turn-end delivery an acceptable interim for the web app's auto-trigger?
+2. Which code survives where the built ai-core queue dashboard and the beads-ui web app overlap under D-11: is the ai-core dashboard ported and retired, or kept as the queue's own view?
+3. How does Sergei want a one-key "approve the recommendation" recorded, given D-39's rule that his answer is recorded exactly as typed?
+4. What format and key distribution should the signed dispatch envelope use so that a session on the paired machine can verify it?
+5. Should the ai-core queue run on fw-lnx too, so the personal pair gets the same prompt store and receipts as the work pair?
+
+## Sources
+
+[^1]: beads-ui. (2026). [beads-ui web app research leg 1: UX, stack recheck and shared code](findings/beads-ui-web-app-ux-stack-and-shared-code.md) (`docs/research/findings/beads-ui-web-app-ux-stack-and-shared-code.md`, with `findings/evidence/beads-ui-web-app-stack-signals-2026-10-28.md`). Tracked in this repository; merged in PR #78 (cdcda0b), 2026-10-28. (Section numbers cited in the text refer to that file.) Online: [beads-ui-web-app-ux-stack-and-shared-code.md](https://github.com/sergeiwallace/beads-ui/blob/main/docs/research/findings/beads-ui-web-app-ux-stack-and-shared-code.md).
+[^2]: beads-ui. (2026). [beads-ui web app research leg 2: event-driven dispatch of per-task prompts](findings/beads-ui-web-app-event-dispatch.md) (`docs/research/findings/beads-ui-web-app-event-dispatch.md`). Tracked in this repository; merged in PR #78 (cdcda0b), 2026-10-28. Online: [beads-ui-web-app-event-dispatch.md](https://github.com/sergeiwallace/beads-ui/blob/main/docs/research/findings/beads-ui-web-app-event-dispatch.md).
+[^3]: Linear. (2026). [Triage](https://linear.app/docs/triage). Linear Docs. Verified accessible (fetched) 2026-10-28 by research leg 1. (Accept, Decline, Duplicate keys; snooze.)
+[^4]: Google. (2026). [Keyboard shortcuts for Gmail](https://support.google.com/mail/answer/6594). Gmail Help. Verified accessible (fetched) 2026-10-28 by research leg 1. (Done, undo; shortcuts off by default.)
+[^5]: GitHub. (2026). [Managing notifications from your inbox](https://docs.github.com/en/subscriptions-and-notifications/how-tos/viewing-and-triaging-notifications/managing-notifications-from-your-inbox). GitHub Docs. Verified accessible (fetched) 2026-10-28 by research leg 1. (Done, saved filters, bulk actions.)
+[^6]: Linear. (2026). [Agent interaction](https://linear.app/developers/agent-interaction). Linear Developers. Verified accessible (fetched) 2026-10-28 by research leg 1. (Six agent session states.)
+[^7]: Anthropic. (2026). [Continue local sessions from any device with Remote Control](https://code.claude.com/docs/en/remote-control). Claude Code Docs. Verified accessible (HTTP 200) 2026-10-27 and 2026-10-28 by research legs 1 and 2. (Connection status; subscription login required.)
+[^8]: W3C. (2023). [Understanding SC 2.1.4: Character Key Shortcuts](https://www.w3.org/WAI/WCAG22/Understanding/character-key-shortcuts.html). WAI. Verified accessible (fetched) 2026-10-28 by research leg 1. (Level A, current in WCAG 2.2.)
+[^9]: Linear. (2026). [Changelog](https://linear.app/changelog) and [Priority inbox](https://linear.app/changelog/2026-09-03-priority-inbox). Linear. Verified accessible (fetched) 2026-10-28 by research leg 1. (Entries April to October 2026.)
+[^10]: npm, Inc. (2026). [npm public registry](https://registry.npmjs.org/), queried per package; raw output in [findings/evidence/beads-ui-web-app-stack-signals-2026-10-28.md](findings/evidence/beads-ui-web-app-stack-signals-2026-10-28.md). Verified accessible 2026-10-28 by research leg 1. (Versions and release dates of the D-10 stack.)
+[^11]: Tan, L., Savona, J., & Zhang, M. (2025, October 7). [React Compiler v1.0](https://react.dev/blog/2025/10/07/react-compiler-1). React Blog. Verified accessible (fetched) 2026-10-28 by research leg 1.
+[^12]: Vite. (2026, March 12). [Vite 8 is out](https://vite.dev/blog/announcing-vite8). Vite Blog. Verified accessible (fetched) 2026-10-28 by research leg 1.
+[^13]: Model Context Protocol. (2026). [MCP Apps specification 2026-01-26](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx) and [MCP Apps overview](https://modelcontextprotocol.io/extensions/apps/overview). Verified accessible (fetched) 2026-10-28 by research leg 1. (`ui/message` posts into the conversation.)
+[^14]: ai-harness. (2026). *Event-driven admission for idle session wakes* (`docs/designs/aih-p811n7-event-driven-idle-wake.md`, lines 89-200, 506-514, 535-552). Read at ai-harness `23ece1e92b6` by research leg 2 and at `1e67f5e9c37` by the coordinator, 2026-10-27. [Gated link, repository access required](https://github.com/sergeiwallace/ai-harness/blob/main/docs/designs/aih-p811n7-event-driven-idle-wake.md); path and commit given.
+[^15]: ai-harness. (2026). `src/ai_harness/idle_wake.py` (lines 30-63, 86-124, 257-298). Read at `23ece1e92b6` by research leg 2. [Gated link, repository access required](https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/idle_wake.py).
+[^16]: beads-ui. (2026). [Evidence: host and history probes behind the event-dispatch findings](findings/evidence/beads-ui-web-app-event-dispatch-host-probe.md). Tracked in this repository; measured 2026-10-27T23:58Z to 2026-10-28T00:06Z by research leg 2. Online: [beads-ui-web-app-event-dispatch-host-probe.md](https://github.com/sergeiwallace/beads-ui/blob/main/docs/research/findings/evidence/beads-ui-web-app-event-dispatch-host-probe.md).
+[^17]: ai-harness. (2026). *Fleet messaging ladder* (`docs/procedures/fleet-messaging-ladder.md`, lines 34-262). Read at `23ece1e92b6` by research leg 2. [Gated link, repository access required](https://github.com/sergeiwallace/ai-harness/blob/main/docs/procedures/fleet-messaging-ladder.md). (Ladder order; VERIFIED and UNVERIFIED peer relays.)
+[^18]: ai-harness. (2026). *Prompt injection and auto-submission library* (`docs/designs/aih-59eza-prompt-injection-library.md`, lines 218-800). Read at `23ece1e92b6` by research leg 2. [Gated link, repository access required](https://github.com/sergeiwallace/ai-harness/blob/main/docs/designs/aih-59eza-prompt-injection-library.md).
+[^19]: ai-harness. (2026). *Autonomous work-queue coordinator and PWA dashboard* (`docs/designs/autonomous-work-queue-coordinator-and-pwa-dashboard.md`, lines 175-600). Read at `23ece1e92b6` by research leg 2. [Gated link, repository access required](https://github.com/sergeiwallace/ai-harness/blob/main/docs/designs/autonomous-work-queue-coordinator-and-pwa-dashboard.md).
+[^20]: ai-harness. (2026). *Session handoff* (`docs/procedures/session-handoff.md`, lines 63-180) and the `/handoff` skill (`skills/handoff/SKILL.md`). Read at `23ece1e92b6` by research leg 2. [Gated link, repository access required](https://github.com/sergeiwallace/ai-harness/blob/main/docs/procedures/session-handoff.md). (Receiver-first handoff; `--force` reassignment.)
+[^21]: Anthropic. (2026). [Keep Claude working toward a goal](https://code.claude.com/docs/en/goal.md). Claude Code Docs. Verified accessible (HTTP 200) 2026-10-27 by research leg 2. (Replacement, pause, resume on a new prompt.)
+[^22]: ai-harness. (2026). `/start-goal` skill (`skills/start-goal/SKILL.md`, lines 1-135), `src/ai_harness/goal_waker.py` and the *Goal waker* design (`docs/designs/aih-wmd2v-goal-waker.md`). Read at `23ece1e92b6` by research leg 2. [Gated link, repository access required](https://github.com/sergeiwallace/ai-harness/blob/main/skills/start-goal/SKILL.md).
+[^23]: Richardson, C. (2026). [Pattern: Transactional outbox](https://microservices.io/patterns/data/transactional-outbox.html). microservices.io. Verified accessible (HTTP 200) 2026-10-27 by research leg 2. (Idempotent consumers.)
+[^24]: Anthropic. (2026). [Use the mods API](https://code.claude.com/docs/en/plugins/mods/api.md). Claude Code Docs. Verified accessible (HTTP 200) 2026-10-27 by research leg 2. (Timers, `$.prompt.submit`, refused-call results.)
+[^25]: beads-ui. (2026). [beads-ui design](../designs/beads-ui-design.md) (`docs/designs/beads-ui-design.md`, D-10, D-11, D-17, D-37, D-39). Tracked in this repository; read at `c5f6e57`, 2026-10-27. Online: [beads-ui-design.md](https://github.com/sergeiwallace/beads-ui/blob/main/docs/designs/beads-ui-design.md).
+[^26]: Anthropic. (2026). [Hooks reference](https://code.claude.com/docs/en/hooks.md). Claude Code Docs. Verified accessible (HTTP 200) 2026-10-27 by research leg 2. (`asyncRewake`, `additionalContext`.)
+[^27]: Anthropic. (2026). [Push events into a running session with channels](https://code.claude.com/docs/en/channels.md). Claude Code Docs. Verified accessible (HTTP 200) 2026-10-27 by research leg 2. (Research preview; provider availability.)
+[^28]: beads-ui. (2026). [beads-ui web app research leg 3: backend, app-portal fit and access](findings/beads-ui-web-app-backend-portal-and-access.md) (`docs/research/findings/beads-ui-web-app-backend-portal-and-access.md`). Tracked in this repository; merged in this run's third research landing, 2026-10-28. Online: [beads-ui-web-app-backend-portal-and-access.md](https://github.com/sergeiwallace/beads-ui/blob/main/docs/research/findings/beads-ui-web-app-backend-portal-and-access.md).
+[^29]: beads-ui. (2026). [Evidence: read-only host probes for the backend, portal and access leg](findings/evidence/beads-ui-web-app-backend-access-probes-2026-10-28.md). Tracked in this repository; measured 2026-10-28 by research leg 3. (Listeners, queue routes and timings, the heads query, store row counts.) Online: [beads-ui-web-app-backend-access-probes-2026-10-28.md](https://github.com/sergeiwallace/beads-ui/blob/main/docs/research/findings/evidence/beads-ui-web-app-backend-access-probes-2026-10-28.md).
+[^30]: DoltHub. (2026). [Dolt system variables](https://www.dolthub.com/docs/sql-reference/version-control/dolt-sysvars). Dolt Documentation. Verified accessible (HTTP 200) 2026-10-28 by research leg 3. (`@@<db>_head`.)
+[^31]: Amazon Web Services. (2026). [Start a session](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-sessions-start.html). AWS Systems Manager User Guide. Verified accessible (HTTP 200) 2026-10-28 by research leg 3. (Port forwarding sessions.)
+[^32]: Tailscale. (2026). [Tailscale Serve](https://tailscale.com/kb/1312/serve). Tailscale Docs. Verified accessible (HTTP 200) 2026-10-28 by research leg 3. (Identity headers; HTTPS.)
+[^33]: Tailscale. (2026). [tailscale serve command](https://tailscale.com/kb/1242/tailscale-serve). Tailscale Docs, last validated 2026-01-26. Verified accessible (HTTP 200) 2026-10-28 by research leg 3. (`--set-path`, `--bg`, `--accept-app-caps`.)
+[^34]: Tailscale. (2026). [Grants](https://tailscale.com/kb/1324/grants). Tailscale Docs. Verified accessible (HTTP 200) 2026-10-28 by research leg 3.
+[^35]: Google Chrome. (2025). [New permission prompt for Local Network Access](https://developer.chrome.com/blog/local-network-access). Chrome for Developers, updated 2025-09-29. Verified accessible (HTTP 200) 2026-10-28 by research leg 3.
+[^36]: OWASP Foundation. (2026). [Cross-Site Request Forgery Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html). OWASP Cheat Sheet Series. Verified accessible (HTTP 200) 2026-10-28 by research leg 3. (Origin checks, Fetch Metadata.)
+[^37]: Fly.io. (2026). [App configuration (fly.toml)](https://docs.fly.io/reference/configuration). Fly Docs. Verified accessible (HTTP 200) 2026-10-28 by research leg 3.
+[^38]: Railway. (2026). [Config as code](https://docs.railway.com/reference/config-as-code). Railway Docs. Verified accessible (HTTP 200) 2026-10-28 by research leg 3. (Deprecation and the 2026-12-01 cutoff.)
+[^39]: Railway. (2026). [Infrastructure as Code](https://docs.railway.com/infrastructure-as-code). Railway Docs. Verified accessible (HTTP 200) 2026-10-28 by research leg 3.
+[^40]: Render. (2026). [Blueprint YAML reference](https://render.com/docs/blueprint-spec). Render Docs. Verified accessible (HTTP 200) 2026-10-28 by research leg 3.
+[^41]: app-portal. (2026). *App portal architecture* (`docs/designs/eve-15f-app-portal-architecture.md`). Private repository file at `b73683e`, read 2026-10-28 by research leg 3. [Gated link, repository access required](https://github.com/sergeiwallace/app-portal/blob/main/docs/designs/eve-15f-app-portal-architecture.md); path and commit given. (Member contract, D-5.)
+[^42]: app-portal. (2026). `apps.yaml`, `src/app_portal/`, `src/vite.ts`, `src/shell.tsx`, `package.json`. Private repository files at `b73683e`, read 2026-10-28 by research leg 3. [Gated link, repository access required](https://github.com/sergeiwallace/app-portal/blob/main/apps.yaml).
+[^43]: ai-core. (2026). `src/ai_core/queue/router.py`, `src/ai_core/main.py`, `web/README.md`. Private repository files at `f40fa2bd`, read 2026-10-28 by research leg 3. [Gated link, repository access required](https://github.com/sergeiwallace/ai-core/blob/main/src/ai_core/queue/router.py). (Queue routes; the built dashboard member app.)
+[^44]: ai-harness. (2026). `scripts/pair_transport.py`, `scripts/wq_tunnel.py`, `config/message-transports.json`, and the remote-access procedure for the employer host under `docs/procedures/`. Read at `23ece1e92b6` by research leg 3. [Gated link, repository access required](https://github.com/sergeiwallace/ai-harness/blob/main/scripts/pair_transport.py). (The supervised port-forward map.)
 
 <!-- /doc:region name="body" -->
 
@@ -181,9 +350,92 @@ Put anything that decides what to show or what a key does in core. Put anything 
 
 ## Appendix: Research Prompt
 
-```text
-None
-```
+**Registry ID:** none (no ai-core prompt registry on this host); the prompts below were assembled by the Opus coordinator from `ai-harness/docs/research/prompts/TEMPLATE.md`
+**Model:** `us.anthropic.claude-opus-5-5` for the three research leaves (persona `researcher`, effort high) and for the coordinator's synthesis (persona `architect`, effort high)
+**Date:** 2026-10-27 (legs 1 and 2 launched 23:57 UTC) to 2026-10-28 (leg 3 launched 01:16 UTC)
+
+Each leaf's brief opened with the Tier 3 founding-ask carrier (the canonical root JSON and digest recorded in Founding Ask Coverage above, the resolved record path, and the full verbatim text of entry A001), then a stage framing naming its leg and issue, an alignment obligation, and the destructive-operation floor. It then carried the research prompt below with its leg's fills, an output contract (one findings file under `docs/research/findings/`, at most 9,000 words, with Summary, one section per question, Recommendations with options and pros and cons, Gaps, Flagged items, Files read and Sources), the tools and scope fence (one writable beads-ui worktree, every other repo read-only, no pushes, no messages), the sub-agent completion contract and the fix-what-you-find rule. Legs 1 and 2 were told afterwards, and leg 3 in its brief, that beads-ui is a public repository whose hook refuses employer infrastructure names.
+
+````text
+## RESEARCH PROMPT (canonical research-prompt template blocks, reproduced verbatim with fills)
+
+<grounding_instructions>
+[Role identity, per leg:
+ Leg 1 (UX, stack and shared code): "You are a principal product designer and front-end architect who has shipped keyboard-first issue trackers and review queues used daily by engineering teams, and who has built React design systems in production."
+ Leg 2 (event-based dispatch): "You are a principal engineer who has built event-driven notification and job-dispatch systems for long-running agent processes, with production experience in pub/sub delivery semantics, idempotent receipts and token-cost accounting for LLM agents."
+ Leg 3 (backend, app-portal and access): "You are a principal platform engineer who has shipped internal developer web apps behind zero-trust access (cloud session tunnels, tailnets, identity-aware proxies) and built Node backends over git-backed and SQL data stores."
+ Each leg continued: "You have strong opinions backed by evidence. When you cannot find a source, you say so explicitly."]
+
+Temporal scope: Weight sources by recency — 2026 (primary) → 2025 → 2024.
+Pre-2024 sources are background context only unless foundational to the topic.
+If post-2024 literature is genuinely sparse for a subtopic, state
+"[subtopic]: no significant post-2024 developments found" rather than
+backfilling with older sources. Backfilling is a failure mode, not a hedge.
+
+[The remainder of the canonical <grounding_instructions> block followed verbatim: the
+Chain-of-Verification four-step inner process, the four claim tags with rationale-before-tag,
+the citation format and integrity rules, the never-invent-a-citation hard constraint, the
+source-vetting rule, the diagram rule and the writing-rules mirror, closing with
+</grounding_instructions>. The block is in ai-harness docs/research/prompts/TEMPLATE.md.]
+
+## Scope note — questions, examples, and named references are a starting point, not a checklist
+[verbatim from the canonical template]
+
+## Independent exploration (gaps, blindspots, emergent threads) — required
+[verbatim from the canonical template]
+
+Retrieval: for each load-bearing claim, make at least one web search or web fetch call; never
+return [VERIFIABLE] without a URL you fetched in this session. Do not stop after one round. [Legs
+1 and 2 were pointed at a web-search tool that turned out not to reach sub-agents; leg 3 was told
+to plan for web fetch only, with a public search results page for discovery.] For internal fleet
+claims (legs 2 and 3), cite the repo file and line read, with its commit.
+
+## Leg 1 research questions
+1. Triage and review queues: which products and patterns let one person clear a queue of
+   blockers, decisions and open questions fastest (Linear Triage and Inbox, GitHub notifications
+   and review queue, Superhuman and Gmail keyboard triage, Jira, Asana Inbox, Height, Plane, Huly,
+   code-review tools): keyboard-first navigation, split list and detail, a decision card that
+   picks the recommended option in one action, an answer composer, snooze, bulk actions, undo,
+   sorting and grouping by priority, impact, type, size, epic and goal, saved filters, progress.
+2. The per-task prompt composer: typing a prompt for the owning session, seeing its liveness and
+   delivery state, changing the owner so a handoff runs; analogues in Linear's agent delegation,
+   GitHub Copilot coding agent, Devin and Cursor background agents, Claude Code remote control and
+   web, OpenAI Codex cloud, Jules.
+3. Rendering held-doc decision blocks, open questions and blockers inside a task detail.
+4. The 2025-2026 board delta beyond the prior beads-ui findings.
+5. A recheck of D-10's stack as of late 2026, and any better choice for a Linear-quality look.
+6. Which layers the web app, the MCP App and the mod can share given D-35's view registry.
+
+## Leg 2 research questions
+1. The delivery contract the event-driven wake gives a producer outside the harness: event
+   kinds, wake versus passive, latency bounds, receipts, dedupe identity, the kill switch, and
+   what is built versus designed.
+2. The candidate routes (Agent Mail, explicit poke, hook context injection, the shared
+   prompt-injection library, the mod's $.prompt.submit, the work queue's claim and lease API,
+   Claude Code native primitives), each with mechanism, idle token cost, latency, cross-host
+   reach and failure modes; a configurable ladder with fallbacks.
+3. Cross-host reach between the paired machines and its authentication.
+4. Owner change and the receiver-first /handoff.
+5. Arming /start-goal without resuming a paused or human-gated goal.
+6. The write path for answers to held decisions and blockers, and the event that follows.
+7. Authority and safety: who may prompt a session, verified versus unverified instructions,
+   audit trail, rate limits.
+8. The delivery states the UI can show and the source of truth for each.
+
+## Leg 3 research questions
+1. Backend over Beads: bd --json, bd serve, Dolt SQL directly or the ai-core queue service; many
+   stores on one host, guarded writes, change feeds, performance; whether D-4 should change.
+2. Which ai-core services the web app should use, and how D-11 divides beads-ui from ai-core.
+3. app-portal fit: registration, routing, authentication, the shell, the bundle, tokens.
+4. Access for sem-kg-ec2 and acn-mac: Session Manager port forwarding, SSH over Session Manager,
+   VS Code forwarding, the existing fleet helper; latency, reconnects, user authentication.
+5. Access for fw-lnx and sw-mac: Tailscale Serve and Funnel, ACLs, MagicDNS, certificates,
+   identity headers; one config shape for both pairs.
+6. Security: loopback binding, auth layers, CSRF and origin checks, the queue API's auth
+   boundary, the signed dispatch envelope. [Wording redacted for this public file.]
+7. Whether D-14 and Phase 6's cloud templates still hold in 2026, and what a privacy-safe hosted
+   option must exclude.
+````
 
 <!-- /doc:region name="appendix_research_prompt" -->
 
