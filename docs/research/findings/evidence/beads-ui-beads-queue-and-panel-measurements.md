@@ -123,12 +123,13 @@ From an ai-harness worktree (database `AIH`, same shared server):
 
 ## M-7. The work-queue service on this host (00:11Z)
 
-`ss -ltn` showed loopback listeners on `:8400` (ai-core), `:5432` (Postgres), `:4222` (NATS) and
-`:3308` (Dolt). `ps` showed `uvicorn ai_core.main:app --host 127.0.0.1 --port 8400 --workers 2`
-(up 4 days 15 h), `scripts/queue_bridge.py loop --interval-seconds 30` and
-`scripts/queue_waker.py run --liveness-interval-seconds 60`.
+The ai-core queue API, Postgres, NATS and the shared Dolt server were running on this host's
+loopback, with the queue bridge and queue waker loops; exact ports, bind addresses and command
+lines are omitted from this public file. A data-scope issue in the ai-core queue on the work host
+is tracked privately and constrains the backend design: the web app puts its own auth and a
+per-host repository allowlist in front of the queue.
 
-`GET http://127.0.0.1:8400/openapi.json` returned 200 with 62 paths, 26 under `/api/queue/`:
+The queue API's OpenAPI document listed 62 paths, 26 under `/api/queue/`:
 `sessions` (GET, POST), `sessions/{id}/heartbeat|state|liveness` (POST), `sessions/{id}` (DELETE),
 `next` (GET), `prompts` (POST), `prompts/{id}/ack|consumed` (POST), `claim`, `block`, `done`,
 `briefing` (POST), `leases/{id}/release` (POST), `gates/{repo}/{task_id}/resolve` (POST),
