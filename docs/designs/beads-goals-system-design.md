@@ -66,6 +66,7 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
   - [Goal views](#goal-views)
   - [Private goals over shared work](#private-goals-over-shared-work)
   - [The private-goal guard](#the-private-goal-guard)
+  - [Caches, logs and backups](#caches-logs-and-backups)
   - [Prior work](#prior-work)
 - [Data Model](#data-model)
 - [Integration](#integration)
@@ -79,6 +80,7 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 - [Open Questions](#open-questions)
 - [Run Ledger](#run-ledger)
   - [Transition verdicts](#transition-verdicts)
+  - [Doc-audit rounds](#doc-audit-rounds)
 - [Design Decisions](#design-decisions)
   - [Decision Summary](#decision-summary)
   - [Decision Details](#decision-details)
@@ -87,7 +89,7 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 
 ## Executive Summary
 
-This design makes a goal a first-class Beads issue that sits above epics: an aspiration over dated objectives, each either an achievement or something to maintain, linked to any issue that serves it and to other goals. Progress is computed from the work linked to a goal, while health comes from short written check-ins, so a goal can show "60% done, at risk" honestly. The goal views (a linked graph, a Gantt and timeline with the critical path, and charts of where effort goes) live in the beads-ui web app, and an alignment score lifts the queue rank of work that serves Sergei's top goals, for his own work and for his agents'. Personal, private, sensitive and domain-specific goals live only in private stores on the personal machine pair, every link that touches them stays there, and client-side guards at every write, publish, push and message path refuse a marked record, and any goal record not marked shared, before it can reach a shared or public repository. Two calls are left for Sergei: whether the alignment score may reorder the fleet's agent queue ([D-8](#d-8)), and where employer-domain goals live ([D-14](#d-14)).
+This design makes a goal a first-class Beads issue that sits above epics: an aspiration over dated objectives, each either an achievement or something to maintain, linked to any issue that serves it and to other goals. Progress is computed from the work linked to a goal, while health comes from short written check-ins, so a goal can show "60% done, at risk" honestly. The goal views (a linked graph, a Gantt and timeline with the critical path, and charts of where effort goes) live in the beads-ui web app, and an alignment score lifts the queue rank of work that serves Sergei's top goals, for his own work and for his agents'. Personal, private, sensitive and domain-specific goals live only in private stores on the personal machine pair, every link that touches them stays there, and client-side guards at every write, publish, push and message path refuse a marked record, and any goal record not marked shared, before it can reach a shared or public repository. Four calls are left for Sergei: whether the alignment score may reorder the fleet's agent queue ([D-8](#d-8)), where employer-domain goals live ([D-14](#d-14)), whether the first release leaves out the daily score he approved for the first system ([D-17](#d-17)), and whether client-side guards are strong enough for "never" or a server-side push gateway is needed ([D-20](#d-20)).
 
 ## Summary for a wide audience
 
@@ -117,12 +119,15 @@ A goal is a Beads issue of a custom `goal` type, added to each store's `types.cu
 | `progress_source` | `work_estimate`, `work_count`, `subgoal`, `metric`, `manual` | Typed progress sources, as Asana names them |
 | `orientation` | `learn` or `perform` | Goal effects shrink on complex work, where learning goals can do better |
 | `motivation`, `obstacles` | short text | Mental contrasting; carried over from the first goals system |
-| `marking` | `shared`, `personal`, `private`, `sensitive`, `domain` | The privacy guard's input ([D-11](#d-11)) |
+| `conflicts_with` | list of goal ids, optional | Goals that compete for the same effort ([D-4](#d-4)); shown on the graph, not used as an edge |
+| `checkin_every_days` | integer, optional | The owner's check-in cadence; without it a goal never shows "update missing" ([D-6](#d-6)) |
+| `band` | `{metric, low, high}`, required on a `maintain` goal | The condition a maintain goal keeps; outside the band the goal is breached |
+| `target_share` | `{person?: 0 to 1, agents?: 0 to 1}`, optional | The share of each pool's effort the owner wants on this goal; feeds the allocation factor ([D-7](#d-7)) |
 | `order` | fractional index, optional | "Your order right now" among a person's active goals, carried over from the first system's unique rank and ordered like D-6's rank; priority stays the weight ([D-18](#d-18)) |
 | `contributions` | `{member_id: "make" or "help"}` | Contribution strength until Beads can write edge metadata ([D-3](#d-3)) |
 | `docs` | list of repository paths or URLs | Plans and research attached to the goal, carried over from the first system |
 
-Priority (`priority` 0 to 4), the hard due date (`due_at`), owner and status are Beads' own fields; `starts_at` and `ends_at` are the planned start and end. A milestone is a member issue of Beads' built-in `milestone` type, linked like any member with `make` and drawn as a checkpoint on the timeline, as the fold-in research recommends over a third strength. A goal stays the top-most type: a `parent-child` edge that would make a non-goal the parent of a goal is refused. A goal's lifecycle is open, in progress, paused, dropped (with a reason) and done; `paused` and `dropped` are statuses recorded in metadata until Beads carries them ([D-6](#d-6)).
+Every issue, goal or not, carries its privacy marking in one place, `metadata.privacy.marking`, with the values `shared`, `personal`, `private`, `sensitive` and `domain` ([D-11](#d-11)). A new goal defaults to `private`; a new task takes its store's class (`shared` in a shared store, `private` in a private one); a goal record in a shared store must say `shared`. A task's marking describes its own content only: serving a private goal does not change it, because that link lives in the private store ([D-19](#d-19)), and a task whose own text is private is created in a private store. Priority (`priority` 0 to 4), the hard due date (`due_at`), owner and status are Beads' own fields; `starts_at` and `ends_at` are the planned start and end. A milestone is a member issue of Beads' built-in `milestone` type, linked like any member with `make` and drawn as a checkpoint on the timeline, as the fold-in research recommends over a third strength. A goal stays the top-most type: a `parent-child` edge that would make a non-goal the parent of a goal is refused. A goal's lifecycle is open, in progress, paused, dropped (with a reason) and done; `paused` and `dropped` are statuses recorded in metadata until Beads carries them ([D-6](#d-6)).
 
 ### Links
 
@@ -142,17 +147,35 @@ Legend: arrows point from the serving item to what it serves; `make` counts full
 
 ### Progress and health
 
-A goal with no members shows "no data", never 0% progress: the first goals system failed exactly there, when its links broke and every goal read zero. Progress is computed from members: by default from estimates (done plus a quarter of in-progress, over the total), falling back to counts when fewer than half the members carry estimates, from sub-goals for an aspiration, or from the target metric when one is set ([D-5](#d-5)). Health is separate: the owner's latest check-in sets `on track`, `at risk` or `off track`, and an overdue check-in shows "update missing" rather than a guess. Monitoring progress is itself effective, so check-ins are short, prompted and recorded; there are no streaks, points or achievements ([D-6](#d-6)).
+A goal with no members shows "no data", never 0% progress: the first goals system failed exactly there, when its links broke and every goal read zero. A goal's members are a set keyed by each issue's store and id, so an issue linked directly and also reached through a linked epic, or through two ancestors, counts once, at its strongest contribution. Progress is computed from members: by default from estimates (done plus a quarter of in-progress, over the total), falling back to counts when fewer than half the members carry estimates, from sub-goals for an aspiration, or from the target metric when one is set ([D-5](#d-5)). Health is separate: the owner's latest check-in sets `on track`, `at risk` or `off track`, and an overdue check-in shows "update missing" rather than a guess. Monitoring progress is itself effective, so check-ins are short, prompted and recorded; there are no streaks, points or achievements ([D-6](#d-6)).
 
 ### Alignment
 
 Each item's alignment $A_i$ is a noisy-OR over the goals it serves, weighted by contribution strength and goal weight, and the queue score multiplies the fleet's existing WSJF composite $C_i$ ([D-7](#d-7)):
 
 $$
-A_i = 1 - \prod_{g \in G} \Bigl(1 - \min\bigl(1,\; c_{i,g}\, w_{g}\bigr)\Bigr), \qquad S_i = C_i \,\bigl(1 + \beta A_i\bigr), \quad \beta = 1
+A_i = 1 - \prod_{g \in G} \Bigl(1 - \min\bigl(1,\; c_{i,g}\, w_{g,k(i)}\bigr)\Bigr), \qquad S_i = C_i \,\bigl(1 + \beta A_i\bigr)
 $$
 
-Alignment also flows backwards along `blocks` edges, so a decision or blocker that holds up goal-serving work inherits that work's alignment, discounted by a call-time factor; the Review queue then ranks Sergei's own answers by the goals they unblock. Completion is read from `closed_at`, never `updated_at`. Unaligned work keeps its WSJF score and appears in an "unaligned work" list, never hidden, though aligned work can now overtake it in the queue. Agent-proposed links count only after Sergei reviews them, which closes the score's main gaming path. Where the score changes ordering is [D-8](#d-8), left for Sergei.
+$$
+w_{g,k} = \pi(p_g)\,\alpha_{g,k}\,\sigma_g, \qquad \pi(p) = \frac{5 - p}{5}, \qquad \alpha_{g,k} = \operatorname{clip}\Bigl(1 + \frac{\tau_{g,k} - a_{g,k}}{\tau_{g,k}},\; 0.5,\; 2\Bigr)
+$$
+
+The terms, adopted from the theory research: $c_{i,g}$ is the strongest contribution path from item $i$ to goal $g$ (`make` 1.0, `help` 0.5, each `parent-child` step 1). $p_g$ is the goal's Beads priority, so P0 weighs 1.0 and P4 0.2. $k(i)$ is the pool that may execute the item, the person or the agents, from its assignee or an `executor` label; an item open to both is scored in both. The allocation factor $\alpha_{g,k}$ compares the goal's `target_share` $\tau_{g,k}$ for that pool with its actual share $a_{g,k}$ of the pool's closed effort over a trailing window, and is 1 when no target is set. The state factor $\sigma_g$ is 1 for an active achieve goal or a breached maintain goal, 0.5 for a maintain goal inside its band, halved again when its check-in is overdue, and 0 for a paused, dropped or done goal. The goal's order breaks ties only and never changes a weight ([D-18](#d-18)).
+
+Every constant is call-time config in `beads-ui.toml`:
+
+```toml
+[goals.alignment]
+beta = 1.0                 # strength of the boost on the WSJF composite
+blocks_discount = 0.5      # alignment passed back along each blocks edge
+blocks_depth = 3           # how many blocks edges alignment travels
+window_days = 28           # trailing window for actual effort shares
+state_in_band = 0.5
+state_overdue_factor = 0.5
+```
+
+Alignment also flows backwards along `blocks` edges, so a decision or blocker that holds up goal-serving work inherits that work's alignment times `blocks_discount` per edge, up to `blocks_depth` edges; the Review queue then ranks Sergei's own answers by the goals they unblock. Completion is read from `closed_at`, never `updated_at`. Unaligned work keeps its WSJF score and appears in an "unaligned work" list, never hidden, though aligned work can now overtake it in the queue. Agent-proposed links count only after Sergei reviews them, which closes the score's main gaming path. Where the score changes ordering is [D-8](#d-8), left for Sergei.
 
 ### Goal views
 
@@ -186,7 +209,7 @@ Private records live only in Beads stores of private-class repositories on the p
 
 Every guard fails closed on missing or unreadable configuration, never echoes matched text, is pinned by a test, and is installed on every machine profile through the installer step that deploys each repository's hooks. One exception is deliberate: the private term list never exists on the employer host, so there the content scan reports `not-declared` while the structural rules still refuse.
 
-The guarantee is exact for goal records and marked tasks. Two cases are covered only by the term-list scan: an unmarked task whose text is private, and text an agent derives from a private goal and writes into a shared task, comment, commit message or summary. The scan runs on personal hosts and in the web app's write API; it does not run on the employer host.
+The guarantee is exact on every guarded path of a machine whose guards are installed and verified, for goal records and marked tasks; a write by a tool that bypasses those paths, such as a raw `dolt` binary or a machine without the guards, is caught only after the fact by the periodic scan. Whether that is strong enough for the ask's "never", or a server-side gateway must hold the only write path to shared remotes, is [D-20](#d-20), left for Sergei. Two cases are covered only by the term-list scan: an unmarked task whose text is private, and text an agent derives from a private goal and writes into a shared task, comment, commit message or summary. The scan runs on personal hosts and in the web app's write API; it does not run on the employer host.
 
 ```mermaid
 flowchart LR
@@ -203,6 +226,17 @@ flowchart LR
 ```
 
 Legend: nothing private flows into a shared repository; the solid edge is a read, or an edit to shared work through the guarded write API, and the dashed edge marks the refusing guards.
+
+### Caches, logs and backups
+
+| Place | Rule |
+|---|---|
+| Web server responses for private-store records | `Cache-Control: no-store`; never written to a server-side cache |
+| The browser | no persistent client cache of private-store records: no IndexedDB or local storage of their titles or bodies |
+| Application logs | record ids and counts only for private-store records, never titles, bodies or goal names |
+| Backups of private stores | stay on personal-pair hosts and are never copied to a shared remote or an employer host |
+
+Phase G3 tests each row.
 
 ### Prior work
 
@@ -225,13 +259,19 @@ Goal (Beads issue, issue_type = "goal")
     progress_source: "work_estimate" | "work_count" | "subgoal" | "metric" | "manual",
     orientation: "learn" | "perform",
     motivation?, obstacles?,
-    marking: "shared" | "personal" | "private" | "sensitive" | "domain",
+    conflicts_with?: [ <goal-id> ],
+    checkin_every_days?: integer,
+    band?: { metric, low, high },               # required when kind = maintain
+    target_share?: { person?: 0..1, agents?: 0..1 },
     order?: fractional-index string,             # optional "your order right now" (D-18)
     docs?: [ <repo path or URL> ],
     lifecycle?: "paused" | "dropped", lifecycle_reason?,
     contributions: { <member-id>: "make" | "help" },   # a milestone is a member of Beads' milestone type
     links_pending_review: [ <edge ref> ]       # agent-proposed links
   }
+Any issue (goal or task)
+  metadata.privacy = { marking: "shared" | "personal" | "private" | "sensitive" | "domain" }
+                                             # goals default private; tasks default to their store's class
 Edge: <member> relates-to <goal>             # read as contributes-to because the target is a goal (D-2)
 Edge: <objective> parent-child <aspiration>  # refines
 Edge: <goal> blocks | relates-to <goal>
@@ -260,16 +300,20 @@ The guard ships before the goal type, so no marked record can exist before somet
 ### Phase G1: The private-goal guard (lands in ai-harness, installed on every profile)
 
 - **Scope:** the six guard points of [The private-goal guard](#the-private-goal-guard); the wrapper for the raw `bd dolt push`; the private-id scan rule extended to hash and slug ids; the shared-by-default repository rule and the `privacy_class` registry; the host-class rule; the periodic scan on a personal host.
-- **Deliverables (ai-harness):** a `private_goal_guard` module with one entry point per guard point; hooks wired at `bd` create and update, at store publication and the raw `bd dolt push`, at pre-commit and pre-push over the full pushed range, at git-inbox, Agent Mail and held-item send, and at host startup; the private term list read from a personal-host-only path, never tracked; the periodic scan as a timer on a personal host; `docs/procedures/private-goal-guard.md`; tests for every guard point.
+- **Deliverables (ai-harness):** `scripts/private_goal_guard.py`, a module with one entry point per guard point, and its tests `tests/test_private_goal_guard.py` (one red-arm and one green-arm case per entry point) and `tests/test_bd_dolt_push_wrapper.py`; hooks wired at `bd` create and update, at store publication and the raw `bd dolt push`, at pre-commit and pre-push over the full pushed range, at git-inbox, Agent Mail and held-item send, and at host startup; the private term list read from a personal-host-only path, never tracked; the periodic scan as a timer on a personal host; `docs/procedures/private-goal-guard.md`; tests for every guard point.
 - **Tasks + acceptance criteria:**
   - **T-G1.1 Store writes**
-    - [ ] `When a goal whose marking is personal, private, sensitive or domain is created or updated in a store of a shared-class repository, the system shall refuse the write, exit non-zero and name the guard and the rule without echoing the record's text.`
-    - [ ] `When a task linked to such a goal is created or updated in a store of a shared-class repository, the system shall refuse the write in the same way.`
+    - [ ] `When a goal whose marking is personal, private, sensitive or domain is created or updated in a store of a shared-class repository, the system shall refuse the write.`
+    - [ ] `When a task whose own marking is personal, private, sensitive or domain is created or updated in a store of a shared-class repository, the system shall refuse the write.`
+    - [ ] `When the guard refuses a write, it shall exit non-zero.`
+    - [ ] `When the guard refuses a write, its message shall name the guard and the rule and shall not contain the record's text.`
+    - [ ] `When a task with no marking is created in a shared-class store, the system shall record it as shared and allow it.`
     - [ ] `When a goal-type record whose marking is not shared, or is absent, is written to a store of a shared-class repository, the system shall refuse the write.`
     - [ ] `When the same records are written to a store of a private-class repository on a personal-pair host, the system shall allow them.`
     - [ ] `If the store's repository class cannot be read, then the system shall refuse the write as shared.`
   - **T-G1.2 Publication**
-    - [ ] `When a shared-class store is published through the store publisher and it holds a record T-G1.1 refuses, the system shall refuse the publication before any Dolt push and shall name the count of such records only.`
+    - [ ] `When a shared-class store is published through the store publisher and it holds a record T-G1.1 refuses, the system shall refuse the publication before any Dolt push.`
+    - [ ] `When the publisher refuses, its message shall give the count of such records and no record text or id.`
     - [ ] `When bd dolt push is run against a shared-class store, the wrapper shall run the same check and refuse a store holding such a record.`
     - [ ] `When the build first runs a Dolt push to a git+ssh remote, it shall record in the Approval Log whether the git pre-push hook ran, and if it ran, the pre-push guard shall also run the store check.`
   - **T-G1.3 Commit and push**
@@ -301,16 +345,23 @@ The guard ships before the goal type, so no marked record can exist before somet
     - [ ] `If a goal link would create a cycle among goals, then the system shall refuse it and name the cycle.`
     - [ ] `If a parent-child edge would make an issue that is not a goal the parent of a goal, then the system shall refuse it.`
     - [ ] `When the core reads a relates-to edge, the system shall treat it as membership only when its target is a goal and its source is not, and as a goal relation when both endpoints are goals.`
-    - [ ] `When a private goal's links name work in a shared store, the core shall join them with that work at read time and run the cycle check over the joined edges, and shall write nothing to the shared store.`
+    - [ ] `When a private goal's links name work in a shared store, the core shall join them with that work at read time and run the cycle check over the joined edges.`
+    - [ ] `When the core joins private links with shared work, it shall write nothing to the shared store.`
+    - [ ] `If the goal model receives metadata.goal with an unknown level, kind or progress source, then it shall reject the record and name the field.`
+    - [ ] `If a maintain goal has no band, then the system shall refuse to save it and name the band field.`
   - **T-G2.2 Progress and health**
     - [ ] `When a goal's progress source is work_estimate and at least half its members carry estimates, the system shall compute progress as done points plus a quarter of in-progress points over total points, counting an epic's children through descendant inclusion.`
     - [ ] `If fewer than half the members carry estimates, then the system shall compute progress from counts and label the method.`
     - [ ] `If a goal has no members, then the system shall show "no data" and shall not show 0% progress.`
     - [ ] `If a store holding a goal's members or links cannot be read, then the system shall show "no data" for that goal, name the store's repository class, and shall not show 0% progress.`
+    - [ ] `When an issue is linked to a goal directly and is also reached through a linked epic or through two linked ancestors, the system shall count it once, at its strongest contribution.`
+    - [ ] `If a contributions map entry names an issue with no membership edge, then the system shall ignore it, and if a membership edge has no map entry, then the system shall count it as help.`
     - [ ] `When a member issue of Beads' milestone type is linked to a goal, the system shall count it as make and mark it as a checkpoint on the timeline.`
     - [ ] `When the system computes completion for progress, it shall read closed_at and shall not read updated_at.`
     - [ ] `When a check-in comment is added, the system shall set health from its first line.`
-    - [ ] `If a goal's check-in cadence has passed with no check-in, then the system shall show "update missing" rather than a computed health.`
+    - [ ] `If a goal's checkin_every_days has passed with no check-in, then the system shall show "update missing" rather than a computed health.`
+    - [ ] `If a goal has no checkin_every_days, then the system shall never show "update missing" for it.`
+    - [ ] `If a check-in comment's first line does not parse, then the system shall keep the previous health and show the parse error on the comment.`
   - **T-G2.3 Lifecycle and order**
     - [ ] `When a goal is dropped, the system shall require a reason and shall offer to create or pick a replacement goal.`
     - [ ] `While a goal is paused, the system shall exclude it from alignment weights and from overdue warnings.`
@@ -336,6 +387,8 @@ The guard ships before the goal type, so no marked record can exist before somet
   - [ ] `When an issue serves one or more goals, the mod's task row shall show a goal indicator naming the goal with the highest weight.`
   - [ ] `When the mod's Goals view opens, it shall list the store's goals in order with their progress and health.`
   - [ ] `When the MCP App renders a goal, it shall draw it from the same core goal view model the web app uses.`
+  - [ ] `When the web server returns a private-store record, it shall send Cache-Control: no-store, and the app shall keep no copy of its title or body in persistent browser storage.`
+  - [ ] `When the web server logs a request touching a private-store record, the log line shall carry ids and counts only.`
 - **Exit gate:** beads-ui gate green; Playwright goals specs green at 390 px and 1280 px; the views used on a real store on the personal pair, recorded in the Approval Log.
 
 ### Phase G4: Alignment in the queues
@@ -344,6 +397,10 @@ The guard ships before the goal type, so no marked record can exist before somet
 - **Deliverables:** `plugins/beads-ui/core/src/goals/alignment.ts`; the queue-ordering change in the repository D-8 names; tests `plugins/beads-ui/core/test/goals/alignment.test.ts`.
 - **Tasks + acceptance criteria:**
   - [ ] `When an item's goals and contribution strengths are known, the system shall compute its alignment as the noisy-OR of strength times goal weight, capped at 1.`
+  - [ ] `When the system computes a goal's weight for a pool, it shall multiply the priority factor, the allocation factor and the state factor defined in Alignment, reading every constant from [goals.alignment] at call time.`
+  - [ ] `When the alignment module is given the research's worked example as input, it shall reproduce that example's alignments and order exactly.`
+  - [ ] `If [goals.alignment] is missing or holds a value out of range, then the system shall use the documented defaults, name the bad key, and shall not stop ordering the queue.`
+  - [ ] `If a goal has a target_share for a pool but the window holds no closed work for that pool, then the allocation factor shall be 1.`
   - [ ] `When an item's alignment is known, the system shall compute its score as the WSJF composite times one plus beta times alignment.`
   - [ ] `If an item has a priority override, then the system shall order it by the override as it does today.`
   - [ ] `When an item blocks goal-serving work, the system shall give it that work's alignment times the configured blocks discount.`
@@ -360,7 +417,7 @@ The guard ships before the goal type, so no marked record can exist before somet
 | # | Phase | Section / Decision | Verified | Notes |
 |---|-------|--------------------|---------|-------|
 | 1 | N/A | Design Overview filled with implementation knowledge, not a stub | - [ ] | |
-| 2 | G1 | D-11 to D-15 (the guard) | - [ ] | |
+| 2 | G1 | D-11 to D-15 and D-20 (the guard) | - [ ] | |
 | 3 | G2 | D-1 to D-6, D-18, D-19 | - [ ] | |
 | 4 | G3 | D-9, D-10 | - [ ] | |
 | 5 | G4 | D-7, D-8 | - [ ] | |
@@ -422,11 +479,11 @@ This design doc hosts the `/auto-flow` Run Ledger for the goals system's design 
 | research route | claude / opus, four `researcher` leaves (the fourth folding in aih-fw-2's prior-work compile) and one `auditor` verifier; synthesis by the Opus coordinator under the orchestrator authorship override |
 | doc route | claude / opus / n/a: the Opus coordinator authors this doc under `/doc --kind design --mode automated` through `flow_dispatch_doc.py --phase prepare` and `--phase complete`. Prepare pinned the integration snapshot at `4a3a17c` (lineage root `docs/research/goals-system.md`, lineage receipt `complete`, no protected decisions); `--phase complete` passed on 2026-10-28 against the same snapshot |
 | doc-audit route | codex / audit / high, cross-family: read-only review rounds through `cx audit`, each writing one evidence file, with the fixes made by the Opus coordinator. The audit loop's fix stage would have Codex write doc text, which this host's rule that Codex only reviews rules out |
-| decider | the Opus coordinator (`us.anthropic.claude-opus-5-5`) through `/decision-framework`; two decisions left for Sergei ([D-8](#d-8), [D-14](#d-14)) and one open question about the scope of his own ruling |
+| decider | the Opus coordinator (`us.anthropic.claude-opus-5-5`) through `/decision-framework`; four decisions left for Sergei ([D-8](#d-8), [D-14](#d-14), [D-17](#d-17), [D-20](#d-20)) and one open question about the scope of his own ruling |
 | max-agents | 3 concurrent children (launcher's cap); one at a time under the host's load holds of 2026-10-28 |
 | target commit (beads-ui) | `4a3a17c` when the design stage began |
 | worktree + branch | `/data/projects/beads-ui/.worktrees/aih-ec2-3-agents/bu-goals-webapp-coordinator` on `wt/aih-ec2-3/bu-goals-webapp-coordinator` |
-| stage cursor | `doc done` (`flow_dispatch_doc.py --phase complete` passed against `4a3a17c`); `doc-audit` next; the run stops after it for Sergei's review |
+| stage cursor | `doc-audit`, round 2 next, after `doc done` (`flow_dispatch_doc.py --phase complete` passed against `4a3a17c`) and round 1 applied; the run stops when the audit converges, for Sergei's review |
 | last completed integration boundary | research landed on main at `4a3a17c` (PRs #78, #79, #80, #81) |
 
 ### Transition verdicts
@@ -436,13 +493,19 @@ This design doc hosts the `/auto-flow` Run Ledger for the goals system's design 
 | `entry->research` | 0 | `research-run` | `explicit` | A001 names the stage: "i want you to /orchestrate /research-doc good UI/UX and design for how to build a goal system"; the launcher's brief repeats it | `session` | `c07cb3c` |
 | `research->doc` | 1 | `converged` | `rubric` | none open: G1 to G6 clear after the verifier's pass (`docs/research/findings/evidence/goals-system-verification-2026-10-28.md`) and its MUST-FIX items 1 to 12 applied; item 13, the founding-ask capture commit not yet on a shared ai-harness ref, is a landing step handed to aih-ec2-3 | `session` | `6cb2901` |
 
+### Doc-audit rounds
+
+| Round | Reviewer | Bytes audited | Evidence | Findings | Disposition |
+|---:|---|---|---|---|---|
+| 1 | codex / audit / high (cross-family) | working tree at sha256 `c47802cc55861b6796a203ab6dd1bf74a37301a70462b0c6035d88fe3546859e`, committed as the next commit after `69073cc` | [round 1 findings](../research/findings/evidence/beads-goals-system-design-audit-r1-2026-10-28.md) | 11 MUST-FIX, 2 WORTH-CONSIDERING | Fixed: the guarantee is stated to its mechanism and its strength goes to Sergei as D-20 (M1); a task's marking is its own and is not inherited (M2); one `metadata.privacy.marking` field for every record with defaults and criteria (M3); D-17 returned to Sergei under Gate B (M4); D-3's two writes made safe without atomicity (M5); `conflicts_with`, `checkin_every_days`, `band` and `target_share` added (M6); the full alignment formula and its config (M7); D-2's record names (a) only (M8); members are a set with one count per issue (M9); compound criteria split, failure paths and G1's file paths added (M10); a caches, logs and backups table (W2); this digest column (W1). Not changed (M11): the `task_id` in the canonical root is `BU-epic-goals-system-usmm`, this public repository's own store id, and the line must stay byte-identical for the fidelity check |
+
 <!-- /doc:region name="overview" -->
 
 <!-- doc:region name="decisions" kind="replaceable" -->
 
 ## Design Decisions
 
-Every decision below was taken through the decision framework (`ai-harness/docs/procedures/decision-framework.md`): Gate 0 first, then the Authority test, then the five criteria, and each chosen option's Cons carry a mitigation. `✅ Resolved by Opus orchestrator` decisions are final for this run and go to Sergei's review with the rest of the doc, as he asked; D-8 and D-14 are left `⏳ PENDING (human)` because a gate fires on each.
+Every decision below was taken through the decision framework (`ai-harness/docs/procedures/decision-framework.md`): Gate 0 first, then the Authority test, then the five criteria, and each chosen option's Cons carry a mitigation. `✅ Resolved by Opus orchestrator` decisions are final for this run and go to Sergei's review with the rest of the doc, as he asked; D-8, D-14, D-17 and D-20 are left `⏳ PENDING (human)` because a gate fires on each.
 
 ### Decision Summary
 
@@ -464,9 +527,10 @@ Every decision below was taken through the decision framework (`ai-harness/docs/
 | D-14 | Where employer-domain goals live | (a) the employer workspace store on the work pair, marked domain; (b) a private store on the personal pair; (c) not supported | (a) | | | An employer-data boundary, Sergei's call | `⏳ PENDING (human)` |
 | D-15 | Where the private term list lives | (a) a personal-host-only file, never tracked; (b) tracked and encrypted | (a) | | | The employer host should hold no private content, the list included | `✅ Resolved by Opus orchestrator` |
 | D-16 | Reuse of the first goals system | (a) map selected concepts onto Beads, scoring optional and derived; (b) design from scratch; (c) adapt the archived services | (a) | | | The compile's own recommendation; Beads stays authoritative | `✅ Resolved by Opus orchestrator` |
-| D-17 | Scoring in the first release | (a) no daily score, achievements or coach, intents served directly; (b) rebuild the daily score; (c) an opt-in score | (a) | | | Evidence against gamification; departs from the April design, called out for review | `✅ Resolved by Opus orchestrator` |
+| D-17 | Scoring in the first release | (a) no daily score, achievements or coach, intents served directly; (b) rebuild the daily score; (c) an opt-in score | (a) | | | Evidence against gamification; departs from the April design, called out for review | `⏳ PENDING (human)` |
 | D-18 | An order among goals | (a) an optional order beside priority; (b) a strict rank replacing priority; (c) priority only | (a) | | | Breaks the "everything is P0" failure without a strict ranking | `✅ Resolved by Opus orchestrator` |
 | D-19 | Private goals over shared work | (a) join at read time on the personal pair, checks in core, "no data" for an unreadable store; (b) copy shared work into the private store; (c) private goals link only private work | (a) | | | (c) narrows the ask; the join failure becomes visible | `✅ Resolved by Opus orchestrator` |
+| D-20 | How strong "never" is | (a) client-side guards, verified, with detection; (b) a server-side push gateway; (c) (a) now, (b) after a leak | (a) | | | Only (b) prevents a bypassing tool; choosing (a) alone would narrow the ask | `⏳ PENDING (human)` |
 
 ### Decision Details
 
@@ -551,11 +615,11 @@ Criterion 1: the representation becomes one-way fast as goals accumulate, and (a
 
 ##### Recommendation
 
-> **Decision:** `✅ Resolved by Opus orchestrator` — (a) `relates-to` from the member to the goal, read as membership by endpoint type, with (d) requested upstream.
-<!-- decision-record: chosen-option=(a)+(d); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5; ai-effort=high; ai-profile=architect -->
+> **Decision:** `✅ Resolved by Opus orchestrator` — (a) `relates-to` from the member to the goal, read as membership by endpoint type.
+<!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-ylx.11.2/D-2; decision-topic=the edge that records goal membership; governs=beads:edges,core:goals; normalized-proposition=goal membership is a relates-to edge from member to goal, read by endpoint type, with an upstream request for a dedicated kind; applicability=phase:G2; outcome-id=; relation=different-question; related-decision-id=BU-mg2.2/D-5; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-(a) and (c) both read meaning from endpoint types; (a) is chosen because no existing beads-ui code reads `relates-to` as membership, so the overload touches only new goal code, while (c) would change D-5's built sprint code. Mitigation for the overload: one core function decides an edge's meaning from its endpoint types, with a test for each case (T-G2.1), and the build files the upstream request so a dedicated kind can replace the overload by migration. Confidence: medium-high.
+(a) and (c) both read meaning from endpoint types; (a) is chosen because no existing beads-ui code reads `relates-to` as membership, so the overload touches only new goal code, while (c) would change D-5's built sprint code. Mitigation for the overload: one core function decides an edge's meaning from its endpoint types, with a test for each case (T-G2.1), and the build files an upstream request for a dedicated kind, so it can replace the overload by migration if Beads adds one; the build proceeds on (a) in the meantime, which is why (d) is not chosen. Confidence: medium-high.
 
 ---
 
@@ -595,7 +659,7 @@ Criterion 1: the representation becomes one-way fast as goals accumulate, and (a
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-ylx.11.2/D-3; decision-topic=storage of contribution strength; governs=core:goals; normalized-proposition=contribution strength lives in the goal's metadata map keyed by member until edge metadata is writable; applicability=phase:G2; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-A milestone is not a third strength: it is a member issue of Beads' built-in `milestone` type, linked with `make`, as the fold-in research recommends. Mitigation for drift: core writes the edge and the map entry in one `bd batch` and treats a map entry with no edge as absent; a reconcile test pins it. Confidence: high.
+A milestone is not a third strength: it is a member issue of Beads' built-in `milestone` type, linked with `make`, as the fold-in research recommends. `bd batch` cannot write metadata, so the two writes are not atomic, and the reader makes that safe: core writes the edge first and the map entry second, reads an edge with no map entry as `help`, and ignores a map entry with no edge. Mitigation for drift: a crash between the two writes therefore leaves a valid, weaker link rather than a broken one, and tests pin both half-written states. Confidence: high.
 
 ---
 
@@ -894,7 +958,7 @@ Mitigation: undated members sit in an undated lane and are excluded from the pat
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-ylx.11.2/D-11; decision-topic=how a goal's privacy is marked; governs=privacy:marking; normalized-proposition=a goal carries a marking field, defaulting to private, checked against its store's class; applicability=phase:G1; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-A task inherits the strictest marking of the goals it serves. Two rules make forgetting fail safe: a goal-type record whose marking is not `shared` is refused in a shared-class store, so an unmarked goal cannot slip through as unmarked; and every repository is shared unless it declares itself private with a committed marker in its own tree, so public repositories such as beads-ui are guarded too, which broadens the ask's "core repo ... cloned ... on all machines" in the protective direction. Mitigation for the shared-goal friction: creating a goal in a shared-class store offers `shared` as the one-key choice. Confidence: high.
+A task's marking describes its own content and is not inherited from the goals it serves: a shared task can serve a private goal because that link lives in the private store ([D-19](#d-19)), and a task whose own text is private is created in a private store. Two rules make forgetting fail safe: a goal-type record whose marking is not `shared` is refused in a shared-class store, so an unmarked goal cannot slip through as unmarked; and every repository is shared unless it declares itself private with a committed marker in its own tree, so public repositories such as beads-ui are guarded too, which broadens the ask's "core repo ... cloned ... on all machines" in the protective direction. Mitigation for the shared-goal friction: creating a goal in a shared-class store offers `shared` as the one-key choice. Confidence: high.
 
 ---
 
@@ -1090,7 +1154,7 @@ Mitigation: [Prior work](#prior-work) lists each reused concept with its new hom
 
 <a id="d-17"></a>
 
-#### D-17: Scoring in the first release — `✅ Resolved by Opus orchestrator`
+#### D-17: Scoring in the first release — `⏳ PENDING (human)`
 
 **Context.** The first goals system had an owner-approved design (April 2026) for a daily score of alignment, effort and consistency, plus achievements and a narrative coach. Its code diverged from that design in three measured places, its own research found no productivity system that sustained gamified engagement past one to two years, and this run's goal science finds reward-contingent tasks lower intrinsic motivation. The founding ask asks for prioritising work toward goals, not for a score. This departs from a design Sergei approved for the old system, so it is called out here for his review.
 
@@ -1121,11 +1185,11 @@ Mitigation: [Prior work](#prior-work) lists each reused concept with its new hom
 
 ##### Recommendation
 
-> **Decision:** `✅ Resolved by Opus orchestrator` — (a) No daily score, achievements or coach in the first release.
-<!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5; ai-effort=high; ai-profile=architect -->
+> **Decision:** `PENDING` — recommended (a) No daily score, achievements or coach in the first release.
+<!-- decision-record: chosen-option=PENDING; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
 <!-- decision-lineage: decision-id=BU-ylx.11.2/D-17; decision-topic=scoring and gamification in the first goals release; governs=core:goals,apps:web; normalized-proposition=the first goals release has no daily score, achievements or narrative coach and serves their intents directly; applicability=phase:G2; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-The April approval was for a different system, and no founding-ask requirement names a score, so Gate 0 does not fire; Sergei's review sees this decision explicitly. Mitigation for the dropped design: its intents are each met by a named mechanism above, and a later release can add an optional score on top of the same goal model without migration. Confidence: medium-high.
+No founding-ask requirement names a score, so Gate 0 does not fire, but the daily score, achievements and coach were in a design Sergei approved in April 2026, so option (a) would reverse content he approved and the Authority test returns it to him (Gate B). Mitigation for the dropped design: its intents are each met by a named mechanism above, and a later release can add an optional score on top of the same goal model without migration. Confidence: medium-high.
 
 ---
 
@@ -1207,6 +1271,47 @@ Mitigation: the goal tree shows priority as the weight and the order as position
 <!-- decision-lineage: decision-id=BU-ylx.11.2/D-19; decision-topic=private goals served by shared work; governs=core:goals,apps:web,privacy:links; normalized-proposition=the personal-pair web server joins private-store goal links with shared-store work at read time and computes checks over the union in core; applicability=phase:G2; outcome-id=; relation=refines; related-decision-id=BU-ylx.11.2/D-12; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
 Gate 0 rules out (c). Mitigation for the Con: core's goal-graph module runs one cycle check over the joined edge set, with tests for a cycle that crosses stores and for a store that cannot be read (T-G2.1, T-G2.2); the join reads shared stores and writes nothing to them. Confidence: high.
+
+---
+
+<a id="d-20"></a>
+
+#### D-20: How strong "never" is — `⏳ PENDING (human)`
+
+**Context.** The ask says marked goals and their tasks must "never" be committed, pushed or merged into a shared repository, through "an enforcement / validation etc system". [D-13](#d-13)'s guards run on the client. They prevent every write through a guarded path on a machine where they are installed and verified, but a tool that bypasses those paths, such as a raw `dolt` binary or a machine without the guards, can still publish, and the periodic scan finds it only afterwards. GitHub offers no content-aware server-side check on these repositories: pre-receive hooks exist only on GitHub Enterprise Server, and push rulesets match paths, not content. Audit round 1 found that the AI resolving this as sufficient would narrow the ask's "never", so it is Sergei's (Gate 0).
+
+##### (a) Client-side guards on every profile, verified by doctor, with the periodic scan as detection
+
+**Pros:**
+- Buildable now on the existing installer path, with no new infrastructure.
+- Covers every path the fleet's own tools use.
+
+**Cons:**
+- A bypassing tool or an unguarded machine can still publish; that case is detected, not prevented.
+
+##### (b) A server-side push gateway: shared remotes accept pushes only from a self-hosted mirror that runs the content checks before forwarding
+
+**Pros:**
+- Prevention that no client can bypass, which matches "never" literally.
+
+**Cons:**
+- New infrastructure on the personal pair that every shared repository's pushes depend on, and a single point of failure for every machine's pushes.
+
+##### (c) (a) now, and (b) only if the scan ever finds a leak
+
+**Pros:**
+- No new infrastructure unless the client-side guards are shown to fail.
+
+**Cons:**
+- The first leak happens before (b) exists, and Dolt history keeps it.
+
+##### Recommendation
+
+> **Decision:** `PENDING` — recommended (a), with the bypass stated in the guard's own documentation.
+<!-- decision-record: chosen-option=PENDING; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
+<!-- decision-lineage: decision-id=BU-ylx.11.2/D-20; decision-topic=strength of the never guarantee; governs=privacy:guard; normalized-proposition=client-side guards with verification and detection are the enforcement for the private-goal rule; applicability=phase:G1; outcome-id=; relation=refines; related-decision-id=BU-ylx.11.2/D-13; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+
+The recommendation rests on where the leak routes are: every route the research found goes through a fleet tool, and each of those is guarded, so the residual is a person or agent deliberately running an unguarded tool. Its Con would be mitigated by the wrapper refusing the raw Dolt push for shared stores, doctor reporting any machine without the guards, and the periodic scan from a personal host. If Sergei wants prevention with no bypass, (b) is the only option that gives it, and Phase G1 is written so that (b) adds a gateway without changing the guard module.
 
 ---
 
