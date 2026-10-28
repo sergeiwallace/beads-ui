@@ -27,8 +27,8 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 | Entry | Clause (quoted or closely paraphrased) | Coverage and disposition |
 |---|---|---|
 | A001 | a goals system "as a fundamental architectural component to the beads task system hierarchy where it will be like the chief most possible parent beads task type" | [Goal model](#goal-model); [D-1](#d-1), [D-4](#d-4) |
-| A001 | "optionall assign all beads tasks to one or more goals (or no goals)" | [Goal model](#goal-model); [D-2](#d-2), [D-3](#d-3) |
-| A001 | view goals organisationally by priority; "all the usual linkages such as relates to and dependencies and blocks" | [D-4](#d-4); [Goal views](#goal-views) |
+| A001 | "optionall assign all beads tasks to one or more goals (or no goals)" | [Goal model](#goal-model); [D-2](#d-2), [D-3](#d-3); a shared task can serve a private goal through [D-19](#d-19) |
+| A001 | view goals organisationally by priority; "all the usual linkages such as relates to and dependencies and blocks" | [D-4](#d-4); [Goal views](#goal-views): the goal tree and the goal health board in priority order |
 | A001 | a system that sits on top of epics, stories and tasks, better than Atlassian's | [Goal model](#goal-model), [Progress and health](#progress-and-health); [D-5](#d-5) |
 | A001 | interactive visualisations of the work under each goal, its dependencies, blockers and links, "in a hierarchical linked graph" | [Goal views](#goal-views); [D-9](#d-9) |
 | A001 | "start / end / due date fields"; Gantt chart, timeline and graph views with dependency and blocker links | [Goal model](#goal-model), [Goal views](#goal-views); [D-1](#d-1), [D-10](#d-10) |
@@ -283,6 +283,7 @@ The guard ships before the goal type, so no marked record can exist before somet
     - [ ] `When a host of the employer class starts the web app or the store refresher and finds a private-class store present, the system shall refuse to open it and report the store count only.`
     - [ ] `While the private term list is absent on an employer-class host, the content scan shall report not-declared, and the structural rules of T-G1.1 to T-G1.4 shall still refuse.`
     - [ ] `When the periodic scan runs on a personal-pair host and finds a marked record or private id in a shared-class repository's tip, the system shall file a report in a private store and never in a shared one.`
+    - [ ] `When a reader that copies text out of Beads stores (recall indexing, transcript harvesting, a delegate's brief) runs on a host, it shall read only the repositories that host's allowlist permits, and a red-arm test per reader shall show it skipping a private-class store.`
   - **T-G1.6 Installation**
     - [ ] `When install.sh apply runs on any machine profile, the system shall install every guard and the bd dolt push wrapper.`
     - [ ] `When doctor runs, it shall report each guard point installed or missing, per repository.`
@@ -331,6 +332,10 @@ The guard ships before the goal type, so no marked record can exist before somet
   - [ ] `If the critical-path module receives a dependency cycle, then it shall return the cycle as an error and draw no path.`
   - [ ] `When the allocation view renders, the system shall show closed and in-progress effort by goal for the person and for agents separately, and list work with no goal.`
   - [ ] `When an edit to a shared-store issue is made from a goal view on the personal pair, the write API shall run the private term-list check and refuse a matching edit without echoing the text.`
+  - [ ] `When a goal's check-in is overdue, a goal is paused with no replacement, or an agent-proposed link awaits review, the Review queue shall list the item under goal review, in goal priority order.`
+  - [ ] `When an issue serves one or more goals, the mod's task row shall show a goal indicator naming the goal with the highest weight.`
+  - [ ] `When the mod's Goals view opens, it shall list the store's goals in order with their progress and health.`
+  - [ ] `When the MCP App renders a goal, it shall draw it from the same core goal view model the web app uses.`
 - **Exit gate:** beads-ui gate green; Playwright goals specs green at 390 px and 1280 px; the views used on a real store on the personal pair, recorded in the Approval Log.
 
 ### Phase G4: Alignment in the queues
@@ -368,7 +373,7 @@ The guard ships before the goal type, so no marked record can exist before somet
 |---|------|--------|------------|
 | 1 | A marked record is written to a shared store before the guard ships | Personal content on every machine, kept in Dolt history | Phase G1 ships the guards before any goal type exists; a new goal defaults to `private` |
 | 2 | Link inflation games the alignment score | Low-value work rises in the queue | Noisy-OR caps $A_i$ at 1; every link records its author; agent links count only after review |
-| 3 | Maintenance work with no goal sinks | Hygiene work starves | Unaligned work keeps its WSJF rank; $\beta$ is call-time config; a breached maintain goal gets full weight |
+| 3 | Maintenance work with no goal sinks | Hygiene work starves | Unaligned work keeps its WSJF score and its own list, though aligned work can overtake it; $\beta$ is call-time config; a breached maintain goal gets full weight |
 | 4 | Check-ins become nagging | Goals are abandoned or ignored | Check-ins are prompted only for goals Sergei owns, at his chosen cadence, from the Review queue; no streaks |
 | 5 | A private goal's existence leaks through a public item's rank | Indirect disclosure | Alignment for shared items is computed on the private side and never written back to a shared store |
 | 6 | The first system's failure repeats: goals lose their link to tasks | Goals become decoration | Membership is a Beads edge in the same store as the task, read by every view; an empty link set shows "no data", never 0%; a test pins the roll-up |
@@ -376,6 +381,7 @@ The guard ships before the goal type, so no marked record can exist before somet
 | 8 | A strict goal order feels like a ranking to defend | Negative affect and conflict, measured for strict prioritisation | The order is optional and labelled "your order right now"; priority remains the weight |
 | 9 | A raw `bd dolt push` publishes a shared store without the publisher's check | A private row reaches every machine and stays in Dolt history | A wrapper refuses the raw verb for shared stores; the build measures whether pre-push runs for a Dolt push and adds the store check there if it does (T-G1.2) |
 | 10 | Private text reaches shared work unmarked, typed by hand or derived by an agent | Personal content in a shared store | The term-list scan on personal hosts and in the web app's write API; stated as a residual risk, since no structural rule can see it |
+| 11 | A reader that copies text, such as recall indexing, transcript harvesting or a delegate's brief, carries private goal text into a shared data store | Personal content outside every guarded path | Each such reader reads only the repositories its host's allowlist permits, as the web app design's D-18 requires of the web server; Phase G1's build lists every reader of goal stores and adds a red-arm test per reader |
 
 ## Open Questions
 
@@ -527,13 +533,13 @@ Criterion 1: the representation becomes one-way fast as goals accumulate, and (a
 **Cons:**
 - Invisible to every Beads graph tool; the first system's "links nobody reads" problem.
 
-##### (c) `tracks`
+##### (c) `tracks`, told apart from sprint membership by its target's type
 
 **Pros:**
-- The natural word.
+- The natural word, and the products research's pick at medium confidence: one "belongs to" edge for sprints and goals.
 
 **Cons:**
-- Collides with D-5 of the beads-ui design.
+- D-5 of the beads-ui design already reads every `tracks` edge as sprint membership, so its built sprint code and views would all need the endpoint check, and an issue in a sprint that also serves a goal carries two `tracks` edges with different meanings.
 
 ##### (d) Wait for an upstream `contributes-to` edge kind
 
@@ -549,7 +555,7 @@ Criterion 1: the representation becomes one-way fast as goals accumulate, and (a
 <!-- decision-record: chosen-option=(a)+(d); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-ylx.11.2/D-2; decision-topic=the edge that records goal membership; governs=beads:edges,core:goals; normalized-proposition=goal membership is a relates-to edge from member to goal, read by endpoint type, with an upstream request for a dedicated kind; applicability=phase:G2; outcome-id=; relation=different-question; related-decision-id=BU-mg2.2/D-5; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-Mitigation for the overload: one core function decides an edge's meaning from its endpoint types, with a test for each case (T-G2.1), and the build files the upstream request so a dedicated kind can replace the overload by migration. Confidence: medium-high.
+(a) and (c) both read meaning from endpoint types; (a) is chosen because no existing beads-ui code reads `relates-to` as membership, so the overload touches only new goal code, while (c) would change D-5's built sprint code. Mitigation for the overload: one core function decides an edge's meaning from its endpoint types, with a test for each case (T-G2.1), and the build files the upstream request so a dedicated kind can replace the overload by migration. Confidence: medium-high.
 
 ---
 
@@ -714,7 +720,7 @@ Mitigation for the nudge: check-ins due appear in the web app's Review queue at 
 ##### (a) A noisy-OR of strength times goal weight, capped at 1, multiplying the WSJF composite
 
 **Pros:**
-- WSJF's structure and inputs are untouched; unaligned work keeps its rank.
+- WSJF's structure and inputs are untouched; unaligned work keeps its score, though aligned work can overtake it.
 - The cap stops many weak links from outweighing one strong one.
 
 **Cons:**
