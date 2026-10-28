@@ -63,7 +63,7 @@ The epic's newest note (2026-10-27) says Phases 1 to 3 are merged and installed 
 `aih-ec2-3`. `bd -C /data/projects/ai-harness show AIH-swgb4.8`: `[P2 · OPEN]`, "work-queue Phase 2:
 dashboard member app -- ai-core web/ SPA (Board, Task detail, Sessions) + SSE + app-portal apps.yaml
 registration". The epic's notes from early October name the Phase 2 prerequisites as absent on
-this host ("nothing on :8400/:4222/:5432, no tailscale"); section 4 below shows that has moved.
+this host (no queue services and no Tailscale); section 4 below shows that has moved.
 
 ## 3. The live idle-wake policy file on this host
 
@@ -77,49 +77,21 @@ ls: cannot access '/home/ubuntu/.config/ai-harness/idle-wake.json': No such file
 
 ## 4. Local listeners and processes
 
-`ss -ltnp`, filtered to the ports the queue and messaging designs name (pids removed):
-
-```text
-127.0.0.1:7777
-127.0.0.1:5432
-127.0.0.1:4222 users:(("nats-server",fd=3))
-127.0.0.1:8443
-127.0.0.1:8400 users:(("python",fd=3),("python",fd=3),("uvicorn",fd=3))
-```
-
-`ps -eo pid,etime,args`, filtered to `queue_waker|wq_tunnel|uvicorn` (pids and elapsed times as
-printed, arguments cut at 160 characters):
-
-```text
-2884 3-23:51:46 /opt/mcp-agent-mail/.venv/bin/python /opt/mcp-agent-mail/.venv/bin/uvicorn services.agent_mail.gateway:app --host 0.0.0.0 --port 8080
-4984 3-23:51:31 /home/ubuntu/.local/bin/uv run --no-dev uvicorn ai_core.main:app --host 127.0.0.1 --port 8400 --workers 2 --timeout-worker-healthcheck 60
-11757 3-23:51:11 ./.venv/bin/python scripts/wq_tunnel.py run --interval-seconds 15 --idle-when-unneeded
-```
-
-No `queue_waker` process was running. `systemctl --user list-units --all` held no queue-waker unit;
-`ai-harness-goal-waker.timer` was `active waiting`. `systemctl --user is-active
-ai-harness-agent-mail-notifier.service` printed `active`.
+Read with `ss -ltnp` and `ps -eo pid,etime,args`. The ai-core queue API, Postgres, NATS and the
+Agent Mail edge were running on this host; exact ports, bind addresses and command lines are
+omitted from this public file. No `queue_waker` process was running and
+`systemctl --user list-units --all` held no queue-waker unit; `ai-harness-goal-waker.timer` was
+`active waiting`, and `systemctl --user is-active ai-harness-agent-mail-notifier.service` printed
+`active`.
 
 ## 5. The ai-core queue API on this host
 
-`curl -s -m 5 http://127.0.0.1:8400/openapi.json` exited 0. `info` was
-`{'title': 'ai-core', 'version': '0.1.0'}`. Paths containing `queue` or `session`:
-
-```text
-/api/queue/sessions, /api/queue/sessions/{session_id}/heartbeat, /api/queue/sessions/{session_id}/state,
-/api/queue/sessions/{session_id}/liveness, /api/queue/sessions/{session_id}, /api/queue/next,
-/api/queue/prompts, /api/queue/prompts/{prompt_id}/ack, /api/queue/prompts/{prompt_id}/consumed,
-/api/queue/claim, /api/queue/leases/{lease_id}/release, /api/queue/block, /api/queue/done,
-/api/queue/briefing, /api/queue/gates/{repo}/{task_id}/resolve, /api/queue/bridge/pending,
-/api/queue/bridge/{command_id}/result, /api/queue/events, /api/queue/projection/{repo},
-/api/queue/tasks, /api/queue/tasks/{repo}/{task_id}, /api/queue/tasks/{repo}/{task_id}/status,
-/api/queue/review, /api/queue/inbox, /api/queue/skills, /api/queue/review/{item_id}/accept
-```
-
-`curl -s -m 5 -w '%{http_code}' http://127.0.0.1:8400/api/queue/sessions` printed `200` with no
-credential sent. The body was a JSON list of 88 rows; counted by `(machine, status)`:
-`[(('sem-kg-ec2', None), 87), (('unknown', None), 1)]`. Only that GET was issued; no prompt was
-queued, acknowledged or consumed.
+The queue API's OpenAPI document, read on the host's loopback, lists the session, prompt
+(`/api/queue/prompts` with `ack` and `consumed`), claim, lease, gate-resolve, events, projection,
+tasks, review and inbox routes. One read-only sessions request was issued; no prompt was queued,
+acknowledged or consumed. A data-scope issue in the ai-core queue on the work host is tracked
+privately and constrains the backend design: the web app puts its own auth and a per-host
+repository allowlist in front of the queue.
 
 ## 6. Tool availability during the run
 

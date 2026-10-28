@@ -236,7 +236,7 @@ literal `/wq next`. Delivery is at-least-once with a per-prompt id ledger; recei
 `delivered`, `acknowledged`, then `consumed`, `expired` or `cancelled`. Rationale: design § Event
 delivery. [VERIFIABLE][^11]
 
-On this host the API is live on `127.0.0.1:8400` with `/api/queue/prompts`, `/ack`, `/consumed`,
+On this host the API is live on loopback with `/api/queue/prompts`, `/ack`, `/consumed`,
 `/claim`, `/gates/{repo}/{task_id}/resolve` and `/events`; 88 sessions are registered. The `wq-*`
 hooks are wired for all machines. No `queue_waker` process or unit is running, so Lane B is absent
 here. Rationale: OpenAPI read, process list and manifest. [VERIFIABLE][^2][^13]
@@ -285,8 +285,8 @@ Rationale: synthesis of the sections above. [INFERENCE]
 ## Q3. Cross-host reach
 
 The two pairs are separate. `config/message-transports.json` names a work pair of acn-mac and
-sem-kg-ec2, relayed on sem-kg-ec2 through a cloud session-manager port forward (relay port 7777,
-board port 8443), and a personal pair of fw-lnx and mac relayed over Tailscale. Rationale: read the
+sem-kg-ec2, relayed on sem-kg-ec2 through a cloud session-manager port forward,
+and a personal pair of fw-lnx and mac relayed over Tailscale. Rationale: read the
 `pairs` block. [VERIFIABLE][^10]
 
 Agent Mail authenticates with per-machine client certificates the installer writes; a session's board
@@ -449,9 +449,10 @@ Who may send: only Sergei's authenticated web identity. On sem-kg-ec2 the server
 loopback and be reached through the port forward the pair already uses; on fw-lnx through Tailscale
 identity. Rationale: the pair transports in Q3. [INFERENCE]
 
-A measured hazard: the local queue API answered `GET /api/queue/sessions` with HTTP 200 and no
-credential. The queue design says the tailnet `/events` route needs a bearer token. A web app that
-proxies the queue must not widen that. Rationale: probe in the evidence file and design T-2.1.
+A data-scope issue in the ai-core queue on the work host is tracked privately and constrains the
+backend design. The queue design says the tailnet `/events` route needs a bearer token. A web app
+that proxies the queue must not widen what the queue exposes, and puts its own auth and a per-host
+repository allowlist in front of it. Rationale: probe in the evidence file and design T-2.1.
 [VERIFIABLE][^2][^11]
 
 Prompts stay advisory: "A queued prompt cannot grant a permission, bypass a gate, or push; it is
@@ -754,7 +755,7 @@ The dependency most likely to block is the policy switch. Phases 1 to 3 are merg
 9. Assignee vocabulary. beads-ui D-17's text says `<machine>/<session>`, while the fleet and D-42's
    measurement use the session name, which carries the host alias. The web app should route on the
    alias. [VERIFIABLE][^14][^20]
-10. Unauthenticated localhost reads on the queue API (Q7). I did not test writes.
+10. The queue's data scope on the work host (Q7) is tracked privately; this leg tested no writes.
 11. A mod's `$.prompt.submit` and a half-typed human draft: the pages fetched do not say whether a
     submit preserves the composer's draft. [NO SOURCE]
 12. Anchor bias. The brief named seven routes; I added the wake sidecar, the queue's live API,
@@ -783,8 +784,9 @@ The dependency most likely to block is the policy switch. Phases 1 to 3 are merg
 - F-5. Privacy carriers (Gaps, item 2). The ask: personal goals and their tasks "never make their
   way into ai-harness repo". Git-inbox dispatches to personal-pair sessions must be pointer-only, and
   the design should state it as a rule the sender enforces.
-- F-6. Queue API reads with no credential on loopback (Q7). I did not file a Beads issue because this
-  brief forbids Beads writes; the coordinator should route it to the ai-core owner.
+- F-6. A data-scope issue in the ai-core queue on the work host is tracked privately and constrains
+  the backend design (Q7): the web app puts its own auth and a per-host repository allowlist in front
+  of the queue.
 
 ## Alignment with the founding ask
 
