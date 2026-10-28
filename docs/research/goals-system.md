@@ -77,7 +77,9 @@ Sergei asked on 2026-10-27 for a goals system as a fundamental part of the Beads
 
 <!-- doc:region name="body" kind="replaceable" -->
 
-(synthesis will populate this region)
+## Temporal Scope
+
+Product, library and practice claims weight 2026 first, then 2025, then 2024. Goal science has no cutoff: its foundational theory and meta-analyses predate 2024 and are cited with their publication dates. Fleet claims (Beads 1.3.x, the beads-ui design, the fleet's repo classes and guards, the prior goals work) are read at the commits each findings file names, measured on 2026-10-27 and 2026-10-28 UTC. Each research leg's full evidence, with its footnoted sources, is in its findings file under [findings/](findings/); this doc synthesizes them and cites the findings file for detail.
 
 <!-- /doc:region name="body" -->
 

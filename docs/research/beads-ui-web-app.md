@@ -80,7 +80,9 @@ The beads-ui design doc already decides the web stack (D-10), the queue member-a
 
 <!-- doc:region name="body" kind="replaceable" -->
 
-(synthesis will populate this region)
+## Temporal Scope
+
+Product, library and platform claims weight 2026 first, then 2025, then 2024; earlier sources appear only as background. Fleet claims (the event-driven wake, Agent Mail, the work queue, the prompt-injection library, the held-doc store, the beads-ui design) are read from ai-harness, ai-core and beads-ui at the commits each findings file names, measured on 2026-10-27 and 2026-10-28 UTC. Each research leg's full evidence, with its footnoted sources, is in its findings file under [findings/](findings/); this doc synthesizes them and cites the findings file for detail.
 
 <!-- /doc:region name="body" -->
 
