@@ -37,9 +37,9 @@ describe("sortIssues", () => {
     const input = allIssues();
     const sorted = sortIssues(input, { key: "assignee", direction: "asc" });
 
-    const aih3 = input.filter((issue) => issue.assignee === "aih-3").map((issue) => issue.id);
-    expect(ids(sorted.filter((issue) => issue.assignee === "aih-3"))).toEqual(aih3);
-    expect(sorted[0]?.assignee).toBe("aih-3");
+    const aih3 = input.filter((issue) => issue.assignee === "ops-3").map((issue) => issue.id);
+    expect(ids(sorted.filter((issue) => issue.assignee === "ops-3"))).toEqual(aih3);
+    expect(sorted[0]?.assignee).toBe("ops-3");
     expect(sorted.at(-1)?.assignee).toBeUndefined();
   });
 

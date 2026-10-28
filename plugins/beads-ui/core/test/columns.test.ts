@@ -82,8 +82,8 @@ describe("buildSwimlanes", () => {
     const lanes = buildSwimlanes(allIssues(), "assignee");
 
     expect(lanes.map((lane) => [lane.label, lane.issues.length])).toEqual([
-      ["aih-3", 7],
-      ["aih-ec2-3", 2],
+      ["ops-3", 7],
+      ["ops-vm-3", 2],
       ["unassigned", 21],
     ]);
   });

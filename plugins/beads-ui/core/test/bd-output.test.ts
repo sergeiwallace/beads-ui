@@ -79,7 +79,7 @@ describe("parseBdHistoryEvents", () => {
       id: "bc4d6413-9fae-5eeb-9237-dd1f34761fae",
       issueId: "BU-mg2.2",
       type: "closed",
-      actor: "aih-ec2-3",
+      actor: "ops-vm-3",
       createdAt: "2026-10-21T04:26:53Z",
       newValue: "Design approved by Sergei 2026-10-21; decisions recorded in beads-ui #14",
     });

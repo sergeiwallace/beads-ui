@@ -19,13 +19,13 @@ const keep = (text: string) => ids(unwrap(applyFilter(allIssues(), filterOf(text
 
 describe("parseFilter", () => {
   test("should read whitespace-separated key:value terms when given a filter expression", () => {
-    expect(parseFilter("  type:task   label:ui assignee:aih-3 sprint:s1 ready:true ")).toEqual({
+    expect(parseFilter("  type:task   label:ui assignee:ops-3 sprint:s1 ready:true ")).toEqual({
       ok: true,
       value: {
         terms: [
           { key: "type", value: "task" },
           { key: "label", value: "ui" },
-          { key: "assignee", value: "aih-3" },
+          { key: "assignee", value: "ops-3" },
           { key: "sprint", value: "s1" },
           { key: "ready", value: "true" },
         ],
@@ -65,7 +65,7 @@ describe("parseFilter", () => {
 
 describe("applyFilter", () => {
   test("should AND type and assignee terms when both are given", () => {
-    expect(keep("type:task assignee:aih-3")).toEqual([
+    expect(keep("type:task assignee:ops-3")).toEqual([
       "BU-mg2.13",
       "BU-mg2.1.3",
       "BU-mg2.1.2",

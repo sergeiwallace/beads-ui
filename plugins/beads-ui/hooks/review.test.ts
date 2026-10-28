@@ -51,8 +51,8 @@ const held = (dir: string, file: string, extra: Record<string, unknown>) => ({
   relpath: `docs/held/${dir}/${file}`,
   kind: "decision",
   status: "open",
-  session: "aih-ec2-3@sem-kg-ec2",
-  machine: "sem-kg-ec2",
+  session: "ops-vm-3@host-c",
+  machine: "host-c",
   task: "BU-mg2.3",
   title: "a held item",
   ask: "",
@@ -61,27 +61,27 @@ const held = (dir: string, file: string, extra: Record<string, unknown>) => ({
   ...extra,
 });
 
-const DECISION = held("sem-kg-ec2--aih-ec2-3", "2026-10-25-01-decision-d37.md", {
+const DECISION = held("host-c--ops-vm-3", "2026-10-25-01-decision-d37.md", {
   title: "D-37: where review items come from",
   ask: "Approve (a), the held_cli.py review verb; one word is enough.",
 });
-const BLOCKER = held("sem-kg-ec2--aih-ec2-firstmate-1", "2026-10-25-02-blocker-install.md", {
+const BLOCKER = held("host-c--ops-vm-firstmate-1", "2026-10-25-02-blocker-install.md", {
   kind: "blocker",
-  session: "aih-ec2-firstmate-1@sem-kg-ec2",
+  session: "ops-vm-firstmate-1@host-c",
   task: DISPLAY,
-  title: "the review command is not installed on acn-mac",
-  ask: "Run the install on acn-mac, or say to wait.",
+  title: "the review command is not installed on host-a",
+  ask: "Run the install on host-a, or say to wait.",
   createdAt: "2026-10-25T10:00:00Z",
 });
-const WAITED = held("sem-kg-ec2--kg-ec2-1", "2026-10-25-01-blocker-owner.md", {
+const WAITED = held("host-c--qa-vm-1", "2026-10-25-01-blocker-owner.md", {
   kind: "blocker",
-  session: "kg-ec2-1@sem-kg-ec2",
+  session: "qa-vm-1@host-c",
   task: "none",
   title: "Sergei to approve the Confluence space",
   ask: "Approve the space request.",
   createdAt: "2026-10-25T08:00:00Z",
 });
-const ELSEWHERE = held("sem-kg-ec2--aih-ec2-3", "2026-10-25-03-decision-other.md", {
+const ELSEWHERE = held("host-c--ops-vm-3", "2026-10-25-03-decision-other.md", {
   task: "BU-mg2.3.5",
   title: "a decision about another issue",
 });
@@ -93,8 +93,8 @@ const snapshotOf = (items: readonly unknown[]) =>
     readAt: START_MS - 30_000,
     checkedAt: START_MS - 30_000,
     fingerprint: "fp-1",
-    host: "sem-kg-ec2",
-    pair: ["acn-mac", "sem-kg-ec2"],
+    host: "host-c",
+    pair: ["host-a", "host-c"],
     scope: "pair",
     items,
     joins: [],
@@ -119,17 +119,17 @@ const SHOWN = JSON.stringify(
 const TRANSITION = [
   "[blocked 2026-10-25T08:05:00Z] from: in_progress",
   "why: the Confluence space must exist before the pages move.",
-  "waits on: owner:ai-harness/docs/held/sem-kg-ec2--kg-ec2-1/2026-10-25-01-blocker-owner.md",
+  "waits on: owner:ai-harness/docs/held/host-c--qa-vm-1/2026-10-25-01-blocker-owner.md",
   "to done: the pages are published in the space.",
   "to in_progress: the space is approved; publish from the drafts.",
-  "by: kg-ec2-1@sem-kg-ec2",
+  "by: qa-vm-1@host-c",
 ].join("\n");
 const COMMENTED = JSON.stringify([
   ...(JSON.parse(comments) as unknown[]),
   {
     id: "c-blocked",
     issue_id: "BU-mg2.3",
-    author: "kg-ec2-1",
+    author: "qa-vm-1",
     text: TRANSITION,
     created_at: "2026-10-25T08:05:00Z",
   },
@@ -195,9 +195,9 @@ const rowKeys = async (ui: Mounted) =>
   (await keys(ui)).filter((key) => key.startsWith("review-row:"));
 const textOf = async (ui: Mounted, key: string) => (await ui.find({ key }))?.text;
 
-const DECISION_ROW = "sem-kg-ec2--aih-ec2-3/2026-10-25-01-decision-d37.md";
-const BLOCKER_ROW = "sem-kg-ec2--aih-ec2-firstmate-1/2026-10-25-02-blocker-install.md";
-const WAITED_ROW = "sem-kg-ec2--kg-ec2-1/2026-10-25-01-blocker-owner.md";
+const DECISION_ROW = "host-c--ops-vm-3/2026-10-25-01-decision-d37.md";
+const BLOCKER_ROW = "host-c--ops-vm-firstmate-1/2026-10-25-02-blocker-install.md";
+const WAITED_ROW = "host-c--qa-vm-1/2026-10-25-01-blocker-owner.md";
 
 /** Opens the decision in the reader. */
 async function reader($: Engine, on: On, options: Options = {}) {
@@ -229,16 +229,16 @@ describe("an issue's review items in its Detail (T-2C.5, D-40)", () => {
       "  Approve (a), the held_cli.py review verb; one word is enough.",
     );
     expect(await textOf(ui, `review-meta:${DECISION_ROW}`)).toBe(
-      "  open, aih-ec2-3@sem-kg-ec2, held 2026-10-25 09:00",
+      "  open, ops-vm-3@host-c, held 2026-10-25 09:00",
     );
     expect(await textOf(ui, `review-meta:${WAITED_ROW}`)).toBe(
-      "  open, kg-ec2-1@sem-kg-ec2, held 2026-10-25 08:00; the blocked transition waits on it",
+      "  open, qa-vm-1@host-c, held 2026-10-25 08:00; the blocked transition waits on it",
     );
     expect(await textOf(ui, "review-blocked-by:BU-mg2.3.9")).toBe(
       "  blocked by BU-mg2.3.9: T-1.5: delete confirmation flow (open)",
     );
     expect(await textOf(ui, "review-blocked:since")).toBe(
-      "  blocked 2026-10-25 08:05 from in_progress by kg-ec2-1@sem-kg-ec2",
+      "  blocked 2026-10-25 08:05 from in_progress by qa-vm-1@host-c",
     );
     expect(await textOf(ui, "review-blocked:why")).toBe(
       "  why: the Confluence space must exist before the pages move.",
@@ -257,9 +257,7 @@ describe("an issue's review items in its Detail (T-2C.5, D-40)", () => {
     const { ui } = await detail($, on, { items: [BLOCKER, ELSEWHERE] });
 
     expect(await rowKeys(ui)).toEqual([`review-row:${BLOCKER_ROW}`]);
-    expect(await textOf(ui, `review-meta:${BLOCKER_ROW}`)).toContain(
-      "aih-ec2-firstmate-1@sem-kg-ec2",
-    );
+    expect(await textOf(ui, `review-meta:${BLOCKER_ROW}`)).toContain("ops-vm-firstmate-1@host-c");
   });
 
   test("should draw the bd blockers alone, say how to set the command and run no held command while [review] command is unset", async ($, on) => {
@@ -401,7 +399,7 @@ describe("answering from the reader (T-2C.5, D-39)", () => {
         `- Item: ${STORE}/docs/held/${DECISION_ROW}`,
         "- Kind: decision",
         "- Title: D-37: where review items come from",
-        "- Owner session: aih-ec2-3@sem-kg-ec2",
+        "- Owner session: ops-vm-3@host-c",
         "- Answer commit: abc1234",
         "",
         "The text below is Sergei's answer, verbatim. held_cli.py answer wrote it under the item's ## Answer.",
@@ -432,9 +430,9 @@ describe("answering from the reader (T-2C.5, D-39)", () => {
     await w.clock.settle();
 
     expect(submitted).toHaveLength(1);
-    expect(submitted[0]).toContain("- Owner session: aih-ec2-firstmate-1@sem-kg-ec2");
+    expect(submitted[0]).toContain("- Owner session: ops-vm-firstmate-1@host-c");
     expect(submitted[0]).toContain(
-      "aih-ec2-firstmate-1@sem-kg-ec2 holds the item, not this session. Tell aih-ec2-firstmate-1@sem-kg-ec2 through the fleet's messaging ladder that Sergei answered it, with the item's path and the answer commit, so that it records the answer, records its durable home and ships it. Do not record or retire the item from this session.",
+      "ops-vm-firstmate-1@host-c holds the item, not this session. Tell ops-vm-firstmate-1@host-c through the fleet's messaging ladder that Sergei answered it, with the item's path and the answer commit, so that it records the answer, records its durable home and ships it. Do not record or retire the item from this session.",
     );
   });
 

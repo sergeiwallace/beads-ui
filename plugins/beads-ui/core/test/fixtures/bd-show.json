@@ -25,7 +25,7 @@
         "status": "in_progress",
         "priority": 1,
         "issue_type": "epic",
-        "assignee": "aih-ec2-3",
+        "assignee": "ops-vm-3",
         "owner": "6564880+sergeiwallace@users.noreply.github.com",
         "created_at": "2026-10-14T23:31:32Z",
         "created_by": "Sergei Wallace",

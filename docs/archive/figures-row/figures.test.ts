@@ -53,15 +53,15 @@ const STORES: Record<string, Listed[]> = {
     { id: "BU-8", status: "closed", assignee: ME, closedAt: START_MS - 1.5 * HOUR },
     { id: "BU-9", status: "closed", assignee: ME, closedAt: START_MS - 23 * HOUR },
     { id: "BU-10", status: "closed", assignee: ME, closedAt: START_MS - 30 * HOUR },
-    { id: "BU-11", status: "closed", assignee: "kg-ec2-1", closedAt: START_MS - HOUR },
+    { id: "BU-11", status: "closed", assignee: "qa-vm-1", closedAt: START_MS - HOUR },
   ],
   [HARNESS]: [
-    { id: "AIH-1", status: "in_progress", assignee: ME },
-    { id: "AIH-2", status: "open", assignee: ME },
-    { id: "AIH-3", status: "closed", assignee: ME, closedAt: START_MS - 11 * HOUR },
+    { id: "OPS-1", status: "in_progress", assignee: ME },
+    { id: "OPS-2", status: "open", assignee: ME },
+    { id: "OPS-3", status: "closed", assignee: ME, closedAt: START_MS - 11 * HOUR },
   ],
 };
-const INVENTORY = inventoryOf({ BU: { repo: CWD }, AIH: { repo: HARNESS } });
+const INVENTORY = inventoryOf({ BU: { repo: CWD }, OPS: { repo: HARNESS } });
 
 const both =
   (...scripts: (Script | undefined)[]): Script =>
@@ -129,7 +129,7 @@ const cellText = (cells: string) =>
     .trimEnd();
 
 /**
- * The parts hold 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2 done (BU-9 at 23 hours, AIH-3 at 11, BU-7
+ * The parts hold 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2 done (BU-9 at 23 hours, OPS-3 at 11, BU-7
  * and BU-8 within the last 2): half the busiest is ⣤, the busiest ⣿. 4 + 1 + 3 + 4 = 12
  * counted, so bars of 16 cells hold 5, 1, 4 and 5 (rounded shares).
  */
@@ -149,7 +149,7 @@ describe("the band's figures row (T-2C.11)", () => {
       "[bd] [t: 12 tasks] (◒[p: 4 in progress], ◉[b: 1 blocked], ◦[o: 3 open], ✓[d: 4 done last 24h]) * [e: ▾] [v: ◫] [◨]",
       FIGURES_120,
     ]);
-    // BU-7 and BU-8 in the newest part, AIH-3 at 11 hours, BU-9 at 23 hours; BU-10 is outside
+    // BU-7 and BU-8 in the newest part, OPS-3 at 11 hours, BU-9 at 23 hours; BU-10 is outside
     // the window and BU-11 another session's. Each store with a done count was read once.
     expect(doneReads(w)).toHaveLength(2);
     expect(overflows(await ui.drawn(), 120)).toEqual([]);
@@ -229,7 +229,7 @@ describe("the figures row's repaint (T-2C.11)", () => {
     expect(w.blits).toEqual([]);
 
     // A task closes in the store: the next minute's count moves and the store's times are read.
-    STORES[HARNESS]?.push({ id: "AIH-9", status: "closed", assignee: ME, closedAt: START_MS });
+    STORES[HARNESS]?.push({ id: "OPS-9", status: "closed", assignee: ME, closedAt: START_MS });
     try {
       await w.clock.advance(MINUTE);
       await w.clock.settle();
@@ -248,7 +248,7 @@ describe("the figures row's repaint (T-2C.11)", () => {
     const ui = await band($);
 
     STORES[CWD]?.push({ id: "BU-90", status: "closed", assignee: ME, closedAt: START_MS });
-    STORES[HARNESS]?.push({ id: "AIH-90", status: "closed", assignee: ME, closedAt: START_MS });
+    STORES[HARNESS]?.push({ id: "OPS-90", status: "closed", assignee: ME, closedAt: START_MS });
     try {
       await w.clock.advance(MINUTE);
       await w.clock.settle();
@@ -280,7 +280,7 @@ describe("the figures row's repaint (T-2C.11)", () => {
     const w = await started($, on, as({ blitAnswer: "no such Raster on screen" }));
     const ui = await band($);
 
-    STORES[HARNESS]?.push({ id: "AIH-9", status: "closed", assignee: ME, closedAt: START_MS });
+    STORES[HARNESS]?.push({ id: "OPS-9", status: "closed", assignee: ME, closedAt: START_MS });
     try {
       await w.clock.advance(MINUTE);
       await w.clock.settle();

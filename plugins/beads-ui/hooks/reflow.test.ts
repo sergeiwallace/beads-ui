@@ -22,7 +22,7 @@ import {
 
 const WIDTHS = [40, 48, 64, 72, 80, 120];
 const LIVE_BAND = {
-  env: { HOME: "/home/me", CLAUDE_CODE_TASK_LIST_ID: "aih-ec2-firstmate-1" },
+  env: { HOME: "/home/me", CLAUDE_CODE_TASK_LIST_ID: "ops-vm-firstmate-1" },
 } satisfies WorldOptions;
 
 type PaneProps = RenderPropsOf["Pane"];

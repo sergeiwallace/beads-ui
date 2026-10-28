@@ -42,13 +42,13 @@ const CONFIG = "/home/me/.config/beads-ui/beads-ui.toml";
 const REVIEW_CONFIG = `[review]\ncommand = ["${PYTHON}", "${HELD}", "review", "--scope", "pair", "--json"]\n`;
 const SNAPSHOT = `${STATE_DIR}/review-${REFRESHER_TOKEN}.json`;
 const HARNESS = "/home/me/projects/ai-harness";
-const FM = "aih-ec2-firstmate-1";
+const FM = "ops-vm-firstmate-1";
 const REVIEW_GLYPH = "✎";
 
 const TASKS: readonly Listed[] = [
   { id: "BU-1", status: "in_progress", assignee: ME, priority: 1, title: "the reviewed work" },
   { id: "BU-2", status: "open", assignee: ME, priority: 2, title: "nothing to review" },
-  { id: "BU-3", status: "open", assignee: "kg-ec2-1", priority: 2, title: "someone else's" },
+  { id: "BU-3", status: "open", assignee: "qa-vm-1", priority: 2, title: "someone else's" },
   { id: "BU-9", status: "open", assignee: ME, priority: 1, title: "the epic" },
 ];
 
@@ -69,8 +69,8 @@ const held = (dir: string, file: string, extra: Record<string, unknown>) => ({
   relpath: `docs/held/${dir}/${file}`,
   kind: "decision",
   status: "open",
-  session: `${ME}@sem-kg-ec2`,
-  machine: "sem-kg-ec2",
+  session: `${ME}@host-c`,
+  machine: "host-c",
   task: "none",
   title: file,
   ask: "",
@@ -80,15 +80,15 @@ const held = (dir: string, file: string, extra: Record<string, unknown>) => ({
 });
 
 /** Held by this session, about no task. */
-const MINE_HELD = held("sem-kg-ec2--aih-ec2-3", "a-mine.md", {
+const MINE_HELD = held("host-c--ops-vm-3", "a-mine.md", {
   title: "my own decision",
   ask: "Pick (a) or (b).",
   createdAt: "2026-10-25T09:00:00Z",
 });
 /** Held by another session, about an issue this session owns. */
-const OWNED = held("sem-kg-ec2--kg-ec2-1", "b-owned.md", {
+const OWNED = held("host-c--qa-vm-1", "b-owned.md", {
   kind: "blocker",
-  session: "kg-ec2-1@sem-kg-ec2",
+  session: "qa-vm-1@host-c",
   task: "BU-1",
   title: "a blocker on my issue",
   ask: "Approve the space request.",
@@ -96,35 +96,35 @@ const OWNED = held("sem-kg-ec2--kg-ec2-1", "b-owned.md", {
   issue: joined("BU-1", { assignee: ME, priority: 1, parent: "BU-9", labels: ["ux"] }),
 });
 /** Held by another session, about an issue it owns: neither held nor owned here. */
-const THEIRS = held("sem-kg-ec2--kg-ec2-1", "c-theirs.md", {
-  session: "kg-ec2-1@sem-kg-ec2",
+const THEIRS = held("host-c--qa-vm-1", "c-theirs.md", {
+  session: "qa-vm-1@host-c",
   task: "BU-3",
   title: "someone else's decision",
   createdAt: "2026-10-25T08:00:00Z",
-  issue: joined("BU-3", { assignee: "kg-ec2-1" }),
+  issue: joined("BU-3", { assignee: "qa-vm-1" }),
 });
 /** On the pair's other host. */
-const PARTNER = held("acn-mac--aih-3", "d-partner.md", {
-  session: "aih-3@acn-mac",
-  machine: "acn-mac",
+const PARTNER = held("host-a--ops-3", "d-partner.md", {
+  session: "ops-3@host-a",
+  machine: "host-a",
   title: "the partner host's question",
   createdAt: "2026-10-25T07:00:00Z",
 });
 /** Outside the pair: every other field would put it in this session's list and on BU-1's row. */
-const OUTSIDE = held("fw-lnx--aih-ec2-3", "e-outside.md", {
-  machine: "fw-lnx",
+const OUTSIDE = held("host-b--ops-vm-3", "e-outside.md", {
+  machine: "host-b",
   task: "BU-1",
   title: "an item from outside the pair",
   createdAt: "2026-10-25T11:00:00Z",
   issue: joined("BU-1", { assignee: ME }),
 });
-const OLD = held("sem-kg-ec2--aih-ec2-3", "f-old.md", {
+const OLD = held("host-c--ops-vm-3", "f-old.md", {
   kind: "summary",
   title: "an old summary",
   selection: "superseded",
   createdAt: "2026-10-25T06:00:00Z",
 });
-const ANSWERED = held("sem-kg-ec2--aih-ec2-3", "g-answered.md", {
+const ANSWERED = held("host-c--ops-vm-3", "g-answered.md", {
   title: "an answered decision",
   status: "answered",
   createdAt: "2026-10-25T05:00:00Z",
@@ -141,8 +141,8 @@ const snapshotOf = (items: readonly unknown[]) =>
     readAt: START_MS - 30_000,
     checkedAt: START_MS - 30_000,
     fingerprint: "fp-1",
-    host: "sem-kg-ec2",
-    pair: ["acn-mac", "sem-kg-ec2"],
+    host: "host-c",
+    pair: ["host-a", "host-c"],
     scope: "pair",
     items,
     joins: [],
@@ -261,8 +261,8 @@ describe("the Review view in the pane (T-2C.6, D-40)", () => {
   });
 
   test("should list every item of the pair for the firstmate, and switch to its own and back with a", async ($, on) => {
-    const own = held("sem-kg-ec2--aih-ec2-firstmate-1", "h-fm.md", {
-      session: `${FM}@sem-kg-ec2`,
+    const own = held("host-c--ops-vm-firstmate-1", "h-fm.md", {
+      session: `${FM}@host-c`,
       title: "the firstmate's own",
       createdAt: "2026-10-25T04:00:00Z",
     });
@@ -277,7 +277,7 @@ describe("the Review view in the pane (T-2C.6, D-40)", () => {
       rowOf(own),
     ]);
     expect(await textOf(ui, "review-view:heading")).toContain(
-      "Review: 5 of 7 items, the pair's (acn-mac, sem-kg-ec2)",
+      "Review: 5 of 7 items, the pair's (host-a, host-c)",
     );
     const scope = await ui.find({ key: "review:scope" });
     expect(scope?.props.hotkey).toBe("a");
@@ -339,8 +339,8 @@ describe("the Review view's filter, sorts and groups at the entry point (T-2C.6)
     ["kind:blocker", [rowOf(OWNED)]],
     ["status:answered selection:all", [rowOf(ANSWERED)]],
     ["selection:superseded status:open", [rowOf(OLD)]],
-    ["session:kg-ec2-1", [rowOf(OWNED), rowOf(THEIRS)]],
-    ["machine:acn-mac", [rowOf(PARTNER)]],
+    ["session:qa-vm-1", [rowOf(OWNED), rowOf(THEIRS)]],
+    ["machine:host-a", [rowOf(PARTNER)]],
     ["task:BU-1", [rowOf(OWNED)]],
     ["epic:BU-9", [rowOf(OWNED)]],
     ["label:ux", [rowOf(OWNED)]],
@@ -414,18 +414,15 @@ describe("the Review view's filter, sorts and groups at the entry point (T-2C.6)
       ["Group: task", ["BU-1: the reviewed work (1)", "no task (2)", "BU-3: someone else's (1)"]],
       ["Group: epic", ["BU-9: the epic (1)", "no epic (3)"]],
       ["Group: kind", ["blocker (1)", "decision (3)"]],
-      [
-        "Group: session",
-        ["kg-ec2-1@sem-kg-ec2 (2)", "aih-ec2-3@sem-kg-ec2 (1)", "aih-3@acn-mac (1)"],
-      ],
+      ["Group: session", ["qa-vm-1@host-c (2)", "ops-vm-3@host-c (1)", "ops-3@host-a (1)"]],
     ]);
   });
 });
 
 describe("the Review view's pages and keys (T-2C.6, T-2B.4)", () => {
   const many = Array.from({ length: 30 }, (_, i) =>
-    held("sem-kg-ec2--aih-ec2-firstmate-1", `m-${String(i).padStart(2, "0")}.md`, {
-      session: `${FM}@sem-kg-ec2`,
+    held("host-c--ops-vm-firstmate-1", `m-${String(i).padStart(2, "0")}.md`, {
+      session: `${FM}@host-c`,
       title: `item ${i}`,
       createdAt: new Date(Date.UTC(2026, 9, 25, 0, i)).toISOString(),
     }),
@@ -579,7 +576,7 @@ describe("the review indicator (T-2C.7, D-41)", () => {
   });
 
   test("should name the count in the row's options menu and open the first item in the reader", async ($, on) => {
-    const second = held("sem-kg-ec2--aih-ec2-3", "i-second.md", {
+    const second = held("host-c--ops-vm-3", "i-second.md", {
       task: "BU-1",
       title: "a second item on BU-1",
       createdAt: "2026-10-25T11:30:00Z",

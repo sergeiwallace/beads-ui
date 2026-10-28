@@ -418,7 +418,7 @@
   {
     "id": "BU-mg2.7",
     "title": "Integrate the autonomous task queue and its dashboard with beads-ui",
-    "description": "Sergei, 2026-10-14: beads-ui should incorporate the autonomous CC-session work-queue system and its dashboard (ai-harness epic AIH-swgb4), merged or integrated with beads-ui. Where the queue system itself lives is open: ai-harness, ai-chassis, a separate package, or an optional import from ai-chassis. For now nothing moves: the queue stays where it is, and this task tracks the integration and the follow-up decision. ai-chassis still has to be open-sourced.",
+    "description": "Sergei, 2026-10-14: beads-ui should incorporate the autonomous CC-session work-queue system and its dashboard (ai-harness epic OPS-li9bg), merged or integrated with beads-ui. Where the queue system itself lives is open: ai-harness, ai-chassis, a separate package, or an optional import from ai-chassis. For now nothing moves: the queue stays where it is, and this task tracks the integration and the follow-up decision. ai-chassis still has to be open-sourced.",
     "status": "open",
     "priority": 2,
     "issue_type": "task",
@@ -610,7 +610,7 @@
   {
     "id": "BU-2zw",
     "title": "npm audit: 10 dev-only advisories under markdownlint-cli2",
-    "description": "`npm audit` on the beads-ui root reports 10 advisories (3 low, 7 high), all in the dev-only dependency tree of `markdownlint-cli2` (braces, js-yaml, katex, markdown-it), measured 2026-10-21 on branch wt/aih-ec2-3/BU-t-0-1-core-module-gset at 588d3ec.\n\nThey predate the T-0.1 bootstrap: `markdownlint-cli2 ^0.21.0` was the root package.json's only devDependency at a9e6e45, and `npm ls` traces every flagged package to it. Bumping to the latest `markdownlint-cli2` (0.23.3) still reports 10 advisories, and the braces advisory lists every version as affected, so there is no upgrade that clears them.\n\nAll are denial-of-service class advisories in a local lint tool that never ships in the plugin (plugins/beads-ui has no dependencies). Options: npm `overrides` pinning patched js-yaml and markdown-it versions where they exist, dropping the npm copy in favour of the pre-commit hook's own markdownlint-cli2, or accepting them until upstream ships fixes.\n\nDone when: the chosen option is applied and `npm audit` reports no high advisory, or the acceptance is recorded with its reason.\n",
+    "description": "`npm audit` on the beads-ui root reports 10 advisories (3 low, 7 high), all in the dev-only dependency tree of `markdownlint-cli2` (braces, js-yaml, katex, markdown-it), measured 2026-10-21 on branch wt/ops-vm-3/BU-t-0-1-core-module-gset at 588d3ec.\n\nThey predate the T-0.1 bootstrap: `markdownlint-cli2 ^0.21.0` was the root package.json's only devDependency at a9e6e45, and `npm ls` traces every flagged package to it. Bumping to the latest `markdownlint-cli2` (0.23.3) still reports 10 advisories, and the braces advisory lists every version as affected, so there is no upgrade that clears them.\n\nAll are denial-of-service class advisories in a local lint tool that never ships in the plugin (plugins/beads-ui has no dependencies). Options: npm `overrides` pinning patched js-yaml and markdown-it versions where they exist, dropping the npm copy in favour of the pre-commit hook's own markdownlint-cli2, or accepting them until upstream ships fixes.\n\nDone when: the chosen option is applied and `npm audit` reports no high advisory, or the acceptance is recorded with its reason.\n",
     "status": "open",
     "priority": 3,
     "issue_type": "bug",
