@@ -897,7 +897,7 @@ This design doc hosts the `/auto-flow` Run Ledger for the beads-ui epic's resear
 | `beads-ui-build-2026-10-21-aih-ec2-3` | `auto-flow/AIH-701#d-7` | `["adn:in-scope"]` | `true` |
 | `beads-ui-band-pane-panel-2026-10-24-aih-ec2-3` | `auto-flow/AIH-701#d-7` | `["adn:in-scope"]` | `true` |
 | `beads-ui-review-band-2026-10-25-aih-ec2-3` | `auto-flow/AIH-701#d-7` | `["adn:in-scope"]` | `true` |
-| `beads-ui-webapp-goals-2026-10-28-aih-ec2-3` | `auto-flow/AIH-701#d-7` | `["adn:in-scope"]` | `true` |
+| `beads-ui-webapp-goals-2026-10-28-aih-ec2-3` | the auto-flow authority contract, decision D-7 | `["adn:in-scope"]` | `true` |
 
 The launcher granted integration ownership (land on `main` by PR, self-merge on green, sync, reap), so `push` is `true`. `adn:in-scope` records that design decisions are resolved through `/decision-framework` by default; what the Authority test escalates goes to the launcher for Sergei.
 
