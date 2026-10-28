@@ -39,9 +39,9 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 | A001: web app clauses (board, review queue, prompt dispatch, framework, shared code, backend, app-portal, hosting) | Out of this doc by split, covered in full by [the beads-ui web app research](beads-ui-web-app.md) |
 | A001: the process clauses (orchestrate, research, wait for the compile, merge, sync, reap, design through /auto-flow, Sergei's review) | Process, not content. Recorded in the Run History of this doc and the coordinator's report |
 
-**Status:** stub
+**Status:** in progress (synthesis continues as the remaining legs report)
 
-**Created:** None
+**Created:** 2026-10-27
 
 <!-- doc:region name="context" kind="immutable" -->
 
@@ -154,7 +154,7 @@ Represent a goal as a custom-type issue with `metadata.goal` holding its planned
 
 ## Sources
 
-[^1]: beads-ui. (2026). [Goals research leg 1: goal products and visualisation landscape](findings/goals-products-and-visualisation-landscape.md) (`docs/research/findings/goals-products-and-visualisation-landscape.md`, with `findings/evidence/goals-visualisation-measurements-2026-10-28.md`). Tracked in this repository; merged in PR #79 (0d07e7b), 2026-10-28. (Section numbers cited in the text refer to that file.)
+[^1]: beads-ui. (2026). [Goals research leg 1: goal products and visualisation landscape](findings/goals-products-and-visualisation-landscape.md) (`docs/research/findings/goals-products-and-visualisation-landscape.md`, with `findings/evidence/goals-visualisation-measurements-2026-10-28.md`). Tracked in this repository; merged in PR #79 (0d07e7b), 2026-10-28. (Section numbers cited in the text refer to that file.) Online: [goals-products-and-visualisation-landscape.md](https://github.com/sergeiwallace/beads-ui/blob/main/docs/research/findings/goals-products-and-visualisation-landscape.md).
 [^2]: Atlassian. (2026). [Link goals and projects to work in Jira](https://support.atlassian.com/platform-experiences/docs/link-goals-and-projects-to-work-in-jira/). Atlassian Support. Verified accessible (HTTP 200) 2026-10-28 by goals leg 1.
 [^3]: Atlassian. (2026). [Goals app data limits and guardrails](https://support.atlassian.com/platform-experiences/docs/goals-app-data-limits-and-guardrails/). Atlassian Support. Verified accessible (HTTP 200) 2026-10-28 by goals leg 1. (100 linked work items per goal.)
 [^4]: Asana. (2026). [Asana OpenAPI specification](https://github.com/Asana/openapi/blob/master/defs/asana_oas.yaml). GitHub. Read raw (HTTP 200) 2026-10-28 by goals leg 1. (`progress_source` values, parent goals.)
@@ -171,7 +171,7 @@ Represent a goal as a custom-type issue with `metadata.goal` holding its planned
 [^15]: SVAR. (2026). [React Gantt](https://svar.dev/react/gantt/). SVAR. Verified accessible (HTTP 200) 2026-10-28 by goals leg 1. (MIT core; PRO features.)
 [^16]: DHTMLX. (2026). [DHTMLX Gantt](https://github.com/DHTMLX/gantt). GitHub. Verified accessible (HTTP 200) 2026-10-28 by goals leg 1. (Community edition; PRO-only features.)
 [^17]: Frappe. (2026). [Frappe Gantt](https://github.com/frappe/gantt). GitHub. Verified accessible (HTTP 200) 2026-10-28 by goals leg 1. (Dependency arrows, no hierarchy.)
-[^18]: npm, Inc. (2026). [npm public registry](https://registry.npmjs.org/), `frappe-gantt` entry; raw output in [findings/evidence/beads-ui-web-app-stack-signals-2026-10-28.md](findings/evidence/beads-ui-web-app-stack-signals-2026-10-28.md). Read 2026-10-28 by web app research leg 1. (1.2.2 released 2026-02-25.)
+[^18]: npm, Inc. (2026). [npm public registry](https://registry.npmjs.org/), `frappe-gantt` entry; raw output in [findings/evidence/beads-ui-web-app-stack-signals-2026-10-28.md](findings/evidence/beads-ui-web-app-stack-signals-2026-10-28.md). Read 2026-10-28 by web app research leg 1. (1.2.2 released 2026-02-25.) Online: [beads-ui-web-app-stack-signals-2026-10-28.md](https://github.com/sergeiwallace/beads-ui/blob/main/docs/research/findings/evidence/beads-ui-web-app-stack-signals-2026-10-28.md).
 [^19]: Recharts. (2026). [Recharts chart sources](https://github.com/recharts/recharts/tree/main/src/chart). GitHub. Read (HTTP 200) 2026-10-28 by goals leg 1. (`Sankey`, `Treemap`, `SunburstChart`, `RadialBarChart`.)
 [^20]: Beads contributors. (2026). [Beads](https://github.com/gastownhall/beads). GitHub. Repository metadata read (HTTP 200) 2026-10-28; CLI help and read-only schema queries from `bd version 1.3.2 (9b65b9e19)` recorded in [findings/evidence/goals-visualisation-measurements-2026-10-28.md](findings/evidence/goals-visualisation-measurements-2026-10-28.md) by goals leg 1.
 
