@@ -105,21 +105,21 @@ Copy Asana's typed progress sources and weighted links, and Linear's split of he
 
 ## 2. How goals link to work
 
-Goal-to-work is many-to-many in every product that models it well, and goal-to-goal is a tree with an optional second parent. Linear joins projects to initiatives through a separate `InitiativeToProject` record, so a project can sit under several initiatives; Asana returns "all of the parent goals of a goal"; GitHub sub-issues keep one parent [VERIFIABLE][^7][^4][^11]. The founding ask's "assign all beads tasks to one or more goals (or no goals)" is exactly this many-to-many shape, and its "relates to and dependencies and blocks" between goals matches Linear's initiative relations and Beads' own `relates-to` and `blocks` edges [INFERENCE][^1].
+Goal-to-work is many-to-many in every product that models it well, and goal-to-goal is a tree with an optional second parent. Linear joins projects to initiatives through a separate `InitiativeToProject` record, so a project can sit under several initiatives; Asana returns "all of the parent goals of a goal"; GitHub sub-issues keep one parent [VERIFIABLE][^7][^4][^11]. The founding ask's "assign all beads tasks to one or more goals (or no goals)" is exactly this many-to-many shape, and its "relates to and dependencies and blocks" between goals matches Linear's initiative relations and Beads' own `relates-to` and `blocks` edges [INFERENCE].
 
-Privacy boundaries break links in the products that have them. Atlassian restricts a goal only at creation, applies the restriction to its whole hierarchy, and forbids links between restricted and open goals [VERIFIABLE][^12]. Where a private goal lives in a different repository from the public work it serves, the link records must live on the private side, or the public store leaks the private goal's id (see [§8](#8-privacy-and-access-control-for-personal-goals)) [INFERENCE][^1].
+Privacy boundaries break links in the products that have them. Atlassian restricts a goal only at creation, applies the restriction to its whole hierarchy, and forbids links between restricted and open goals [VERIFIABLE][^12]. Where a private goal lives in a different repository from the public work it serves, the link records must live on the private side, or the public store leaks the private goal's id (see [§8](#8-privacy-and-access-control-for-personal-goals)) [INFERENCE].
 
 ### When to use
 
-Model goal membership as a link from the goal to each member, many-to-many, with descendant inclusion: linking an epic counts its children, as Plane does [INFERENCE][^1].
+Model goal membership as a link from the goal to each member, many-to-many, with descendant inclusion: linking an epic counts its children, as Plane does [INFERENCE].
 
 ## 3. The science of goals
 
 A goal record needs a measurable target, a date and a feedback channel. Specific, difficult goals beat "do your best" with effect sizes of d = .42 to .80, and feedback is a named moderator of that effect [VERIFIABLE][^22]. Monitoring progress raises attainment by d+ = 0.40, more so when progress is recorded or reported, so a goal view that shows progress is itself an intervention [VERIFIABLE][^23].
 
-Goal effects shrink on complex work. Goal-difficulty effects fall from d = .67 on the simplest tasks to d = .48 on the most complex, and on complex tasks a learning goal can beat a performance goal [VERIFIABLE][^22]. Software and agent work is mostly complex, so a goal benefits from an orientation (learn or perform) and from proximal sub-goals rather than one distant target [INFERENCE][^21].
+Goal effects shrink on complex work. Goal-difficulty effects fall from d = .67 on the simplest tasks to d = .48 on the most complex, and on complex tasks a learning goal can beat a performance goal [VERIFIABLE][^22]. Software and agent work is mostly complex, so a goal benefits from an orientation (learn or perform) and from proximal sub-goals rather than one distant target [INFERENCE].
 
-Stalled goals need an explicit pause-or-drop path. In a 2022 study the capacity to re-engage with a new goal, not disengagement alone, predicted well-being, and a 2026 meta-analysis of 235 studies rates the goal-adjustment evidence low to moderate [VERIFIABLE][^31][^32]. A goal lifecycle with `paused` and `dropped` states, a recorded reason and a prompt to pick a replacement follows from this [INFERENCE][^21].
+Stalled goals need an explicit pause-or-drop path. In a 2022 study the capacity to re-engage with a new goal, not disengagement alone, predicted well-being, and a 2026 meta-analysis of 235 studies rates the goal-adjustment evidence low to moderate [VERIFIABLE][^31][^32]. A goal lifecycle with `paused` and `dropped` states, a recorded reason and a prompt to pick a replacement follows from this [INFERENCE].
 
 The design must avoid metric fixation, streaks and points. Goals can narrow attention and raise unethical behaviour, Goodhart's law has four named mechanisms, and reward-contingent tasks lower free-choice intrinsic motivation (d = -0.40 to -0.28) [VERIFIABLE][^33][^34][^35]. OKRs as practised have a thin research base: a 2024 mapping study found "few academic studies addressing the topic in depth" [VERIFIABLE][^36]. This is directly relevant to the first goals system, whose daily scoring and achievement layers are the parts the prior-work compile marks for caution (see [§9](#9-prior-work-from-the-first-goals-system)).
 
@@ -133,11 +133,11 @@ Ask for a target, a date and an orientation when a goal is created; show progres
 
 Two goal levels above epics fit the evidence: an aspiration ("be healthy") and a dated objective ("run a half marathon by June"). Combining a superordinate goal with concrete subordinate goals sustains long-term pursuit better than either alone [VERIFIABLE][^24]. Requirements engineering and business modelling make the same split: KAOS separates soft and hard goals, iStar 2.0 separates qualities from goals, and the OMG Business Motivation Model separates goals from objectives [VERIFIABLE][^25][^26][^27].
 
-Goals also come in two behavioural kinds, achieve and maintain. KAOS, BDI agent languages and PARA's projects versus areas all draw this line, and a maintain goal demands work only when its condition fails [VERIFIABLE][^25][^28][^29]. A maintain goal ("keep CI green") therefore never closes and needs no due date [INFERENCE][^21].
+Goals also come in two behavioural kinds, achieve and maintain. KAOS, BDI agent languages and PARA's projects versus areas all draw this line, and a maintain goal demands work only when its condition fails [VERIFIABLE][^25][^28][^29]. A maintain goal ("keep CI green") therefore never closes and needs no due date [INFERENCE].
 
-One task serving several goals is normal, and people rate a shared means as less useful to each goal it serves (the dilution effect) [VERIFIABLE][^30]. Membership must be many-to-many, as §2 found in the products, and the UI should name one primary goal per item so the dilution does not blur ownership [INFERENCE][^21].
+One task serving several goals is normal, and people rate a shared means as less useful to each goal it serves (the dilution effect) [VERIFIABLE][^30]. Membership must be many-to-many, as §2 found in the products, and the UI should name one primary goal per item so the dilution does not blur ownership [INFERENCE].
 
-The theory leg's recommended ontology, mapped onto Beads [INFERENCE][^21]:
+The theory leg's recommended ontology, mapped onto the Beads fields its evidence file measured, is in the table below [VERIFIABLE][^21].
 
 | Element | Values | Beads home today |
 |---|---|---|
@@ -168,7 +168,7 @@ Use the two levels and the two kinds as the goal's own fields; use `contributes-
 
 ## 5. Goal alignment for a person's and their agents' work
 
-Goal alignment should multiply the fleet's existing WSJF composite and leave its inputs alone, so that unaligned work keeps its rank and is listed, never blocked [INFERENCE][^21][^43]. The theory leg proposes a noisy-OR alignment score for item $i$ over its goals $G$, where $c_{i,g}$ is the strongest contribution path from $i$ to goal $g$ (1.0 for `make`, 0.5 for `help`, 1 for each `parent-child` step) and $w_{g,k}$ is goal $g$'s weight for owner class $k$ (the person or the agents):
+Goal alignment should multiply the fleet's existing WSJF composite and leave its inputs alone, so that unaligned work keeps its rank and is listed, never blocked [INFERENCE]. The theory leg proposes a noisy-OR alignment score for item $i$ over its goals $G$, where $c_{i,g}$ is the strongest contribution path from $i$ to goal $g$ (1.0 for `make`, 0.5 for `help`, 1 for each `parent-child` step) and $w_{g,k}$ is goal $g$'s weight for owner class $k$ (the person or the agents):
 
 $$
 A_i = 1 - \prod_{g \in G} \Bigl(1 - \min\bigl(1,\; c_{i,g}\, w_{g,k(i)}\bigr)\Bigr)
@@ -178,9 +178,9 @@ $$
 S_i = C_i \,\bigl(1 + \beta A_i\bigr), \qquad \beta = 1 \text{ by default}
 $$
 
-Here $C_i$ is the WSJF composite the fleet already computes, and an explicit `priority_override` still wins over $S_i$ as it wins over $C_i$ today [INFERENCE][^21][^43]. Ordering by weight over duration is Smith's 1956 rule, so the score keeps WSJF's structure with alignment-adjusted weights [VERIFIABLE][^37]. Running the score separately for the person's queue and the agents' queue answers the founding ask's "prioritising my task and agentic AI work towards them" [INFERENCE].
+Here $C_i$ is the WSJF composite the fleet already computes, and an explicit `priority_override` still wins over $S_i$ as it wins over $C_i$ today [VERIFIABLE][^43]. Ordering by weight over duration is Smith's 1956 rule, so the score keeps WSJF's structure with alignment-adjusted weights [VERIFIABLE][^37]. Running the score separately for the person's queue and the agents' queue answers the founding ask's "prioritising my task and agentic AI work towards them" [INFERENCE].
 
-AI agents drift from goals and game specifications. Every model in a 2025 goal-drift evaluation drifted to some degree, 2026 work shows drift inherited from earlier agents' trajectories, and reasoning models hacked a chess benchmark by default [VERIFIABLE][^38][^39][^40]. Two rules follow: goal context is re-supplied to an agent when it claims work, and links an agent adds stay proposed until a person reviews them, which also blocks the main failure mode of the score, link inflation [INFERENCE][^21].
+AI agents drift from goals and game specifications. Every model in a 2025 goal-drift evaluation drifted to some degree, 2026 work shows drift inherited from earlier agents' trajectories, and reasoning models hacked a chess benchmark by default [VERIFIABLE][^38][^39][^40]. Two rules follow: goal context is re-supplied to an agent when it claims work, and links an agent adds stay proposed until a person reviews them, which also blocks the main failure mode of the score, link inflation [INFERENCE].
 
 No surveyed product shows whether agent effort goes to the highest-priority goals (§1), so the alignment and allocation views are new design work, drawn with the Recharts Sankey and treemap views §6 selects [VERIFIABLE][^1].
 
@@ -192,7 +192,7 @@ Rank work by $S_i$ in both the person's and the agents' queues, show unaligned w
 
 For the hierarchical linked goal graph, React Flow (`@xyflow/react` 12.12.0, MIT, about 38,800 GitHub stars) with ELK's layered layout running in a Web Worker fits D-10's React stack best [VERIFIABLE][^13][^14]. React Flow draws DOM nodes with keyboard focus, ARIA labels and a live region, which no canvas or WebGL graph library in the survey offers [VERIFIABLE][^13]. Two costs come with it: its expand-and-collapse and auto-layout examples are paid "Pro" examples, and ELK is EPL-2.0 with the largest bundle of the layout engines React Flow compares, so dagre serves pure-tree layouts when ELK is not loaded [VERIFIABLE][^13].
 
-No permissive open-source Gantt library offers a critical path. SVAR React Gantt and DHTMLX Gantt both reserve auto-scheduling and critical path for paid PRO editions, and Frappe Gantt draws dependency arrows but has no hierarchy [VERIFIABLE][^15][^16][^17]. (Frappe Gantt released 1.2.2 on 2026-02-25 per the npm registry; the products leg's "no release since February 2025" is superseded by the web app UX leg's registry read [VERIFIABLE][^18].) The cheapest route to the founding ask's Gantt, timeline and dependency lines is a custom SVG timeline on visx, shared with the beads-ui Phase 3 Roadmap, with critical path computed in the DOM-free core [INFERENCE][^1].
+No permissive open-source Gantt library offers a critical path. SVAR React Gantt and DHTMLX Gantt both reserve auto-scheduling and critical path for paid PRO editions, and Frappe Gantt draws dependency arrows but has no hierarchy [VERIFIABLE][^15][^16][^17]. (Frappe Gantt released 1.2.2 on 2026-02-25 per the npm registry; the products leg's "no release since February 2025" is superseded by the web app UX leg's registry read [VERIFIABLE][^18].) The cheapest route to the founding ask's Gantt, timeline and dependency lines is a custom SVG timeline on visx, shared with the beads-ui Phase 3 Roadmap, with critical path computed in the DOM-free core [INFERENCE].
 
 Recharts, already in D-10, ships `Sankey`, `Treemap`, `SunburstChart` and `RadialBarChart`, which covers effort-allocation and progress-ring views with no new chart library [VERIFIABLE][^19].
 
@@ -213,7 +213,7 @@ Creating, re-parenting and linking goals has to be as quick as editing a task. T
 
 Review follows the same triage pattern as the web app's Review view: goals whose check-in is overdue, goals paused without a replacement, and agent-proposed links awaiting review form one queue sorted by goal priority [INFERENCE] (see [the web app research § 1](beads-ui-web-app.md#1-review-and-triage-of-blockers-decisions-and-open-questions)).
 
-Visibility belongs in the UI only as a reflection of where the record lives. A private goal is shown with a marking and a store name, and the UI offers no "make public" toggle that would move it into a shared store; re-classification is an explicit move with its own guard [INFERENCE][^44].
+Visibility belongs in the UI only as a reflection of where the record lives. A private goal is shown with a marking and a store name, and the UI offers no "make public" toggle that would move it into a shared store; re-classification is an explicit move with its own guard [INFERENCE].
 
 ### When to use
 
@@ -225,15 +225,15 @@ The main leak path today is the Beads store itself, and no git commit hook sees 
 
 Session artifacts are the second large path, and several writers bypass pre-commit. Founding-ask records route by session prefix to ai-harness `docs/asks/`, held items from a repository without its own route fall to the `source_repo = "*"` row and land in `ai-harness/docs/held`, and git-inbox builds its commits with `commit-tree` and then pushes [VERIFIABLE][^48][^49]. A goal typed into a session prompt can therefore be committed verbatim into ai-harness by tools working as designed. Pre-push over the full pushed range is the narrowest git hook that sees every writer [VERIFIABLE][^44][^49].
 
-Content scanning cannot be the primary guard. The word "goal" already names the fleet's session-goal feature, matching 585 of 8,576 tracked ai-harness paths, and the list of private terms a scanner would need is itself private, so it cannot live in ai-harness or on the employer host [VERIFIABLE][^45][^50]. Structure carries the guarantee: a record's store and marking decide where it may go, and scanning is the backstop [INFERENCE][^44]. The fleet's existing task-id scan rule matches only legacy `PREFIX-<digits>` ids, so slug and hash display ids pass it; that gap is tracked privately [VERIFIABLE][^45].
+Content scanning cannot be the primary guard. The word "goal" already names the fleet's session-goal feature, matching 585 of 8,576 tracked ai-harness paths, and the list of private terms a scanner would need is itself private, so it cannot live in ai-harness or on the employer host [VERIFIABLE][^45][^50]. Structure carries the guarantee: a record's store and marking decide where it may go, and scanning is the backstop [INFERENCE]. The fleet's existing task-id scan rule matches only legacy `PREFIX-<digits>` ids, so slug and hash display ids pass it; that gap is tracked privately [VERIFIABLE][^45].
 
-Links across the privacy boundary belong in the private store, and the shared store should know nothing about a private goal, not even an opaque id. A Beads `external:<project>:<capability>` edge is stored as written, so it would name the private project in the shared store, and it "remains blocking" wherever that project is unconfigured, which on the employer host is always [VERIFIABLE][^52]. Atlassian forbids links across its restriction boundary, and Linear shows a private issue's id as a linkback on pull requests, which is the kind of trace to avoid [VERIFIABLE][^12][^53]. The theory leg adds one more trace: a private goal that boosts a public item's rank through the alignment score of §5 reveals that the goal exists, so alignment for shared items is computed on the private side and never written back [INFERENCE][^21].
+Links across the privacy boundary belong in the private store, and the shared store should know nothing about a private goal, not even an opaque id. A Beads `external:<project>:<capability>` edge is stored as written, so it would name the private project in the shared store, and it "remains blocking" wherever that project is unconfigured, which on the employer host is always [VERIFIABLE][^52]. Atlassian forbids links across its restriction boundary, and Linear shows a private issue's id as a linkback on pull requests, which is the kind of trace to avoid [VERIFIABLE][^12][^53]. The theory leg adds one more trace: a private goal that boosts a public item's rank through the alignment score of §5 reveals that the goal exists, so alignment for shared items is computed on the private side and never written back [INFERENCE].
 
 No server-side guard is available. Pre-receive hooks are documented only for GitHub Enterprise Server, push-protection custom patterns need a Team or Enterprise plan, and the fleet retired GitHub Actions, so enforcement is client-side, installed and measured on every machine through the existing installer step that deploys each repository's pre-commit hooks [VERIFIABLE][^54][^55][^56][^51]. Encryption inside a shared repo does not meet the ask: git-crypt leaves file names, commit messages and change patterns visible, cannot revoke a key, and the ciphertext would still be cloned onto the employer host [VERIFIABLE][^57].
 
 The same rule applies beyond Beads stores. A data-scope issue in the ai-core queue on the work host is tracked privately and constrains the backend design: every reader on a host, the web app included, filters by a per-host repository allowlist [INFERENCE] (see [the web app research § 7](beads-ui-web-app.md#7-backend-over-beads-and-ai-core)). On git history, the owner has already ruled "nah, don't worry about commit history. its fine... just focus on files"; whether that ruling also covers the ai-harness store's Dolt history is unrecorded [VERIFIABLE][^44] (§ 6 of that file).
 
-The recommended enforcement design [INFERENCE][^44]:
+The recommended enforcement design [INFERENCE]:
 
 | Guard point | What it refuses | Reuses |
 |---|---|---|
@@ -244,7 +244,7 @@ The recommended enforcement design [INFERENCE][^44]:
 | Host startup | A private store present on a host whose class forbids it (the employer pair) | the machine install contract |
 | Periodic scan | Regressions, run from a personal host only | the same rules |
 
-Every guard fails closed and never echoes matched text; each is pinned by a test and installed on every profile through the existing installer step, which is the privacy issue's own Done-when [INFERENCE][^44][^51].
+Every guard fails closed and never echoes matched text; each is pinned by a test and installed on every profile through the existing installer step, which is the privacy issue's own Done-when [INFERENCE].
 
 ```mermaid
 flowchart LR
@@ -282,15 +282,15 @@ Beads 1.3.2 can hold goals without a schema change, though not cleanly [VERIFIAB
 | Progress, metric, health | Issue `metadata` JSON; `bd epic status` | No fields |
 | Cross-store goals | `bd repo` hydration, `external:<project>:<capability>` edges, `bd migrate-personal` | Which store holds a cross-store link is a privacy rule (§8) |
 
-The goal-membership edge kind is the one data-model call this research cannot settle. `tracks` is the natural kind but already means sprint membership under D-5, and the default `blocks` would remove every member from `bd ready` [VERIFIABLE][^20]. The design must choose between overloading `relates-to`, adding a custom edge kind, or holding membership in the goal's metadata [INFERENCE][^1].
+The goal-membership edge kind is the one data-model call this research cannot settle. `tracks` is the natural kind but already means sprint membership under D-5, and the default `blocks` would remove every member from `bd ready` [VERIFIABLE][^20]. The design must choose between overloading `relates-to`, adding a custom edge kind, or holding membership in the goal's metadata [INFERENCE].
 
 ### When to use
 
-Represent a goal as a custom-type issue with `metadata.goal` holding its planned start, date resolution, progress source, target metric and visibility, and keep weights in the goal's metadata keyed by member until Beads can write edge metadata [INFERENCE][^1].
+Represent a goal as a custom-type issue with `metadata.goal` holding its planned start, date resolution, progress source, target metric and visibility, and keep weights in the goal's metadata keyed by member until Beads can write edge metadata [INFERENCE].
 
 ## Comparison
 
-How the surveyed products and the recommended design handle the requirements the founding ask names [INFERENCE][^1][^44]:
+How the surveyed products and the recommended design handle the requirements the founding ask names [INFERENCE]:
 
 | # | Criterion | Atlassian Goals | Linear initiatives | Asana goals | Recommended Beads design |
 |---|---|---|---|---|---|
