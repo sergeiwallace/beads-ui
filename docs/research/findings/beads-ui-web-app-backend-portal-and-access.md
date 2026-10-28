@@ -346,8 +346,8 @@ Two Session Manager routes are already in daily use:
   it". [VERIFIABLE][^29]
 
 The queue design's D-19 says a reverse SSH channel is impossible because "no `authorized_keys`
-credential exists". That is out of date: the remote-access procedure installed a dedicated key, and
-`authorized_keys` held three keys at this probe. [VERIFIABLE][^27][^30][^33] The web app needs only a
+credential exists". That is out of date: the remote-access procedure installed a dedicated key.
+[VERIFIABLE][^27][^30] The web app needs only a
 forward from client to host, so this matters for the record and not for the route. [INFERENCE]
 
 ### 4.2 The candidate routes
@@ -704,7 +704,7 @@ origin waits for the D-16(b) security design.
 - One read for every repository.
 
 **Cons:**
-- Up to 5 minutes stale; no description or metadata; absent on the personal pair; carries stale personal rows today.
+- Up to 5 minutes stale; no description or metadata; absent on the personal pair; its data scope on the work host is tracked privately.
 
 Recommendation: (a), with (c) as the cross-store index on the work pair. Deciding criterion: the
 read path must work on both pairs and keep D-4's hooks. Confidence: high. [INFERENCE]
@@ -923,8 +923,8 @@ criterion: keep the ask's cloud option without a new public surface. Confidence:
 
 ### Emergent findings
 
-1. The personal-repository rows in the employer host's queue (section 8). The brief did not
-   anticipate them.
+1. A data-scope issue in the ai-core queue on the work host, tracked privately (section 8). The
+   brief did not anticipate it.
 2. The ai-core dashboard is mostly built (section 2.4). The brief described it as "still open".
 3. The refresher writes one board snapshot per worktree path, so one store appears five times
    (section 1.4).

@@ -237,7 +237,7 @@ literal `/wq next`. Delivery is at-least-once with a per-prompt id ledger; recei
 delivery. [VERIFIABLE][^11]
 
 On this host the API is live on loopback with `/api/queue/prompts`, `/ack`, `/consumed`,
-`/claim`, `/gates/{repo}/{task_id}/resolve` and `/events`; 88 sessions are registered. The `wq-*`
+`/claim`, `/gates/{repo}/{task_id}/resolve` and `/events`; sessions are registered. The `wq-*`
 hooks are wired for all machines. No `queue_waker` process or unit is running, so Lane B is absent
 here. Rationale: OpenAPI read, process list and manifest. [VERIFIABLE][^2][^13]
 
