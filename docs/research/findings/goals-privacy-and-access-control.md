@@ -93,7 +93,7 @@ The Beads store ranks first on impact. A `bd create` run from a shared checkout 
 
 The carriers matter because they push outside the normal path. git-inbox message files live on `refs/heads/fleet-inbox/*` in the ai-harness repository. The sender drops old files from the ref's tip, but "history keeps them". [VERIFIABLE][^34] A sibling leg found that the work pair's Agent Mail board runs on the employer host and that dispatch bodies for private tasks must carry only an id and a digest. [VERIFIABLE][^44] For a `sensitive` task even the digest should be dropped, for the dictionary reason above. [INFERENCE]
 
-Backups push before review. The worktree backup transport sends every committed branch to `refs/heads/aih-backup/<branch>` on the remote, queued from commit hooks, and applies a gitleaks refusal first. [VERIFIABLE][^39] A private file committed by mistake in an ai-harness worktree is therefore on GitHub within the queue's delay, before any merge. That gitleaks refusal is a ready insertion point for the private-id rules.
+Backups push before review: a commit-hook queue sends every committed branch to `refs/heads/aih-backup/<branch>`, after a gitleaks refusal that is a ready insertion point for the private-id rules. [VERIFIABLE][^39]
 
 Agent reads and delegation are a path the ask does not name. On a personal host, a session whose working directory is ai-harness can read the sergei checkout. Claude Code accepts `Read(<path>)` deny rules in user or managed settings. [VERIFIABLE][^24] They cover its file tools and the file commands it recognises in Bash. The docs say they do not apply to "arbitrary subprocesses that read or write files indirectly, like a Python or Node script". OS-level blocking needs the sandbox. [VERIFIABLE][^25] A research leg or delegate briefed about a private goal writes its findings into whatever repository its brief names, usually a shared one. [INFERENCE]
 
@@ -127,7 +127,7 @@ Content scanning then uses a private term list held in the private repository an
 | Install, doctor and web app startup | The host's `governance` value and its configured stores | A private-class store is present or configured on an employer-gated host |
 | Periodic scan from a personal host | Remote tips and new commits of every shared repo and store | Any rule; reports and alerts, cannot block |
 
-Git's own semantics fix this layering. `pre-commit` "can be bypassed with the `--no-verify` option". A non-zero `pre-push` makes "git push ... abort without pushing anything". `reference-transaction` can abort only in its "preparing" and "prepared" states. [VERIFIABLE][^7] The fleet already bans `--no-verify` by rule. The periodic scan is what notices if someone uses it anyway.
+Git's semantics fix this layering. `pre-commit` "can be bypassed with the `--no-verify` option", while a non-zero `pre-push` makes "git push ... abort without pushing anything". [VERIFIABLE][^7] The fleet bans `--no-verify` by rule, and the periodic scan catches its use.
 
 ### Fail-closed behaviour
 
@@ -157,15 +157,15 @@ Structural rules have a low false-positive rate because they match fleet-assigne
 | Notion page permissions | Subpages inherit; broadest grant wins | Notion help [VERIFIABLE][^21] | Counter-example: inherited permission fails open |
 | Open Policy Agent and Conftest | Rego policies over structured config | OPA is a "graduated Cloud Native Computing Foundation (CNCF) project"; Conftest has 3.3k stars and "helps you write tests against structured configuration data" [VERIFIABLE][^22][^23] | Fits store-record checks in principle; adds a Go binary and Rego to a Python-stdlib fleet for rules that are a few SQL predicates. Exploratory here |
 
-Rationale for the vetting verdicts: gitleaks, SOPS, OPA and Beads clear the adoption bar on stars and governance signals. The encryption tools are rejected on fit, whatever their adoption. Betterleaks and Conftest stay exploratory for this use.
+Vetting: gitleaks, SOPS, OPA and Beads clear the adoption bar on stars and governance. The encryption tools fail on fit. Betterleaks and Conftest stay exploratory here.
 
-Server-side enforcement is where the 2024-2026 literature is thinnest for personal accounts. Server-side checks on personal-account private repositories: no significant post-2024 developments found in the GitHub docs fetched.
+Server-side checks on personal-account private repositories: no significant post-2024 developments found in the GitHub docs fetched.
 
 ## 6. Existing exposure and regression detection
 
 The prior-work compile measured, as counts and paths only, that live ai-harness goal files carried employer, name, private-id and health pattern matches. It recorded these as review candidates, not confirmed leaks. It also counted 804 goal-ish paths and 305 deleted goal-named paths across 17,442 commits of ai-harness history. [VERIFIABLE][^42] On 2026-10-28 the owner ruled, through the chief's relay, to scrub files at the tip only, with no history rewrite and no re-clone. The compile's tip scrub is on an open ai-harness pull request. [VERIFIABLE][^42]
 
-The design should therefore make three statements. The guard is forward-looking: it prevents new leaks and does not erase old ones. The history remains on every existing clone, the employer host's included, by the owner's choice. A history rewrite stays an owner decision with its options described, never a step the guard takes. [INFERENCE]
+The design should say that the guard prevents new leaks and erases no old ones, that the history stays on every existing clone by the owner's choice, and that a rewrite remains an owner decision. [INFERENCE]
 
 Two exposures sit outside that ruling's words. First, the ai-harness Beads store's Dolt history: the prior-work inventory covered Beads issues and comments, but the ruling speaks of "commit history". Second, git-inbox refs, whose history keeps every message body. [VERIFIABLE][^34][^42] Both are flagged.
 
@@ -173,7 +173,7 @@ Regression detection is a scheduled job on a personal-pair host, because only th
 
 ## Leak surfaces and guards
 
-Likelihood and impact are my ratings from the fleet behaviour described above. [INFERENCE]
+Likelihood and impact are my ratings. [INFERENCE]
 
 | Surface | How content would leak | Likelihood | Impact | Guard | Hook point | Reuse or new |
 |---|---|---|---|---|---|---|
@@ -198,9 +198,11 @@ Likelihood and impact are my ratings from the fleet behaviour described above. [
 
 ### Classification model
 
-One `privacy` marking per goal and task, with values `shared`, `domain:<repo>`, `personal`, `private` and `sensitive`, stored as a Beads label. Every repository carries a `privacy_class` of `shared`, `public` or `private` in `config/fleet-projects.toml`. The class is an allowlist of shared and public repositories. An unlisted repository is treated as shared for placement, so a private record is refused anywhere not positively marked private. The class should be a stored property and not derived from the wake repo set, because the measured sets disagree: `[wake.repo_sets.core]` lists ai-harness, ai-core, aido, ai-cli-utils and knowledge-curation, omits project-template, and the cross-pair launch allow-list adds beads-ui. [VERIFIABLE][^35][^36]
+One `privacy` marking per goal and task, with values `shared`, `domain:<repo>`, `personal`, `private` and `sensitive`, stored as a Beads label.
 
-Private domain repositories should not be named in the ai-harness registry at all, because a repository name can itself be sensitive. The guard needs only the shared allowlist plus the private id prefixes. Those prefixes do have to be in a shared manifest, and `SW` already is. [VERIFIABLE][^37] [INFERENCE]
+Every repository is shared unless it declares itself private. The declaration is a committed marker file inside the private repository's own tree. Shared and public repositories are listed with a `privacy_class` key in `config/fleet-projects.toml`, which the install test reads. Private domain repositories are never named in the ai-harness registry, because a repository name can itself be sensitive. The guard installed in every repository enforces unless it finds the private marker, so a new or forgotten repository is guarded by default. [INFERENCE]
+
+The class should be stored, not derived from an existing repo set, because the measured sets disagree. `[wake.repo_sets.core]` lists ai-harness, ai-core, aido, ai-cli-utils and knowledge-curation and omits project-template; the cross-pair launch allow-list adds beads-ui. [VERIFIABLE][^35][^36] The private id prefixes do have to sit in the shared prefix manifest so shared repos can refuse them, and `SW` already does. [VERIFIABLE][^37]
 
 ### Placement and link rule
 
@@ -455,7 +457,7 @@ The owner already ruled for tip-only scrubbing, so the design records that rulin
 
 ### R10. Shipping state
 
-Ship every guard enabled, as the fleet rule for requested features requires. I see no concrete reason to ship a guard off. The term-list rule is the one with a real false-positive cost. Its mitigation is a curated phrase list and a reasoned per-line waiver, not a default-off switch. [INFERENCE] Confidence: medium.
+Ship every guard enabled, as the fleet rule for requested features requires; I found no concrete reason to ship one off. The term-list rule carries the real false-positive cost, and its mitigation is a curated phrase list with reasoned per-line waivers. [INFERENCE] Confidence: medium.
 
 ## Alignment with the founding ask
 
@@ -478,14 +480,14 @@ The brief's line that private goals "still show up in the person's goal views" h
 4. The existing task-id rule has a coverage gap beyond privacy. It matches only legacy numeric ids, so it no longer catches the hash and slug ids Beads issues now (measured). Its scope is deliberately "legacy numeric" per its own wrapper. Whether that rule's original purpose, internal ids in published content, still holds for modern ids is a question for its owner. [VERIFIABLE][^26][^27][^28] Flagged, not filed: this run may not write Beads.
 5. Model providers are a leak path the ask does not name. On the employer host, delegated prompts go through the employer's model gateway. A private goal in a brief there leaves the personal pair even if no repository ever holds it. The placement rule (private work only in personal-pair sessions) closes it as a side effect. The design should say so. [INFERENCE]
 6. The guard's own configuration can leak. A scrub rule that names the identifier it removes is itself private content. The prior-work compile left one such policy file untouched for that reason. [VERIFIABLE][^42] Term lists, waivers and test fixtures for the privacy guard must live in the private repo or be synthetic.
-7. Repository names can be sensitive. Registering a private domain repository in the shared fleet registry, as every current repository is registered, would publish its name. The allowlist-of-shared design avoids it (Recommended enforcement design).
+7. Repository names can be sensitive. Registering a private domain repository in the shared fleet registry would publish its name. The self-declared private marker avoids it (Recommended enforcement design).
 8. Prompt injection on the agent read path is unaddressed. A shared-repo session on a personal host that can read the private checkout can be steered to copy from it. Claude Code deny rules do not cover subprocesses, and the docs point to the sandbox for OS-level blocking. [VERIFIABLE][^25] Commit and push guards remain the backstop.
 9. Counter-evidence to the strict model: Atlassian shows restricted goals in the link picker, and Linear shows id-only linkbacks and exposes titles through its API. [VERIFIABLE][^19][^20] Those products accept partial disclosure for usability. The ask's wording does not, so this packet keeps the strict model and names the cost in R3.
 10. Anchor-bias check: beyond the listed surfaces I added backups, plumbing commits, public repositories, harvesters, model gateways, guard configuration and repository names.
 
 ## Flagged for the coordinator
 
-1. Scope of the history ruling. The relayed owner turn reads: "nah, don't worry about commit history. its fine. that sounds like more hassle than its worth. just focus on files". Source: the prior-work compile's Beads comment of 2026-10-28 00:49 in the ai-harness store. [VERIFIABLE][^42] It speaks of commit history. The ai-harness Beads store's Dolt history and the git-inbox ref history are separate histories. Options: (a) read the ruling as covering all history, (b) ask the owner whether Dolt and inbox history are included. My recommendation is (b), raised once with the counts the prior-work compile measures, because the Dolt store is seeded onto every new machine. Decision-framework note: this is the owner's own ruling's scope, so no AI authority can widen it.
+1. Scope of the history ruling. The relayed owner turn reads: "nah, don't worry about commit history. its fine. that sounds like more hassle than its worth. just focus on files". Source: the prior-work compile's Beads comment of 2026-10-28 00:49 in the ai-harness store. [VERIFIABLE][^42] The ai-harness store's Dolt history and the git-inbox ref history are separate histories the words do not name. Options: (a) read the ruling as covering all history, (b) ask the owner once, with a count of goal records in the store's Dolt history, which nobody has measured yet. Recommendation: (b), because the Dolt store is seeded onto every new machine. The scope of the owner's own ruling is not an AI decision under the decision framework.
 2. Employer-domain goals. The ask places restricted goals "in sergei repo or another domain-specific repo that is on my personal machine pair". A goal about the employer work would naturally live in the work pair's workspace repository on the employer host, which is not on the personal pair. Options: (a) employer-domain goals are `shared` and live in the workspace store, (b) they are `domain:<workspace>` and allowed on the employer pair, (c) they are refused as restricted goals. This changes which hosts may hold a restricted record, so it needs the owner. Recommendation: (b).
 3. `sensitive` handling. The ask names the marking without saying how it differs from `private`. The proposed extra rules (no digest in carriers, no recall indexing, no delegation) broaden the ask. Options: (a) adopt them, (b) treat `sensitive` as a synonym of `private`. Recommendation: (a). The design author can decide this within the Gate 0 rule because it adds protection and drops nothing.
 4. Broadening to public repositories. beads-ui is public and is where the goals UI is built. Guarding it goes beyond "core repo ... cloned ... on all machines". Recommendation: include it, as a broadening that adds protection.
@@ -498,35 +500,35 @@ ai-harness at `23ece1e92b6`, byte-identical at `origin/main` `c6b37c0b72b` for e
 
 ai-core at `f40fa2bdff`: `src/ai_core/decisions/transcripts.py`. beads-ui at `0d07e7b`: `docs/research/goals-system.md`, `docs/research/beads-ui-web-app.md`, and the two sibling findings files cited. Beads: the prior-work compile issue, read-only, and Beads 1.3.2 help output for `repo`, `migrate-personal`, `dep`, `ship`, `federation`, `config`, `lint` and `dolt`.
 
-Not read: anything in the sergei repository, and none of the files the prior-work inventory flagged.
+Not read: the sergei repository, or any file the prior-work inventory flagged.
 
 ## Sources
 
-[^1]: GitHub. (2026). [About push protection](https://docs.github.com/en/code-security/secret-scanning/introduction/about-push-protection). GitHub Docs. Verified accessible (HTTP 200) 2026-10-28. (Repository push protection requires Secret Protection; user push protection covers public repositories.)
-[^2]: GitHub. (2026). [Defining custom patterns for secret scanning](https://docs.github.com/en/code-security/secret-scanning/using-advanced-secret-scanning-and-push-protection-features/custom-patterns/defining-custom-patterns-for-secret-scanning). GitHub Docs. Verified accessible (HTTP 200) 2026-10-28. (Secret Protection must be enabled first.)
-[^3]: GitHub. (2026). [About GitHub Advanced Security](https://docs.github.com/en/get-started/learning-about-github/about-github-advanced-security). GitHub Docs. Verified accessible (HTTP 200) 2026-10-28. ("You must be on a GitHub Team or GitHub Enterprise plan" to purchase.)
-[^4]: GitHub. (2026). [About rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets). GitHub Docs. Verified accessible (HTTP 200) 2026-10-28. (Framed for Team and Enterprise customers; push rulesets for private and internal repositories.)
-[^5]: GitHub. (2026). [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets). GitHub Docs. Verified accessible (HTTP 200) 2026-10-28. (Restrict file paths, extensions, size and path length.)
-[^6]: GitHub. (2026). [About pre-receive hooks](https://docs.github.com/en/enterprise-server@latest/admin/enforcing-policies/enforcing-policy-with-pre-receive-hooks/about-pre-receive-hooks). GitHub Enterprise Server Docs. Verified accessible (HTTP 200) 2026-10-28. ("scripts that run on the GitHub Enterprise Server appliance".)
-[^7]: Git project. (2026). [githooks](https://git-scm.com/docs/githooks). Git documentation. Verified accessible (HTTP 200) 2026-10-28. (pre-commit bypass, pre-push abort, reference-transaction states, pre-receive.)
-[^8]: Gitleaks. (2026). [gitleaks/gitleaks](https://github.com/gitleaks/gitleaks). GitHub repository. Verified accessible (HTTP 200) 2026-10-28. (30.4k stars, MIT, feature-complete notice, custom rules, `--redact`.)
-[^9]: Betterleaks. (2026). [betterleaks/betterleaks](https://github.com/betterleaks/betterleaks). GitHub repository. Verified accessible (HTTP 200) 2026-10-28. (2.4k stars, MIT, maintained by the gitleaks authors.)
-[^10]: Truffle Security. (2026). [trufflesecurity/trufflehog](https://github.com/trufflesecurity/trufflehog). GitHub repository. Verified accessible (HTTP 200) 2026-10-28. (28.7k stars, AGPL-3.0, custom regex detectors.)
-[^11]: Ayer, A. (2025). [AGWA/git-crypt](https://github.com/AGWA/git-crypt). GitHub repository. Verified accessible (HTTP 200) 2026-10-28. (0.8.0 released 2025-09-23; limitations section.)
-[^12]: SOPS project. (2026). [getsops/sops](https://github.com/getsops/sops). GitHub repository. Verified accessible (HTTP 200) 2026-10-28. (23.5k stars, MPL-2.0, CNCF sandbox, key backends.)
-[^13]: elasticdog. (2025). [elasticdog/transcrypt](https://github.com/elasticdog/transcrypt). GitHub repository. Verified accessible (HTTP 200) 2026-10-28. (1.7k stars; settings stored in plain text in `.git/config`.)
-[^14]: DoltHub. (2026). [Access management](https://www.dolthub.com/docs/sql-reference/server/access-management). Dolt documentation. Verified accessible (HTTP 200) 2026-10-28. (Grants, roles; column privileges not yet supported.)
-[^15]: DoltHub. (2026). [Branch permissions](https://www.dolthub.com/docs/sql-reference/server/branch-permissions). Dolt documentation. Verified accessible (HTTP 200) 2026-10-28. (Write and merge control only; reads open; CLI bypasses.)
-[^16]: DoltHub. (2026, October 8). [How Dolt remotes work](https://www.dolthub.com/blog/2026-10-08-how-dolt-remotes-work/). DoltHub Blog. Verified accessible (HTTP 200) 2026-10-28. (A push transfers missing chunks including missing history; commits reference a full root.)
-[^17]: Gastown Hall. (2026). [gastownhall/beads](https://github.com/gastownhall/beads). GitHub repository. Verified accessible (HTTP 200) 2026-10-28. (28.2k stars; `bd init --contributor` routes planning issues to a separate repo.)
-[^18]: Gastown Hall. (2026). [Dependencies: cross-repo dependencies](https://github.com/gastownhall/beads/blob/main/docs/core-concepts/dependencies.md). Beads documentation. Verified accessible (HTTP 200) 2026-10-28. ("an unconfigured or unavailable project remains blocking".)
-[^19]: Linear. (2026). [Private teams](https://linear.app/docs/private-teams). Linear Docs. Verified accessible (HTTP 200) 2026-10-28. (Id-only linkbacks; API and integrations can expose titles.)
-[^20]: Atlassian. (2026). [Restrict who can view and edit goals](https://support.atlassian.com/platform-experiences/docs/restrict-who-can-view-and-edit-goals/). Atlassian Support. Verified accessible (HTTP 200) 2026-10-28. (Restrict at creation only; whole hierarchy; no cross-boundary links; one-way change.)
-[^21]: Notion. (2026). [Sharing and permissions](https://www.notion.com/help/sharing-and-permissions). Notion Help Center. Verified accessible (HTTP 200) 2026-10-28. (Subpage inheritance; broadest access wins.)
-[^22]: Open Policy Agent. (2026). [OPA documentation](https://www.openpolicyagent.org/docs). Verified accessible (HTTP 200) 2026-10-28. (General-purpose policy engine; CNCF graduated.)
-[^23]: Open Policy Agent. (2026). [open-policy-agent/conftest](https://github.com/open-policy-agent/conftest). GitHub repository. Verified accessible (HTTP 200) 2026-10-28. (3.3k stars; tests against structured configuration data.)
-[^24]: Anthropic. (2026). [Settings files and precedence](https://code.claude.com/docs/en/settings). Claude Code Docs. Verified accessible (HTTP 200) 2026-10-28. (`permissions.deny` `Read(...)` example; managed settings precedence.)
-[^25]: Anthropic. (2026). [Configure permissions](https://code.claude.com/docs/en/permissions). Claude Code Docs. Verified accessible (HTTP 200) 2026-10-28. (Read and Edit deny rules do not cover arbitrary subprocesses; use the sandbox.)
+[^1]: GitHub. (2026). [About push protection](https://docs.github.com/en/code-security/secret-scanning/introduction/about-push-protection). GitHub Docs. Verified accessible (HTTP 200) 2026-10-28.
+[^2]: GitHub. (2026). [Defining custom patterns for secret scanning](https://docs.github.com/en/code-security/secret-scanning/using-advanced-secret-scanning-and-push-protection-features/custom-patterns/defining-custom-patterns-for-secret-scanning). GitHub Docs. Verified accessible (HTTP 200) 2026-10-28.
+[^3]: GitHub. (2026). [About GitHub Advanced Security](https://docs.github.com/en/get-started/learning-about-github/about-github-advanced-security). GitHub Docs. Verified accessible (HTTP 200) 2026-10-28.
+[^4]: GitHub. (2026). [About rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets). GitHub Docs. Verified accessible (HTTP 200) 2026-10-28.
+[^5]: GitHub. (2026). [Available rules for rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets). GitHub Docs. Verified accessible (HTTP 200) 2026-10-28.
+[^6]: GitHub. (2026). [About pre-receive hooks](https://docs.github.com/en/enterprise-server@latest/admin/enforcing-policies/enforcing-policy-with-pre-receive-hooks/about-pre-receive-hooks). GitHub Enterprise Server Docs. Verified accessible (HTTP 200) 2026-10-28.
+[^7]: Git project. (2026). [githooks](https://git-scm.com/docs/githooks). Git documentation. Verified accessible (HTTP 200) 2026-10-28.
+[^8]: Gitleaks. (2026). [gitleaks/gitleaks](https://github.com/gitleaks/gitleaks). GitHub repository. Verified accessible (HTTP 200) 2026-10-28.
+[^9]: Betterleaks. (2026). [betterleaks/betterleaks](https://github.com/betterleaks/betterleaks). GitHub repository. Verified accessible (HTTP 200) 2026-10-28.
+[^10]: Truffle Security. (2026). [trufflesecurity/trufflehog](https://github.com/trufflesecurity/trufflehog). GitHub repository. Verified accessible (HTTP 200) 2026-10-28.
+[^11]: Ayer, A. (2025). [AGWA/git-crypt](https://github.com/AGWA/git-crypt). GitHub repository. Verified accessible (HTTP 200) 2026-10-28.
+[^12]: SOPS project. (2026). [getsops/sops](https://github.com/getsops/sops). GitHub repository. Verified accessible (HTTP 200) 2026-10-28.
+[^13]: elasticdog. (2025). [elasticdog/transcrypt](https://github.com/elasticdog/transcrypt). GitHub repository. Verified accessible (HTTP 200) 2026-10-28.
+[^14]: DoltHub. (2026). [Access management](https://www.dolthub.com/docs/sql-reference/server/access-management). Dolt documentation. Verified accessible (HTTP 200) 2026-10-28.
+[^15]: DoltHub. (2026). [Branch permissions](https://www.dolthub.com/docs/sql-reference/server/branch-permissions). Dolt documentation. Verified accessible (HTTP 200) 2026-10-28.
+[^16]: DoltHub. (2026, October 8). [How Dolt remotes work](https://www.dolthub.com/blog/2026-10-08-how-dolt-remotes-work/). DoltHub Blog. Verified accessible (HTTP 200) 2026-10-28.
+[^17]: Gastown Hall. (2026). [gastownhall/beads](https://github.com/gastownhall/beads). GitHub repository. Verified accessible (HTTP 200) 2026-10-28.
+[^18]: Gastown Hall. (2026). [Dependencies: cross-repo dependencies](https://github.com/gastownhall/beads/blob/main/docs/core-concepts/dependencies.md). Beads documentation. Verified accessible (HTTP 200) 2026-10-28.
+[^19]: Linear. (2026). [Private teams](https://linear.app/docs/private-teams). Linear Docs. Verified accessible (HTTP 200) 2026-10-28.
+[^20]: Atlassian. (2026). [Restrict who can view and edit goals](https://support.atlassian.com/platform-experiences/docs/restrict-who-can-view-and-edit-goals/). Atlassian Support. Verified accessible (HTTP 200) 2026-10-28.
+[^21]: Notion. (2026). [Sharing and permissions](https://www.notion.com/help/sharing-and-permissions). Notion Help Center. Verified accessible (HTTP 200) 2026-10-28.
+[^22]: Open Policy Agent. (2026). [OPA documentation](https://www.openpolicyagent.org/docs). Verified accessible (HTTP 200) 2026-10-28.
+[^23]: Open Policy Agent. (2026). [open-policy-agent/conftest](https://github.com/open-policy-agent/conftest). GitHub repository. Verified accessible (HTTP 200) 2026-10-28.
+[^24]: Anthropic. (2026). [Settings files and precedence](https://code.claude.com/docs/en/settings). Claude Code Docs. Verified accessible (HTTP 200) 2026-10-28.
+[^25]: Anthropic. (2026). [Configure permissions](https://code.claude.com/docs/en/permissions). Claude Code Docs. Verified accessible (HTTP 200) 2026-10-28.
 [^26]: beads-ui. (2026). [Measurements behind the private-goal privacy findings](https://github.com/sergeiwallace/beads-ui/blob/main/docs/research/findings/evidence/goals-privacy-measurements-2026-10-28.md), `docs/research/findings/evidence/goals-privacy-measurements-2026-10-28.md`. This run's measurements M-1 to M-7, committed beside this file.
 [^27]: ai-harness. (2026). [.gitleaks.toml](https://github.com/sergeiwallace/ai-harness/blob/main/.gitleaks.toml), lines 1-8, 100-198. Private repository; read at `c6b37c0b72b` 2026-10-28.
 [^28]: ai-harness. (2026). [gitleaks_staged.py](https://github.com/sergeiwallace/ai-harness/blob/main/scripts/gitleaks_staged.py) and [run_publication_security_scan.py](https://github.com/sergeiwallace/ai-harness/blob/main/scripts/run_publication_security_scan.py). Private repository; read at `c6b37c0b72b` 2026-10-28. (Legacy numeric id scope; redacted working-tree and all-ref scans.)
