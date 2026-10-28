@@ -16,16 +16,29 @@ stub: true
 
 ## Founding Ask Coverage
 
-`founding_ask_ref`: [FILL: exact `canonical_root_json` + `founding_ask_ref_sha256` | N/A with reason]
+`canonical_root_json`: `{"blob_oid":"8b43d16fb45272c4911f8de4d1b491e6bb472134","capture_commit":"b5eaeefd646b1fee17f189518ca9d32a67e9aad2","content_sha256":"79619e87b5d6a8e02204a9bf35e294caa65ab910f8be7f0d136e7035009caed0","entry_ids":["A001"],"generation":1,"path":"docs/asks/BU-epic-goals-system-usmm.md","previous_ref_sha256":null,"repository":"ai-harness","schema_version":1,"task_id":"BU-epic-goals-system-usmm"}`
 
-[FILL: When this `founding_ask_ref` is `N/A` for a Tier 1 dispatch with no `canonical_root_json`, paste the literal `verbatim_exact_ask` from the worker brief directly below in a fenced `text` block. Never replace it with a summary or a reference to the transient brief. Do not add this block for Tier 0 or Tier 2/3.]
+`founding_ask_ref_sha256`: `c12436184b45bdc5c279f8f1d3928c6610536b5802f38b0760a6d47d4997dae6`
 
-[FILL: account for every authoritative raw FAR entry, including every re-scope entry. This index
-is non-authoritative; the raw FAR governs.]
+The founding ask record has one entry, A001, recorded verbatim in ai-harness at `docs/asks/BU-epic-goals-system-usmm.md`. This index is non-authoritative; the raw entry governs. A001 covers two systems. This doc covers the web app clauses; the goals clauses and the privacy guard are covered by [the goals system research](goals-system.md). Each row below is one web app clause of A001.
 
-| Authoritative raw entry | Coverage and disposition |
+| A001 clause (quoted or closely paraphrased) | Coverage and disposition |
 |---|---|
-| [FILL: one row per entry id] | [FILL: section/evidence or explicit disposition] |
+| A001: "the web app for the beads-ui task manager ... same overall purpose as the beads-ui task manage claude code mod tui" | Covered: Context; [§5](#5-front-end-stack-recheck); [§6](#6-shared-code-across-the-web-app-the-mcp-app-and-the-mod) |
+| A001: "react or whatever framework is pretty and aesthetic and best practice" | Covered: [§5](#5-front-end-stack-recheck) |
+| A001: "best practice UI / UX interactions from jira / todoist / asana / linear"; kanban, sprint and backlog, rearrange, quick edits of priority, status and owner, view details | Covered: [§2](#2-board-backlog-and-sprint-the-2025-2026-delta), building on the prior beads-ui landscape research |
+| A001: "view the held doc blockers / decisions / open questions / details" | Covered: [§1](#1-review-and-triage-of-blockers-decisions-and-open-questions) |
+| A001: type and enter prompt responses per task for the owning session; the session "should get automatically notified via event-based system" built on aih-fw-1's event-driven wake | Covered: [§3](#3-per-task-prompts-and-event-based-dispatch) |
+| A001: "it can work via either agent-mail or hook context injection (should be event-based) and/or prompt injection via shared prompt injection library or configurable combination of them with fallback options" | Covered: [§3](#3-per-task-prompts-and-event-based-dispatch). All three named routes stay in the design space; the section recommends how they combine |
+| A001: "i can change the owning cc session too and it should trigger the automatic /handoff" | Covered: [§4](#4-owner-change-handoff-and-start-goal) |
+| A001: "auto-triggers them to `/start-goal` if they're not in a current goal mode state" | Covered: [§4](#4-owner-change-handoff-and-start-goal) |
+| A001: "use the auto-work queue system to see all the tasks in priority order and filter them to see all blocked tasks in priority order (can filter by ... epic etc)"; review blockers and decisions by priority, impact, type and size; unblock and prompt next steps | Covered: [§1](#1-review-and-triage-of-blockers-decisions-and-open-questions); [§7](#7-backend-over-beads-and-ai-core) for the queue data |
+| A001: "fit within the app-portal system ... as a modular web app" | Covered: [§8](#8-app-portal-fit) |
+| A001: "shared code ... for beads-ui claude code mod tui, claude desktop / claude.ai webapp UI MCP app ... (if its too limiting, then they can be separate builds)" | Covered: [§6](#6-shared-code-across-the-web-app-the-mcp-app-and-the-mod) |
+| A001: "built on our backend of beads tasks dolt db store etc and whatever else from ai-core"; open to changing backend or frontend | Covered: [§7](#7-backend-over-beads-and-ai-core) |
+| A001: local hosting for now; sem-kg-ec2 with acn-mac via SSM or SSH; fw-lnx with sw-mac via Tailscale; cloud hosting from infra-as-config templates later | Covered: [§9](#9-hosting-and-access-for-each-machine-pair) |
+| A001: goals system, goal views, goal research and the privacy guard | Out of this doc by split, covered in full by [the goals system research](goals-system.md) |
+| A001: the process clauses (orchestrate, research, wait for aih-fw-2's compile, merge, sync, reap, then design through /auto-flow, then Sergei's review) | Process, not content. Recorded in the Run History of this doc and the coordinator's report |
 
 **Status:** stub
 
