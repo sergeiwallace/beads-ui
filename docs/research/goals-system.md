@@ -85,7 +85,7 @@ Product, library and practice claims weight 2026 first, then 2025, then 2024. Go
 
 ## 1. Goal and OKR products
 
-Atlassian Goals is "just okay" for a documented reason: it does not compute a goal's progress from the work linked to it. Its own help says that when several work items link to one goal, "progress won't be automatically calculated across all of them", and it caps linked Jira work items at 100 per goal [VERIFIABLE][^2][^3]. Plane and ClickUp count completed work, and Asana names its progress sources most precisely: a goal's progress is `manual`, `subgoal_progress`, `project_task_completion`, `project_milestone_completion`, `task_completion` or `external`, and each supporting link carries a `contribution_weight` from 0 to 1 [VERIFIABLE][^4][^5].
+Atlassian Goals is "just okay" for a documented reason: it does not compute a goal's progress from the work linked to it. Its own help says that when several work items link to one goal, "progress won't be automatically calculated across all of them", and it caps linked Jira work items at 100 per goal [VERIFIABLE][^2][^3]. Plane and ClickUp count completed work [VERIFIABLE][^1] (§ 1 of that file). Asana names its progress sources most precisely: a goal's progress is `manual`, `subgoal_progress`, `project_task_completion`, `project_milestone_completion`, `task_completion` or `external`, and each supporting link carries a `contribution_weight` from 0 to 1 [VERIFIABLE][^4][^5].
 
 The better products keep health and progress as two separate signals. Linear derives a project's health from its most recent written update, flags "Update Missing" when an update is overdue, and computes progress from estimate points as completed plus a quarter of in-progress over the total [VERIFIABLE][^6][^7]. Health answers "is this on track, in the owner's judgment", progress answers "how much of the work is done", and a goal view needs both.
 
@@ -149,6 +149,31 @@ The goal-membership edge kind is the one data-model call this research cannot se
 ### When to use
 
 Represent a goal as a custom-type issue with `metadata.goal` holding its planned start, date resolution, progress source, target metric and visibility, and keep weights in the goal's metadata keyed by member until Beads can write edge metadata [INFERENCE][^1].
+
+<!-- later-sections-slot -->
+
+## Sources
+
+[^1]: beads-ui. (2026). [Goals research leg 1: goal products and visualisation landscape](findings/goals-products-and-visualisation-landscape.md) (`docs/research/findings/goals-products-and-visualisation-landscape.md`, with `findings/evidence/goals-visualisation-measurements-2026-10-28.md`). Tracked in this repository; merged in PR #79 (0d07e7b), 2026-10-28. (Section numbers cited in the text refer to that file.)
+[^2]: Atlassian. (2026). [Link goals and projects to work in Jira](https://support.atlassian.com/platform-experiences/docs/link-goals-and-projects-to-work-in-jira/). Atlassian Support. Verified accessible (HTTP 200) 2026-10-28 by goals leg 1.
+[^3]: Atlassian. (2026). [Goals app data limits and guardrails](https://support.atlassian.com/platform-experiences/docs/goals-app-data-limits-and-guardrails/). Atlassian Support. Verified accessible (HTTP 200) 2026-10-28 by goals leg 1. (100 linked work items per goal.)
+[^4]: Asana. (2026). [Asana OpenAPI specification](https://github.com/Asana/openapi/blob/master/defs/asana_oas.yaml). GitHub. Read raw (HTTP 200) 2026-10-28 by goals leg 1. (`progress_source` values, parent goals.)
+[^5]: Asana. (2026). [Goal relationships](https://developers.asana.com/reference/goal-relationships). Asana Developers. Verified accessible (HTTP 200) 2026-10-28 by goals leg 1. (`contribution_weight`.)
+[^6]: Linear. (2026). [Initiative and project updates](https://linear.app/docs/initiative-and-project-updates). Linear Docs. Verified accessible (HTTP 200) 2026-10-28 by goals leg 1. (Health from updates; Update Missing.)
+[^7]: Linear. (2026). [Linear SDK GraphQL schema](https://github.com/linear/linear/blob/master/packages/sdk/src/schema.graphql). GitHub. Read raw (HTTP 200) 2026-10-28 by goals leg 1. (`InitiativeToProject`, progress formula.)
+[^8]: Perdoo. (2026). [MCP server](https://support.perdoo.com/en/articles/14470891-mcp-server). Perdoo Support. Verified accessible (HTTP 200) 2026-10-28 by goals leg 1; page dated 2026-09-15.
+[^9]: Tability. (2026). [Tability](https://www.tability.io/). Tability. Verified accessible (HTTP 200) 2026-10-28 by goals leg 1. (Human and agent teams, check-ins.)
+[^10]: Linear. (2026). [Agents in Linear](https://linear.app/docs/agents-in-linear). Linear Docs. Verified accessible (HTTP 200) 2026-10-28 by goals leg 1. (Delegation by assignment, delegate filters.)
+[^11]: GitHub. (2026). [REST API endpoints for sub-issues](https://docs.github.com/en/rest/issues/sub-issues). GitHub Docs. Verified accessible (HTTP 200) 2026-10-28 by goals leg 1. (One parent; `replace_parent`.)
+[^12]: Atlassian. (2026). [Restrict who can view and edit goals](https://support.atlassian.com/platform-experiences/docs/restrict-who-can-view-and-edit-goals/). Atlassian Support. Verified accessible (HTTP 200) 2026-10-28 by goals leg 1.
+[^13]: xyflow. (2026). [Layouting](https://reactflow.dev/learn/layouting/layouting). React Flow Docs. Verified accessible (HTTP 200) 2026-10-28 by goals leg 1. (Dagre, d3 and ELK compared; Pro examples.)
+[^14]: GitHub. (2026). Repository metadata via the [GitHub GraphQL API](https://docs.github.com/en/graphql) for the repositories listed in [findings/evidence/goals-visualisation-measurements-2026-10-28.md](findings/evidence/goals-visualisation-measurements-2026-10-28.md). Read 2026-10-28 by goals leg 1. (Stars, licences, release dates.)
+[^15]: SVAR. (2026). [React Gantt](https://svar.dev/react/gantt/). SVAR. Verified accessible (HTTP 200) 2026-10-28 by goals leg 1. (MIT core; PRO features.)
+[^16]: DHTMLX. (2026). [DHTMLX Gantt](https://github.com/DHTMLX/gantt). GitHub. Verified accessible (HTTP 200) 2026-10-28 by goals leg 1. (Community edition; PRO-only features.)
+[^17]: Frappe. (2026). [Frappe Gantt](https://github.com/frappe/gantt). GitHub. Verified accessible (HTTP 200) 2026-10-28 by goals leg 1. (Dependency arrows, no hierarchy.)
+[^18]: npm, Inc. (2026). [npm public registry](https://registry.npmjs.org/), `frappe-gantt` entry; raw output in [findings/evidence/beads-ui-web-app-stack-signals-2026-10-28.md](findings/evidence/beads-ui-web-app-stack-signals-2026-10-28.md). Read 2026-10-28 by web app research leg 1. (1.2.2 released 2026-02-25.)
+[^19]: Recharts. (2026). [Recharts chart sources](https://github.com/recharts/recharts/tree/main/src/chart). GitHub. Read (HTTP 200) 2026-10-28 by goals leg 1. (`Sankey`, `Treemap`, `SunburstChart`, `RadialBarChart`.)
+[^20]: Beads contributors. (2026). [Beads](https://github.com/gastownhall/beads). GitHub. Repository metadata read (HTTP 200) 2026-10-28; CLI help and read-only schema queries from `bd version 1.3.2 (9b65b9e19)` recorded in [findings/evidence/goals-visualisation-measurements-2026-10-28.md](findings/evidence/goals-visualisation-measurements-2026-10-28.md) by goals leg 1.
 
 <!-- /doc:region name="body" -->
 

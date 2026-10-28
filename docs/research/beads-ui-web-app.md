@@ -120,7 +120,7 @@ The recommended dispatch path follows the transactional outbox pattern: write th
 | 1 | Agent Mail addressed to `<session>@<host>`, admitted by the target host's notifier: an idle session wakes through the hook, a busy one sees a header at its next tool call | Primary |
 | 2 | Buzz, then git-inbox, as cross-host carriers when Agent Mail is unavailable; git-inbox carries a pointer only | Agent Mail unavailable |
 | 3 | The shared prompt-injection library types a one-line, harness-authored pointer to the dispatch on the target host | Rung 1 published but no shown receipt within a bound (proposed 60 s), and the session has a tmux pane |
-| 4 | The beads-ui mod's `$.prompt.submit`, when the mod is loaded in the target session | No pane the library can resolve |
+| 4 | The beads-ui mod's `$.prompt.submit`, when the mod is loaded in the target session; the mods API documents it with timers and refused-call results [VERIFIABLE][^24] | No pane the library can resolve |
 | 5 | The work queue's `Stop`-hook pull and the passive header at the next turn end | Floor: nothing is lost when every wake rung is off |
 
 This keeps all three routes the founding ask names. Agent Mail admitted by the notifier is the "hook context injection ... event-based" route through aih-fw-1's work, the shared prompt-injection library is rung 3, and git-inbox and Buzz carry Agent Mail's role across hosts [INFERENCE][^2][^17][^18]. Claude Code's native channels and remote control stay out of the ladder: channels are a research preview with provider limits, and Remote Control requires a subscription login that excludes the Bedrock route this host uses [VERIFIABLE][^7][^27].
@@ -166,6 +166,36 @@ One limit matters for the MCP App. MCP Apps' `ui/message` posts into the Claude 
 Put anything that decides what to show or what a key does in core. Put anything that draws in the surface package.
 
 <!-- sections-7-9-slot -->
+
+## Sources
+
+[^1]: beads-ui. (2026). [beads-ui web app research leg 1: UX, stack recheck and shared code](findings/beads-ui-web-app-ux-stack-and-shared-code.md) (`docs/research/findings/beads-ui-web-app-ux-stack-and-shared-code.md`, with `findings/evidence/beads-ui-web-app-stack-signals-2026-10-28.md`). Tracked in this repository; merged in PR #78 (cdcda0b), 2026-10-28. (Section numbers cited in the text refer to that file.)
+[^2]: beads-ui. (2026). [beads-ui web app research leg 2: event-driven dispatch of per-task prompts](findings/beads-ui-web-app-event-dispatch.md) (`docs/research/findings/beads-ui-web-app-event-dispatch.md`). Tracked in this repository; merged in PR #78 (cdcda0b), 2026-10-28.
+[^3]: Linear. (2026). [Triage](https://linear.app/docs/triage). Linear Docs. Verified accessible (fetched) 2026-10-28 by research leg 1. (Accept, Decline, Duplicate keys; snooze.)
+[^4]: Google. (2026). [Keyboard shortcuts for Gmail](https://support.google.com/mail/answer/6594). Gmail Help. Verified accessible (fetched) 2026-10-28 by research leg 1. (Done, undo; shortcuts off by default.)
+[^5]: GitHub. (2026). [Managing notifications from your inbox](https://docs.github.com/en/subscriptions-and-notifications/how-tos/viewing-and-triaging-notifications/managing-notifications-from-your-inbox). GitHub Docs. Verified accessible (fetched) 2026-10-28 by research leg 1. (Done, saved filters, bulk actions.)
+[^6]: Linear. (2026). [Agent interaction](https://linear.app/developers/agent-interaction). Linear Developers. Verified accessible (fetched) 2026-10-28 by research leg 1. (Six agent session states.)
+[^7]: Anthropic. (2026). [Continue local sessions from any device with Remote Control](https://code.claude.com/docs/en/remote-control). Claude Code Docs. Verified accessible (HTTP 200) 2026-10-27 and 2026-10-28 by research legs 1 and 2. (Connection status; subscription login required.)
+[^8]: W3C. (2023). [Understanding SC 2.1.4: Character Key Shortcuts](https://www.w3.org/WAI/WCAG22/Understanding/character-key-shortcuts.html). WAI. Verified accessible (fetched) 2026-10-28 by research leg 1. (Level A, current in WCAG 2.2.)
+[^9]: Linear. (2026). [Changelog](https://linear.app/changelog) and [Priority inbox](https://linear.app/changelog/2026-09-03-priority-inbox). Linear. Verified accessible (fetched) 2026-10-28 by research leg 1. (Entries April to October 2026.)
+[^10]: npm, Inc. (2026). [npm public registry](https://registry.npmjs.org/), queried per package; raw output in [findings/evidence/beads-ui-web-app-stack-signals-2026-10-28.md](findings/evidence/beads-ui-web-app-stack-signals-2026-10-28.md). Verified accessible 2026-10-28 by research leg 1. (Versions and release dates of the D-10 stack.)
+[^11]: Tan, L., Savona, J., & Zhang, M. (2025, October 7). [React Compiler v1.0](https://react.dev/blog/2025/10/07/react-compiler-1). React Blog. Verified accessible (fetched) 2026-10-28 by research leg 1.
+[^12]: Vite. (2026, March 12). [Vite 8 is out](https://vite.dev/blog/announcing-vite8). Vite Blog. Verified accessible (fetched) 2026-10-28 by research leg 1.
+[^13]: Model Context Protocol. (2026). [MCP Apps specification 2026-01-26](https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx) and [MCP Apps overview](https://modelcontextprotocol.io/extensions/apps/overview). Verified accessible (fetched) 2026-10-28 by research leg 1. (`ui/message` posts into the conversation.)
+[^14]: ai-harness. (2026). *Event-driven admission for idle session wakes* (`docs/designs/aih-p811n7-event-driven-idle-wake.md`, lines 89-200, 506-514, 535-552). Read at ai-harness `23ece1e92b6` by research leg 2 and at `1e67f5e9c37` by the coordinator, 2026-10-27. [no online source located] private repository; path and commit given.
+[^15]: ai-harness. (2026). `src/ai_harness/idle_wake.py` (lines 30-63, 86-124, 257-298). Read at `23ece1e92b6` by research leg 2. [no online source located] private repository.
+[^16]: beads-ui. (2026). [Evidence: host and history probes behind the event-dispatch findings](findings/evidence/beads-ui-web-app-event-dispatch-host-probe.md). Tracked in this repository; measured 2026-10-27T23:58Z to 2026-10-28T00:06Z by research leg 2.
+[^17]: ai-harness. (2026). *Fleet messaging ladder* (`docs/procedures/fleet-messaging-ladder.md`, lines 34-262). Read at `23ece1e92b6` by research leg 2. [no online source located] private repository. (Ladder order; VERIFIED and UNVERIFIED peer relays.)
+[^18]: ai-harness. (2026). *Prompt injection and auto-submission library* (`docs/designs/aih-59eza-prompt-injection-library.md`, lines 218-800). Read at `23ece1e92b6` by research leg 2. [no online source located] private repository.
+[^19]: ai-harness. (2026). *Autonomous work-queue coordinator and PWA dashboard* (`docs/designs/autonomous-work-queue-coordinator-and-pwa-dashboard.md`, lines 175-600). Read at `23ece1e92b6` by research leg 2. [no online source located] private repository.
+[^20]: ai-harness. (2026). *Session handoff* (`docs/procedures/session-handoff.md`, lines 63-180) and the `/handoff` skill (`skills/handoff/SKILL.md`). Read at `23ece1e92b6` by research leg 2. [no online source located] private repository. (Receiver-first handoff; `--force` reassignment.)
+[^21]: Anthropic. (2026). [Keep Claude working toward a goal](https://code.claude.com/docs/en/goal.md). Claude Code Docs. Verified accessible (HTTP 200) 2026-10-27 by research leg 2. (Replacement, pause, resume on a new prompt.)
+[^22]: ai-harness. (2026). `/start-goal` skill (`skills/start-goal/SKILL.md`, lines 1-135), `src/ai_harness/goal_waker.py` and the *Goal waker* design (`docs/designs/aih-wmd2v-goal-waker.md`). Read at `23ece1e92b6` by research leg 2. [no online source located] private repository.
+[^23]: Richardson, C. (2026). [Pattern: Transactional outbox](https://microservices.io/patterns/data/transactional-outbox.html). microservices.io. Verified accessible (HTTP 200) 2026-10-27 by research leg 2. (Idempotent consumers.)
+[^24]: Anthropic. (2026). [Use the mods API](https://code.claude.com/docs/en/plugins/mods/api.md). Claude Code Docs. Verified accessible (HTTP 200) 2026-10-27 by research leg 2. (Timers, `$.prompt.submit`, refused-call results.)
+[^25]: beads-ui. (2026). [beads-ui design](../designs/beads-ui-design.md) (`docs/designs/beads-ui-design.md`, D-10, D-11, D-17, D-37, D-39). Tracked in this repository; read at `c5f6e57`, 2026-10-27.
+[^26]: Anthropic. (2026). [Hooks reference](https://code.claude.com/docs/en/hooks.md). Claude Code Docs. Verified accessible (HTTP 200) 2026-10-27 by research leg 2. (`asyncRewake`, `additionalContext`.)
+[^27]: Anthropic. (2026). [Push events into a running session with channels](https://code.claude.com/docs/en/channels.md). Claude Code Docs. Verified accessible (HTTP 200) 2026-10-27 by research leg 2. (Research preview; provider availability.)
 
 <!-- /doc:region name="body" -->
 
