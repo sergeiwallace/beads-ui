@@ -88,7 +88,7 @@ repos:
   # distribution mechanism here, not a shortcut around it. A workstation that
   # never ran ai-harness's install.sh fails loudly (`Executable <name> not
   # found`), never silently passes — see ai-harness's
-  # docs/designs/aih-393-shared-hook-distribution-model.md.
+  # shared hook distribution model design.
   - repo: local
     hooks:
       # Fail if any .claude/settings.json hook command points at a script that

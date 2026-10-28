@@ -9,7 +9,7 @@
 # Fails non-zero when pre-commit or the config file isn't
 # available: a bootstrap that cannot install hooks must not be allowed to
 # silently claim success, matching Tier-B's loud-failure contract in
-# ai-harness's docs/designs/aih-393-shared-hook-distribution-model.md.
+# ai-harness's shared hook distribution model design.
 # setup.sh.jinja's hook-install step handles this exit non-zero itself
 # (warns and continues the rest of the scaffold) so a fresh scaffold
 # without pre-commit yet installed is still usable — this script's own
