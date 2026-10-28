@@ -31,7 +31,7 @@ a452401e054 2026-10-27T19:26:41-04:00 fix(agent-mail): quiet, withdraw and expir
 0f7064df8b4 2026-10-25T01:09:03-04:00 Route the harness-sync wake to one installation owner (#6086)
 9e86bbda503 2026-10-24T23:57:39-04:00 fix(agent-mail): stop re-delivering an unchanged notice view across changes to the global notice id (#6071)
 802f762104a 2026-10-24T22:13:43-04:00 fix(hooks): disable automatic session-notice wakes by default (#6052)
-3904eed0d2c 2026-10-24T21:19:13-04:00 docs(design): event-driven admission for idle session wakes (AIH-p811n7.2) (#6032)
+3904eed0d2c 2026-10-24T21:19:13-04:00 docs(design): event-driven admission for idle session wakes (#6032)
 ```
 
 `git branch -r --list 'origin/wt/aih-fw-1/*'` listed, among others, `idle-wake-design`,
@@ -41,26 +41,26 @@ a452401e054 2026-10-27T19:26:41-04:00 fix(agent-mail): quiet, withdraw and expir
 
 ## 2. Beads status lines (read-only)
 
-`bd -C /data/projects/ai-harness show AIH-p811n7` children, verbatim status glyphs and titles:
+`bd show` on the event-driven idle wake epic, its children, verbatim status glyphs and titles:
 
 ```text
-✓ AIH-p811n7.2: Design the event-driven idle wake (design doc, Codex sol decisions) P1
-◐ AIH-p811n7.3: Implement the event-driven idle wake (Codex sol implement plus impl-audit) P1
-◐ AIH-p811n7.6: Phase 2 impl-audit of the idle-wake snapshots (Codex gpt-6.1-sol read-only review) P2
-◐ AIH-p811n7.9: Implement idle-wake Phase 4: lifecycle coexistence, config seeding and call-time gates (Codex sol) P2
-✓ AIH-3i8zyt: Interim kill switch: stop automatic session-notice wakes until the event-driven idle wake lands P0
-✓ AIH-p811n7.7: Fix the four Phase 2 review findings (Codex gpt-6.1-sol implement) P2
-✓ AIH-p811n7.1: Measure idle-wake cost and cause from real session transcripts (Codex sol research) P1
-✓ AIH-p811n7.8: Fix the eight Phase 3 review findings (Codex gpt-6.1-sol implement) P2
-✓ AIH-p811n7.4: Interim cut of no-op wake cost before the full design lands (Codex sol bug-fix) P1
+✓ child 2: Design the event-driven idle wake (design doc, Codex sol decisions) P1
+◐ child 3: Implement the event-driven idle wake (Codex sol implement plus impl-audit) P1
+◐ child 6: Phase 2 impl-audit of the idle-wake snapshots (Codex gpt-6.1-sol read-only review) P2
+◐ child 9: Implement idle-wake Phase 4: lifecycle coexistence, config seeding and call-time gates (Codex sol) P2
+✓ related: Interim kill switch: stop automatic session-notice wakes until the event-driven idle wake lands P0
+✓ child 7: Fix the four Phase 2 review findings (Codex gpt-6.1-sol implement) P2
+✓ child 1: Measure idle-wake cost and cause from real session transcripts (Codex sol research) P1
+✓ child 8: Fix the eight Phase 3 review findings (Codex gpt-6.1-sol implement) P2
+✓ child 4: Interim cut of no-op wake cost before the full design lands (Codex sol bug-fix) P1
 ◐ 6/10 complete (60%)
 ```
 
 The epic's newest note (2026-10-27) says Phases 1 to 3 are merged and installed on fw-lnx and that
 "Automatic wakes remain off (no idle-wake.json)".
 
-`bd -C /data/projects/ai-harness show AIH-swgb4`: `[EPIC] ... [P1 · BLOCKED]`, assignee
-`aih-ec2-3`. `bd -C /data/projects/ai-harness show AIH-swgb4.8`: `[P2 · OPEN]`, "work-queue Phase 2:
+`bd show` on the work-queue epic: `[EPIC] ... [P1 · BLOCKED]`, assignee
+`aih-ec2-3`. `bd show` on its dashboard issue: `[P2 · OPEN]`, "work-queue Phase 2:
 dashboard member app -- ai-core web/ SPA (Board, Task detail, Sessions) + SSE + app-portal apps.yaml
 registration". The epic's notes from early October name the Phase 2 prerequisites as absent on
 this host (no queue services and no Tailscale); section 4 below shows that has moved.
