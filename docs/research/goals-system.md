@@ -1,15 +1,21 @@
 ---
 title: "A goals system above epics, stories and tasks: products, science and ontology, visualisation and privacy"
 category: research
-tags: [research]
-status: stub
-source: "None"
+tags: [research, goals, okr, ontology, alignment, visualisation, privacy, beads]
+status: complete
+source: "claude-opus-5-5-2026-10-28"
 template_version: "research-1.2.0"
 delegation_provenance:
   version: 2
   contributors: []
 task: BU-ylx.11.1
-stub: true
+stub: false
+related_docs:
+  - docs/research/beads-ui-web-app.md
+  - docs/research/findings/goals-products-and-visualisation-landscape.md
+  - docs/research/findings/goals-science-ontology-and-alignment.md
+  - docs/research/findings/goals-privacy-and-access-control.md
+  - docs/research/findings/goals-prior-work-fold-in.md
 ---
 
 # A goals system above epics, stories and tasks: products, science and ontology, visualisation and privacy
@@ -39,7 +45,7 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 | A001: web app clauses (board, review queue, prompt dispatch, framework, shared code, backend, app-portal, hosting) | Out of this doc by split, covered in full by [the beads-ui web app research](beads-ui-web-app.md) |
 | A001: the process clauses (orchestrate, research, wait for the compile, merge, sync, reap, design through /auto-flow, Sergei's review) | Process, not content. Recorded in the Run History of this doc and the coordinator's report |
 
-**Status:** in progress (synthesis continues as the remaining legs report)
+**Status:** complete
 
 **Created:** 2026-10-27
 
@@ -60,11 +66,39 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
      `scripts/check_doc_toc.py <this-doc>`, which fails on an anchor that does not resolve.
      Manual `<!-- toc:skip -->` / `<!-- toc:include -->` override. -->
 
+- [Founding Ask Coverage](#founding-ask-coverage)
 - [Context](#context)
+- [Temporal Scope](#temporal-scope)
+- [Executive Summary](#executive-summary)
+- [1. Goal and OKR products](#1-goal-and-okr-products)
+  - [When to use](#when-to-use)
+- [2. How goals link to work](#2-how-goals-link-to-work)
+  - [When to use](#when-to-use-1)
+- [3. The science of goals](#3-the-science-of-goals)
+  - [When to use](#when-to-use-2)
+- [4. Goal ontology](#4-goal-ontology)
+  - [When to use](#when-to-use-3)
+- [5. Goal alignment for a person's and their agents' work](#5-goal-alignment-for-a-persons-and-their-agents-work)
+  - [When to use](#when-to-use-4)
+- [6. Visualisation patterns and libraries](#6-visualisation-patterns-and-libraries)
+  - [When to use](#when-to-use-5)
+- [7. Configuration and review UX](#7-configuration-and-review-ux)
+  - [When to use](#when-to-use-6)
+- [8. Privacy and access control for personal goals](#8-privacy-and-access-control-for-personal-goals)
+  - [When to use](#when-to-use-7)
+- [9. Prior work from the first goals system](#9-prior-work-from-the-first-goals-system)
+  - [When to use](#when-to-use-8)
+- [10. Fit with Beads](#10-fit-with-beads)
+  - [When to use](#when-to-use-9)
+- [Comparison](#comparison)
+- [Recommendation](#recommendation)
+- [Open Questions](#open-questions)
+- [Sources](#sources)
 - [Ambiguous Items from Auto-Remediation (Post-Run Review)](#ambiguous-items-from-auto-remediation-post-run-review)
 - [Appendix: Research Prompt](#appendix-research-prompt)
 - [Appendix: Provenance Ledger](#appendix-provenance-ledger)
 - [Run History](#run-history)
+  - [2026-10-27 to 2026-10-28: orchestrated research run (coordinator BU-agent-coordinator-nmva)](#2026-10-27-to-2026-10-28-orchestrated-research-run-coordinator-bu-agent-coordinator-nmva)
 
 ## Context
 
@@ -80,6 +114,8 @@ Sergei asked on 2026-10-27 for a goals system as a fundamental part of the Beads
 ## Temporal Scope
 
 Product, library and practice claims weight 2026 first, then 2025, then 2024. Goal science has no cutoff: its foundational theory and meta-analyses predate 2024 and are cited with their publication dates. Fleet claims (Beads 1.3.x, the beads-ui design, the fleet's repo classes and guards, the prior goals work) are read at the commits each findings file names, measured on 2026-10-27 and 2026-10-28 UTC. Each research leg's full evidence, with its footnoted sources, is in its findings file under [findings/](findings/); this doc synthesizes them and cites the findings file for detail.
+
+One limitation is stated rather than hidden: no web-search tool reached the research legs, so user sentiment about goal products, review sites, and the goal pages of vendors whose help renders client-side (Asana, ClickUp and monday.com among them) are unverified. No decision in this doc rests on them.
 
 ## Executive Summary
 
@@ -266,7 +302,36 @@ Legend: every arrow into the shared side is a read; the dashed edge marks the gu
 
 Mark every goal at creation, defaulting to private; keep private goals, their tasks and every link that touches them in a private store on the personal pair; and rely on the guards, not on care, to keep them there.
 
-<!-- section-9-slot -->
+## 9. Prior work from the first goals system
+
+The founding ask asked this research to wait for aih-fw-2's compile of the first goals attempt, fold it in and link it. The compile landed in ai-harness on 2026-10-28; its entry point is [legacy-goal-system--prior-work-reference.md](https://github.com/sergeiwallace/ai-harness/blob/main/docs/analysis/legacy-goal-system--prior-work-reference.md) (gated link, repository access required), which links ten scrubbed documents and a read-only code archive [VERIFIABLE][^58][^59]. The fold-in leg compared it with this research [VERIFIABLE][^58].
+
+The first system failed at the goal-to-task link, not in its goal model. Tasks moved to Beads while goals and their link table stayed in the ai-core database, so the join could not run; the goal-detail call then returned zero progress "rather than erroring", and the local link table held zero rows on both inventory dates [VERIFIABLE][^58]. The design here keeps goals, work and links in one Beads store, which removes that failure by construction, and it must show an empty link set as "no data", never as 0% progress [INFERENCE].
+
+Most of the old goal record carries over, and the fold-in found three old concepts this research had missed [VERIFIABLE][^58]:
+
+| Old concept | New equivalent | Verdict |
+|---|---|---|
+| Summary, motivation, obstacles, target date | §4 attributes; obstacles map to mental contrasting (§3) | Carry over |
+| Lifecycle active, paused, achieved, archived | open, paused, dropped with a reason, done (§3) | Adapt: add the reason and the replacement prompt |
+| Many-to-many contributions: direct, supporting | `contributes-to` with `make` and `help` (§4) | Carry over |
+| Milestone contribution | None in §4 | Missing: add it as a third strength or a typed member |
+| Unique active rank among goals | None in §4 | Missing: an optional order beside priority, the remedy for every goal becoming top priority |
+| Goal-to-document links | None in §4 | Missing: plans and research attached to a goal |
+| Review signal for high-priority unlinked work | the "unaligned work" list (§5) | Carry over |
+| Completion-count progress bars | typed progress sources (§1) | Superseded |
+
+The daily score, achievements and narrative coach should not return in the first release. The old design was owner-approved, but its code diverged from it in three measured places, its own research found no productivity system that sustained gamified engagement past one to two years, and §3's evidence runs against points and streaks [VERIFIABLE][^58]. The owner's underlying intents (priority discipline, credit for unblocking agents, confirming agent-made records before they count) can each be served without a score [INFERENCE]. Because this departs from a design the owner approved, the goals design records it as an explicit decision for his review.
+
+Two leads change this research's own model. First, alignment should flow backwards along `blocks` edges: under §5's formula a decision that blocks goal-serving work gets no boost unless someone links it by hand, while the old design credited unblocking agents, so propagating alignment back along `blocks` would rank Sergei's review queue by the goals each item unblocks [INFERENCE]. Second, the score must use `closed_at` as the completion time; the old scoring engine used `updated_at` [VERIFIABLE][^58].
+
+Several prior citations are wrong or weaker than they read, and two verified ones qualify this research. A 2024 pre-registered experiment found SMART goals no better than do-your-best or open goals for creative performance, which bounds §3's rule that every objective needs a measurable target; the target stays optional [VERIFIABLE][^58]. Strict prioritisation instructions raised negative affect and perceived conflict while lenient ones did not, so a unique goal order is framed as "your order right now", not a ranking to defend [VERIFIABLE][^58].
+
+The compile's own scrub supplies privacy lessons for §8. Design documents followed their code into a shared repository and carried personal content with them; one redaction was applied in one file and missed in five others; and the old guidance service sent open task titles and a vision statement to an external model's command line [VERIFIABLE][^58]. Prevention at placement, §8's structural guard, is the only control that would have stopped all three [INFERENCE]. The missed redaction is routed privately to the compile's owner.
+
+### When to use
+
+Reuse the old goal concepts in the table, respecified on Beads; read the archive for behaviour to specify afresh, never for code to import; and leave scoring out of the first release.
 
 ## 10. Fit with Beads
 
@@ -372,6 +437,8 @@ Build goals as a first-class Beads type with the ontology in §4, the progress a
 [^55]: GitHub. (2026). [About GitHub Advanced Security](https://docs.github.com/en/get-started/learning-about-github/about-github-advanced-security). GitHub Docs. Verified accessible (HTTP 200) 2026-10-28 by goals leg 3. (Plan requirements.)
 [^56]: GitHub. (2026). [About pre-receive hooks](https://docs.github.com/en/enterprise-server@latest/admin/enforcing-policies/enforcing-policy-with-pre-receive-hooks/about-pre-receive-hooks). GitHub Enterprise Server Docs. Verified accessible (HTTP 200) 2026-10-28 by goals leg 3.
 [^57]: Ayer, A. (2025). [AGWA/git-crypt](https://github.com/AGWA/git-crypt). GitHub repository. Verified accessible (HTTP 200) 2026-10-28 by goals leg 3. (Metadata stays visible; no key revocation.)
+[^58]: beads-ui. (2026). [Goals research leg 4: prior goals system fold-in](findings/goals-prior-work-fold-in.md) (`docs/research/findings/goals-prior-work-fold-in.md`). Tracked in this repository, 2026-10-28. Online: [goals-prior-work-fold-in.md](https://github.com/sergeiwallace/beads-ui/blob/main/docs/research/findings/goals-prior-work-fold-in.md). (Cites each prior-work file by its ai-harness path.)
+[^59]: ai-harness. (2026). *Legacy goal system: prior-work reference* (`docs/analysis/legacy-goal-system--prior-work-reference.md`) and the ten documents and code archive it links. Read at ai-harness `d79603123c8` by goals leg 4, 2026-10-28. [Gated link, repository access required](https://github.com/sergeiwallace/ai-harness/blob/main/docs/analysis/legacy-goal-system--prior-work-reference.md).
 
 <!-- /doc:region name="body" -->
 
@@ -387,9 +454,75 @@ Build goals as a first-class Beads type with the ontology in §4, the progress a
 
 ## Appendix: Research Prompt
 
-```text
-None
-```
+**Registry ID:** none (no ai-core prompt registry on this host); the prompts below were assembled by the Opus coordinator from `ai-harness/docs/research/prompts/TEMPLATE.md`
+**Model:** `us.anthropic.claude-opus-5-5` for the four research leaves (persona `researcher`, effort high) and for the coordinator's synthesis (persona `architect`, effort high)
+**Date:** 2026-10-27 (leg 1 launched 23:57 UTC) to 2026-10-28 (legs 2 and 3 launched 01:13 and 01:16 UTC, leg 4 at 02:30 UTC after the prior-work compile arrived)
+
+Each leaf's brief opened with the Tier 3 founding-ask carrier (the canonical root JSON and digest recorded in Founding Ask Coverage above, the resolved record path, and the full verbatim text of entry A001), then a stage framing naming its leg and issue, an alignment obligation, and the destructive-operation floor. It then carried the research prompt below with its leg's fills, an output contract (one findings file under `docs/research/findings/`, with Summary, one section per question, Recommendations with options and pros and cons, Gaps, Flagged items, Files read and Sources), the tools and scope fence (one writable beads-ui worktree, every other repo read-only, no pushes, no messages, never the sergei repository), the sub-agent completion contract and the fix-what-you-find rule. Every leg was told that beads-ui is public and that examples stay generic; legs 2 to 4 were told that no web-search tool reaches sub-agents.
+
+````text
+## RESEARCH PROMPT (canonical research-prompt template blocks, reproduced verbatim with fills)
+
+<grounding_instructions>
+[Role identity, per leg:
+ Leg 1 (products and visualisation): "You are a senior product strategist and data-visualisation engineer who has designed OKR and portfolio-planning products and shipped interactive graph and Gantt views in React for planning tools used by thousands of teams."
+ Leg 2 (science, ontology and alignment): "You are a research psychologist and knowledge engineer who has published on goal pursuit and self-regulation, and who has built goal-modelling tools for requirements engineering and agent planning systems."
+ Leg 3 (privacy and access control): "You are a principal security engineer who designs data-classification and leak-prevention controls for source repositories and developer tooling, with production experience in pre-commit and server-side git guards, secret scanning and multi-tenant data separation."
+ Leg 4 (prior-work fold-in): "You are a principal product researcher who audits a team's earlier attempt at a product before its rebuild, separating durable insight from abandoned scaffolding, with a background in goal-pursuit research and task-system data modelling."
+ Each leg continued: "You have strong opinions backed by evidence. When you cannot find a source, you say so explicitly."]
+
+Temporal scope: Weight sources by recency — 2026 (primary) → 2025 → 2024.
+Pre-2024 sources are background context only unless foundational to the topic.
+If post-2024 literature is genuinely sparse for a subtopic, state
+"[subtopic]: no significant post-2024 developments found" rather than
+backfilling with older sources. Backfilling is a failure mode, not a hedge.
+[Leg 2 added: the foundational goal-science and goal-modelling literature predates 2024 and is in
+scope with its publication date stated. Leg 4 added: its primary sources are the compiled prior-work
+files and the new research files, cited by path and commit.]
+
+[The remainder of the canonical <grounding_instructions> block followed verbatim: the
+Chain-of-Verification four-step inner process, the four claim tags with rationale-before-tag,
+the citation format and integrity rules, the never-invent-a-citation hard constraint, the
+source-vetting rule, the diagram rule and the writing-rules mirror, closing with
+</grounding_instructions>. The block is in ai-harness docs/research/prompts/TEMPLATE.md.]
+
+## Scope note — questions, examples, and named references are a starting point, not a checklist
+[verbatim from the canonical template]
+
+## Independent exploration (gaps, blindspots, emergent threads) — required
+[verbatim from the canonical template]
+
+## Leg 1 research questions
+1. Goal features across products (Atlassian Goals and Jira Plans, Linear, Asana, ClickUp, monday,
+   Notion, Height, GitHub Projects, Productboard, Aha!, Plane, Huly, OpenProject, Leantime, Taiga,
+   Vikunja, Focalboard, OKR tools, personal-goal apps): goal model, hierarchy, links to work,
+   progress roll-up, check-ins, views, praise and complaints; why Atlassian Goals is "just okay".
+2. Linkage models between goals and work and between goals.
+3. Visualisation patterns: goal graphs, dependency graphs, Gantt with critical path, timelines,
+   treemaps, sunbursts, Sankey views, progress rings.
+4. Libraries for those views in React 19: licence, maintenance, accessibility, performance.
+5. Prioritisation surfaces tying the person's and agents' work to goals.
+6. Configuration UX for goals, and the UI side of private goals.
+
+## Leg 2 research questions
+1. Goal-setting science and its moderators. 2. Goal hierarchies and goal systems theory.
+3. Implementation intentions, mental contrasting and progress monitoring. 4. Motivation,
+well-being, disengagement and re-engagement. 5. Failure modes: goals gone wild, Goodhart's law,
+OKR criticism, gamification. 6. Prioritisation theory and its fit with WSJF. 7. Goal ontologies
+(KAOS, iStar, Tropos, GRL, BDI, OMG BMM, strategy maps, PARA) and a small ontology for Beads.
+8. Alignment for AI agents' work, with a computable measure.
+
+## Leg 3 research questions
+1. Classification of the four markings. 2. Placement of private records and cross-store links.
+3. Leak surfaces with their guards. 4. Enforcement design: structure versus scanning, hook points,
+tests, installation on every profile. 5. Prior art with adoption evidence. 6. Existing exposure and
+regression detection.
+
+## Leg 4 research questions
+1. Inventory of the compile. 2. The old goal model against the new research. 3. Scoring and
+gamification against the new evidence. 4. Why the first system failed. 5. Algorithms worth
+respecifying. 6. Privacy lessons from the compile's scrub. 7. Gaps and leads.
+````
 
 <!-- /doc:region name="appendix_research_prompt" -->
 
@@ -404,5 +537,12 @@ None
 <!-- doc:region name="run_history" kind="append_only" -->
 
 ## Run History
+
+### 2026-10-27 to 2026-10-28: orchestrated research run (coordinator BU-agent-coordinator-nmva)
+
+- Method: `/research-doc` under an Opus 5.5 orchestrator, synthesis by the coordinator; four Opus 5.5 `researcher` leaves, each writing one findings file: products and visualisation, goal science and ontology, privacy and access control, and the prior-work fold-in.
+- The founding ask required waiting for aih-fw-2's compile of the first goals attempt. It landed in ai-harness on 2026-10-28 and arrived by git-inbox at 01:33 UTC; the fold-in leg ran after it, and §9 synthesizes it.
+- Landed on beads-ui main through PRs #79 (0d07e7b) and #80 (3cb5987); the fold-in and this completion land in the next PR. A fresh-context verification pass follows.
+- Public-repository rule: no personal goal content, no private issue ids, and no work-host detail; the goals examples are generic.
 
 <!-- /doc:region name="run_history" -->

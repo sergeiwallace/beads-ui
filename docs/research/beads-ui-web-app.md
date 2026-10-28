@@ -97,6 +97,7 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 - [Appendix: Research Prompt](#appendix-research-prompt)
 - [Appendix: Provenance Ledger](#appendix-provenance-ledger)
 - [Run History](#run-history)
+  - [2026-10-27 to 2026-10-28: orchestrated research run (coordinator BU-agent-coordinator-nmva)](#2026-10-27-to-2026-10-28-orchestrated-research-run-coordinator-bu-agent-coordinator-nmva)
 
 ## Context
 
