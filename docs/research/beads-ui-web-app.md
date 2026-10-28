@@ -452,12 +452,61 @@ claims (legs 2 and 3), cite the repo file and line read, with its commit.
 
 ## Appendix: Provenance Ledger
 
-(none yet — auto-populated at commit from the validated provenance ledger)
+Built by the fresh-context verifier from pages it fetched on 2026-10-28; copied verbatim from [its evidence file](findings/evidence/beads-ui-web-app-verification-2026-10-28.md), section D. 38 rows: 34 SUPPORTED, 3 PLAUSIBLE, 1 UNVERIFIABLE, 0 CONTRADICTED. Claims the verifier marked other than SUPPORTED were reworded or retagged in this doc's verification fixes.
+
+| Claim | Source URL | Verbatim quote | Verdict | Live? |
+|---|---|---|---|---|
+| Linear Triage keys 1, 2, 3 and H | https://linear.app/docs/triage | "The shortcut `MM` also triggers the mark as duplicate action." | SUPPORTED (the page also maps accept to `1`, decline to 2, duplicate to 3 and snooze to `H`) | Yes |
+| Gmail archive with E, undo with Z | https://support.google.com/mail/answer/6594 | "Undo last action" | SUPPORTED (row key `z`; "Archive" row key `e`) | Yes |
+| Gmail ships shortcuts off by default | https://support.google.com/mail/answer/6594 | "These shortcuts won't work unless keyboard shortcuts are turned on." | PLAUSIBLE | Yes |
+| GitHub notification inbox has saved filters | https://docs.github.com/en/subscriptions-and-notifications/how-tos/viewing-and-triaging-notifications/managing-notifications-from-your-inbox | "You can add up to 15 of your own custom filters." | SUPPORTED | Yes |
+| GitHub inbox has bulk actions | same as above | "To triage multiple notifications at once, select the relevant notifications" | SUPPORTED | Yes |
+| GitHub marks done with E and undoes with Z | https://docs.github.com/en/get-started/accessibility/keyboard-shortcuts (not cited by the doc) | "Mark as done" | UNVERIFIABLE for undo (E is on an uncited page; no Z in the Notifications table; the cited page names neither) | Yes |
+| Linear agent sessions have six states | https://linear.app/developers/agent-interaction | "Agent sessions can have one of 6 states: `pending`, `active`, `error`, `awaitingInput`, `complete`, `stale`." | SUPPORTED | Yes |
+| Remote Control disconnected banner says nothing about work continuing | https://code.claude.com/docs/en/remote-control | "Neither message tells you whether Claude or a subagent you were watching is still working on your computer." | SUPPORTED | Yes |
+| Remote Control needs a subscription login, excluding cloud-provider routes | https://code.claude.com/docs/en/remote-control | "Remote Control requires a claude.ai subscription." | SUPPORTED | Yes |
+| WCAG 2.1.4 is Level A and allows turn off or remap | https://www.w3.org/WAI/WCAG22/Understanding/character-key-shortcuts.html | "A mechanism is available to turn the shortcut off;" | SUPPORTED | Yes |
+| Linear Priority inbox in September 2026 | https://linear.app/changelog/2026-09-03-priority-inbox | "An active workspace can create a significant amount of notifications each day" | SUPPORTED (post dated September 3, 2026) | Yes |
+| Linear reorder groups (May 2026) and shared filtered views (July 2026) | https://linear.app/changelog/page/2 (not cited by the doc) | "Share filtered views" | PLAUSIBLE (true on page 2; the cited `[^9]` URLs do not carry it) | Yes |
+| Linear groups agent replies in their own inbox section | https://linear.app/changelog/page/2 (not cited by the doc) | "Grouped agent-authored inbox replies into a dedicated Agents section in focus inbox grouping" | PLAUSIBLE (same citation gap) | Yes |
+| cmdk last release 2025-03-14 | https://registry.npmjs.org/cmdk | "1.1.1":"2025-03-14T19:21:16.194Z" | SUPPORTED (`latest` is 1.1.1) | Yes |
+| React Compiler 1.0 on 2025-10-07 | https://react.dev/blog/2025/10/07/react-compiler-1 | "We are releasing the compiler's first stable release today." | SUPPORTED | Yes |
+| Vite 8 (2026-03-12) bundles with Rolldown | https://vite.dev/blog/announcing-vite8 | "Vite 8 ships with Rolldown as its single, unified, Rust-based bundler." | SUPPORTED | Yes |
+| MCP Apps `ui/message` posts into the conversation | https://github.com/modelcontextprotocol/ext-apps/blob/main/specification/2026-01-26/apps.mdx | "Send message content to the host's chat interface" | SUPPORTED | Yes |
+| MCP Apps fit review and triage workflows | https://modelcontextprotocol.io/extensions/apps/overview | "Approving expense reports, reviewing code changes, or triaging issues involves examining items one by one." | SUPPORTED (leg 1 claim the doc inherits in §6) | Yes |
+| Native `/goal` replaces an active goal | https://code.claude.com/docs/en/goal.md | "If a goal is already active, the new one replaces it." | SUPPORTED | Yes |
+| Native `/goal` resumes a paused goal on any new prompt | https://code.claude.com/docs/en/goal.md | "Send a message at any time to start the next turn immediately." | SUPPORTED (in the pause paragraph that opens "a notice starting with `Goal paused` names the cause") | Yes |
+| Outbox consumers must be idempotent | https://microservices.io/patterns/data/transactional-outbox.html | "The Message relay might publish a message more than once." | SUPPORTED | Yes |
+| Mods API `$.prompt.submit` and timers | https://code.claude.com/docs/en/plugins/mods/api.md | "The call waits until the session is idle and then starts a new turn." | SUPPORTED (refused-call results are in "What refused calls return") | Yes |
+| `asyncRewake` hook wakes on exit 2 | https://code.claude.com/docs/en/hooks.md | "If `true`, runs in the background and wakes Claude on exit code 2." | SUPPORTED | Yes |
+| Channels are a research preview with provider limits | https://code.claude.com/docs/en/channels.md | "Channels are a research preview feature." | SUPPORTED | Yes |
+| Dolt `@@<db>_head` gives a store's head | https://www.dolthub.com/docs/sql-reference/version-control/dolt-sysvars | "This system variable reflects the current HEAD commit's hash." | SUPPORTED | Yes |
+| Asana fall 2026 adds AI Teammates and a Work Graph | https://asana.com/whats-new | "powered by the Asana Work Graph." | SUPPORTED (doc cites only the findings file) | Yes |
+| Huly repository frozen, hosted service discontinued | https://github.com/hcengineering/platform | "The hosted Huly service has been discontinued because its hosting is no longer funded." | SUPPORTED (doc cites only the findings file) | Yes |
+| Session Manager port forwarding exists for the work pair | https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-sessions-start.html | "`localPortNumber` is the port on your local computer where traffic starts" | SUPPORTED | Yes |
+| Tailscale Serve sets an identity header | https://tailscale.com/kb/1312/serve | "Filled with the requester's login name" | SUPPORTED (`Tailscale-User-Login`) | Yes |
+| App capabilities need Tailscale 1.92 or later | https://tailscale.com/kb/1312/serve | "This feature is available in Tailscale v1.92 or later." | SUPPORTED | Yes |
+| `tailscale serve --set-path` mounts under a path | https://tailscale.com/kb/1242/tailscale-serve | "Appends the specified path to the base URL for accessing the underlying service." | SUPPORTED | Yes |
+| Grants carry app capabilities | https://tailscale.com/kb/1324/grants | "The recommended best practice is to favor grants for most use cases." | SUPPORTED | Yes |
+| Chrome gates public-to-loopback requests | https://developer.chrome.com/blog/local-network-access | "The Local Network Access permission prompt is launching in Chrome 142." | SUPPORTED | Yes |
+| Origin and Fetch Metadata checks against CSRF | https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html | "If the Origin header is present, verify that its value matches the target origin." | SUPPORTED | Yes |
+| Railway config-as-code deprecated, cutoff 2026-12-01 | https://docs.railway.com/reference/config-as-code | "Existing files keep working for legacy services until 2026-12-01" | SUPPORTED (scope is "legacy services") | Yes |
+| Railway's replacement is `.railway/railway.ts` | https://docs.railway.com/infrastructure-as-code | "Railway creates `.railway/README.md` and, by default, `.railway/railway.ts`." | SUPPORTED | Yes |
+| `fly.toml` is current | https://docs.fly.io/reference/configuration | "Configuration of builds, environment variables, internet-exposed services, disk mounts, and release commands go here." | SUPPORTED | Yes |
+| `render.yaml` is current | https://render.com/docs/blueprint-spec | "By default, this file has the name `render.yaml`" | SUPPORTED | Yes |
 
 <!-- /doc:region name="appendix_provenance" -->
 
 <!-- doc:region name="run_history" kind="append_only" -->
 
 ## Run History
+
+### 2026-10-27 to 2026-10-28: orchestrated research run (coordinator BU-agent-coordinator-nmva)
+
+- Method: `/research-doc` under an Opus 5.5 orchestrator, synthesis by the coordinator; three Opus 5.5 `researcher` leaves, each writing one findings file (UX, stack and shared code; event-based dispatch; backend, app-portal and access), launched 2026-10-27 23:57 UTC and 2026-10-28 01:16 UTC.
+- Landed on beads-ui main through PRs #78 (cdcda0b), #79 (0d07e7b) and #80 (3cb5987); the verifier fixes land in the next PR.
+- Verification: one fresh-context pass by an Opus 5.5 `auditor` leaf (same family as the author, recorded as such): G1 to G6, a five-perspective critic pass, live checks of every public citation (all live), and a 38-row provenance ledger. Its 14 MUST-FIX items were applied in this doc except M14, the table of contents inside the stub's context region, which is left as the stub generator emits it.
+- Public-repository rule: a data-scope issue on the work host is named only as tracked privately; host ports, command lines, counts and private issue ids were removed from this doc and its findings files without rewriting history.
+- The goals research ([goals-system.md](goals-system.md)) waited for the prior-work compile from aih-fw-2, which arrived 2026-10-28 01:33 UTC; this doc does not depend on it.
 
 <!-- /doc:region name="run_history" -->
