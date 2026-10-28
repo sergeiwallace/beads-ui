@@ -46,11 +46,11 @@ The `aih-fleet-task-id` regex from ai-harness `.gitleaks.toml` line 112 was run 
 |---|---|
 | `SW-123` | True |
 | `SW-12.3` | True |
-| `SW-8e730k` | False |
+| `SW-3fq9zk` | False |
 | `SW-abcde` | False |
-| `SW-some-slug-title-8e730k` | False |
-| `SW-x250px` | False |
-| `AIH-x250px` | False |
+| `SW-some-slug-title-3fq9zk` | False |
+| `SW-qq00zz` | False |
+| `AIH-qq00zz` | False |
 
 `config/bd_fleet_prefixes.yaml` line 60 assigns prefix `SW` to the `sergei` repository.
 

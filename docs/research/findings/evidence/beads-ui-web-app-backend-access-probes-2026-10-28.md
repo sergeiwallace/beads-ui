@@ -29,73 +29,26 @@ which change a finding.
 
 ## 1. Listeners on the host
 
-`ss -ltn`, ports below 30000 or above 45000, plus every non-loopback bind:
+Read with `ss -ltn` and `ps -eo pid,etime,args`. Every service the findings name (the ai-core API,
+Postgres, NATS, the Agent Mail edge and the shared Dolt server) listens on loopback only, and no
+Tailscale or app-portal shell process runs on this host. Exact ports and command lines are omitted
+from this public file.
 
-```text
-0.0.0.0:22  [::]:22  127.0.0.1:3308  127.0.0.1:4222  127.0.0.1:5432  127.0.0.1:7777
-127.0.0.1:8400  127.0.0.1:8443  127.0.0.1:9010  127.0.0.53%lo:53
-non-loopback: 0.0.0.0:22, [::]:22 only
-```
+## 2. ai-core queue API on loopback
 
-`ps -eo pid,etime,args` shows the Dolt server as
-`dolt --data-dir ~/.beads/shared-server/dolt sql-server -H 127.0.0.1 -P 3308`, the ai-core API as
-`uvicorn ai_core.main:app --host 127.0.0.1 --port 8400 --workers 2`, a NATS server, Postgres with
-`ssl=on`, and `scripts/wq_tunnel.py run --idle-when-unneeded`. No `tailscale` process and no
-app-portal shell process was running. A VS Code server ran with `--host=127.0.0.1`.
+Read-only HTTP GETs on the host's loopback. The health, sessions, tasks, review and inbox routes
+answered 200; the tasks route returned the full task projection in 0.27 to 1.04 s over five runs.
+The API's root route answered 404 because the queue dashboard bundle is not mounted on this host.
 
-## 2. ai-core on loopback port 8400
+## 3. The queue's task projection
 
-`curl -s -m 5 -o <scratch> -w '<path> %{http_code} %{size_download}'`:
-
-```text
-/healthz 200 36
-/ 404 22
-/index.html 404 22
-/api/queue/sessions 200 53570
-/api/queue/tasks 000 0          (first attempt, timed out at 5 s)
-/events 401 27
-/api/apps 404 22
-```
-
-Re-run with `-m 60`:
-
-```text
-/api/queue/tasks   200 6780649   0.362832s
-/api/queue/review  200 11406852  1.044286s
-/api/queue/inbox   200 16841     0.038201s
-/api/queue/tasks   200 6780649   0.265410s, 0.689732s, 0.521425s (three more runs)
-```
-
-`/` answering 404 means the queue dashboard SPA (`attach_queue_dashboard`, mounted only when
-`QUEUE_WEB_DIST_DIR` is set) is not mounted on this host. `/events` answers 401 because that route
-requires a bearer user; the `/api/queue/*` routes required none.
-
-## 3. The queue's task projection, by repository
-
-Parsed from the `/api/queue/tasks` body above (13,715 rows). Row keys:
+Parsed from the tasks route above; titles were not printed. Row keys:
 `autonomous_eligible, blocked_by, display_id, exported_at, issue_type, labels, owner_session,
 parent_id, priority, queue_state, repo, requires_approval, source_commit, status, task_id, title`.
-Titles were not printed.
 
-| Repository | Rows | Newest `exported_at` (UTC) |
-|---|---|---|
-| ai-harness | 7,338 | 2026-10-28T01:20:22Z |
-| the employer workspace store | 2,241 | 2026-10-28T01:22:33Z |
-| the personal repository | 2,092 | **2026-10-04T06:46:32Z** |
-| ai-cli-utils | 741 | 2026-10-28T01:19:17Z |
-| ai-core | 589 | 2026-10-28T01:19:48Z |
-| aido | 492 | 2026-10-28T01:21:00Z |
-| beads-ui | 134 | 2026-10-28T01:22:31Z |
-| project-template | 55 | 2026-10-28T01:22:31Z |
-| doc-editor | 20 | 2026-10-28T01:22:31Z |
-| app-portal | 13 | 2026-10-28T01:22:31Z |
-
-Status counts: closed 8,198; open 4,723; blocked 321; in_progress 254; deferred 219.
-
-`test -d /data/projects/<the personal repository>` printed `absent`. The host's store inventory
-(`~/.beads/shared-server/publish-sweep.json`, `run_at_utc` 2026-10-28T01:16:56Z) lists 9 stores
-and no row for the personal repository. So 2,092 rows from a repository that is no longer on this
-host were last ingested 24 days ago and are still served by the queue API here.
+A data-scope issue in the ai-core queue on the work host is tracked privately and constrains the
+backend design: the web app's backend must filter by a per-host repository allowlist (findings
+section 7). Per-repository counts are omitted from this public file.
 
 ## 4. The shared Dolt server
 
@@ -161,8 +114,8 @@ path.
 ## 7. Access configuration read from ai-harness (no live call)
 
 - `config/message-transports.json` `pairs`: the work pair (acn-mac, sem-kg-ec2) has
-  `"transport": "ssm-port-forward"`, `relay_port` 7777 and a `forwards` map with one extra entry
-  (the agent-mail board, remote 8443, local 8443); the personal pair (fw-lnx, mac) has
+  `"transport": "ssm-port-forward"`, a relay port and a `forwards` map with one extra entry
+  (the agent-mail board); the personal pair (fw-lnx, mac) has
   `"transport": "tailscale"`.
 - `config/work_queue.toml` `[machines]`: `sem-kg-ec2 = "supervised"`, every other row
   `disabled`, including `fw-lnx`, `mac` and `acn-mac`.

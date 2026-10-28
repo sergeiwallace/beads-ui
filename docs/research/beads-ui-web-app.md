@@ -121,7 +121,7 @@ Product, library and platform claims weight 2026 first, then 2025, then 2024; ea
 2. A prompt typed on a task reaches its owning session by event: the server writes a durable dispatch record to the ai-core queue, then sends addressed Agent Mail that the target host's notifier admits as a wake. The shared prompt-injection library, the mod's `$.prompt.submit` and the queue's turn-end pull are fallbacks, all under one kill switch, and nothing costs tokens while nothing is pending ([§3](#3-per-task-prompts-and-event-based-dispatch)).
 3. The auto-trigger depends on fleet work not yet done: every automatic idle wake is off on sem-kg-ec2 until Phase 4 of the event-driven wake seeds its policy file, and web-app prompts need a signed dispatch envelope or receiving sessions treat them as unverified ([§3](#3-per-task-prompts-and-event-based-dispatch)).
 4. D-4, D-10, D-11 and D-14 hold. The server reads Beads through `bd --json` and the host refresher, detects change across every store with one Dolt heads query, uses the ai-core queue for sessions and prompts, and registers with app-portal as a Node upstream ([§5](#5-front-end-stack-recheck), [§7](#7-backend-over-beads-and-ai-core), [§8](#8-app-portal-fit)).
-5. Each pair reaches a loopback-bound server through its existing transport: a Session Manager port forward from acn-mac to the employer host, and `tailscale serve` on fw-lnx for sw-mac. The server adds its own Host, Origin and token checks, and a per-host repository allowlist keeps personal stores off the employer host, where a measured privacy defect already exposes 2,092 personal rows ([§7](#7-backend-over-beads-and-ai-core), [§9](#9-hosting-and-access-for-each-machine-pair)).
+5. Each pair reaches a loopback-bound server through its existing transport: a Session Manager port forward from acn-mac to the employer host, and `tailscale serve` on fw-lnx for sw-mac. The server adds its own Host, Origin and token checks, and a per-host repository allowlist keeps personal stores off the employer host ([§7](#7-backend-over-beads-and-ai-core), [§9](#9-hosting-and-access-for-each-machine-pair)).
 
 ## 1. Review and triage of blockers, decisions and open questions
 
@@ -164,7 +164,7 @@ This keeps all three routes the founding ask names. Agent Mail admitted by the n
 
 Every rung costs zero model tokens while nothing is pending, because the waiting runs in a daemon, a hook watcher or a mod timer. Each delivery costs one model turn over the session's cached context, measured at a median of 365,551 cache-read tokens per response window, so coalescing several dispatches to one session into one turn is the main cost lever during bulk review [VERIFIABLE][^14][^2].
 
-Authority is the open design problem. The fleet's peer-relay `VERIFIED` check reads the sending session's transcript for Sergei's typed turn; a web app has no transcript, so its prompts would arrive `UNVERIFIED` and a receiving session would treat them as coordination only [VERIFIABLE][^17]. The web app needs a dispatch envelope signed by the server after it authenticates Sergei and verified on the receiving host [INFERENCE][^2]. The same leg found the ai-core queue API answering on loopback with no credential, which the web app's auth design must account for [VERIFIABLE][^16].
+Authority is the open design problem. The fleet's peer-relay `VERIFIED` check reads the sending session's transcript for Sergei's typed turn; a web app has no transcript, so its prompts would arrive `UNVERIFIED` and a receiving session would treat them as coordination only [VERIFIABLE][^17]. The web app needs a dispatch envelope signed by the server after it authenticates Sergei and verified on the receiving host [INFERENCE][^2]. The web app's own browser auth layer (§9) therefore matters as much as the envelope [INFERENCE].
 
 The composer itself should be ported, not redesigned. The work queue's dashboard in ai-core already has a Sergei-approved composer (Lexical rich text, a `/skill` typeahead, an explicit "Queue prompt" button and a secret-guard refusal), and under D-11 the beads-ui web app replaces that dashboard [INFERENCE][^1][^25]. Every agent-delegation product surveyed shows a per-session state beside a follow-up box; Linear's agent sessions have six states (`pending`, `active`, `error`, `awaitingInput`, `complete`, `stale`), and Claude Code's Remote Control docs warn that a disconnected banner says nothing about whether work continues [VERIFIABLE][^6][^7]. The composer should therefore show three separate indicators: session liveness, delivery state (queued, shown, taken, acted on, failed, each with its source of truth in the queue record) and the session's response [INFERENCE][^1][^2].
 
@@ -208,9 +208,9 @@ D-4 holds for the web server. Reads come from the host refresher's snapshots (D-
 
 A change feed across every store on a host costs one query. The shared Dolt server answers `SELECT @@AIH_head, @@BU_head, ...` for all stores in one call, measured at 0.42 s as a `bd sql` process; that is the cheapest live-update trigger, and it sees changes that arrived by sync, which the events journal does not (the journal is off on every store checked) [VERIFIABLE][^29][^30]. The server polls the heads, re-reads only the stores that moved and pushes Server-Sent Events to the browser [INFERENCE][^28].
 
-The ai-core work-queue API is the fleet's only cross-store read model and the only home of sessions, leases and durable prompts. It served 13,715 task rows across 10 repositories in 0.27 to 1.04 s, with no credential [VERIFIABLE][^29][^43]. Under D-11 the web app should read sessions, prompts, review items and events from it on the pair where it runs, keep `bd` as the source of truth for task fields, and write each dispatch to the queue's prompt store (§3, rung 0); where the queue is not configured, a local append-only store takes its place [INFERENCE][^28][^19].
+The ai-core work-queue API is the fleet's only cross-store read model and the only home of sessions, leases and durable prompts. It served the full task projection in 0.27 to 1.04 s [VERIFIABLE][^29][^43]. Under D-11 the web app should read sessions, prompts, review items and events from it on the pair where it runs, keep `bd` as the source of truth for task fields, and write each dispatch to the queue's prompt store (§3, rung 0); where the queue is not configured, a local append-only store takes its place [INFERENCE][^28][^19].
 
-The same probe found a privacy defect. The queue on the employer-provisioned host still serves 2,092 rows from the personal repository the founding ask names as the home of private goals, last exported on 2026-10-04 although that repository is no longer on the host [VERIFIABLE][^29]. The web app backend therefore needs a per-host repository allowlist, and the stale rows need purging; the purge is an owner decision routed to the queue's maintainers [INFERENCE]. The allowlist is a requirement for the design (see [the goals research § 8](goals-system.md#8-privacy-and-access-control-for-personal-goals)).
+A data-scope issue in the ai-core queue on the work host is tracked privately and constrains the backend design: the web app's backend must filter every store and queue read through a per-host repository allowlist, so a host never shows a store its class does not allow [INFERENCE][^28]. The allowlist is a requirement for the design (see [the goals research § 8](goals-system.md#8-privacy-and-access-control-for-personal-goals)).
 
 ### When to use
 
@@ -277,7 +277,7 @@ Build the web app on the decided beads-ui stack and data path, and spend the new
 - The Review triage queue and the per-task composer, ported from the ai-core dashboard's composer, with three separate status indicators and a WCAG-compliant shortcut setting (§1, §3).
 - The dispatch path: a durable record in the ai-core queue, Agent Mail as the primary event, the ladder of fallbacks under one call-time kill switch, coalescing per session, and a signed dispatch envelope verified on the receiving host (§3).
 - Owner change as a receiver-first handoff request, and `/start-goal` armed by a flag the receiving session acts on, holding dispatches to a paused goal (§4).
-- Access through each pair's existing transport, a server-side browser auth layer, and a per-host repository allowlist, with the stale personal rows on the employer host purged (§7, §9).
+- Access through each pair's existing transport, a server-side browser auth layer, and a per-host repository allowlist on every store and queue read (§7, §9).
 
 The source-vetting rule is met for every external pattern adopted here: Linear and Gmail triage, the transactional outbox, Tailscale Serve and Session Manager port forwarding are each documented by their vendors and in production use, and the libraries carry the maintenance signals recorded in the UX leg's evidence file [VERIFIABLE][^1][^10].
 
@@ -431,8 +431,8 @@ claims (legs 2 and 3), cite the repo file and line read, with its commit.
    VS Code forwarding, the existing fleet helper; latency, reconnects, user authentication.
 5. Access for fw-lnx and sw-mac: Tailscale Serve and Funnel, ACLs, MagicDNS, certificates,
    identity headers; one config shape for both pairs.
-6. Security: loopback binding, auth layers, CSRF and origin checks, the queue API's missing
-   credential, the signed dispatch envelope.
+6. Security: loopback binding, auth layers, CSRF and origin checks, the queue API's auth
+   boundary, the signed dispatch envelope. [Wording redacted for this public file.]
 7. Whether D-14 and Phase 6's cloud templates still hold in 2026, and what a privacy-safe hosted
    option must exclude.
 ````

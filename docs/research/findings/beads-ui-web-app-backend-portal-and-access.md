@@ -36,14 +36,10 @@ they meet this topic and cited as sources.
    matching `bd vc status` per store). That is the cheapest live-update trigger. The events journal
    is off on every store checked and does not cover synced rows. [VERIFIABLE][^8][^33]
 3. The ai-core queue API is the only fleet-wide read model and the only home of sessions, leases and
-   durable prompts. It served 13,715 task rows across 10 repositories in 0.27 to 1.04 s, with no
-   credential. Under D-11 the web app should read sessions, prompts, review items and events from
+   durable prompts. It served the full task projection in 0.27 to 1.04 s. Under D-11 the web app should read sessions, prompts, review items and events from
    it on the work pair, and keep `bd` as the source for task fields. [VERIFIABLE][^28][^33]
-4. Privacy defect, measured. The queue on the employer host still serves 2,092 rows from the
-   personal repository that the founding ask names as the home of private goals. They were last
-   exported on 2026-10-04 and that repository is no longer on the host. A web app reading the queue
-   there would show them. The backend needs a per-host repository allowlist, and the stale rows need
-   purging. [VERIFIABLE][^33]
+4. A data-scope issue in the ai-core queue on the work host is tracked privately and constrains the backend design: the web app's backend must filter every store and queue read through a
+   per-host repository allowlist. [INFERENCE]
 5. app-portal's member contract assumes a FastAPI process serving a static SPA under a
    `tailscale serve` path, with no Node at runtime (its D-5). beads-ui's Node server (D-10) can
    still join through `apps.yaml`, which accepts any loopback upstream, but must re-implement
@@ -182,18 +178,17 @@ needs a new decision (R3), and D-4 stays as written.
 
 | Service | Listener | Used by the web app? |
 |---|---|---|
-| ai-core API (`ai_core.main:app`, two workers) | 127.0.0.1:8400 | Yes, on the work pair: `/api/queue/*` |
-| Postgres (TLS on) | 127.0.0.1:5432 | Only through the queue API |
-| NATS JetStream | 127.0.0.1:4222 | Only through the queue's SSE route |
-| Agent-mail edge (the message board) | 127.0.0.1:8443 | Dispatch carrier, per the dispatch leg |
-| Shared Dolt server | 127.0.0.1:3308 | Head polling; reads through `bd` |
+| ai-core API | loopback | Yes, on the work pair: `/api/queue/*` |
+| Postgres | loopback | Only through the queue API |
+| NATS JetStream | loopback | Only through the queue's SSE route |
+| Agent-mail edge (the message board) | loopback | Dispatch carrier, per the dispatch leg |
+| Shared Dolt server | loopback | Head polling; reads through `bd` |
 
 Source: `ss -ltn` and `ps` in the evidence file. [VERIFIABLE][^33]
 
-The queue API answered `/healthz` 200 and `/api/queue/sessions` 200 (88 rows per the dispatch leg)
-with no credential. Its `/events` route answered 401, because it is the older bearer-protected
-route that the queue design says to copy and not reuse. [VERIFIABLE][^23][^27][^33] The queue
-router's own docstring says "No route carries an auth dependency". [VERIFIABLE][^28]
+The queue API answered its health and sessions routes on the host's loopback. Its auth model is
+the queue design's own concern; the beads-ui server must add its own browser auth layer either
+way (section 6.2). [VERIFIABLE][^23][^27][^33]
 
 ### 2.2 The data model the web app consumes
 
@@ -232,9 +227,9 @@ read model. [INFERENCE]
 
 ai-core `web/` is "the app-portal member app for the autonomous work-queue coordinator ... Phase 2",
 with views `Board`, `Decisions`, `Epics`, `Inbox`, `Review`, `Sessions` and `TaskDetail`, the Lexical
-`Composer.tsx`, generated OpenAPI types and `portalConfig({ appId: "queue", apiPort: 8400 })`.
-[VERIFIABLE][^28] On the employer host it is not mounted: `GET /` on 8400 returned 404 because
-`QUEUE_WEB_DIST_DIR` is unset. [VERIFIABLE][^33]
+`Composer.tsx`, generated OpenAPI types and a `portalConfig` for the `queue` app.
+[VERIFIABLE][^28] On the employer host it is not mounted: the API's root route returned 404
+because no built bundle is configured. [VERIFIABLE][^33]
 
 The dispatch leg's F-1 already asked whether to supersede that issue. [VERIFIABLE][^23] The new
 fact is that most of the dashboard exists as code. The beads-ui web app should port its queue
@@ -264,7 +259,7 @@ The parts a member touches, read from source:
   while its routes stay unprefixed. [VERIFIABLE][^25]
 - Auth: "None in this phase, by the standing tailnet-only invariant". [VERIFIABLE][^25]
 
-The only registered member is `queue` at `/queue`, upstream `http://127.0.0.1:8400`. [VERIFIABLE][^26]
+The only registered member is `queue` at `/queue`, with a loopback upstream. [VERIFIABLE][^26]
 
 ### 3.2 Where beads-ui does not fit as-is
 
@@ -519,9 +514,10 @@ in the fleet after the agent sessions themselves. The threats, with the control 
 Sources: the dispatch leg's envelope (R-3), the queue design's security section, and the web
 mechanisms cited in section 4.4. [VERIFIABLE][^12][^23][^27] The table itself is [INFERENCE].
 
-### 6.2 The queue API's missing credential
+### 6.2 The queue API's auth boundary
 
-The queue answers every `/api/queue/*` route with no credential, by D-16(a). [VERIFIABLE][^27][^28]
+The queue's own design sets its auth model (its D-16), and the web app must not depend on it.
+[VERIFIABLE][^27][^28]
 The web server proxies a subset of it, and must never widen it: the browser talks only to the
 beads-ui server, which reaches the queue on the host's loopback. [INFERENCE] The queue design defers
 "application authorization, CSRF controls for cookie sessions, and the no-tokens-in-browser-storage
@@ -577,10 +573,9 @@ rule.
 
 The sibling privacy leg owns the rule. This leg found three backend consequences.
 
-First, the queue on the employer host is already a leak path. It serves 2,092 rows from the personal
-repository, last exported 2026-10-04, from a repository no longer on the host. [VERIFIABLE][^33] Rows
-carry titles. The queue's ingest takes whatever the bridge pushes, with no per-host allowlist in the
-design text read. [VERIFIABLE][^27] [INFERENCE] for the missing allowlist.
+First, a data-scope issue in the ai-core queue on the work host is tracked privately and constrains the backend design. The queue's ingest design text has no per-host
+allowlist, so the web app cannot rely on the queue to scope what it shows. [VERIFIABLE][^27]
+[INFERENCE] for the missing allowlist.
 
 Second, the web server must open only the stores its host allows (the `[stores] allow` list), and on
 the employer host that list must exclude every personal store. Auto-discovery over a projects root
@@ -637,10 +632,10 @@ flowchart LR
   end
   subgraph ec2["Employer EC2 host (zero inbound)"]
     W["beads-ui server 127.0.0.1:p<br/>auth: Host allowlist, token cookie,<br/>Origin + Sec-Fetch-Site on writes"]
-    Q["ai-core queue 127.0.0.1:8400<br/>auth: none (loopback only)"]
-    D["Dolt sql-server 127.0.0.1:3308"]
+    Q["ai-core queue on loopback"]
+    D["Dolt sql-server on loopback"]
     R["host refresher snapshots"]
-    AM["Agent Mail edge 127.0.0.1:8443<br/>auth: client certificates"]
+    AM["Agent Mail edge on loopback"]
   end
   B -->|"HTTP/1.1 to local port"| PT
   PT -->|"outbound WebSocket"| SM
@@ -953,7 +948,7 @@ threats (hostile page, DNS rebinding) were followed separately.
 
 ### Contrarian evidence
 
-The queue design and app-portal both say no auth is needed on loopback. That is right for a
+app-portal relies on loopback binding and the tailnet for auth. That is right for a
 tailnet-only portal whose clients are phones and laptops on the tailnet. It is weaker for a
 `localhost` port on a laptop that also browses the open web, which is the work pair's shape.
 
@@ -976,14 +971,8 @@ condition D-4 set has not been met.
 
 ## Flagged for the coordinator
 
-- F-1. Personal rows in the employer host's queue. Raw excerpt from the founding ask: "any goals and
-  their related tasks etc that are marked personal / private / sensitive etc never make their way
-  into ai-harness repo ... they can go in sergei repo or another domain-specific repo that is on my
-  personal machine pair". Measured: 2,092 projection rows from that repository, last exported
-  2026-10-04, served by `/api/queue/tasks` on the employer host. Needs: a purge of those rows, a
-  per-host ingest allowlist in the queue, and the privacy leg's rule extended to the queue's
-  Postgres. This touches ai-core, so it needs the ai-core owner. Not filed, because this brief
-  forbids Beads writes.
+- F-1. A data-scope issue in the ai-core queue on the work host is tracked privately and constrains the backend design. Needs: a per-host repository allowlist in the web app's backend,
+  and the queue's own scope is handled by its owner.
 - F-2. Scope against the built ai-core dashboard. The dispatch leg's F-1 asked who owns the queue's
   Phase 2 member app. New evidence: ai-core `web/` already holds seven views and the composer, built
   but not mounted on the employer host. Recommendation: port from it and retire it at parity, under
