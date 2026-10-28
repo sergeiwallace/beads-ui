@@ -214,9 +214,16 @@ describe("the task list, shown and collapsed (T-2B.2)", () => {
   // 300 open tasks of the session's, each with a long title: expanded, the list draws a window of
   // rows that follows the focus, so the drawing stays under the 100,000 characters Claude Code
   // keeps and Down still reaches the last task.
+  //
+  // Its time is the stepping loop: each of the 300 focus steps redraws the pane, an 80-row window
+  // near the drawing limit, about 30 ms a step alone, half in the pane's own draw and half in
+  // Claude Code's; the 300 rows' first draw is about 0.5 s. Measured on 16 cores: about 10 s
+  // alone, 17 to 20 s beside 8 busy processes, 27 to 36 s inside the whole suite beside them,
+  // and past 60 s twice with about four times as many runnable threads as cores. 120 s is twice
+  // that, the budget the Timeline's stepping test has.
   test(
     "should keep an expanded list of 300 tasks under the drawing limit and reach the last one by stepping down",
-    { timeoutMs: 60_000 },
+    { timeoutMs: 120_000 },
     async ($, on) => {
       const [first] = JSON.parse(list) as Record<string, unknown>[];
       const rows = Array.from({ length: 300 }, (_, i) => ({
