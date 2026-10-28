@@ -61,7 +61,7 @@ the tracked evidence file
    piece. [VERIFIABLE][^9] for the current rule; the envelope is [INFERENCE].
 9. The ai-core queue service the work-queue design specified is live on sem-kg-ec2, with prompt,
    ack, consumed, claim, gate-resolve and SSE event routes, but its idle-wake lane (the queue waker)
-   is not running and its dashboard (AIH-swgb4.8) is still open. The web app overlaps that dashboard
+   is not running and its dashboard issue is still open. The web app overlaps that dashboard
    almost entirely. [VERIFIABLE][^2][^11]
 10. Two transports conflict with the founding ask's privacy requirement if used for content.
     Git-inbox commits messages to refs of the ai-harness repository, which is in the shared harness
@@ -125,7 +125,7 @@ Built versus designed, measured against main and the Beads epic:
 | Phase 2 per-session snapshots, shared hook dedupe | Built | `4924c8fc4cd` (#6110) |
 | Phase 3 recovery, action closure, counters | Built | `50315a68c56` (#6162) |
 | Gone-addressee quieting and expiry | Built | `a452401e054` (#6168) |
-| Phase 4 lifecycle coexistence, config seeding, call-time gates | Designed; AIH-p811n7.9 in progress, no branch | Beads child list |
+| Phase 4 lifecycle coexistence, config seeding, call-time gates | Designed; its Phase 4 issue in progress, no branch | Beads child list |
 | Phase 5 Windows notifier supervision | Designed | No branch |
 | `idle-wake.json` on any host | Not seeded; absent here; epic note says absent on fw-lnx | File probe, epic note |
 
@@ -181,7 +181,7 @@ The realtime-awareness design recorded live tests that exit 2 creates an idle tu
 MCP notifications do not reach the model. Rationale: p811n7 "Claude Code primitives" paragraph
 citing the earlier tests. [VERIFIABLE][^1]
 
-### (d) The shared prompt-injection library (AIH-59eza)
+### (d) The shared prompt-injection library
 
 The library types into a live tmux pane behind a fingerprint fence, presses Enter separately, and
 proves landing from the transcript. It is "the only transport that can submit a slash command into
@@ -237,7 +237,7 @@ literal `/wq next`. Delivery is at-least-once with a per-prompt id ledger; recei
 delivery. [VERIFIABLE][^11]
 
 On this host the API is live on loopback with `/api/queue/prompts`, `/ack`, `/consumed`,
-`/claim`, `/gates/{repo}/{task_id}/resolve` and `/events`; 88 sessions are registered. The `wq-*`
+`/claim`, `/gates/{repo}/{task_id}/resolve` and `/events`; sessions are registered. The `wq-*`
 hooks are wired for all machines. No `queue_waker` process or unit is running, so Lane B is absent
 here. Rationale: OpenAPI read, process list and manifest. [VERIFIABLE][^2][^13]
 
@@ -326,7 +326,7 @@ rendered message over the resolved rung, keeps its rows, and deletes them only a
 Rationale: read the skill. [VERIFIABLE][^16]
 
 Two rules shape a web-app owner edit. First, `bd` refuses another session's reassignment of an
-in-progress claim: "cannot reassign AIH-d16q1: held by "aih-acn-1" (in_progress) ... pass --force
+in-progress claim: "cannot reassign <task>: held by "aih-acn-1" (in_progress) ... pass --force
 only if their claim is abandoned". Second, fleet work goes only to `aih-*` and `ai-cli-*` sessions,
 never a `kg-*` one. Rationale: quoted from the handoff procedure. [VERIFIABLE][^15]
 
@@ -603,7 +603,7 @@ verify_pubkey = "~/.config/beads-ui/dispatch-ed25519.pub" # each receiving host
     - Matches the queue design's playbook mirroring into Beads.
   - **Cons:**
     - Couples the web app to ai-core, which is not running on every host.
-    - The queue dashboard (AIH-swgb4.8) covers the same ground; two owners must agree.
+    - The queue dashboard issue covers the same ground; two owners must agree.
 - (b) Beads only (a comment or a structured note on the task)
   - **Pros:**
     - One system of record, published by the existing tool.
@@ -712,12 +712,12 @@ Rationale: the measured cache-read cost in Summary item 5. [INFERENCE]
 
 | Dependency | Needed for | State | If late |
 |---|---|---|---|
-| AIH-p811n7 Phase 4 and a seeded `idle-wake.json` | Any automatic idle wake (rungs 1, 3, 4) | In progress; file absent here | Deliver at the next turn end (rung 5); show "waiting: automatic wakes off" |
-| AIH-p811n7 typed source for dispatch | Clear counters and reasons | Not built; unknown addressed actions already wake with reason `unknown-source-action` | Ride ordinary addressed mail |
-| AIH-59eza library and the `inbox-nudge` pattern | Rung 3 | Built; use case on | Skip rung 3 |
-| AIH-swgb4 queue API | Dispatch record, receipts, SSE | Live on sem-kg-ec2; Lane B not running; no joining machine enabled; dashboard open | bd-comment-only record; poll the record |
-| AIH-swgb4.8 dashboard | Scope boundary with this web app | Open | Decide ownership before building (F-1) |
-| AIH-iz7t3 wake sidecar | Launch of a non-running owner | Built, enabled on four pair hosts | Leave pending and show "owner not running" |
+| The idle-wake design's Phase 4 and a seeded `idle-wake.json` | Any automatic idle wake (rungs 1, 3, 4) | In progress; file absent here | Deliver at the next turn end (rung 5); show "waiting: automatic wakes off" |
+| The idle-wake design's typed source for dispatch | Clear counters and reasons | Not built; unknown addressed actions already wake with reason `unknown-source-action` | Ride ordinary addressed mail |
+| The prompt-injection library and the `inbox-nudge` pattern | Rung 3 | Built; use case on | Skip rung 3 |
+| The work-queue API | Dispatch record, receipts, SSE | Live on sem-kg-ec2; Lane B not running; no joining machine enabled; dashboard open | bd-comment-only record; poll the record |
+| The queue dashboard | Scope boundary with this web app | Open | Decide ownership before building (F-1) |
+| The fleet wake sidecar | Launch of a non-running owner | Built, enabled on four pair hosts | Leave pending and show "owner not running" |
 | held store `review`/`answer` verbs | Held answers | Built (beads-ui D-37, D-39) | Answer from the pane only |
 | owner-sync assignee convention | Routing by host alias | Designed; names carry the host alias | Resolve host from the session registry |
 
@@ -728,7 +728,7 @@ The dependency most likely to block is the policy switch. Phases 1 to 3 are merg
 
 ## Gaps, blindspots & emergent findings
 
-1. Overlap with the work-queue dashboard. AIH-swgb4.8 already specifies a Board, Task detail, prompt
+1. Overlap with the work-queue dashboard. The queue dashboard issue already specifies a Board, Task detail, prompt
    composer, review queue and SSE, as an app-portal member app. The beads-ui web app has the same
    founding purpose. Building both duplicates the prompt model. [VERIFIABLE][^11]
 2. Privacy and carriers. Git-inbox messages and receipts are commits on `refs/heads/fleet-inbox/*` in
@@ -766,13 +766,13 @@ The dependency most likely to block is the policy switch. Phases 1 to 3 are merg
 
 ## Flagged for the coordinator
 
-- F-1. Scope against AIH-swgb4.8. Raw excerpt: "work-queue Phase 2: dashboard member app -- ai-core
+- F-1. Scope against the queue dashboard issue. Raw excerpt: "work-queue Phase 2: dashboard member app -- ai-core
   web/ SPA (Board, Task detail, Sessions) + SSE + app-portal apps.yaml registration" (bd
-  AIH-swgb4.8). The founding ask wants this web app inside the app-portal system too. Options:
+  the queue dashboard issue). The founding ask wants this web app inside the app-portal system too. Options:
   supersede swgb4.8 with the beads-ui web app; build the web app as that member app; or keep both
   with one shared prompt store. Needs an owner decision across two epics.
 - F-2. The automatic-wake switch. Raw excerpt: "Automatic wakes remain off (no idle-wake.json).
-  ... Next: Phase 4 (AIH-p811n7.9)" (bd AIH-p811n7 notes, 2026-10-27). The ask requires that a
+  ... Next: Phase 4" (the idle-wake epic's notes, 2026-10-27). The ask requires that a
   prompt "auto-trigger that owning cc session to start working on it". That requirement depends on
   aih-fw-1's Phase 4 and on the switch being turned on; this leg cannot decide it.
 - F-3. Signed dispatch envelope (R-3) is a new mechanism with key management on four hosts. It needs

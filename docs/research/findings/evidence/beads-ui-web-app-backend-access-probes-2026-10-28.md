@@ -122,9 +122,8 @@ path.
 - The fleet's machine profile for the personal laptop is `mac`; no file under `config/` contains
   `sw-mac`.
 - ai-harness's VS Code remote-access procedure for this host records, for acn-mac on 2026-09-23,
-  `ssh -o ExitOnForwardFailure=yes -L 127.0.0.1:52222:127.0.0.1:22 <alias> true` returning `rc=0`
+  an SSH local forward over the existing Session Manager alias returning `rc=0` (command line omitted from this public file)
   through the SSH-over-Session-Manager alias, with `ControlMaster auto` and `ControlPersist 10m`.
-- `wc -l ~/.ssh/authorized_keys` printed 3 (keys not read).
 
 ## Scratch
 
