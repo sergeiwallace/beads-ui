@@ -27,7 +27,7 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 | Entry | Clause (quoted or closely paraphrased) | Coverage and disposition |
 |---|---|---|
 | A001 | "the web app for the beads-ui task manager ... same overall purpose as the beads-ui task manage claude code mod tui" | [Architecture](#architecture); inherits the beads-ui design's D-1 to D-43 |
-| A001 | "react or whatever framework is pretty and aesthetic and best practice" | [Stack and look](#stack-and-look); D-10 of the beads-ui design holds; [D-12](#d-12) |
+| A001 | "react or whatever framework is pretty and aesthetic and best practice" | [Stack and look](#stack-and-look); D-10 of the beads-ui design holds |
 | A001 | kanban, sprint and backlog, rearrange, quick edits of priority, status and owner, details, Jira, Todoist, Asana and Linear interactions | Phase 3 of the beads-ui design (T-3.1 to T-3.4) plus [Board and views](#board-and-views), [D-21](#d-21) and T-W1.0 of [Phase W1](#phase-w1-the-views-the-ask-names-the-review-queue-and-the-composer) |
 | A001 | "view the held doc blockers / decisions / open questions / details" | [The Review queue](#the-review-queue); [D-1](#d-1), [D-2](#d-2), [D-3](#d-3); detail views (T-W1.7) |
 | A001 | type and enter a prompt per task for the owning session, notified "via event-based system" built on aih-fw-1's event-driven wake | [Composer and dispatch](#composer-and-dispatch); [D-4](#d-4) to [D-8](#d-8) |
@@ -76,9 +76,10 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
   - [Configuration](#configuration)
 - [Integration](#integration)
 - [Implementation Phases](#implementation-phases)
+  - [Phase W0: Security foundation, receiver and dispatch store](#phase-w0-security-foundation-receiver-and-dispatch-store)
   - [Phase W1: The views the ask names, the Review queue and the composer](#phase-w1-the-views-the-ask-names-the-review-queue-and-the-composer)
-  - [Phase W2: Event-based dispatch, the receiver API, envelope, handoff and goal arming](#phase-w2-event-based-dispatch-the-receiver-api-envelope-handoff-and-goal-arming)
-  - [Phase W3: Live updates, allowlist, access and app-portal](#phase-w3-live-updates-allowlist-access-and-app-portal)
+  - [Phase W2: Event-based dispatch, handoff and goal arming](#phase-w2-event-based-dispatch-handoff-and-goal-arming)
+  - [Phase W3: Live updates, access and app-portal](#phase-w3-live-updates-access-and-app-portal)
   - [Phase W4: MCP App parity](#phase-w4-mcp-app-parity)
 - [Implementation Audit](#implementation-audit)
 - [Risks and Mitigations](#risks-and-mitigations)
@@ -94,7 +95,7 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 
 ## Executive Summary
 
-This design turns the beads-ui web app, already planned as Phase 3 of the beads-ui design, into the place where Sergei steers his Claude Code sessions. It adds a keyboard-first Review queue that lists every blocked task, held decision and open question in priority order and lets him answer each with one key or a short reply, and a per-task composer that sends a prompt to the session owning the task. That prompt reaches the session by event: the server records it in the ai-core work queue and sends addressed Agent Mail, which the fleet's event-driven wake turns into a model turn only when there is something to do, with the shared prompt-injection library, the mod and the queue's turn-end pull as fallbacks under one kill switch. Changing a task's owner sends a receiver-first handoff, and a dispatch can ask the receiving session to arm `/start-goal`. Each machine pair reaches a loopback-bound server through the transport it already runs, with the server's own authentication in front, and a per-host repository allowlist keeps personal stores off the work host. The two most consequential calls are the dispatch ladder ([D-6](#d-6)) and the signed dispatch envelope ([D-8](#d-8)); one decision is left for Sergei: whether app-portal's member contract takes a Node server ([D-15](#d-15)).
+This design turns the beads-ui web app, already planned as Phase 3 of the beads-ui design, into the place where Sergei steers his Claude Code sessions. It adds a keyboard-first Review queue that lists every blocked task, held decision and open question in priority order and lets him answer each with one key or a short reply, and a per-task composer that sends a prompt to the session owning the task. That prompt reaches the session by event: the server records it in the ai-core work queue and sends addressed Agent Mail, which the fleet's event-driven wake turns into a model turn only when there is something to do, with the shared prompt-injection library, the mod and the queue's turn-end pull as fallbacks under one kill switch. Changing a task's owner sends a receiver-first handoff, and a dispatch can ask the receiving session to arm `/start-goal`. Each machine pair reaches a loopback-bound server through the transport it already runs, with the server's own authentication in front, and a per-host repository allowlist keeps personal stores off the work host. The two most consequential calls are the dispatch ladder ([D-6](#d-6)) and the signed dispatch envelope ([D-8](#d-8)); three decisions are left for Sergei: whether app-portal's member contract takes a Node server ([D-15](#d-15)), whether the web app turns manual rank on by default ([D-21](#d-21)), and the ai-harness changes the build needs ([D-22](#d-22)).
 
 ## Summary for a wide audience
 
@@ -173,11 +174,11 @@ Board, Backlog, Sprints, Roadmap, Analytics, Sessions and Issue detail are as Ph
 
 ### Backend and live updates
 
-The server reads task fields through the host refresher's snapshots and `bd --json`, and writes through guarded `bd` calls (D-4 and D-26 of the beads-ui design). It detects change across every allowed store with one Dolt heads query and pushes Server-Sent Events to open tabs ([D-13](#d-13)). Sessions, prompts, receipts and review items come from the ai-core work queue where it runs; elsewhere a local append-only store holds dispatch records ([D-14](#d-14)). Receiving sessions fetch a dispatch and post its receipts through the server's receiver API, over the same access route as the browser, through the host's notifier, which holds a per-host receiver token and fetches only for the session a dispatch is addressed to (T-W2.2). Every store and queue read is filtered through the host's repository allowlist ([D-18](#d-18)).
+The server reads task fields through the host refresher's snapshots and `bd --json`, and writes through guarded `bd` calls (D-4 and D-26 of the beads-ui design). It detects change across every allowed store with one Dolt heads query and pushes Server-Sent Events to open tabs ([D-13](#d-13)). Sessions, prompts, receipts and review items come from the ai-core work queue where it runs; elsewhere a local append-only store holds dispatch records ([D-14](#d-14)). Receiving sessions fetch a dispatch and post its receipts through the server's receiver API, over the same access route as the browser, through the host's notifier, which holds a per-host receiver token and fetches only for the session a dispatch is addressed to (T-W0.3). Every store and queue read is filtered through the host's repository allowlist ([D-18](#d-18)).
 
 ### Access for each machine pair
 
-On the work pair, the server binds to loopback on sem-kg-ec2 and acn-mac reaches it through one more entry in the pair transport's supervised Session Manager port forward, with an SSH local forward as the fallback ([D-16](#d-16)). On the personal pair, the server binds to loopback on fw-lnx and is published to sw-mac with `tailscale serve` at `/beads`, registered through app-portal's `apps.yaml` ([D-15](#d-15), [D-16](#d-16)). The server adds its own authentication on both pairs: a per-host token on every request, with the tailnet identity recorded but never trusted on its own ([D-17](#d-17)).
+On the work pair, the server binds to loopback on sem-kg-ec2 and acn-mac reaches it through one more entry in the pair transport's supervised Session Manager port forward, with an SSH local forward as the fallback ([D-16](#d-16)). On the personal pair, the server binds to loopback on fw-lnx and is published to sw-mac with `tailscale serve` at `/beads`, standalone ([D-16](#d-16)); it is registered in app-portal's `apps.yaml` only if Sergei rules [D-15](#d-15) for option (a). The server adds its own authentication on both pairs: a per-host token on every request, with the tailnet identity recorded but never trusted on its own ([D-17](#d-17)).
 
 ```mermaid
 flowchart TB
@@ -251,7 +252,21 @@ order = ["notifier", "prompt-injection", "mod-submit", "turn-end"]
 
 [hosts]
 allow_repos = ["..."]            # the per-host repository allowlist (D-18)
+
+[auth]
+hosts = ["localhost", "127.0.0.1"]   # Host values accepted
+origins = ["http://localhost:<port>"] # exact Origin values accepted when Sec-Fetch-Site is absent
+dispatch_identities = ["..."]       # tailnet identities allowed to dispatch on the personal pair
+browser_secret = "state:browser-secret"   # references to generated credentials, never values
+receiver_token = "state:receiver-token"
+mcp_token = "state:mcp-token"
+configured_user = "sergei"            # the one person whose dispatches the server signs
+signing_key = "secret-store:dispatch-signing-key"
+signing_key_id = "<host>-<yyyymmdd>"   # carried in every envelope
+trusted_keys = "state:trusted-dispatch-keys.json"   # receiver side: key id to public key, with not_before and not_after
 ```
+
+Credential files live in the server's state directory, owned by the server's user with mode 0600. The server validates the whole `[auth]` table at start and refuses to start if a key is missing, empty or malformed, or a referenced credential is unreadable (T-W0.1).
 
 The kill switch is the event-driven wake's own call-time policy file. With automatic wakes off, the addressed Agent Mail is still sent and stays pending; only the model wake and the active rungs 3 and 4 are suppressed, and the notifier's passive header delivers the dispatch at the session's next tool call or turn end.
 
@@ -272,7 +287,70 @@ The kill switch is the event-driven wake's own call-time policy file. With autom
 
 ## Implementation Phases
 
-The phases below extend Phase 3 of the beads-ui design, which they assume built first or alongside; each lands in beads-ui unless it says ai-harness. Every phase ships enabled once merged and live-verified.
+Phase W0 comes first, because nothing that can make a session act may ship without authentication, the allowlist and a verified envelope. The phases below extend Phase 3 of the beads-ui design, which they assume built first or alongside; each lands in beads-ui unless it says ai-harness. Every phase ships enabled once merged and live-verified.
+
+### Phase W0: Security foundation, receiver and dispatch store
+
+Nothing that can make a session act ships before this phase: every later phase depends on it.
+
+- **Scope:** request authentication and write authorization; the per-host repository allowlist; the receiver API and the receiving-side client; the signed envelope and its verification; the dispatch store with its queue-backed and local implementations.
+- **Deliverables:**
+  - Files created: `apps/web/server/auth.ts`, `apps/web/server/allowlist.ts`, `apps/web/server/receiver-api.ts`, `apps/web/server/envelope.ts`; `plugins/beads-ui/core/src/dispatch-store.ts` (the `DispatchStore` interface, exported from the core package's index), `apps/web/server/dispatch-store/queue.ts`, `apps/web/server/dispatch-store/local.ts`.
+  - Files created (ai-harness, subject to [D-22](#d-22)): the receiving-side client that fetches a dispatch through the receiver API at each natural boundary and verifies its envelope, key id and body digest, with the shared golden vectors; the installer step that writes each receiver's trusted-keys map.
+  - Tests added: `apps/web/test/auth.test.ts`, `apps/web/test/allowlist.test.ts`, `apps/web/test/receiver-api.test.ts`, `apps/web/test/envelope.test.ts`, `apps/web/test/dispatch-store.contract.test.ts`, `apps/web/e2e/auth.spec.ts`; ai-harness tests for the receiver client and the verifier.
+- **Tasks + acceptance criteria:**
+  - **T-W0.1 Authentication**
+    - [ ] `When a request arrives, the system shall reject it unless its Host is on the allowlist.`
+    - [ ] `When a browser write arrives without the X-Beads-UI header, the system shall reject it.`
+    - [ ] `When a browser write arrives with Sec-Fetch-Site set to same-origin, the system shall accept it on that check.`
+    - [ ] `When a browser write arrives with Sec-Fetch-Site set to cross-site, same-site or none, the system shall reject it.`
+    - [ ] `When a browser write arrives with no Sec-Fetch-Site header, the system shall accept it on that check only if its Origin exactly equals an allowed origin.`
+    - [ ] `When a request reaches the receiver API, the system shall authorise it by the receiver token and the host and session match of T-W0.3, and shall not apply the browser checks.`
+    - [ ] `When any browser request arrives on either pair, the system shall require the browser session, and shall reject the request without it whatever identity headers it carries.`
+    - [ ] `Where the server runs behind Tailscale Serve, the system shall record the Tailscale-User-Login identity on each write and shall refuse a dispatch whose recorded identity is not on the host's dispatch list, in addition to the token.`
+    - [ ] `If a request reaches the loopback listener directly with Tailscale identity headers and no valid token, then the system shall reject it.`
+    - [ ] `If the server is bound beyond loopback without the auth layer configured, then the system shall refuse to start and shall name the required setting.`
+    - [ ] `If any [auth] key is missing, empty or malformed, or a referenced credential file is unreadable or not mode 0600, then the server shall refuse to start and name the key, on loopback too.`
+    - [ ] `When the launch command prints a one-time link, its code shall expire after five minutes, and the server shall exchange it once for a session cookie marked HttpOnly and SameSite=Strict and scoped to the app's base path.`
+    - [ ] `If a one-time code is presented a second time or after it expires, then the server shall refuse it and set no cookie.`
+    - [ ] `When the browser opens the SSE stream, the server shall authenticate it by the session cookie, and no token shall appear in a URL after the exchange or in browser storage.`
+    - [ ] `When a session is 12 hours old, or idle for 2 hours, the server shall end it and the cookie shall stop working.`
+    - [ ] `When the user logs out, the server shall revoke that session on the server and clear its cookie.`
+    - [ ] `When the host's revoke command names one session, the server shall end that session only.`
+    - [ ] `When the per-host secret is rotated, every existing session cookie shall stop working.`
+    - [ ] `When a request reaches a browser route, the server shall require the browser session cookie; a receiver route, the receiver token; an MCP route, the MCP token; and shall refuse a request carrying only another route's credential.`
+    - [ ] `When the server starts, it shall read the MCP token and the host's configured user from [auth] and refuse to start if either is missing.`
+  - **T-W0.2 Allowlist**
+    - [ ] `When the server starts, the system shall open only the stores whose repositories are on the host's allowlist.`
+    - [ ] `When the server reads the work queue, the system shall filter every row to the allowlisted repositories.`
+    - [ ] `If a store or queue row from a repository not on the allowlist is encountered, then the system shall drop it, count it in a health line without naming it, and shall not render it.`
+    - [ ] `If the allowlist is unreadable, then the server shall open no store and shall show why.`
+    - [ ] `When a dispatch is created, the server shall refuse it if the task's repository is not on the target host's allowlist, read from that host's published allowlist.`
+    - [ ] `When the receiver API returns a dispatch body, it shall first check the task's repository against the requesting host's allowlist and refuse without the body if it is not listed.`
+  - **T-W0.3 Receiver API**
+    - [ ] `When the target host's notifier, which holds that host's receiver token, requests a dispatch for a session it has confirmed is running on that host, the server shall return the dispatch record and its body only if both the host and the session match the dispatch's target.`
+    - [ ] `If the receiver token is missing, unknown or belongs to another host, or the named session is not the dispatch's target, then the server shall refuse the request without revealing whether the dispatch exists.`
+    - [ ] `When a receipt (taken, acted, failed) is posted for a dispatch, the server shall record it only if its host and session match the dispatch's target, and shall refuse any other.`
+    - [ ] `When a dispatch is consumed or expires, the server shall delete its body from the body store and append a tombstone record, keeping the record and its receipts; backups shall exclude bodies.`
+    - [ ] `Where the work queue is configured, the receiver API shall serve the queue's prompt store through the same endpoints.`
+    - [ ] `When a session reaches a natural boundary (a tool call or its turn end), the receiving-side client shall ask the receiver API for dispatches addressed to that session and deliver any it finds, so delivery needs no mail or wake.`
+  - **T-W0.4 Envelope**
+    - [ ] `When the server writes a dispatch, the system shall sign the RFC 8785 canonical JSON of its id, task, target, kind, body_ref, body_digest, arm_goal, created_by, created_at and expires_at, with timestamps as UTC RFC 3339 strings to the millisecond, using the serving host's Ed25519 key (D-20).`
+    - [ ] `When the Node signer and the Python verifier run the shared golden vectors, each shall produce and accept the same bytes, and each shall reject the malformed vectors.`
+    - [ ] `When the receiving host fetches a dispatch, it shall verify the signature, then hash the fetched body and compare it with body_digest, before the session acts.`
+    - [ ] `If the signature fails, any signed field differs from the record, or the body's hash differs from body_digest, then the receiving host shall mark the dispatch failed with the reason, and the session shall treat its text as unverified coordination only.`
+    - [ ] `If a dispatch has passed its expires_at, or names a target other than the receiving session, or carries an id the receiver has already consumed, then the receiving host shall refuse it and record why.`
+    - [ ] `When the server signs an envelope, it shall include its signing_key_id inside the signed bytes.`
+    - [ ] `When a receiver verifies an envelope, it shall look up the key id in its trusted-keys map and accept only a key inside its not_before and not_after window.`
+    - [ ] `If the key id is unknown, expired or revoked, then the receiver shall refuse the dispatch and name the key id.`
+    - [ ] `When the signing key is rotated, the installer shall add the new public key to every receiver's map before the server signs with it, and keep the old key valid for 24 hours.`
+  - **T-W0.5 Dispatch store**
+    - [ ] `When a dispatch is created, read, given a receipt, expired or consumed, the queue-backed and the local DispatchStore shall behave identically, and one shared contract suite shall run against both.`
+    - [ ] `When the server restarts, the local store shall recover every outstanding dispatch and its receipts.`
+    - [ ] `If the same dispatch id is written twice, then the store shall keep one record.`
+    - [ ] `When a dispatch is consumed or expires, the local store shall delete its body, append a tombstone, and compaction shall drop tombstoned bodies; backups shall exclude bodies.`
+    - [ ] `If the local store's file cannot be written, then the server shall refuse new dispatches and say why, and shall not report a dispatch as queued.`
+- **Exit gate:** beads-ui gate green; ai-harness `pytest` green for the receiver client and verifier; a live run on each pair recorded in the Approval Log: a cross-origin write, a forged-header request, a forged dispatch and a body-tampered dispatch each refused; an unlisted repository dropped; a local-store server restarted with a dispatch outstanding and recovered.
 
 ### Phase W1: The views the ask names, the Review queue and the composer
 
@@ -287,7 +365,7 @@ The phases below extend Phase 3 of the beads-ui design, which they assume built 
     - [ ] `When the user moves an issue between the backlog and a sprint, by drag, by the command palette or by the Move to menu, the system shall write the sprint membership through a guarded bd write.`
     - [ ] `When the user reorders a card in a column or a row in the backlog, by drag or by the keyboard's move up and move down commands, the system shall write metadata.rank as a fractional-index key between its neighbours (D-21).`
     - [ ] `When the user changes an issue's priority or status inline on a card or a list row, the system shall perform the guarded write and show the new value.`
-    - [ ] `When the user opens the owner picker on a card, a list row or an issue's detail, by pointer, keyboard or touch, the system shall offer the sessions the fleet's handoff rules allow, and shall apply the choice through T-W2.4.`
+    - [ ] `When the user opens the owner picker on a card, a list row or an issue's detail, by pointer, keyboard or touch, the system shall offer the sessions the fleet's handoff rules allow, and shall apply the choice through T-W2.2.`
     - [ ] `If an inline edit's guarded write returns a conflict, then the system shall roll back to the stored value and show a conflict notice naming the field.`
     - [ ] `If the user is on a touch device, then every reorder and inline edit shall also be reachable without a drag or a hover.`
   - **T-W1.1 Review queue**
@@ -299,8 +377,11 @@ The phases below extend Phase 3 of the beads-ui design, which they assume built 
     - [ ] `If the review-queue reducer receives an item with no priority, then it shall sort that item after every prioritised item and shall not throw.`
   - **T-W1.2 Option cards and answers**
     - [ ] `When a held decision is shown, the system shall draw each option from the structured-options command with its label and recommendation.`
-    - [ ] `When the user presses an option's number key on a shown decision, the system shall select that option.`
-    - [ ] `When the user confirms a selected option, the system shall offer an undo for five seconds and then write a dispatch of kind answer to the session owning the held item, carrying the exact answer bytes: the option letter and a statement that it was chosen with a control (D-3).`
+    - [ ] `When a held decision is shown, the system shall preselect its recommended option and give the card keyboard focus.`
+    - [ ] `When the user presses Enter on a shown decision, or an option's number key, the system shall choose that option with that one key and start a five-second undo window.`
+    - [ ] `When the user presses Escape or Undo inside the undo window, the system shall cancel the answer and write nothing.`
+    - [ ] `If focus is in a text field, then Enter and the number keys shall type into the field and choose no option.`
+    - [ ] `When the undo window closes without a cancel, the system shall write a dispatch of kind answer to the session owning the held item, carrying the exact answer bytes: the option letter and a statement that it was chosen with a control (D-3).`
     - [ ] `When the target host's dispatch receiver takes an answer dispatch, it shall write the answer's bytes to a file and run the held store's answer verb on that host, and the answer recorded shall be byte-identical to the bytes the server sent.`
     - [ ] `If the held item's landing pad on the target host is not clean, then the receiver shall refuse the answer, mark the dispatch failed with the reason, and the Review view shall show that reason.`
     - [ ] `If an answer dispatch is delivered twice, then the receiver shall record the answer once, keyed by the dispatch id.`
@@ -332,19 +413,22 @@ The phases below extend Phase 3 of the beads-ui design, which they assume built 
     - [ ] `If a field of an issue's detail cannot be read, then the system shall show the read error and the store it came from, and shall not show the field as empty.`
     - [ ] `When a held item's detail opens, the system shall render its full Markdown body for every held kind (decision, open question, blocker and other), with the option card above the body when structured options exist.`
     - [ ] `If a held item's body cannot be read, then the system shall show the read error and its source and shall not show an empty detail.`
+    - [ ] `When the app renders Markdown from a task or held item, it shall render no raw HTML, allow only http, https and mailto links, and strip every other URL scheme.`
+    - [ ] `When the server serves the app, it shall send a Content Security Policy with no inline script and enforce Trusted Types for DOM sinks.`
+    - [ ] `When a test renders Markdown carrying script tags, event-handler attributes and javascript: links, nothing shall execute and the links shall be inert.`
   - **T-W1.4 Shortcuts**
     - [ ] `Where single-key shortcuts are enabled, when the user presses a mapped key outside a text field, the system shall run its command.`
     - [ ] `While the single-key shortcut setting is off, the system shall ignore single-key presses and keep modified shortcuts.`
     - [ ] `If a remap assigns one key to two commands, then the key map shall refuse the remap and name both commands.`
 - **Exit gate:** `npx tsc --noEmit && npx vitest run` green in beads-ui; ai-harness `pytest` green for the structured-options command and the answer and unblock handlers; Playwright views, Review and composer specs green at 390 px and 1280 px; a live run on the work pair recorded in the Approval Log: one card reordered, one priority edited inline and one owner changed from a card, the Queue view filtered to blocked tasks, one decision answered by key and recorded on its owning host byte for byte, one task unblocked with a follow-up prompt, one prompt delivered at a turn end.
 
-### Phase W2: Event-based dispatch, the receiver API, envelope, handoff and goal arming
+### Phase W2: Event-based dispatch, handoff and goal arming
 
-- **Scope:** the dispatch ladder with its kill switch, coalescing and rate cap; the receiver API; the signed envelope and its verification on the receiving host; owner change as a handoff request; goal arming.
+- **Scope:** the dispatch ladder with its kill switch, coalescing and rate cap; owner change as a handoff request; goal arming. The receiver API and envelope are Phase W0's.
 - **Deliverables:**
-  - Files created: `apps/web/server/dispatch-ladder.ts`, `apps/web/server/envelope.ts`, `apps/web/server/receiver-api.ts`; `plugins/beads-ui/core/src/dispatch-policy.ts`, exported from the core package's index.
-  - Files created (ai-harness): a dispatch typed source in the notifier's admission (so web dispatches are counted and reasoned as their own kind), the receiving-side client that fetches a dispatch through the receiver API and verifies its envelope and body digest, and the receiver instructions that act on `arm_goal`.
-  - Tests added: `apps/web/test/dispatch-ladder.test.ts`, `apps/web/test/envelope.test.ts`, `apps/web/test/receiver-api.test.ts`, `plugins/beads-ui/core/test/dispatch-policy.test.ts`; ai-harness tests for the typed source, the receiver client and the verifier.
+  - Files created: `apps/web/server/dispatch-ladder.ts`; `plugins/beads-ui/core/src/dispatch-policy.ts`, exported from the core package's index.
+  - Files created (ai-harness): a dispatch typed source in the notifier's admission (so web dispatches are counted and reasoned as their own kind), and the receiver instructions that act on `arm_goal` (subject to [D-22](#d-22)).
+  - Tests added: `apps/web/test/dispatch-ladder.test.ts`, `plugins/beads-ui/core/test/dispatch-policy.test.ts`; ai-harness tests for the typed source.
 - **Tasks + acceptance criteria:**
   - **T-W2.1 Ladder**
     - [ ] `When a dispatch is written and automatic wakes are on, the system shall send addressed Agent Mail to the target session at its host naming the dispatch id.`
@@ -359,19 +443,7 @@ The phases below extend Phase 3 of the beads-ui design, which they assume built 
     - [ ] `When two or more dispatches to one session are written within coalesce_window_s, the system shall deliver them as one event.`
     - [ ] `If a session exceeds max_per_session_per_hour, then the system shall hold further dispatches to it and say so in the composer.`
     - [ ] `If the dispatch policy is unreadable, then the system shall deliver at the next turn end only and show the reason.`
-  - **T-W2.2 Receiver API**
-    - [ ] `When the target host's notifier, which holds that host's receiver token, requests a dispatch for a session it has confirmed is running on that host, the server shall return the dispatch record and its body only if both the host and the session match the dispatch's target.`
-    - [ ] `If the receiver token is missing, unknown or belongs to another host, or the named session is not the dispatch's target, then the server shall refuse the request without revealing whether the dispatch exists.`
-    - [ ] `When a receipt (taken, acted, failed) is posted for a dispatch, the server shall record it only if its host and session match the dispatch's target, and shall refuse any other.`
-    - [ ] `When a dispatch is consumed or expires, the server shall delete its body from the body store and append a tombstone record, keeping the record and its receipts; backups shall exclude bodies.`
-    - [ ] `Where the work queue is configured, the receiver API shall serve the queue's prompt store through the same endpoints.`
-  - **T-W2.3 Envelope**
-    - [ ] `When the server writes a dispatch, the system shall sign the RFC 8785 canonical JSON of its id, task, target, kind, body_ref, body_digest, arm_goal, created_by, created_at and expires_at, with timestamps as UTC RFC 3339 strings to the millisecond, using the serving host's Ed25519 key (D-20).`
-    - [ ] `When the Node signer and the Python verifier run the shared golden vectors, each shall produce and accept the same bytes, and each shall reject the malformed vectors.`
-    - [ ] `When the receiving host fetches a dispatch, it shall verify the signature, then hash the fetched body and compare it with body_digest, before the session acts.`
-    - [ ] `If the signature fails, any signed field differs from the record, or the body's hash differs from body_digest, then the receiving host shall mark the dispatch failed with the reason, and the session shall treat its text as unverified coordination only.`
-    - [ ] `If a dispatch has passed its expires_at, or names a target other than the receiving session, or carries an id the receiver has already consumed, then the receiving host shall refuse it and record why.`
-  - **T-W2.4 Owner change**
+  - **T-W2.2 Owner change**
     - [ ] `When the user picks a new owner, the system shall refuse a receiver the fleet's handoff rules do not allow, naming the rule, before anything is sent.`
     - [ ] `When the user changes the owner of an unclaimed task, the system shall write the assignee through a guarded bd write, and when the user also typed a prompt, dispatch it to the new owner.`
     - [ ] `When the user changes the owner of a task claimed by a live session, the system shall send that session a dispatch of kind handoff-request naming the selected receiver, and shall not write the assignee itself.`
@@ -380,7 +452,7 @@ The phases below extend Phase 3 of the beads-ui design, which they assume built 
     - [ ] `When the sender's verify step exits 0 and it drops its rows, the system shall show the handoff complete with the verify receipt as its source.`
     - [ ] `If the current owner is proved gone by the fleet's liveness check, then the server shall release the abandoned claim through the documented force path, send the selected receiver a git-inbox action carrying a pointer only, and show "owner not running" until git-inbox confirm records the take.`
     - [ ] `If the current owner's liveness cannot be established, then the system shall not reassign, shall show "owner state unknown" and shall offer a retry.`
-  - **T-W2.5 Goal arming**
+  - **T-W2.3 Goal arming**
     - [ ] `When the composer writes a prompt dispatch, or an answer or unblock carries next-step text, the system shall set arm_goal on that dispatch.`
     - [ ] `When the user clears the composer's arm-goal control for one dispatch, the system shall send that dispatch without arm_goal and record that the user cleared it.`
     - [ ] `When a dispatch carries arm_goal and the receiving session has no active goal, the session shall run /start-goal for the dispatched task before acting on the prompt.`
@@ -389,44 +461,21 @@ The phases below extend Phase 3 of the beads-ui design, which they assume built 
     - [ ] `When the user presses "deliver now" on a dispatch waiting on a paused goal, the system shall deliver it at once.`
 - **Exit gate:** beads-ui gate green; ai-harness `pytest` green including the typed-source, receiver-client and verifier tests; a live run on each pair, with automatic wakes switched on for the test session's host, recorded in the Approval Log: an idle session woken by a dispatch, every rung exercised in tests and one cross-host carrier failover exercised live, a wakes-off canary, a session on the paired machine fetching a dispatch through the receiver API, a forged and a body-tampered dispatch each refused, one owner change completed receiver-first.
 
-### Phase W3: Live updates, allowlist, access and app-portal
+### Phase W3: Live updates, access and app-portal
 
-- **Scope:** the heads-query change feed and SSE shared across tabs; the per-host repository allowlist; the work pair's forward entry and SSH fallback; Tailscale Serve and, subject to [D-15](#d-15), app-portal registration on the personal pair; the authentication layer.
+- **Scope:** the heads-query change feed and SSE shared across tabs; the work pair's forward entry and SSH fallback; Tailscale Serve and, subject to [D-15](#d-15), app-portal registration on the personal pair. Authentication and the allowlist are Phase W0's.
 - **Deliverables:**
-  - Files created: `apps/web/server/heads-feed.ts`, `apps/web/server/allowlist.ts`, `apps/web/server/auth.ts`, `apps/web/server/portal.ts` (the app-portal member duties); `apps/web/src/live/shared-feed.ts` (one SSE connection per browser, shared by its tabs); `docs/procedures/web-access.md`.
-  - Files modified (ai-harness): the pair transport's `forwards` map gains the web port entry for the work pair.
+  - Files created: `apps/web/server/heads-feed.ts`, `apps/web/server/portal.ts` (the app-portal member duties); `apps/web/src/live/shared-feed.ts` (one SSE connection per browser, shared by its tabs); `docs/procedures/web-access.md`.
+  - Files modified (ai-harness, subject to [D-22](#d-22)): the pair transport's `forwards` map gains the web port entry for the work pair.
   - Files modified (app-portal, once D-15 is ruled): `apps.yaml` gains the `beads` member on the personal pair.
-  - Tests added: `apps/web/test/heads-feed.test.ts`, `apps/web/test/allowlist.test.ts`, `apps/web/test/auth.test.ts`, `apps/web/test/portal.test.ts`, `apps/web/e2e/auth.spec.ts`, `apps/web/e2e/tabs.spec.ts`.
+  - Tests added: `apps/web/test/heads-feed.test.ts`, `apps/web/test/portal.test.ts`, `apps/web/e2e/tabs.spec.ts`.
 - **Tasks + acceptance criteria:**
   - **T-W3.1 Change feed**
     - [ ] `When any allowed store's Dolt head changes, the system shall re-read that store only and push one Server-Sent Event within the configured poll interval.`
     - [ ] `While several tabs of the app are open in one browser, the system shall hold one SSE connection for them and deliver each event to every tab.`
     - [ ] `If the tab holding the shared connection closes, then another open tab shall take it over within the poll interval.`
     - [ ] `If the heads query fails, then the system shall keep the last state with a stale stamp, retry with backoff, and shall not report the stores as unchanged.`
-  - **T-W3.2 Allowlist**
-    - [ ] `When the server starts, the system shall open only the stores whose repositories are on the host's allowlist.`
-    - [ ] `When the server reads the work queue, the system shall filter every row to the allowlisted repositories.`
-    - [ ] `If a store or queue row from a repository not on the allowlist is encountered, then the system shall drop it, count it in a health line without naming it, and shall not render it.`
-    - [ ] `If the allowlist is unreadable, then the server shall open no store and shall show why.`
-  - **T-W3.3 Authentication**
-    - [ ] `When a request arrives, the system shall reject it unless its Host is on the allowlist.`
-    - [ ] `When a browser write arrives without the X-Beads-UI header, the system shall reject it.`
-    - [ ] `When a browser write arrives with Sec-Fetch-Site set to same-origin, the system shall accept it on that check.`
-    - [ ] `When a browser write arrives with Sec-Fetch-Site set to cross-site, same-site or none, the system shall reject it.`
-    - [ ] `When a browser write arrives with no Sec-Fetch-Site header, the system shall accept it on that check only if its Origin exactly equals an allowed origin.`
-    - [ ] `When a request reaches the receiver API, the system shall authorise it by the receiver token and target match of T-W2.2 and shall not apply the browser checks.`
-    - [ ] `When any request arrives on either pair, the system shall require the per-host token, and shall reject the request without it whatever identity headers it carries.`
-    - [ ] `Where the server runs behind Tailscale Serve, the system shall record the Tailscale-User-Login identity on each write and shall refuse a dispatch whose recorded identity is not on the host's dispatch list, in addition to the token.`
-    - [ ] `If a request reaches the loopback listener directly with Tailscale identity headers and no valid token, then the system shall reject it.`
-    - [ ] `If the server is bound beyond loopback without the auth layer configured, then the system shall refuse to start and shall name the required setting.`
-    - [ ] `When the launch command prints a one-time link, its code shall expire after five minutes, and the server shall exchange it once for a session cookie marked HttpOnly and SameSite=Strict and scoped to the app's base path.`
-    - [ ] `If a one-time code is presented a second time or after it expires, then the server shall refuse it and set no cookie.`
-    - [ ] `When the browser opens the SSE stream, the server shall authenticate it by the session cookie, and no token shall appear in a URL after the exchange or in browser storage.`
-    - [ ] `When a session is 12 hours old, or idle for 2 hours, the server shall end it and the cookie shall stop working.`
-    - [ ] `When the user logs out, the server shall revoke that session on the server and clear its cookie.`
-    - [ ] `When the host's revoke command names one session, the server shall end that session only.`
-    - [ ] `When the per-host secret is rotated, every existing session cookie shall stop working.`
-  - **T-W3.4 Access and app-portal duties**
+  - **T-W3.2 Access and app-portal duties**
     - [ ] `When the pair transport starts on the work pair's laptop, it shall forward the web port from the work host to a local port.`
     - [ ] `When the forward drops, the pair transport shall restore it under its existing supervision.`
     - [ ] `When the server is mounted under a base path such as /beads, it shall serve every asset and API route under that path and shall serve the app shell for any other path below it without shadowing /api.`
@@ -434,16 +483,18 @@ The phases below extend Phase 3 of the beads-ui design, which they assume built 
     - [ ] `When the server serves the app shell, it shall send the header set app-portal's member helper sends, including no-store on the shell and its referrer policy.`
     - [ ] `When the app is built, it shall emit a web app manifest and shall register no service worker.`
     - [ ] `Where D-15 is ruled for (a), when app-portal serve-sync runs on the personal pair's server host with the beads member registered, the system shall publish the app at /beads on the tailnet, and a test shall load it both directly and through the portal shell.`
-- **Exit gate:** beads-ui gate green; ai-harness and app-portal gates green for their changes; the app opened from the work pair's laptop through the forward and from the personal pair's laptop through the tailnet, each recorded in the Approval Log with a refused cross-origin write and a refused forged-header request.
+- **Exit gate:** beads-ui gate green; ai-harness and app-portal gates green for their changes; the app opened from the work pair's laptop through the forward and from the personal pair's laptop through the tailnet, each recorded in the Approval Log.
 
 ### Phase W4: MCP App parity
 
 - **Scope:** the MCP App's dispatch tool writing the same record.
 - **Deliverables:** `packages/mcp-server/src/tools/dispatch.ts`; tests `packages/mcp-server/test/dispatch.test.ts`.
 - **Tasks + acceptance criteria:**
-  - [ ] `When the MCP App's user sends a prompt for a task, the MCP server shall write the same dispatch record and envelope the web server writes.`
+  - [ ] `When the MCP App's user sends a prompt for a task, the MCP server shall submit it to the web server's dispatch API with its per-host MCP token, and the web server shall sign it; the MCP server shall hold no signing key.`
+  - [ ] `When a dispatch request comes from a model's tool call rather than the user's own control in the MCP App, the system shall create a draft and send nothing until the user confirms it in the app.`
+  - [ ] `If an MCP dispatch request has no valid MCP token, names a user other than the host's configured user, or repeats a dispatch id, then the web server shall refuse it.`
   - [ ] `When the MCP server writes a dispatch, delivery shall follow the same ladder as a web dispatch.`
-  - [ ] `If the MCP host does not advertise the app capability, then the dispatch tool shall still accept a text call and return the dispatch id.`
+  - [ ] `If the MCP host does not advertise the app capability, then the dispatch tool shall accept a text call only as a draft, return the draft id, and send nothing until the user confirms it in the web app or the MCP App.`
   - [ ] `If the dispatch tool is called for a task outside the host's allowlist, then it shall refuse the call without naming the repository.`
 - **Exit gate:** beads-ui gate green; an MCP App dispatch delivered on the work pair recorded in the Approval Log.
 
@@ -455,10 +506,11 @@ The phases below extend Phase 3 of the beads-ui design, which they assume built 
 | # | Phase | Section / Decision | Verified | Notes |
 |---|-------|--------------------|---------|-------|
 | 1 | N/A | Design Overview filled with implementation knowledge, not a stub | - [ ] | |
-| 2 | W1 | D-1 to D-5, D-11, D-12, D-21 | - [ ] | |
-| 3 | W2 | D-6 to D-10, D-14, D-20 | - [ ] | |
-| 4 | W3 | D-13, D-15 to D-18 | - [ ] | |
-| 5 | W4 | MCP App parity | - [ ] | |
+| 2 | W0 | D-8, D-14, D-17, D-18, D-20 | - [ ] | |
+| 3 | W1 | D-1 to D-5, D-11, D-12, D-21 | - [ ] | |
+| 4 | W2 | D-6, D-7, D-9, D-10, D-22 | - [ ] | |
+| 5 | W3 | D-13, D-15, D-16 | - [ ] | |
+| 6 | W4 | MCP App parity | - [ ] | |
 
 **Audit completed:** not yet
 
@@ -474,7 +526,7 @@ The phases below extend Phase 3 of the beads-ui design, which they assume built 
 | 6 | The queue dashboard and this web app diverge | Two dashboards to maintain | D-11: the built dashboard is the port source, and ai-core's owner retires it after parity |
 | 7 | Dispatch to a paused goal resumes it | A rate-limited session restarts into the limit | D-10 waits until the pause clears and then releases the dispatch automatically; "deliver now" overrides |
 | 8 | A local process forges Tailscale identity headers on the loopback listener | A forged request is taken as Sergei's | D-17 requires the per-host token on every request; identity headers are never trusted alone; a forged-header test |
-| 9 | A stored dispatch is altered after signing | A session acts on text Sergei did not send | The envelope signs `body_ref` and `created_by` with the rest; the receiver checks the body's hash (T-W2.3) |
+| 9 | A stored dispatch is altered after signing | A session acts on text Sergei did not send | The envelope signs `body_ref` and `created_by` with the rest; the receiver checks the body's hash (T-W0.4) |
 
 ## Open Questions
 
@@ -511,11 +563,11 @@ This design doc hosts the `/auto-flow` Run Ledger for the web app's design stage
 | research route | claude / opus, three `researcher` leaves and one `auditor` verifier; synthesis by the Opus coordinator under the orchestrator authorship override |
 | doc route | claude / opus / n/a: the Opus coordinator authors this doc under `/doc --kind design --mode automated` through `flow_dispatch_doc.py --phase prepare` and `--phase complete`. Prepare pinned the integration snapshot at `4a3a17c` (lineage root `docs/research/beads-ui-web-app.md`, lineage receipt `complete`, no protected decisions); `--phase complete` passed on 2026-10-28 against the same snapshot (verdict `complete`) |
 | doc-audit route | codex / audit / high, cross-family: read-only review rounds through `cx audit`, each writing one evidence file, with the fixes made by the Opus coordinator. The audit loop's fix stage would have Codex write doc text, which this host's rule that Codex only reviews rules out |
-| decider | the Opus coordinator (`us.anthropic.claude-opus-5-5`) through `/decision-framework`; one decision left for Sergei ([D-15](#d-15)) |
+| decider | the Opus coordinator (`us.anthropic.claude-opus-5-5`) through `/decision-framework`; three decisions left for Sergei ([D-15](#d-15), [D-21](#d-21), [D-22](#d-22)) |
 | max-agents | 3 concurrent children (launcher's cap); one at a time under the host's load holds of 2026-10-28 |
 | target commit (beads-ui) | `4a3a17c` at the design-stage prepare |
 | worktree + branch | `/data/projects/beads-ui/.worktrees/aih-ec2-3-agents/bu-goals-webapp-coordinator` on `wt/aih-ec2-3/bu-goals-webapp-coordinator` |
-| stage cursor | `doc-audit`, round 4 next, after `doc done` (`flow_dispatch_doc.py --phase complete` passed against `4a3a17c`) and rounds 1 to 3 applied; the run stops when the audit converges, for Sergei's review |
+| stage cursor | `doc-audit` stopped after round 6, after `doc done` (`flow_dispatch_doc.py --phase complete` passed against `4a3a17c`) with rounds 1 to 6 applied. Round sizes were 12, 11, 6, 5, 5 and 5 MUST-FIX; each round's earlier fixes held, except one renumbering slip round 5 found. The launcher stopped the rounds here because the doc goes to Sergei's review next; round 6's fixes are unaudited |
 | last completed integration boundary | research landed on main at `4a3a17c` (PRs #78, #79, #80, #81) |
 
 ### Transition verdicts
@@ -529,9 +581,12 @@ This design doc hosts the `/auto-flow` Run Ledger for the web app's design stage
 
 | Round | Reviewer | Evidence | Findings | Disposition |
 |---:|---|---|---|---|
-| 1 | codex / audit / high (cross-family), leaf BU-mg2.5.3.1 | [round 1 findings](../research/findings/evidence/beads-ui-web-app-design-audit-r1-2026-10-28.md) | 12 MUST-FIX, 2 WORTH-CONSIDERING | Fixed: D-11 applies the approved decision instead of reopening it (M1); Sprint view, manual rank on by default (D-21) and inline edits added as T-W1.0 (M2); answers run on the owning host through an answer dispatch (M3); the receiver API (M4); the envelope signs every authorization field and the receiver checks the body hash, expiry, target and replay (M5); the token is required on both pairs and identity headers are never trusted alone (M6); the portal duties are tested in T-W3.4 (M7); D-15 returned to Sergei and D-19 withdrawn to BU-isu (M8); goal arming before acting, with automatic release after a limit pause (M9); core paths normalized (M10); compound criteria split, failure-path criteria added and the composer's parity inventory written (M12); shared SSE across tabs and the impact sort key defined (both WORTH-CONSIDERING items). Partly conceded (M11): the work host's network posture sentence is removed; machine names, beads-ui's own `BU-` ids and the worktree path stay, because the approved parent design and the founding ask use the same names and the public-repository rule for this run covers counts, ports, command lines, the queue's auth posture and private-store ids, none of which the doc carries |
+| 1 | codex / audit / high (cross-family), leaf BU-mg2.5.3.1 | [round 1 findings](../research/findings/evidence/beads-ui-web-app-design-audit-r1-2026-10-28.md) | 12 MUST-FIX, 2 WORTH-CONSIDERING | Fixed: D-11 applies the approved decision instead of reopening it (M1); Sprint view, manual rank on by default (D-21) and inline edits added as T-W1.0 (M2); answers run on the owning host through an answer dispatch (M3); the receiver API (M4); the envelope signs every authorization field and the receiver checks the body hash, expiry, target and replay (M5); the token is required on both pairs and identity headers are never trusted alone (M6); the portal duties are tested in T-W3.2 (M7); D-15 returned to Sergei and D-19 withdrawn to BU-isu (M8); goal arming before acting, with automatic release after a limit pause (M9); core paths normalized (M10); compound criteria split, failure-path criteria added and the composer's parity inventory written (M12); shared SSE across tabs and the impact sort key defined (both WORTH-CONSIDERING items). Partly conceded (M11): the work host's network posture sentence is removed; machine names, beads-ui's own `BU-` ids and the worktree path stay, because the approved parent design and the founding ask use the same names and the public-repository rule for this run covers counts, ports, command lines, the queue's auth posture and private-store ids, none of which the doc carries |
 | 2 | codex / audit / high (cross-family), leaf BU-mg2.5.3.1 | [round 2 findings](../research/findings/evidence/beads-ui-web-app-design-audit-r2-2026-10-28.md) | 11 MUST-FIX, 2 WORTH-CONSIDERING; round 1 closure: 10 PASS, 2 PARTIAL, 1 FAIL | Fixed: the receiver API matches host and session and refuses wrong-session fetches and receipts (M1); impact and size are the curation value and effort (M2, and round 1's impact item); the Queue view lists every open task in queue order with a blocked filter (M3); unblock runs the resolution comment and `bd-unblock` on the owning host (M4); issue and held-item detail criteria (M5); the full receiver-first handoff with live, gone, unknown and unclaimed cases (M6); the wake policy is now seeded off, so the dependency is each host's switch and W2's live test runs with wakes on (M7); the SSH fact reconciled in D-20 (M8); the event-wake design is referred to without its file name (M9); the cursor updated (M10); the browser session lifecycle specified and tested (M11); D-1 and D-2 cited for shared code; body deletion as a tombstone in an append-only log |
 | 3 | codex / audit / high (cross-family), leaf BU-mg2.5.3.1 | [round 3 findings](../research/findings/evidence/beads-ui-web-app-design-audit-r3-2026-10-28.md) | 6 MUST-FIX, 2 WORTH-CONSIDERING; rounds 1 and 2 closure: all PASS except round 2's M11 (PARTIAL) | Fixed: every actionable web dispatch sets `arm_goal` by default (M1); the owner picker on cards, rows and detail (M2); with wakes off the mail is still sent and only the wake and rungs 3 and 4 are suppressed (M3); a criterion per fallback rung (M4); the browser write rule stated exactly (M5); session expiry, logout and single-session revoke (M6); the seeding wording in Risk 1; RFC 8785 bytes with shared golden vectors |
+| 4 | codex / audit / high (cross-family), leaf BU-mg2.5.3.1 | [round 4 findings](../research/findings/evidence/beads-ui-web-app-design-audit-r4-2026-10-28.md) | 5 MUST-FIX, 2 WORTH-CONSIDERING; all round 3 fixes PASS | Fixed: Phase W0 lands authentication, the allowlist, the receiver API and client, the envelope and the dispatch store before anything can make a session act (M1, M2); the `DispatchStore` interface, both implementations and one contract suite (M3); standalone is the baseline and portal registration follows D-15 (M4); D-21 returned to Sergei and the ai-harness changes gathered into D-22 for him (M5); stale D-12 and D-6 references (W1). Build-issue edge receipt, read on 2026-10-28: BU-mg2.5.4 is blocked by BU-mg2.5.3 and is a child of BU-mg2.5; BU-ylx.11.3 relates to BU-mg2.5.4 (W2) |
+| 5 | codex / audit / high (cross-family), leaf BU-mg2.5.3.1 | [round 5 findings](../research/findings/evidence/beads-ui-web-app-design-audit-r5-2026-10-28.md) | 5 MUST-FIX, 1 WORTH-CONSIDERING | Fixed: every cross-repository part of D-2, D-6, D-8, D-10, D-16 and D-20 is contingent on D-22 (M1); MCP dispatch goes through the web server's API with a token and the user's confirmation, and the MCP server holds no key (M2); the `[auth]` configuration contract and its fail-closed start (M3); one-key answers with a preselected recommendation and an undo window (M4); the receiver reference in T-W0.1 (M5). Successor brief: the build issue BU-mg2.5.4's description, sha256 `958e6e20c75820ce5123a252e8a96c2d0f96d9d72aabe11de0251c5b21ef2406` (10,182 bytes), read on 2026-10-28 (W1) |
+| 6 | codex / audit / high (cross-family), leaf BU-mg2.5.3.1 | [round 6 findings](../research/findings/evidence/beads-ui-web-app-design-audit-r6-2026-10-28.md) | 5 MUST-FIX, 2 WORTH-CONSIDERING | Fixed: the target host's allowlist governs dispatch creation and body return (M1); a Markdown rendering contract with no raw HTML, a scheme allowlist, CSP and Trusted Types (M2); one credential per route, with the MCP token and configured user in `[auth]` (M3); a signed key id, the receivers' trusted-keys map and rotation with overlap (M4); turn-end discovery through the receiver client at each natural boundary, so Phase W1 delivers without mail (M5); decision lineage set to W0 (W1). Open for Sergei's review: the build brief's body is recorded by digest only (W2). These round 6 fixes have not been re-audited |
 
 <!-- /doc:region name="overview" -->
 
@@ -539,33 +594,34 @@ This design doc hosts the `/auto-flow` Run Ledger for the web app's design stage
 
 ## Design Decisions
 
-Every decision below was taken through the decision framework (`ai-harness/docs/procedures/decision-framework.md`): Gate 0 first, then the Authority test, then the five criteria, and each chosen option's Cons carry a mitigation. A decision marked `✅ Resolved by Opus orchestrator` is final for this run and goes to Sergei's review with the rest of the doc, as he asked; one decision, D-15, is left `⏳ PENDING (human)` because it would change app-portal's member contract in another repository.
+Every decision below was taken through the decision framework (`ai-harness/docs/procedures/decision-framework.md`): Gate 0 first, then the Authority test, then the five criteria, and each chosen option's Cons carry a mitigation. A decision marked `✅ Resolved by Opus orchestrator` is final for this run and goes to Sergei's review with the rest of the doc, as he asked; three are left `⏳ PENDING (human)`: D-15 and D-22 because they change another repository's contracts (app-portal's and ai-harness's), and D-21 because it changes a default of the parent design Sergei approved.
 
 ### Decision Summary
 
 | # | Decision | Options Considered | Recommended (AI) | Chosen | Diverged? | Rationale | Status |
 |---|----------|-------------------|------------------|--------|-----------|-----------|--------|
 | D-1 | Review queue layout | (a) split list and detail, keyboard first, sections by next action; (b) one card at a time; (c) a table with bulk actions | (a), with (c)'s bulk selection | | | The ask's "quickly go through and review"; triage queues are the closest proven pattern | `✅ Resolved by Opus orchestrator` |
-| D-2 | Where a decision's options come from | (a) a held-store command printing options as JSON; (b) a TypeScript Markdown parser in core; (c) rendered Markdown only | (a) | | | One parser, the one the held store already ships | `✅ Resolved by Opus orchestrator` |
+| D-2 | Where a decision's options come from | (a) a held-store command printing options as JSON; (b) a TypeScript Markdown parser in core; (c) rendered Markdown only | (a) | | | One parser, the one the held store already ships; the ai-harness part is contingent on D-22 | `✅ Resolved by Opus orchestrator` |
 | D-3 | How a one-key answer is recorded | (a) an answer naming the option and stating a control chose it; (b) fill the composer and require Send; (c) both, per setting | (a) | | | Faithful record of what Sergei chose, at the speed the ask asks for | `✅ Resolved by Opus orchestrator` |
 | D-4 | The composer | (a) port the ai-core dashboard's approved composer; (b) a new textarea with a skill autocomplete | (a) | | | Keeps an interaction Sergei approved, under D-11 | `✅ Resolved by Opus orchestrator` |
 | D-5 | Status shown beside the composer | (a) three indicators: liveness, delivery, response; (b) one combined chip | (a) | | | Connection status says nothing about delivery or work | `✅ Resolved by Opus orchestrator` |
-| D-6 | The dispatch ladder | (a) Agent Mail through the notifier first, then prompt-injection pointer, mod submit and turn-end pull, one kill switch; (b) prompt injection first; (c) turn-end pull only | (a) | | | Event-based, cross-host, one admission point; keeps all three named routes | `✅ Resolved by Opus orchestrator` |
+| D-6 | The dispatch ladder | (a) Agent Mail through the notifier first, then prompt-injection pointer, mod submit and turn-end pull, one kill switch; (b) prompt injection first; (c) turn-end pull only | (a) | | | Event-based, cross-host, one admission point; keeps all three named routes; the ai-harness part is contingent on D-22 | `✅ Resolved by Opus orchestrator` |
 | D-7 | Cross-host carriage | (a) Agent Mail, then Buzz, then git-inbox with a pointer only; (b) git-inbox first | (a) | | | Agent Mail is the fleet's primary cross-host rung; git-inbox commits to a shared repo | `✅ Resolved by Opus orchestrator` |
-| D-8 | Authority of a web prompt | (a) a signed envelope verified on the receiving host; (b) trust the transport; (c) treat web prompts as unverified coordination | (a) | | | Without it every web prompt reads unverified; the ask wants it to start work | `✅ Resolved by Opus orchestrator` |
+| D-8 | Authority of a web prompt | (a) a signed envelope verified on the receiving host; (b) trust the transport; (c) treat web prompts as unverified coordination | (a) | | | Without it every web prompt reads unverified; the ask wants it to start work; the ai-harness part is contingent on D-22 | `✅ Resolved by Opus orchestrator` |
 | D-9 | Owner change | (a) a receiver-first handoff request, git-inbox action when the owner is gone; (b) a forced reassignment | (a) | | | The fleet's handoff contract; bd refuses a claimed reassignment without force | `✅ Resolved by Opus orchestrator` |
-| D-10 | Arming /start-goal | (a) the receiver arms before acting; a limit pause delays delivery and releases it automatically, with "deliver now"; (b) always deliver and resume; (c) the server types /start-goal | (a) | | | Only the receiver can read its goal state; every dispatch still triggers work | `✅ Resolved by Opus orchestrator` |
+| D-10 | Arming /start-goal | (a) the receiver arms before acting; a limit pause delays delivery and releases it automatically, with "deliver now"; (b) always deliver and resume; (c) the server types /start-goal | (a) | | | Only the receiver can read its goal state; every dispatch still triggers work; the ai-harness part is contingent on D-22 | `✅ Resolved by Opus orchestrator` |
 | D-11 | The ai-core dashboard code under the approved D-11 | (a) port source now, retirement after parity by ai-core's owner; (b) rebuild without it | (a) | | | Applies Sergei's approved D-11; reopens nothing | `✅ Resolved by Opus orchestrator` |
 | D-12 | Single-key shortcuts | (a) on by default with an off and remap setting; (b) off by default | (a) | | | WCAG 2.1.4 needs an off switch, not an off default; speed is the ask | `✅ Resolved by Opus orchestrator` |
 | D-13 | Live updates | (a) poll every store's Dolt head in one query, then SSE; (b) the events journal; (c) Dolt binlog replication | (a) | | | Sees synced changes; one cheap query | `✅ Resolved by Opus orchestrator` |
 | D-14 | Where dispatch records live | (a) the queue's prompt store where configured, a local append-only store otherwise; (b) local on both pairs; (c) run the queue on fw-lnx too | (a) | | | Reuses what runs on each pair; one record shape | `✅ Resolved by Opus orchestrator` |
 | D-15 | app-portal integration | (a) beads-ui's Node server as a `kind: portal` upstream; (b) a static bundle served by ai-core; (c) both | (a) | | | (a) changes app-portal's member contract in another repository | `⏳ PENDING (human)` |
-| D-16 | Access routes | (a) pair transport forward on the work pair, `tailscale serve` on the personal pair; (b) SSH forwards on both; (c) a public origin behind OAuth | (a) | | | Each pair's existing supervised transport; zero inbound ports | `✅ Resolved by Opus orchestrator` |
+| D-16 | Access routes | (a) pair transport forward on the work pair, `tailscale serve` on the personal pair; (b) SSH forwards on both; (c) a public origin behind OAuth | (a) | | | Each pair's existing supervised transport; zero inbound ports; the ai-harness part is contingent on D-22 | `✅ Resolved by Opus orchestrator` |
 | D-17 | Authentication | (a) Host, Origin and Fetch Metadata checks and a per-host token on both pairs, tailnet identity as an extra check; (b) trust tailnet headers on the personal pair; (c) an OAuth proxy | (a) | | | Identity headers can be forged on the loopback listener | `✅ Resolved by Opus orchestrator` |
 | D-18 | What a host may show | (a) a per-host repository allowlist on every store and queue read, fail closed; (b) a denylist of personal repositories; (c) rely on what the queue ingests | (a) | | | The privacy requirement; a denylist would have to name private repositories | `✅ Resolved by Opus orchestrator` |
 | D-19 | Phase 6 Railway template | withdrawn: outside this doc, filed as BU-isu | | | | Changes a deliverable of the parent design's Phase 6 | withdrawn |
-| D-20 | The dispatch envelope's signature | (a) Ed25519, signing key on the serving host only; (b) HMAC with a shared per-pair key; (c) SSH signatures | (a) | | | Receivers verify but cannot forge; both runtimes support it natively | `✅ Resolved by Opus orchestrator` |
-| D-21 | Manual rank in the web app | (a) on by default with D-6's keys; (b) off by default | (a) | | | The ask names rearranging; D-6 was AI-resolved | `✅ Resolved by Opus orchestrator` |
+| D-20 | The dispatch envelope's signature | (a) Ed25519, signing key on the serving host only; (b) HMAC with a shared per-pair key; (c) SSH signatures | (a) | | | Receivers verify but cannot forge; both runtimes support it natively; the ai-harness part is contingent on D-22 | `✅ Resolved by Opus orchestrator` |
+| D-21 | Manual rank in the web app | (a) on by default with the parent design's D-6 keys; (b) off by default | (a) | | | The ask names rearranging; the parent design was approved as a whole | `⏳ PENDING (human)` |
+| D-22 | The ai-harness changes this design needs | (a) build them, one ai-harness PR each; (b) beads-ui only, with what ai-harness ships | (a) | | | (b) drops ask requirements; (a) changes another repository's contracts | `⏳ PENDING (human)` |
 
 ### Decision Details
 
@@ -868,9 +924,9 @@ Mitigation: the carriers' order lives in the call-time config (Data Model), and 
 
 > **Decision:** `✅ Resolved by Opus orchestrator` — (a) A signed envelope verified on the receiving host.
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5; ai-effort=high; ai-profile=architect -->
-<!-- decision-lineage: decision-id=BU-mg2.5.3/D-8; decision-topic=authority of a prompt sent from the web app; governs=dispatch:envelope; normalized-proposition=web dispatches carry a signature the receiving host verifies before the session acts; applicability=phase:W2; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+<!-- decision-lineage: decision-id=BU-mg2.5.3/D-8; decision-topic=authority of a prompt sent from the web app; governs=dispatch:envelope; normalized-proposition=web dispatches carry a signature the receiving host verifies before the session acts; applicability=phase:W0; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-Criterion 1 (a one-way door once sessions act on web prompts) favours the robust option. Mitigations: one signing key on each serving host, held in its existing secret store and read at call time, with its public key installed on receivers ([D-20](#d-20)); the verifier ships as its own ai-harness PR with forged and tampered dispatch tests (T-W2.3); the envelope signs a digest, never a private body. The key format is [D-20](#d-20). Confidence: high on the need, medium on the format.
+Criterion 1 (a one-way door once sessions act on web prompts) favours the robust option. Mitigations: one signing key on each serving host, held in its existing secret store and read at call time, with its public key installed on receivers ([D-20](#d-20)); the verifier ships as its own ai-harness PR with forged and tampered dispatch tests (T-W0.4); the envelope signs a digest, never a private body. The key format is [D-20](#d-20). Confidence: high on the need, medium on the format.
 
 ---
 
@@ -902,7 +958,7 @@ Criterion 1 (a one-way door once sessions act on web prompts) favours the robust
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.5.3/D-9; decision-topic=what an owner change in the web app does; governs=apps:web,dispatch:handoff; normalized-proposition=an owner change sends a receiver-first handoff request rather than a forced reassignment; applicability=phase:W2; outcome-id=; relation=different-question; related-decision-id=BU-mg2.2/D-17; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-The full protocol is in T-W2.4: the selected receiver is checked against the fleet's handoff rules first, the sender reassigns and publishes, the receiver takes and replies, and the sender verifies before dropping its rows, with each state shown from its own receipt. Mitigation for the delay: the owner field shows "handoff pending to <session>" with the current state, and a task with no claim takes a plain assignee write at once (T-W2.4). Confidence: high.
+The full protocol is in T-W2.2: the selected receiver is checked against the fleet's handoff rules first, the sender reassigns and publishes, the receiver takes and replies, and the sender verifies before dropping its rows, with each state shown from its own receipt. Mitigation for the delay: the owner field shows "handoff pending to <session>" with the current state, and a task with no claim takes a plain assignee write at once (T-W2.2). Confidence: high.
 
 ---
 
@@ -943,7 +999,7 @@ The full protocol is in T-W2.4: the selected receiver is checked against the fle
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.5.3/D-10; decision-topic=arming /start-goal from a web dispatch; governs=dispatch:goal; normalized-proposition=the receiver arms /start-goal before acting and a dispatch to a goal paused for a limit is released automatically when the pause clears; applicability=phase:W2; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-Gate 0: every actionable web dispatch sets the flag by default (T-W2.5), so the ask's auto-trigger is kept; a limit pause changes when it fires, not whether, and "deliver now" lets Sergei override. Mitigation: the receiver-side handling ships in ai-harness with tests for no goal, an active goal and a paused goal, and the release condition is testable: the receiver reports the goal active, or the pause window it recorded ends (T-W2.5). Confidence: high.
+Gate 0: every actionable web dispatch sets the flag by default (T-W2.3), so the ask's auto-trigger is kept; a limit pause changes when it fires, not whether, and "deliver now" lets Sergei override. Mitigation: the receiver-side handling ships in ai-harness with tests for no goal, an active goal and a paused goal, and the release condition is testable: the receiver reports the goal active, or the pause window it recorded ends (T-W2.3). Confidence: high.
 
 ---
 
@@ -1085,7 +1141,7 @@ The poll is on the server, outside any model, so it costs no tokens; the interva
 
 > **Decision:** `✅ Resolved by Opus orchestrator` — (a) The queue's prompt store where configured, a local append-only store otherwise.
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5; ai-effort=high; ai-profile=architect -->
-<!-- decision-lineage: decision-id=BU-mg2.5.3/D-14; decision-topic=storage of dispatch records; governs=dispatch:record; normalized-proposition=dispatch records use the queue's prompt store where configured and a local append-only store otherwise; applicability=phase:W2; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+<!-- decision-lineage: decision-id=BU-mg2.5.3/D-14; decision-topic=storage of dispatch records; governs=dispatch:record; normalized-proposition=dispatch records use the queue's prompt store where configured and a local append-only store otherwise; applicability=phase:W0; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
 Mitigation: one `DispatchStore` interface in core with both implementations run through the same test suite. Whether the queue should later run on fw-lnx is Open Question 2. Confidence: medium-high.
 
@@ -1128,7 +1184,7 @@ Mitigation: one `DispatchStore` interface in core with both implementations run 
 <!-- decision-record: chosen-option=PENDING; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
 <!-- decision-lineage: decision-id=BU-mg2.5.3/D-15; decision-topic=how the web app joins app-portal; governs=apps:web,integration:app-portal; normalized-proposition=the beads-ui Node server registers as a kind: portal upstream; applicability=phase:W3; outcome-id=; relation=different-question; related-decision-id=BU-mg2.2/D-11; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-Every option keeps the ask's portal fit, so Gate 0 holds whichever is chosen. Recommended (a): it keeps one server, and its Cons are bounded by the duties being few and listed. If (a) is approved, the duties (base path, SPA fallback that never shadows `/api`, `/healthz`, the shell header set, a manifest and no service worker) are built and tested in T-W3.4, and app-portal's contract gains the Node member in its own repository. Until the ruling, the app runs standalone on both pairs, and only the `apps.yaml` registration waits.
+Every option keeps the ask's portal fit, so Gate 0 holds whichever is chosen. Recommended (a): it keeps one server, and its Cons are bounded by the duties being few and listed. If (a) is approved, the duties (base path, SPA fallback that never shadows `/api`, `/healthz`, the shell header set, a manifest and no service worker) are built and tested in T-W3.2, and app-portal's contract gains the Node member in its own repository. Until the ruling, the app runs standalone on both pairs, and only the `apps.yaml` registration waits.
 
 ---
 
@@ -1168,7 +1224,7 @@ Every option keeps the ask's portal fit, so Gate 0 holds whichever is chosen. Re
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.5.3/D-16; decision-topic=how each machine pair reaches the web app; governs=apps:web,access; normalized-proposition=the work pair uses the pair transport's forward and the personal pair uses tailscale serve; applicability=phase:W3; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-Mitigation: one procedure doc covers both shapes, and the SSH local forward over the existing Session Manager alias is documented as the work pair's fallback (T-W3.4). Confidence: high.
+Mitigation: one procedure doc covers both shapes, and the SSH local forward over the existing Session Manager alias is documented as the work pair's fallback (T-W3.2). Confidence: high.
 
 ---
 
@@ -1207,9 +1263,9 @@ Mitigation: one procedure doc covers both shapes, and the SSH local forward over
 
 > **Decision:** `✅ Resolved by Opus orchestrator` — (a) Host, Origin and Fetch Metadata checks and a per-host token on both pairs; tailnet identity as an extra check only.
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5; ai-effort=high; ai-profile=architect -->
-<!-- decision-lineage: decision-id=BU-mg2.5.3/D-17; decision-topic=authentication of requests to the web server; governs=apps:web,security:auth; normalized-proposition=the web server requires Host, Origin and Fetch Metadata checks and a per-host token on both pairs and never trusts identity headers alone; applicability=phase:W3; outcome-id=; relation=different-question; related-decision-id=BU-mg2.2/D-14; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+<!-- decision-lineage: decision-id=BU-mg2.5.3/D-17; decision-topic=authentication of requests to the web server; governs=apps:web,security:auth; normalized-proposition=the web server requires Host, Origin and Fetch Metadata checks and a per-host token on both pairs and never trusts identity headers alone; applicability=phase:W0; outcome-id=; relation=different-question; related-decision-id=BU-mg2.2/D-14; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-Mitigation: the per-host secret is generated at first start into the host's state directory. A launch command on the host prints a one-time link whose code expires in five minutes; the server exchanges the code once for an `HttpOnly`, `SameSite=Strict` session cookie scoped to the base path, which the browser sends on every request and on the SSE stream, so no token appears in a URL after the exchange or in browser storage. Every write also needs the `X-Beads-UI` header. A session ends after 12 hours, or 2 idle hours; logout revokes it on the server; a host command revokes one session; rotating the secret ends every session. The receiver token for sessions (T-W2.2) is separate. The server refuses to start beyond loopback without the auth layer, and tests pin replay, storage, CSRF, SSE, revocation and forged headers (T-W3.3). Confidence: high.
+Mitigation: the per-host secret is generated at first start into the host's state directory. A launch command on the host prints a one-time link whose code expires in five minutes; the server exchanges the code once for an `HttpOnly`, `SameSite=Strict` session cookie scoped to the base path, which the browser sends on every request and on the SSE stream, so no token appears in a URL after the exchange or in browser storage. Every write also needs the `X-Beads-UI` header. A session ends after 12 hours, or 2 idle hours; logout revokes it on the server; a host command revokes one session; rotating the secret ends every session. The receiver token for sessions (T-W0.3) is separate. The server refuses to start beyond loopback without the auth layer, and tests pin replay, storage, CSRF, SSE, revocation and forged headers (T-W0.1). Confidence: high.
 
 ---
 
@@ -1248,7 +1304,7 @@ Mitigation: the per-host secret is generated at first start into the host's stat
 
 > **Decision:** `✅ Resolved by Opus orchestrator` — (a) A per-host repository allowlist, fail closed.
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5; ai-effort=high; ai-profile=architect -->
-<!-- decision-lineage: decision-id=BU-mg2.5.3/D-18; decision-topic=which repositories a web app host may show; governs=apps:web,privacy:host-scope; normalized-proposition=every store and queue read is filtered through a per-host repository allowlist that fails closed; applicability=phase:W3; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+<!-- decision-lineage: decision-id=BU-mg2.5.3/D-18; decision-topic=which repositories a web app host may show; governs=apps:web,privacy:host-scope; normalized-proposition=every store and queue read is filtered through a per-host repository allowlist that fails closed; applicability=phase:W0; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
 Gate 0 keeps the privacy requirement whole. Mitigation for the invisible-new-repository Con: the health line counts dropped rows without naming them, so a missing work repository is noticed, and the allowlist is call-time config read from the machine profile. Confidence: high.
 
@@ -1298,15 +1354,15 @@ Withdrawn in audit round 1. The Railway template is a deliverable of Phase 6 of 
 
 > **Decision:** `✅ Resolved by Opus orchestrator` — (a) Ed25519, signing key on the serving host only.
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5; ai-effort=high; ai-profile=architect -->
-<!-- decision-lineage: decision-id=BU-mg2.5.3/D-20; decision-topic=dispatch envelope signature format; governs=apps:web,harness:dispatch-verifier; normalized-proposition=web dispatch envelopes are signed with Ed25519 on the serving host and verified with its public key on receivers; applicability=phase:W2; outcome-id=; relation=refines; related-decision-id=BU-mg2.5.3/D-8; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+<!-- decision-lineage: decision-id=BU-mg2.5.3/D-20; decision-topic=dispatch envelope signature format; governs=apps:web,harness:dispatch-verifier; normalized-proposition=web dispatch envelopes are signed with Ed25519 on the serving host and verified with its public key on receivers; applicability=phase:W0; outcome-id=; relation=refines; related-decision-id=BU-mg2.5.3/D-8; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-Criterion 1 favours (a): a one-way door once sessions act on web prompts, and only (a) keeps forging power on one host. Mitigations for its Cons: the verifier's pull request declares `cryptography` in its own dependencies and pins a forged-envelope test (T-W2.3); the signing key lives in the serving host's existing secret store, read at call time, and the public key ships through the installer, so rotation is one key write plus one install. Confidence: high.
+Criterion 1 favours (a): a one-way door once sessions act on web prompts, and only (a) keeps forging power on one host. Mitigations for its Cons: the verifier's pull request declares `cryptography` in its own dependencies and pins a forged-envelope test (T-W0.4); the signing key lives in the serving host's existing secret store, read at call time, and the public key ships through the installer, so rotation is one key write plus one install. Confidence: high.
 
 ---
 
 <a id="d-21"></a>
 
-#### D-21: Manual rank in the web app — `✅ Resolved by Opus orchestrator`
+#### D-21: Manual rank in the web app — `⏳ PENDING (human)`
 
 **Context.** The ask names "rearrange them" among the web app's interactions. D-6 of the beads-ui design (resolved by the AI, not approved separately by Sergei) kept the MVP without manual rank and put rank behind `views.rank` in Phase 3, off unless set. A switch that is off by default would leave the web app unable to rearrange cards as shipped.
 
@@ -1314,7 +1370,7 @@ Criterion 1 favours (a): a one-way door once sessions act on web prompts, and on
 
 **Pros:**
 - Rearranging works as shipped, which the ask requires.
-- Uses D-6's own keys, so nothing migrates.
+- Uses the parent design's D-6 keys, so nothing migrates.
 
 **Cons:**
 - Amends an AI-resolved decision of the parent design.
@@ -1329,11 +1385,43 @@ Criterion 1 favours (a): a one-way door once sessions act on web prompts, and on
 
 ##### Recommendation
 
-> **Decision:** `✅ Resolved by Opus orchestrator` — (a) Manual rank on by default in the web app.
-<!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5; ai-effort=high; ai-profile=architect -->
+> **Decision:** `PENDING` — recommended (a) Manual rank on by default in the web app.
+<!-- decision-record: chosen-option=PENDING; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
 <!-- decision-lineage: decision-id=BU-mg2.5.3/D-21; decision-topic=manual rank in the web app; governs=apps:web,views:rank; normalized-proposition=the web app ships with manual rank on by default using the fractional-index keys of D-6; applicability=phase:W1; outcome-id=; relation=refines; related-decision-id=BU-mg2.2/D-6; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-Gate 0 decides it: the ask names rearranging, and D-6 is an AI decision, so the AI may refine it. Mitigation: the switch stays, so a store that wants sort-only views can turn rank off; the mod is unchanged; jittered keys keep concurrent reorders from colliding, as D-6 planned. Confidence: high.
+Gate 0 favours (a): the ask names rearranging, and (b) would ship without it. But the parent design, D-6 included, was approved by Sergei as a whole, so changing its default is his call (Gate B); audit round 4 returned it. Mitigation: the switch stays, so a store that wants sort-only views can turn rank off; the mod is unchanged; jittered keys keep concurrent reorders from colliding, as D-6 planned. Confidence: high.
+
+---
+
+<a id="d-22"></a>
+
+#### D-22: The ai-harness changes this design needs — `⏳ PENDING (human)`
+
+**Context.** Several resolved decisions here are buildable only with changes in ai-harness: the held store's structured-options command ([D-2](#d-2)), a dispatch typed source in the notifier's admission ([D-6](#d-6)), the receiving-side client and envelope verifier ([D-8](#d-8), [D-20](#d-20)), the receiver's answer and unblock handlers (T-W1.2, T-W1.6), the receiver instructions that act on `arm_goal` ([D-10](#d-10)), the pair transport's `forwards` entry ([D-16](#d-16)), and the installer step that distributes the trusted dispatch keys ([D-20](#d-20)). Each design choice is contained, but together they change ai-harness's contracts, which audit round 4 found is a cross-repository change the decision framework returns to Sergei. D-16 adds one more: a `forwards` entry in ai-harness's pair transport. Until Sergei rules this decision, the cross-repository part of each of D-2, D-6, D-8, D-10, D-16 and D-20 is contingent on it; only their beads-ui parts are resolved.
+
+##### (a) Build the ai-harness changes as part of this build, each as its own ai-harness pull request with its tests
+
+**Pros:**
+- Every requirement the ask names is met: verified prompts, event-based delivery, answers and unblocks on the owning host, goal arming.
+
+**Cons:**
+- The build spans two repositories and lands in ai-harness under that repository's own gates.
+
+##### (b) Keep the build inside beads-ui and use only what ai-harness already ships
+
+**Pros:**
+- One repository.
+
+**Cons:**
+- No envelope verification, no answer or unblock on the owning host and no typed admission, so web prompts could not be verified and the ask's answer and unblock flows would be lost.
+
+##### Recommendation
+
+> **Decision:** `PENDING` — recommended (a) Build the ai-harness changes, one pull request each.
+<!-- decision-record: chosen-option=PENDING; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
+<!-- decision-lineage: decision-id=BU-mg2.5.3/D-22; decision-topic=the ai-harness changes the web app needs; governs=repo:ai-harness,dispatch:receiver; normalized-proposition=the web app build lands the held options command, the dispatch typed source, the receiver client and verifier, the answer and unblock handlers and the arming instructions in ai-harness; applicability=phase:W0,phase:W1,phase:W2; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+
+Option (b) drops ask requirements, so Gate 0 leaves (a) as the only way to keep them; the ruling Sergei gives is about the cross-repository work, not whether the requirements stand. Mitigation for (a)'s Con: each change is additive, lands as a separate ai-harness pull request with red-arm tests, and nothing in beads-ui's phases ships its acting path until that pull request is merged and installed.
 
 ---
 
