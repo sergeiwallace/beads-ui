@@ -58,7 +58,7 @@ const DATED_STORE = [
 const DATED_ORDER = ["BU-mg2.3", "BU-ms7", "BU-mg2.5", "BU-mg2"];
 const UNDATED = ["BU-mg2.4", "BU-mg2.8", "BU-mg2.9", "BU-mg2.10", "BU-mg2.11", "BU-mg2.12"];
 
-const FIRSTMATE = "aih-ec2-firstmate-1";
+const FIRSTMATE = "ops-vm-firstmate-1";
 
 const storeOf = (store: readonly unknown[], session = FIRSTMATE): WorldOptions => ({
   ...MINE,
@@ -292,7 +292,7 @@ describe("the Timeline's scope (BU-beads-ui-timeline-dety N-1, D-29)", () => {
   const OWN = ["BU-mg2.3", "BU-ms7"];
   const owned = DATED_STORE.map((row) => ({
     ...row,
-    assignee: OWN.includes(String(row.id)) ? ME : "aih-ec2-4",
+    assignee: OWN.includes(String(row.id)) ? ME : "ops-vm-4",
   }));
 
   test("should list only a non-firstmate session's own epics and milestones, and every owner's after a", async ($, on) => {

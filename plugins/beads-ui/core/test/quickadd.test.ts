@@ -7,7 +7,7 @@ import { unwrap } from "./helpers.ts";
 describe("parseQuickAdd", () => {
   test("should parse every token and keep the rest as the title when given a full line", () => {
     const parsed = parseQuickAdd(
-      "Fix  board p1 type:bug @aih-3 refresh +ui due:2026-11-02 sprint:s1 +ui on resize",
+      "Fix  board p1 type:bug @ops-3 refresh +ui due:2026-11-02 sprint:s1 +ui on resize",
     );
 
     expect(parsed).toEqual({
@@ -16,7 +16,7 @@ describe("parseQuickAdd", () => {
         title: "Fix board refresh on resize",
         priority: 1,
         type: "bug",
-        assignee: "aih-3",
+        assignee: "ops-3",
         labels: ["ui", "sprint:s1"],
         due: "2026-11-02",
         sprint: "s1",
@@ -29,7 +29,7 @@ describe("parseQuickAdd", () => {
   });
 
   test("should return an empty-title error when the line holds only tokens", () => {
-    expect(parseQuickAdd("p0 +ui @aih-3")).toEqual({
+    expect(parseQuickAdd("p0 +ui @ops-3")).toEqual({
       ok: false,
       error: { kind: "empty-title", message: "a new issue needs a title" },
     });
@@ -60,7 +60,7 @@ describe("parseQuickAdd", () => {
 describe("createArgv", () => {
   test("should map each parsed token to its bd create flag when building the create", () => {
     const parsed = unwrap(
-      parseQuickAdd("Fix refresh p1 type:bug @aih-3 +ui due:2026-11-02 sprint:s1"),
+      parseQuickAdd("Fix refresh p1 type:bug @ops-3 +ui due:2026-11-02 sprint:s1"),
     );
 
     expect(createArgv(parsed)).toEqual([
@@ -69,7 +69,7 @@ describe("createArgv", () => {
       "--title=Fix refresh",
       "--priority=1",
       "--type=bug",
-      "--assignee=aih-3",
+      "--assignee=ops-3",
       "--labels=ui,sprint:s1",
       "--due=2026-11-02",
       "--json",

@@ -35,13 +35,13 @@ const issue = (id: string, extra: Partial<ReviewIssue> = {}): ReviewIssue => ({
 });
 
 const item = (name: string, extra: Partial<ReviewItem> = {}): ReviewItem => ({
-  path: `/home/me/projects/ai-harness/docs/held/sem-kg-ec2--aih-ec2-3/${name}.md`,
+  path: `/home/me/projects/ai-harness/docs/held/host-c--ops-vm-3/${name}.md`,
   store: "ai-harness",
-  relpath: `docs/held/sem-kg-ec2--aih-ec2-3/${name}.md`,
+  relpath: `docs/held/host-c--ops-vm-3/${name}.md`,
   kind: "decision",
   status: "open",
-  session: "aih-ec2-3@sem-kg-ec2",
-  machine: "sem-kg-ec2",
+  session: "ops-vm-3@host-c",
+  machine: "host-c",
   task: "none",
   title: name,
   ask: "",
@@ -96,14 +96,14 @@ describe("the Review view's filter (T-2C.6)", () => {
   });
 
   test("should keep the items a session holds, by its whole name or its slug, when the filter holds session:", () => {
-    const both = [item("mine"), item("theirs", { session: "kg-ec2-1@sem-kg-ec2" })];
-    expect(filtered(both, "session:kg-ec2-1")).toEqual(["decision: theirs"]);
-    expect(filtered(both, "session:kg-ec2-1@sem-kg-ec2")).toEqual(["decision: theirs"]);
+    const both = [item("mine"), item("theirs", { session: "qa-vm-1@host-c" })];
+    expect(filtered(both, "session:qa-vm-1")).toEqual(["decision: theirs"]);
+    expect(filtered(both, "session:qa-vm-1@host-c")).toEqual(["decision: theirs"]);
   });
 
   test("should keep the items of the machine when the filter holds machine:", () => {
-    const both = [item("here"), item("there", { machine: "acn-mac" })];
-    expect(filtered(both, "machine:acn-mac")).toEqual(["decision: there"]);
+    const both = [item("here"), item("there", { machine: "host-a" })];
+    expect(filtered(both, "machine:host-a")).toEqual(["decision: there"]);
   });
 
   test("should keep the items about the task, by the item's task or its issue's ids, when the filter holds task:", () => {
@@ -144,10 +144,10 @@ describe("the Review view's filter (T-2C.6)", () => {
   test("should keep the items holding every free word in their title or ask, in any case", () => {
     const both = [
       item("Confluence space", { ask: "approve the request" }),
-      item("install", { ask: "run it on acn-mac" }),
+      item("install", { ask: "run it on host-a" }),
     ];
     expect(filtered(both, "APPROVE confluence")).toEqual(["decision: Confluence space"]);
-    expect(filtered(both, "acn-mac")).toEqual(["decision: install"]);
+    expect(filtered(both, "host-a")).toEqual(["decision: install"]);
   });
 
   test("should open on status:open selection:current", () => {
@@ -197,7 +197,7 @@ describe("the Review view's filter (T-2C.6)", () => {
 describe("the Review view's sorts (T-2C.6)", () => {
   const a = item("a", {
     kind: "blocker",
-    session: "kg-ec2-1@sem-kg-ec2",
+    session: "qa-vm-1@host-c",
     task: "BU-2",
     createdAt: "2026-10-25T07:00:00Z",
     answeredAt: "2026-10-25T11:00:00Z",
@@ -205,14 +205,14 @@ describe("the Review view's sorts (T-2C.6)", () => {
   });
   const b = item("b", {
     kind: "decision",
-    session: "aih-ec2-3@sem-kg-ec2",
+    session: "ops-vm-3@host-c",
     task: "BU-1",
     createdAt: "2026-10-25T09:00:00Z",
     issue: issue("BU-1", { priority: 1, parent: "BU-8" }),
   });
   const c = item("c", {
     kind: "summary",
-    session: "aih-ec2-firstmate-1@sem-kg-ec2",
+    session: "ops-vm-firstmate-1@host-c",
     task: "none",
     createdAt: "2026-10-25T08:00:00Z",
   });
@@ -254,13 +254,13 @@ describe("the Review view's groups (T-2C.6)", () => {
   const one = item("one", {
     kind: "decision",
     task: "BU-1",
-    session: "aih-ec2-3@sem-kg-ec2",
+    session: "ops-vm-3@host-c",
     issue: issue("BU-1", { parent: "BU-9", title: "first" }),
   });
   const two = item("two", {
     kind: "blocker",
     task: "BU-1",
-    session: "kg-ec2-1@sem-kg-ec2",
+    session: "qa-vm-1@host-c",
     createdAt: "2026-10-25T08:00:00Z",
     issue: issue("BU-1", { parent: "BU-9", title: "first" }),
   });
@@ -284,7 +284,7 @@ describe("the Review view's groups (T-2C.6)", () => {
   });
 
   test("should draw one header with its count per session when grouping by session", () => {
-    expect(counts("session")).toEqual(["aih-ec2-3@sem-kg-ec2 (2)", "kg-ec2-1@sem-kg-ec2 (1)"]);
+    expect(counts("session")).toEqual(["ops-vm-3@host-c (2)", "qa-vm-1@host-c (1)"]);
   });
 
   test("should draw no header when grouping by none, and each group's header with its whole count on every page it spans", () => {
@@ -311,42 +311,41 @@ describe("the Review view's groups (T-2C.6)", () => {
 describe("whose items the Review view lists (T-2C.6, D-38)", () => {
   const held = item("held here");
   const owned = item("owned", {
-    session: "kg-ec2-1@sem-kg-ec2",
+    session: "qa-vm-1@host-c",
     task: "BU-1",
-    issue: issue("BU-1", { assignee: "aih-ec2-3" }),
+    issue: issue("BU-1", { assignee: "ops-vm-3" }),
   });
-  const neither = item("neither", { session: "kg-ec2-1@sem-kg-ec2" });
-  const sameNameOtherHost = item("same name, other host", { session: "aih-ec2-3@acn-mac" });
+  const neither = item("neither", { session: "qa-vm-1@host-c" });
+  const sameNameOtherHost = item("same name, other host", { session: "ops-vm-3@host-a" });
   const items = [held, owned, neither, sameNameOtherHost];
 
   test("should list the items a session holds and those about issues it owns, and no other, on mine", () => {
     expect(
-      names(scopedItems(items, { session: "aih-ec2-3", host: "sem-kg-ec2", scope: "mine" })),
+      names(scopedItems(items, { session: "ops-vm-3", host: "host-c", scope: "mine" })),
     ).toEqual(["held here", "owned"]);
   });
 
   test("should list every item on pair", () => {
     expect(
-      names(scopedItems(items, { session: "aih-ec2-3", host: "sem-kg-ec2", scope: "pair" })),
+      names(scopedItems(items, { session: "ops-vm-3", host: "host-c", scope: "pair" })),
     ).toEqual(names(items));
   });
 
   test("should list nothing for a session with no name on mine", () => {
-    expect(scopedItems(items, { session: undefined, host: "sem-kg-ec2", scope: "mine" })).toEqual(
-      [],
-    );
+    expect(scopedItems(items, { session: undefined, host: "host-c", scope: "mine" })).toEqual([]);
   });
 
   test("should keep only the items whose machine is in the snapshot's pair, or this host's when it names none", () => {
     const outside = [
       item("here"),
-      item("partner", { machine: "acn-mac" }),
-      item("far", { machine: "fw-lnx" }),
+      item("partner", { machine: "host-a" }),
+      item("far", { machine: "host-b" }),
     ];
-    expect(names(inPair(outside, { pair: ["acn-mac", "sem-kg-ec2"], host: "sem-kg-ec2" }))).toEqual(
-      ["here", "partner"],
-    );
-    expect(names(inPair(outside, { pair: [], host: "sem-kg-ec2" }))).toEqual(["here"]);
+    expect(names(inPair(outside, { pair: ["host-a", "host-c"], host: "host-c" }))).toEqual([
+      "here",
+      "partner",
+    ]);
+    expect(names(inPair(outside, { pair: [], host: "host-c" }))).toEqual(["here"]);
     expect(inPair(outside, { pair: [], host: "" })).toEqual([]);
   });
 });

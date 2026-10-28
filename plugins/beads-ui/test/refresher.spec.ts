@@ -214,13 +214,13 @@ const calls = (h: Host) =>
 
 const HOUR = 3_600_000;
 const STORES: Record<string, Issue[]> = {
-  AIH: [
-    { status: "open", assignee: "aih-ec2-3" },
-    { status: "in_progress", assignee: "aih-ec2-firstmate-1" },
-    { status: "closed", assignee: "aih-ec2-3", closedAt: Date.now() - HOUR },
-    { status: "closed", assignee: "aih-ec2-3", closedAt: Date.now() - 72 * HOUR },
+  OPS: [
+    { status: "open", assignee: "ops-vm-3" },
+    { status: "in_progress", assignee: "ops-vm-firstmate-1" },
+    { status: "closed", assignee: "ops-vm-3", closedAt: Date.now() - HOUR },
+    { status: "closed", assignee: "ops-vm-3", closedAt: Date.now() - 72 * HOUR },
   ],
-  BU: [{ status: "blocked", assignee: "aih-ec2-3" }, { status: "open" }],
+  BU: [{ status: "blocked", assignee: "ops-vm-3" }, { status: "open" }],
 };
 
 // Each test starts real Node processes, and a stub bd for every count: on a loaded host the first
@@ -228,7 +228,7 @@ const STORES: Record<string, Issue[]> = {
 describe("the host refresher", { timeout: 30_000 }, () => {
   it("should start detached in its own process group and write every store's counts by owner with a heartbeat", async () => {
     const h = host(STORES);
-    register(h, "aih-ec2-3");
+    register(h, "ops-vm-3");
 
     const pid = launch(h, "token-aaaaaaaa");
     const written = await until(() => snapshot(h));
@@ -238,22 +238,22 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     expect(written.token).toBe("token-aaaaaaaa");
     expect(written.pid).toBe(pid);
     expect(Math.abs(Date.now() - written.beatAt)).toBeLessThan(5_000);
-    const aih = written.stores.find((store: { name: string }) => store.name === "AIH");
-    expect(aih).toMatchObject({
+    const ops = written.stores.find((store: { name: string }) => store.name === "OPS");
+    expect(ops).toMatchObject({
       ok: true,
       statuses: {
-        open: { "aih-ec2-3": 1 },
-        in_progress: { "aih-ec2-firstmate-1": 1 },
+        open: { "ops-vm-3": 1 },
+        in_progress: { "ops-vm-firstmate-1": 1 },
         blocked: {},
       },
-      done: { "24h": { "aih-ec2-3": 1 } },
+      done: { "24h": { "ops-vm-3": 1 } },
     });
     expect(lease(h)).toMatchObject({ token: "token-aaaaaaaa", pid });
   });
 
   it("should leave exactly one refresher holding the lease when two start at the same moment", async () => {
     const h = host(STORES);
-    register(h, "aih-ec2-3");
+    register(h, "ops-vm-3");
 
     const pids = [launch(h, "token-first111"), launch(h, "token-second22")];
     await until(() => snapshot(h));
@@ -270,7 +270,7 @@ describe("the host refresher", { timeout: 30_000 }, () => {
   for (const held of [BUILD, "999.0.0"]) {
     it(`should start nothing and read nothing when a live refresher of build ${held === BUILD ? "its own" : held} holds the lease`, async () => {
       const h = host(STORES);
-      register(h, "aih-ec2-3");
+      register(h, "ops-vm-3");
       writeFileSync(
         join(h.state, "lease.json"),
         JSON.stringify({ token: "someone-else1", pid: 1, beatAt: Date.now(), version: held }),
@@ -295,14 +295,14 @@ describe("the host refresher", { timeout: 30_000 }, () => {
   it("should take over the live lease of an older build's refresher, its last snapshot current under the new token from the moment the lease names it", async () => {
     const h = host({ ...STORES, HUNG: [{ status: "open" }] });
     writeFileSync(join(h.root, "HUNG", "hang"), "");
-    register(h, "aih-ec2-3");
+    register(h, "ops-vm-3");
     const beatAt = Date.now() - 5_000;
     const old = {
       schema: 1,
       token: "old-build-token1",
       pid: 1,
       beatAt,
-      stores: [{ path: join(h.root, "AIH"), name: "AIH", ok: false, readAt: beatAt, error: "x" }],
+      stores: [{ path: join(h.root, "OPS"), name: "OPS", ok: false, readAt: beatAt, error: "x" }],
     };
     writeFileSync(join(h.state, "counts.json"), JSON.stringify(old));
     writeFileSync(
@@ -322,7 +322,7 @@ describe("the host refresher", { timeout: 30_000 }, () => {
 
   it("should leave an older build's refresher no lease, so it stops reading and exits, once a newer build's refresher starts", async () => {
     const h = host(STORES);
-    register(h, "aih-ec2-3");
+    register(h, "ops-vm-3");
     // The older build: this refresher with no manifest beside it, so its lease records no build,
     // as every build before 0.9.4 wrote it.
     const older = join(h.root, "older-plugin");
@@ -354,7 +354,7 @@ describe("the host refresher", { timeout: 30_000 }, () => {
 
   it("should take over a lease whose heartbeat is stale", async () => {
     const h = host(STORES);
-    register(h, "aih-ec2-3");
+    register(h, "ops-vm-3");
     writeFileSync(
       join(h.state, "lease.json"),
       JSON.stringify({ token: "gone-refresher", pid: 1, beatAt: Date.now() - 60_000 }),
@@ -370,7 +370,7 @@ describe("the host refresher", { timeout: 30_000 }, () => {
   it("should take over, by default, the lease of a killed refresher once it is 50 seconds unrenewed and not before", async () => {
     const DEFAULT_STALE = ["--beat-ms", "300", "--renew-ms", "100", "--idle-ms", "4000"];
     const fresh = host(STORES);
-    register(fresh, "aih-ec2-3");
+    register(fresh, "ops-vm-3");
     writeFileSync(
       join(fresh.state, "lease.json"),
       JSON.stringify({
@@ -385,7 +385,7 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     expect(lease(fresh).token).toBe("killed-refresher");
 
     const dead = host(STORES);
-    register(dead, "aih-ec2-3");
+    register(dead, "ops-vm-3");
     writeFileSync(
       join(dead.state, "lease.json"),
       JSON.stringify({
@@ -404,7 +404,7 @@ describe("the host refresher", { timeout: 30_000 }, () => {
 
   it("should stop reading and writing and exit, leaving the new holder's lease, when another refresher takes its lease while it is stopped", async () => {
     const h = host(STORES);
-    register(h, "aih-ec2-3");
+    register(h, "ops-vm-3");
     const ousted = launch(h, "token-ousted11");
     await until(() => snapshot(h));
 
@@ -429,7 +429,7 @@ describe("the host refresher", { timeout: 30_000 }, () => {
 
   it("should leave the new holder's snapshot as the current one when it was stalled between its lease check and its write", async () => {
     const h = host(STORES);
-    register(h, "aih-ec2-3");
+    register(h, "ops-vm-3");
     // The session registers once, so FAST's 4-second idle exit could stop the new holder before
     // the stalled one wakes on a loaded host; a minute keeps both running for the whole case.
     const running = [...FAST.slice(0, 6), "--idle-ms", "60000"];
@@ -458,7 +458,7 @@ describe("the host refresher", { timeout: 30_000 }, () => {
 
   it("should leave a newer holder's lease alone when it is stopped on purpose after losing it", async () => {
     const h = host(STORES);
-    register(h, "aih-ec2-3");
+    register(h, "ops-vm-3");
     const ousted = launch(h, "token-ousted22");
     await until(() => snapshot(h));
 
@@ -476,21 +476,21 @@ describe("the host refresher", { timeout: 30_000 }, () => {
 
   it("should run the same bd calls a beat whatever the number of sessions, and count their windows and stores", async () => {
     const h = host(STORES);
-    const extra = join(h.root, "kg-store");
+    const extra = join(h.root, "qa-store");
     mkdirSync(extra);
     writeFileSync(
       join(extra, "issues.json"),
-      JSON.stringify([{ status: "open", assignee: "kg-ec2-3" }]),
+      JSON.stringify([{ status: "open", assignee: "qa-vm-3" }]),
     );
-    register(h, "aih-ec2-3");
-    register(h, "aih-ec2-firstmate-1", { windows: ["24h", "7d"] });
+    register(h, "ops-vm-3");
+    register(h, "ops-vm-firstmate-1", { windows: ["24h", "7d"] });
     writeFileSync(
-      join(h.state, "sessions", "kg-ec2-3.json"),
+      join(h.state, "sessions", "qa-vm-3.json"),
       JSON.stringify({
-        id: "kg-ec2-3",
+        id: "qa-vm-3",
         seenAt: Date.now(),
         windows: ["24h"],
-        stores: [{ name: "kg-store", path: extra }],
+        stores: [{ name: "qa-store", path: extra }],
       }),
     );
     register(h, "closed-long-ago", { seenAt: Date.now() - 10 * 60_000, windows: ["90m"] });
@@ -504,19 +504,19 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     expect(new Set(first.map((call) => call.cwd)).size).toBe(3);
     expect(first.every((call) => call.args.includes("--by-assignee"))).toBe(true);
     expect(first.some((call) => call.args.some((arg) => arg.startsWith("--assignee")))).toBe(false);
-    const aih = written.stores.find((store: { name: string }) => store.name === "AIH");
-    expect(aih.done).toEqual({ "24h": { "aih-ec2-3": 1 }, "7d": { "aih-ec2-3": 2 } });
+    const ops = written.stores.find((store: { name: string }) => store.name === "OPS");
+    expect(ops.done).toEqual({ "24h": { "ops-vm-3": 1 }, "7d": { "ops-vm-3": 2 } });
     expect(
-      written.stores.find((store: { name: string }) => store.name === "kg-store"),
-    ).toMatchObject({ ok: true, statuses: { open: { "kg-ec2-3": 1 } } });
+      written.stores.find((store: { name: string }) => store.name === "qa-store"),
+    ).toMatchObject({ ok: true, statuses: { open: { "qa-vm-3": 1 } } });
     // D-42: the sessions registered live, which the agent indicator dims by; not the closed one.
-    expect(written.sessions).toEqual(["aih-ec2-3", "aih-ec2-firstmate-1", "kg-ec2-3"]);
+    expect(written.sessions).toEqual(["ops-vm-3", "ops-vm-firstmate-1", "qa-vm-3"]);
   });
 
   it("should name a store that cannot be read and still count the rest", async () => {
     const h = host(STORES);
     writeFileSync(join(h.root, "BU", "fail"), "");
-    register(h, "aih-ec2-3");
+    register(h, "ops-vm-3");
 
     launch(h, "token-partial1");
     const written = await until(() => snapshot(h));
@@ -525,18 +525,18 @@ describe("the host refresher", { timeout: 30_000 }, () => {
       ok: false,
       error: "exit 1, Error: database is locked",
     });
-    expect(written.stores.find((store: { name: string }) => store.name === "AIH").ok).toBe(true);
+    expect(written.stores.find((store: { name: string }) => store.name === "OPS").ok).toBe(true);
   });
 
   it("should write the snapshot by the beat's deadline with the stores that answered, a store that hangs marked unread", async () => {
     const h = host({
       ...STORES,
-      KG: [{ status: "open", assignee: "kg-ec2-1" }],
-      SW: [{ status: "open", assignee: "kg-ec2-2" }],
+      QA: [{ status: "open", assignee: "qa-vm-1" }],
+      WS: [{ status: "open", assignee: "qa-vm-2" }],
       HUNG: [{ status: "open" }],
     });
     writeFileSync(join(h.root, "HUNG", "hang"), "");
-    register(h, "aih-ec2-3");
+    register(h, "ops-vm-3");
 
     const launched = Date.now();
     // A 3-second deadline. Read one after another, the hung store's four reads would wait out
@@ -551,28 +551,28 @@ describe("the host refresher", { timeout: 30_000 }, () => {
       ok: false,
       error: "not read before the beat's deadline",
     });
-    for (const name of ["AIH", "BU", "KG", "SW"]) expect(byName(name)?.ok).toBe(true);
+    for (const name of ["OPS", "BU", "QA", "WS"]) expect(byName(name)?.ok).toBe(true);
   });
 
   it("should count each database once when sessions reach it through a linked worktree or a symlinked path", async () => {
     const h = host(STORES);
-    // A linked worktree of AIH: its own `.beads` directory, the same database (prefix AIH).
-    const worktree = join(h.root, "AIH", ".worktrees", "aih-ec2-1");
+    // A linked worktree of OPS: its own `.beads` directory, the same database (prefix OPS).
+    const worktree = join(h.root, "OPS", ".worktrees", "ops-vm-1");
     mkdirSync(worktree, { recursive: true });
-    writeFileSync(join(worktree, "issues.json"), JSON.stringify(STORES.AIH));
+    writeFileSync(join(worktree, "issues.json"), JSON.stringify(STORES.OPS));
     // The main tree through a symlinked parent, as `~/projects` links to `/data/projects`, from a
     // session whose bd named no prefix.
     const linked = join(h.root, "linked");
     symlinkSync(h.root, linked);
     writeFileSync(
-      join(h.state, "sessions", "aih-ec2-1.json"),
+      join(h.state, "sessions", "ops-vm-1.json"),
       JSON.stringify({
-        id: "aih-ec2-1",
+        id: "ops-vm-1",
         seenAt: Date.now(),
         windows: ["24h"],
         stores: [
-          { name: "aih-ec2-1", path: worktree, prefix: "AIH" },
-          { name: "AIH", path: join(linked, "AIH") },
+          { name: "ops-vm-1", path: worktree, prefix: "OPS" },
+          { name: "OPS", path: join(linked, "OPS") },
         ],
       }),
     );
@@ -581,16 +581,16 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     const written = await until(() => snapshot(h));
 
     expect(written.stores.map((store: { path: string }) => store.path).sort()).toEqual(
-      [join(h.root, "AIH"), join(h.root, "BU")].sort(),
+      [join(h.root, "OPS"), join(h.root, "BU")].sort(),
     );
     expect(new Set(calls(h).map((call) => call.cwd))).toEqual(
-      new Set([join(h.root, "AIH"), join(h.root, "BU")]),
+      new Set([join(h.root, "OPS"), join(h.root, "BU")]),
     );
   });
 
   it("should beat once a minute by default, no sooner", async () => {
     const h = host(STORES);
-    register(h, "aih-ec2-3");
+    register(h, "ops-vm-3");
 
     launch(h, "token-cadence1", []);
     await until(() => snapshot(h));
@@ -601,7 +601,7 @@ describe("the host refresher", { timeout: 30_000 }, () => {
 
   it("should mark the snapshot stopped and release the lease when no session has registered for a while", async () => {
     const h = host(STORES);
-    register(h, "aih-ec2-3", { seenAt: Date.now() - 10 * 60_000 });
+    register(h, "ops-vm-3", { seenAt: Date.now() - 10 * 60_000 });
 
     const pid = launch(h, "token-idle1111", [...FAST.slice(0, 6), "--idle-ms", "500"]);
     await until(() => (alive(pid) ? undefined : true));
@@ -612,7 +612,7 @@ describe("the host refresher", { timeout: 30_000 }, () => {
 
   it("should mark the snapshot stopped and release the lease when it is sent SIGTERM", async () => {
     const h = host(STORES);
-    register(h, "aih-ec2-3");
+    register(h, "ops-vm-3");
     const pid = launch(h, "token-sigterm1");
     await until(() => snapshot(h));
 
@@ -638,8 +638,8 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     const lists = (h: Host) => calls(h).filter((call) => call.args[0] === "list");
     const closedAt = (n: number) => Date.now() - n * HOUR;
     const MANY: Record<string, Issue[]> = {
-      AIH: [
-        { status: "open", assignee: "aih-ec2-3" },
+      OPS: [
+        { status: "open", assignee: "ops-vm-3" },
         { status: "in_progress" },
         ...Array.from({ length: 40 }, (_, i) => ({ status: "closed", closedAt: closedAt(i + 1) })),
       ],
@@ -648,11 +648,11 @@ describe("the host refresher", { timeout: 30_000 }, () => {
 
     it("should keep a board of the drawn fields for each store a pane reads: the open issues and the newest closed page", async () => {
       const h = host(MANY);
-      register(h, "aih-ec2-3", { boards: [{ name: "AIH", path: join(h.root, "AIH") }] });
+      register(h, "ops-vm-3", { boards: [{ name: "OPS", path: join(h.root, "OPS") }] });
 
       launch(h, "token-boards11");
-      const entry = await until(() => entryOf(h, "AIH"));
-      const board = boardOf(h, "AIH");
+      const entry = await until(() => entryOf(h, "OPS"));
+      const board = boardOf(h, "OPS");
 
       expect(entry).toMatchObject({ ok: true, head: "head-1", file: expect.any(String) });
       expect(board.head).toBe("head-1");
@@ -696,42 +696,42 @@ describe("the host refresher", { timeout: 30_000 }, () => {
 
     it("should not re-read a store's issues while its head has not moved, and re-read them once it moves", async () => {
       const h = host(MANY);
-      register(h, "aih-ec2-3", { boards: [{ name: "AIH", path: join(h.root, "AIH") }] });
+      register(h, "ops-vm-3", { boards: [{ name: "OPS", path: join(h.root, "OPS") }] });
 
       // The session registers once, so FAST's 4-second idle exit would stop the refresher before
       // the head moves on a loaded host; a minute keeps it beating for the whole case.
       launch(h, "token-unchang1", [...FAST.slice(0, 6), "--idle-ms", "60000"]);
-      await until(() => entryOf(h, "AIH"));
+      await until(() => entryOf(h, "OPS"));
       const heads = () => calls(h).filter((call) => call.args[0] === "vc").length;
       await until(() => (heads() >= 3 ? true : undefined));
 
       // Three beats, one head each, and the issues read at the first only.
       expect(lists(h)).toHaveLength(2);
-      const first = entryOf(h, "AIH");
+      const first = entryOf(h, "OPS");
       expect(first.checkedAt).toBeGreaterThanOrEqual(first.readAt);
 
-      writeFileSync(join(h.root, "AIH", "head"), "head-2");
-      const moved = await until(() => (entryOf(h, "AIH")?.head === "head-2" ? true : undefined));
+      writeFileSync(join(h.root, "OPS", "head"), "head-2");
+      const moved = await until(() => (entryOf(h, "OPS")?.head === "head-2" ? true : undefined));
 
       expect(moved).toBe(true);
       expect(lists(h)).toHaveLength(4);
-      expect(boardOf(h, "AIH").head).toBe("head-2");
+      expect(boardOf(h, "OPS").head).toBe("head-2");
     });
 
     it("should take over the last refresher's board without reading the store again while its head has not moved, then drop the last one's files", async () => {
       const h = host(MANY);
-      register(h, "aih-ec2-3", { boards: [{ name: "AIH", path: join(h.root, "AIH") }] });
+      register(h, "ops-vm-3", { boards: [{ name: "OPS", path: join(h.root, "OPS") }] });
       const first = launch(h, "token-boardsA1", [...FAST.slice(0, 6), "--idle-ms", "60000"]);
-      await until(() => entryOf(h, "AIH"));
+      await until(() => entryOf(h, "OPS"));
       process.kill(first, "SIGTERM");
       await until(() => (alive(first) ? undefined : true));
       expect(lists(h)).toHaveLength(2);
 
       launch(h, "token-boardsB1", [...FAST.slice(0, 6), "--idle-ms", "60000"]);
-      await until(() => (snapshot(h)?.token === "token-boardsB1" ? entryOf(h, "AIH") : undefined));
+      await until(() => (snapshot(h)?.token === "token-boardsB1" ? entryOf(h, "OPS") : undefined));
 
       expect(lists(h)).toHaveLength(2);
-      expect(boardOf(h, "AIH")?.head).toBe("head-1");
+      expect(boardOf(h, "OPS")?.head).toBe("head-1");
       await until(() =>
         existsSync(join(h.state, "counts-token-boardsA1.json")) ||
         existsSync(join(h.state, "boards", "token-boardsA1"))
@@ -744,43 +744,43 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     it("should write no board and name the store when its snapshot would pass 4 MiB", async () => {
       const long = "x".repeat(5_000);
       const h = host({
-        AIH: Array.from({ length: 1_000 }, () => ({ status: "open", title: long })),
+        OPS: Array.from({ length: 1_000 }, () => ({ status: "open", title: long })),
       });
-      register(h, "aih-ec2-3", { boards: [{ name: "AIH", path: join(h.root, "AIH") }] });
+      register(h, "ops-vm-3", { boards: [{ name: "OPS", path: join(h.root, "OPS") }] });
 
       launch(h, "token-toobig11");
-      const entry = await until(() => entryOf(h, "AIH"));
+      const entry = await until(() => entryOf(h, "OPS"));
 
       expect(entry.ok).toBe(false);
       expect(entry.error).toMatch(
         /^its board snapshot would be 5\.\d MiB, past the 4 MiB a session can read; the pane reads this store itself$/,
       );
-      expect(boardOf(h, "AIH")).toBeUndefined();
+      expect(boardOf(h, "OPS")).toBeUndefined();
     });
 
     it("should read a store again within a few seconds of a session's wake marker, not at the next beat", async () => {
       const h = host(STORES);
-      register(h, "aih-ec2-3", { boards: [{ name: "AIH", path: join(h.root, "AIH") }] });
+      register(h, "ops-vm-3", { boards: [{ name: "OPS", path: join(h.root, "OPS") }] });
       // The default minute beat: only the marker can bring a read sooner.
       launch(h, "token-wakeup11", ["--renew-ms", "100", "--idle-ms", "60000"]);
-      await until(() => entryOf(h, "AIH"));
+      await until(() => entryOf(h, "OPS"));
 
       writeFileSync(
-        join(h.root, "AIH", "issues.json"),
-        JSON.stringify([...(STORES.AIH ?? []), { status: "open", assignee: "aih-ec2-3" }]),
+        join(h.root, "OPS", "issues.json"),
+        JSON.stringify([...(STORES.OPS ?? []), { status: "open", assignee: "ops-vm-3" }]),
       );
-      writeFileSync(join(h.root, "AIH", "head"), "head-2");
+      writeFileSync(join(h.root, "OPS", "head"), "head-2");
       const wrote = Date.now();
       writeFileSync(
         join(h.state, "wake", "_marker.json"),
-        JSON.stringify({ path: join(h.root, "AIH"), at: wrote }),
+        JSON.stringify({ path: join(h.root, "OPS"), at: wrote }),
       );
-      await until(() => (entryOf(h, "AIH")?.head === "head-2" ? true : undefined));
+      await until(() => (entryOf(h, "OPS")?.head === "head-2" ? true : undefined));
       const took = Date.now() - wrote;
 
       expect(took).toBeLessThan(10_000);
-      const aih = snapshot(h).stores.find((store: { name: string }) => store.name === "AIH");
-      expect(aih.statuses.open).toEqual({ "aih-ec2-3": 2 });
+      const ops = snapshot(h).stores.find((store: { name: string }) => store.name === "OPS");
+      expect(ops.statuses.open).toEqual({ "ops-vm-3": 2 });
       expect(existsSync(join(h.state, "wake", "_marker.json"))).toBe(false);
       // BU was not woken: its counts are still the first beat's.
       expect(calls(h).filter((call) => call.cwd === join(h.root, "BU"))).toHaveLength(4);
@@ -788,20 +788,20 @@ describe("the host refresher", { timeout: 30_000 }, () => {
 
     it("should read the main tree's counts and the worktree's board again on a wake marker from a linked worktree", async () => {
       const h = host(STORES);
-      const tree = join(h.root, "AIH", ".worktrees", "aih-ec2-3");
+      const tree = join(h.root, "OPS", ".worktrees", "ops-vm-3");
       mkdirSync(tree, { recursive: true });
-      writeFileSync(join(tree, "issues.json"), JSON.stringify(STORES.AIH));
-      register(h, "aih-ec2-3", { boards: [{ name: "aih-ec2-3", path: tree, prefix: "AIH" }] });
+      writeFileSync(join(tree, "issues.json"), JSON.stringify(STORES.OPS));
+      register(h, "ops-vm-3", { boards: [{ name: "ops-vm-3", path: tree, prefix: "OPS" }] });
       launch(h, "token-wakeup22", ["--renew-ms", "100", "--idle-ms", "60000"]);
       await until(() =>
         snapshot(h)?.boards?.find((entry: { path: string }) => entry.path === tree),
       );
 
       const more = JSON.stringify([
-        ...(STORES.AIH ?? []),
-        { status: "open", assignee: "aih-ec2-3" },
+        ...(STORES.OPS ?? []),
+        { status: "open", assignee: "ops-vm-3" },
       ]);
-      for (const dir of [join(h.root, "AIH"), tree]) {
+      for (const dir of [join(h.root, "OPS"), tree]) {
         writeFileSync(join(dir, "issues.json"), more);
         writeFileSync(join(dir, "head"), "head-2");
       }
@@ -814,14 +814,14 @@ describe("the host refresher", { timeout: 30_000 }, () => {
           (entry: { path: string; head: string }) => entry.path === tree && entry.head === "head-2",
         ),
       );
-      const aih = await until(() => {
+      const ops = await until(() => {
         const store = snapshot(h).stores.find(
-          (one: { path: string }) => one.path === join(h.root, "AIH"),
+          (one: { path: string }) => one.path === join(h.root, "OPS"),
         );
-        return store?.statuses?.open?.["aih-ec2-3"] === 2 ? store : undefined;
+        return store?.statuses?.open?.["ops-vm-3"] === 2 ? store : undefined;
       });
 
-      expect(aih.statuses.open).toEqual({ "aih-ec2-3": 2 });
+      expect(ops.statuses.open).toEqual({ "ops-vm-3": 2 });
       expect(snapshot(h).stores.map((store: { path: string }) => store.path)).not.toContain(tree);
     });
   });
@@ -853,13 +853,13 @@ process.stdout.write(JSON.stringify({ ...payload, fingerprint }) + "\\n");
 `;
     // The verb's own item shape (ai-harness held_cli.py review, REVIEW_KEYS and its derived fields).
     const item = (n: number, task: string, extra: Record<string, unknown> = {}) => ({
-      path: `/home/me/projects/ai-harness/docs/held/sem-kg-ec2--aih-ec2-3/2026-10-25-0${n}-decision-x.md`,
+      path: `/home/me/projects/ai-harness/docs/held/host-c--ops-vm-3/2026-10-25-0${n}-decision-x.md`,
       store: "ai-harness",
-      relpath: `docs/held/sem-kg-ec2--aih-ec2-3/2026-10-25-0${n}-decision-x.md`,
+      relpath: `docs/held/host-c--ops-vm-3/2026-10-25-0${n}-decision-x.md`,
       kind: "decision",
       status: "open",
-      session: "aih-ec2-3@sem-kg-ec2",
-      machine: "sem-kg-ec2",
+      session: "ops-vm-3@host-c",
+      machine: "host-c",
       task,
       title: `D-${n}: a decision`,
       ask: "Approve (a).",
@@ -876,8 +876,8 @@ process.stdout.write(JSON.stringify({ ...payload, fingerprint }) + "\\n");
     });
     const payloadOf = (items: unknown[]) => ({
       schema: 1,
-      host: "sem-kg-ec2",
-      pair: ["acn-mac", "sem-kg-ec2"],
+      host: "host-c",
+      pair: ["host-a", "host-c"],
       scope: "pair",
       read_at: "2026-10-25T11:00:00Z",
       stores: {},
@@ -886,7 +886,7 @@ process.stdout.write(JSON.stringify({ ...payload, fingerprint }) + "\\n");
     });
     const STORE: Record<string, Issue[]> = {
       S: [
-        { status: "in_progress", assignee: "aih-ec2-3", title: "the reviewed task", parent: "S-9" },
+        { status: "in_progress", assignee: "ops-vm-3", title: "the reviewed task", parent: "S-9" },
         { status: "blocked", title: "the task named by its display id" },
       ],
     };
@@ -933,7 +933,7 @@ process.stdout.write(JSON.stringify({ ...payload, fingerprint }) + "\\n");
 
     it("should run the review verb with the user's command and write the pair's items, each joined to its issue by bd id or display id", async () => {
       const h = reviewHost([item(1, "S-0"), item(2, "S-issue-1"), item(3, "none")]);
-      register(h, "aih-ec2-3");
+      register(h, "ops-vm-3");
 
       launch(h, "token-review01", [...KEEP, "--config", h.configPath]);
       const written = await until(() => reviewOf(h));
@@ -946,8 +946,8 @@ process.stdout.write(JSON.stringify({ ...payload, fingerprint }) + "\\n");
         schema: 1,
         token: "token-review01",
         fingerprint: "fp-1",
-        host: "sem-kg-ec2",
-        pair: ["acn-mac", "sem-kg-ec2"],
+        host: "host-c",
+        pair: ["host-a", "host-c"],
       });
       expect(written.error).toBeUndefined();
       const [first, second, third] = written.items;
@@ -959,7 +959,7 @@ process.stdout.write(JSON.stringify({ ...payload, fingerprint }) + "\\n");
         priority: 2,
         labels: ["id:S-issue-0"],
         parent: "S-9",
-        assignee: "aih-ec2-3",
+        assignee: "ops-vm-3",
         updatedAt: "2026-10-01T00:00:00.000Z",
         store: join(h.root, "S"),
       });
@@ -974,7 +974,7 @@ process.stdout.write(JSON.stringify({ ...payload, fingerprint }) + "\\n");
 
     it("should pass the last fingerprint, keep the items while the verb prints unchanged, and join again only once the store's head moves", async () => {
       const h = reviewHost([item(1, "S-0")]);
-      register(h, "aih-ec2-3");
+      register(h, "ops-vm-3");
 
       launch(h, "token-review02", [...KEEP, "--config", h.configPath]);
       const first = await until(() => reviewOf(h));
@@ -1011,7 +1011,7 @@ process.stdout.write(JSON.stringify({ ...payload, fingerprint }) + "\\n");
 
     it("should run the review verb again within a few seconds of a session's review wake marker, not at the next beat", async () => {
       const h = reviewHost([item(1, "S-0")]);
-      register(h, "aih-ec2-3");
+      register(h, "ops-vm-3");
       // The default minute beat: only the marker can bring a run sooner.
       launch(h, "token-review05", [
         "--renew-ms",
@@ -1052,7 +1052,7 @@ process.stdout.write(JSON.stringify({ ...payload, fingerprint }) + "\\n");
 
     it("should run no held command and write no review snapshot while [review] command is unset", async () => {
       const h = reviewHost([item(1, "S-0")], false);
-      register(h, "aih-ec2-3");
+      register(h, "ops-vm-3");
 
       launch(h, "token-review03", [...KEEP, "--config", h.configPath]);
       await until(() =>
@@ -1069,7 +1069,7 @@ process.stdout.write(JSON.stringify({ ...payload, fingerprint }) + "\\n");
     it("should keep the last items and name the failure when the command fails, and write the failure alone when it never answered", async () => {
       const h = reviewHost([item(1, "S-0")]);
       writeFileSync(join(h.held, "fail"), "");
-      register(h, "aih-ec2-3");
+      register(h, "ops-vm-3");
 
       launch(h, "token-review04", [...KEEP, "--config", h.configPath]);
       const failed = await until(() => reviewOf(h));

@@ -16,11 +16,11 @@ const FACTS: StoreFacts = {
   fixFile: "/home/me/.config/beads-ui/beads-ui.toml",
   home: "/home/me",
   cwdHasStore: false,
-  session: "kg-ec2-3",
+  session: "qa-vm-3",
   inventory: {
     ok: true,
     value: [
-      { name: "KG", path: "/work/sw-bms-workspace", synced: true },
+      { name: "QA", path: "/work/sw-bms-workspace", synced: true },
       { name: "BU", path: "/work/beads-ui", synced: true },
     ],
   },
@@ -29,10 +29,10 @@ const FACTS: StoreFacts = {
 
 describe("sessionPrefix", () => {
   test("should drop the host and number and upper-case the rest when given a fleet session name", () => {
-    expect(sessionPrefix("kg-ec2-3")).toBe("KG");
-    expect(sessionPrefix("aih-ec2-3")).toBe("AIH");
-    expect(sessionPrefix("aih-ec2-firstmate-1")).toBe("AIH");
-    expect(sessionPrefix("ai-cli-ec2-1")).toBe("AI_CLI");
+    expect(sessionPrefix("qa-vm-3")).toBe("QA");
+    expect(sessionPrefix("ops-vm-3")).toBe("OPS");
+    expect(sessionPrefix("ops-vm-firstmate-1")).toBe("OPS");
+    expect(sessionPrefix("ai-cli-vm-1")).toBe("AI_CLI");
     expect(sessionPrefix("laptop")).toBeUndefined();
   });
 });
@@ -60,13 +60,13 @@ describe("resolveStore", () => {
     expect(resolved).toEqual({
       ok: true,
       path: "/work/sw-bms-workspace",
-      prefix: "KG",
+      prefix: "QA",
       via: "mapping",
     });
   });
 
   test("should accept only an exact inventory key when the prefix is close to one", () => {
-    const resolved = resolveStore({ ...FACTS, session: "kgx-ec2-3" });
+    const resolved = resolveStore({ ...FACTS, session: "qax-vm-3" });
 
     expect(resolved.ok).toBe(false);
   });
@@ -106,13 +106,13 @@ describe("parseBdWhere", () => {
 
   test("should give the database prefix bd 1.3.2 names for a linked worktree's store", () => {
     const where = JSON.stringify({
-      database_path: "/work/ai-harness/.worktrees/aih-ec2-1/.beads/dolt",
-      path: "/work/ai-harness/.worktrees/aih-ec2-1/.beads",
-      prefix: "AIH",
+      database_path: "/work/ai-harness/.worktrees/ops-vm-1/.beads/dolt",
+      path: "/work/ai-harness/.worktrees/ops-vm-1/.beads",
+      prefix: "OPS",
       schema_version: 1,
     });
 
-    expect(parseBdWhere(0, where)).toEqual({ hasStore: true, prefix: "AIH" });
+    expect(parseBdWhere(0, where)).toEqual({ hasStore: true, prefix: "OPS" });
   });
 });
 
@@ -123,7 +123,7 @@ describe("resolveStore in a linked worktree", () => {
       cwd: "/work/beads-ui/.worktrees/feature",
       cwdHasStore: true,
       cwdPrefix: "BU",
-      session: "aih-ec2-3",
+      session: "ops-vm-3",
     });
 
     expect(resolved).toEqual({

@@ -184,8 +184,8 @@ describe("editArgv", () => {
       "open",
       "--json",
     ]);
-    expect(unwrap(editArgv(task(), { field: "assignee", value: "aih-ec2-3" })).slice(3)).toEqual([
-      "--assignee=aih-ec2-3",
+    expect(unwrap(editArgv(task(), { field: "assignee", value: "ops-vm-3" })).slice(3)).toEqual([
+      "--assignee=ops-vm-3",
       "--if-assignee=",
       "--json",
     ]);

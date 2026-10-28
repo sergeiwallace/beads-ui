@@ -34,7 +34,7 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 | A001 | "start / end / due date fields"; Gantt chart, timeline and graph views with dependency and blocker links | [Goal model](#goal-model), [Goal views](#goal-views); [D-1](#d-1), [D-10](#d-10) |
 | A001 | orient and prioritise work toward "my actual goals in life"; prioritise "my take and agentic ai work towards them" | [Alignment](#alignment); [D-7](#d-7), [D-8](#d-8) |
 | A001 | the research gamut (products, libraries, goal science, ontology, visualisation patterns) | [research](../research/goals-system.md); applied throughout |
-| A001 | fold in aih-fw-2's compile of the first goals attempt, link it, research new leads | [Prior work](#prior-work); [D-16](#d-16) |
+| A001 | fold in ops-lab-2's compile of the first goals attempt, link it, research new leads | [Prior work](#prior-work); [D-16](#d-16) |
 | A001 | a privacy and access-control system so personal, private, sensitive or domain-specific goals and their tasks never reach ai-harness, ai-cli-utils, ai-core, project-template, aido or another shared core repo; enforcement and validation | [The private-goal guard](#the-private-goal-guard); [D-11](#d-11) to [D-15](#d-15) |
 | A001 | the goal views inside the web app, app-portal and the shared core | [the web app design](beads-ui-web-app-design.md); [Goal views](#goal-views) |
 | A001 | the process clauses | Process, not content: the [Run Ledger](#run-ledger) |
@@ -242,7 +242,7 @@ Phase G1 tests the backup row and Phase G3 the other rows.
 
 ### Prior work
 
-The first goals system, compiled by aih-fw-2 into ai-harness ([prior-work reference](https://github.com/sergeiwallace/ai-harness/blob/main/docs/analysis/legacy-goal-system--prior-work-reference.md), gated link), failed at the goal-to-task link rather than in its goal model: tasks moved to Beads while goals and their link table stayed behind, and progress then read 0% instead of an error ([research § 9](../research/goals-system.md#9-prior-work-from-the-first-goals-system)). This design keeps a shared goal, its work and its links in one Beads store; a private goal's links stay in its private store and the personal-pair web app joins them with shared work ([D-19](#d-19)); either way an empty or unreadable link set shows "no data". It carries over the old record's motivation, obstacles, target date, pause state, many-to-many contributions (the old milestone kind becomes a member of Beads' `milestone` type), unique order, document links and the unlinked-work review signal ([D-16](#d-16)), and leaves the daily score, achievements and narrative coach out of the first release ([D-17](#d-17)). Nothing is imported from the archive; its algorithms are behaviour to respecify.
+The first goals system, compiled by ops-lab-2 into ai-harness ([prior-work reference](https://github.com/sergeiwallace/ai-harness/blob/main/docs/analysis/legacy-goal-system--prior-work-reference.md), gated link), failed at the goal-to-task link rather than in its goal model: tasks moved to Beads while goals and their link table stayed behind, and progress then read 0% instead of an error ([research § 9](../research/goals-system.md#9-prior-work-from-the-first-goals-system)). This design keeps a shared goal, its work and its links in one Beads store; a private goal's links stay in its private store and the personal-pair web app joins them with shared work ([D-19](#d-19)); either way an empty or unreadable link set shows "no data". It carries over the old record's motivation, obstacles, target date, pause state, many-to-many contributions (the old milestone kind becomes a member of Beads' `milestone` type), unique order, document links and the unlinked-work review signal ([D-16](#d-16)), and leaves the daily score, achievements and narrative coach out of the first release ([D-17](#d-17)). Nothing is imported from the archive; its algorithms are behaviour to respecify.
 
 > **Feedback Round 1:** Does this approach feel right? What's missing?
 > - <enter feedback here>
@@ -505,7 +505,7 @@ Phase G1 starts once Sergei has ruled [D-13](#d-13) and [D-20](#d-20); the crite
 
 ## Run Ledger
 
-This design doc hosts the `/auto-flow` Run Ledger for the goals system's design stage. Written by the Opus coordinator for aih-ec2-3. The run's authority record is in [the beads-ui design's Run Ledger](beads-ui-design.md#run-ledger), run id `beads-ui-webapp-goals-2026-10-28-aih-ec2-3`.
+This design doc hosts the `/auto-flow` Run Ledger for the goals system's design stage. Written by the Opus coordinator for ops-vm-3. The run's authority record is in [the beads-ui design's Run Ledger](beads-ui-design.md#run-ledger), run id `beads-ui-webapp-goals-2026-10-28`.
 
 `ledger-version`: `1`
 
@@ -521,13 +521,13 @@ This design doc hosts the `/auto-flow` Run Ledger for the goals system's design 
 | require_doc_approval / source | true / flag (Sergei's review is his explicit gate) |
 | stages | explicit, by the launcher's brief: `research`, `doc`, `doc-audit`; `implement` and `impl-audit` withheld until Sergei approves this doc |
 | model-family | claude (employer-API-billed host; Claude is the delegation default) |
-| research route | claude / opus, four `researcher` leaves (the fourth folding in aih-fw-2's prior-work compile) and one `auditor` verifier; synthesis by the Opus coordinator under the orchestrator authorship override |
+| research route | claude / opus, four `researcher` leaves (the fourth folding in ops-lab-2's prior-work compile) and one `auditor` verifier; synthesis by the Opus coordinator under the orchestrator authorship override |
 | doc route | claude / opus / n/a: the Opus coordinator authors this doc under `/doc --kind design --mode automated` through `flow_dispatch_doc.py --phase prepare` and `--phase complete`. Prepare pinned the integration snapshot at `4a3a17c` (lineage root `docs/research/goals-system.md`, lineage receipt `complete`, no protected decisions); `--phase complete` passed on 2026-10-28 against the same snapshot |
 | doc-audit route | codex / audit / high, cross-family: read-only review rounds through `cx audit`, each writing one evidence file, with the fixes made by the Opus coordinator. The audit loop's fix stage would have Codex write doc text, which this host's rule that Codex only reviews rules out |
 | decider | the Opus coordinator (`us.anthropic.claude-opus-5-5`) through `/decision-framework`; five decisions left for Sergei ([D-8](#d-8), [D-13](#d-13), [D-14](#d-14), [D-17](#d-17), [D-20](#d-20)) and one open question about the scope of his own ruling |
 | max-agents | 3 concurrent children (launcher's cap); one at a time under the host's load holds of 2026-10-28 |
 | target commit (beads-ui) | `4a3a17c` when the design stage began |
-| worktree + branch | `/data/projects/beads-ui/.worktrees/aih-ec2-3-agents/bu-goals-webapp-coordinator` on `wt/aih-ec2-3/bu-goals-webapp-coordinator` |
+| worktree + branch | `/data/projects/beads-ui/.worktrees/ops-vm-3-agents/bu-goals-webapp-coordinator` on `wt/ops-vm-3/bu-goals-webapp-coordinator` |
 | stage cursor | `doc-audit` stopped after round 4, after `doc done` (`flow_dispatch_doc.py --phase complete` passed against `4a3a17c`) with rounds 1 to 4 applied. Round sizes were 11, 8, 6 and 9 MUST-FIX; each round's earlier fixes held except two defects round 3's fixes introduced, fixed in round 4. The launcher stopped the rounds here because both docs go to Sergei's review next, with the open items in round 4's row; round 4's fixes are unaudited |
 | last completed integration boundary | research landed on main at `4a3a17c` (PRs #78, #79, #80, #81) |
 
@@ -536,7 +536,7 @@ This design doc hosts the `/auto-flow` Run Ledger for the goals system's design 
 | Transition | Round | Verdict | Basis | Items | Recorded by | Commit |
 |---|---:|---|---|---|---|---|
 | `entry->research` | 0 | `research-run` | `explicit` | A001 names the stage: "i want you to /orchestrate /research-doc good UI/UX and design for how to build a goal system"; the launcher's brief repeats it | `session` | `c07cb3c` |
-| `research->doc` | 1 | `converged` | `rubric` | none open: G1 to G6 clear after the verifier's pass (`docs/research/findings/evidence/goals-system-verification-2026-10-28.md`) and its MUST-FIX items 1 to 12 applied; item 13, the founding-ask capture commit not yet on a shared ai-harness ref, is a landing step handed to aih-ec2-3 | `session` | `6cb2901` |
+| `research->doc` | 1 | `converged` | `rubric` | none open: G1 to G6 clear after the verifier's pass (`docs/research/findings/evidence/goals-system-verification-2026-10-28.md`) and its MUST-FIX items 1 to 12 applied; item 13, the founding-ask capture commit not yet on a shared ai-harness ref, is a landing step handed to ops-vm-3 | `session` | `6cb2901` |
 
 ### Doc-audit rounds
 

@@ -96,7 +96,7 @@ const largeStore = (assignees: number) => {
     status: ["open", "in_progress", "closed"][i % 3],
     metadata: { display_id: `BU-issue-number-${i}-load` },
     labels: [`id:BU-issue-number-${i}-load`],
-    assignee: `aih-ec2-${i % assignees}`,
+    assignee: `ops-vm-${i % assignees}`,
   }));
 };
 /** The cards the board draws from a store: each issue not closed, and the newest 25 closed. */
@@ -195,7 +195,7 @@ describe("the Board tab", () => {
 
     await ui.press({ key: "swimlane" });
 
-    expect(await keysOf(ui, "lane:")).toEqual(["lane:aih-3", "lane:aih-ec2-3", "lane:-"]);
+    expect(await keysOf(ui, "lane:")).toEqual(["lane:ops-3", "lane:ops-vm-3", "lane:-"]);
     expect((await ui.find({ key: "lane:-" }))?.text).toContain("unassigned");
     expect((await ui.find({ key: "swimlane" }))?.props.label).toBe("Swimlane: assignee");
   });
@@ -570,7 +570,7 @@ describe("the Backlog tab", () => {
 
     expect(await rows("type:bug ready:true")).toEqual(["BU-2zw"]);
     expect(await rows("label:id:BU-t-1-2-backlog-tab-vptb")).toEqual(["BU-mg2.3.6"]);
-    expect(await rows("assignee:aih-3")).toEqual([]);
+    expect(await rows("assignee:ops-3")).toEqual([]);
     expect(await rows("type:epic")).toEqual(
       sortIssues(issues().filter((issue) => issue.status === "open" && issue.type === "epic")).map(
         (issue) => issue.id,
@@ -579,10 +579,10 @@ describe("the Backlog tab", () => {
   });
 
   test("should keep exactly the open issues assigned to that person when an assignee filter is entered", async ($, on) => {
-    // The store with two open issues claimed by aih-ec2-3; the fixture's open issues have no assignee.
+    // The store with two open issues claimed by ops-vm-3; the fixture's open issues have no assignee.
     const claimed = new Set(["BU-2zw", "BU-mg2.3.6"]);
     const assigned = (JSON.parse(list) as Record<string, unknown>[]).map((record) =>
-      claimed.has(String(record.id)) ? { ...record, assignee: "aih-ec2-3" } : record,
+      claimed.has(String(record.id)) ? { ...record, assignee: "ops-vm-3" } : record,
     );
     const { ui } = await openPane($, on, {
       script: (key) =>
@@ -590,7 +590,7 @@ describe("the Backlog tab", () => {
     });
     await ui.press({ key: "tab:backlog" });
 
-    await ui.input({ key: "filter", text: "assignee:aih-ec2-3" });
+    await ui.input({ key: "filter", text: "assignee:ops-vm-3" });
 
     expect((await keysOf(ui, "row:")).map((key) => key.slice(4))).toEqual(
       sortIssues(issues().filter((issue) => claimed.has(issue.id))).map((issue) => issue.id),
@@ -763,7 +763,7 @@ describe("quick-add", () => {
   const before = () =>
     JSON.stringify((JSON.parse(list) as { id: string }[]).filter((one) => one.id !== "BU-2zw"));
   const LINE =
-    "npm audit: 10 dev-only advisories under markdownlint-cli2 p3 type:bug @aih-3 +ci due:2026-11-01 sprint:s1";
+    "npm audit: 10 dev-only advisories under markdownlint-cli2 p3 type:bug @ops-3 +ci due:2026-11-01 sprint:s1";
   const script = (key: string) =>
     key === "bd list --all --brief --limit 0"
       ? ok(before())
@@ -783,7 +783,7 @@ describe("quick-add", () => {
       "--title=npm audit: 10 dev-only advisories under markdownlint-cli2",
       "--priority=3",
       "--type=bug",
-      "--assignee=aih-3",
+      "--assignee=ops-3",
       "--labels=ci,sprint:s1",
       "--due=2026-11-01",
       "--json",

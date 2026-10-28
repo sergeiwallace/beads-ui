@@ -14,14 +14,14 @@ template_version: "bug-1.0.0"
 
 Non-authoritative index. The task is Beads BU-4af (child of BU-ylx.6). The founding ask quoted in
 the delegating brief is about the band's text: `[bd] {N} tasks (...)` instead of
-`beads aih-ec2-3, all 9 stores ...`, the "as of" stamp only in debug mode, and a beads-ui task
+`beads ops-vm-3, all 9 stores ...`, the "as of" stamp only in debug mode, and a beads-ui task
 panel that replaces the Claude Code one. This fix does not change any of those. The band format
 and the debug-only stamp are already what builds 0.9.x draw (`hooks/bands.test.ts`, the `OWN`
 line; `core/src/views/band.ts`, `asOf` in debug only). A session that still shows the old text is
 running an older build's code, which is the same upgrade skew this bug is about, on the session
 side rather than the refresher side. The task panel is Phase 2B work and is not touched here.
 
-**Status:** open (fix in review; aih-ec2-3 merges, installs and runs the live check)
+**Status:** open (fix in review; ops-vm-3 merges, installs and runs the live check)
 
 **Severity:** P1
 
@@ -43,7 +43,7 @@ side rather than the refresher side. The task panel is Phase 2B work and is not 
 
 ## Symptoms
 
-After the plugin was upgraded to 0.9.3, the only host refresher on sem-kg-ec2 was still the one
+After the plugin was upgraded to 0.9.3, the only host refresher on host-c was still the one
 started from the 0.4.0 cache (pid 545026, started 13:00:49Z). It writes only
 `~/.local/state/beads-ui/counts.json`. Builds 0.9.2 and later read only `counts-<token>.json` for
 the token `lease.json` names, so a session restarted on 0.9.3 finds a live lease and no snapshot
@@ -53,7 +53,7 @@ minute and marks its band line `*`. That is the per-session cost the refresher e
 
 ## Environment
 
-- Host sem-kg-ec2, plugin cache `/data/claude/plugins/cache/beads-ui/beads-ui/` holding 0.1.0
+- Host host-c, plugin cache `/data/claude/plugins/cache/beads-ui/beads-ui/` holding 0.1.0
   to 0.9.3, installed build 0.9.3.
 - Live state measured 2026-10-24 ~20:52Z: `lease.json` and `lease-<token>.json`
   share an inode (link count 2), record `{"token":"<token>","pid":545026,...}`
@@ -187,8 +187,8 @@ the current build. Without it, that lease reads as an older build's and is right
 
 - [x] Old lease and old snapshot format, new refresher: takes over, snapshot current at once
 - [x] Real older process exits and stops calling `bd` once superseded
-- [ ] Live on sem-kg-ec2 after merge and install: one refresher of 0.9.4 serves every restarted
-      session from its snapshot (aih-ec2-3 verifies; pid 545026 was left running on purpose)
+- [ ] Live on host-c after merge and install: one refresher of 0.9.4 serves every restarted
+      session from its snapshot (ops-vm-3 verifies; pid 545026 was left running on purpose)
 
 Live unknown: the session reads its manifest with `$.fs.read` under `$.plugin.root`. If the
 engine refuses that path, `outdated` is never true and a session never starts the takeover; a

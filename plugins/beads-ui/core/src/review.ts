@@ -16,7 +16,7 @@ export const HELD_REVIEW_SCHEMA = 1;
  * marker takes this name: theirs are named from an absolute path.
  */
 export const REVIEW_WAKE_FILE = "review.json";
-/** The verb was measured at 2.6 s for 300 items on sem-kg-ec2; a beat gives it this long. */
+/** The verb was measured at 2.6 s for 300 items on host-c; a beat gives it this long. */
 export const REVIEW_TIMEOUT_MS = 20_000;
 
 /**

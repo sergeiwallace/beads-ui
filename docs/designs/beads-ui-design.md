@@ -32,21 +32,21 @@ The raw record is `docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md` in this
 | A002 | FOLLOW-UP, 2026-10-14T23:40:00Z. One repo `beads-ui` for the mod, the MCP UI app and the web app sharing components, with mobile and native desktop later: D-1, D-2 and R-11; sharing is narrowed to logic across three surfaces and React components across two, as the research measured. The alias `bv` and the npm name collide with existing tools: D-7 is escalated to Sergei with a recommendation. Mobile and native desktop: the "Later sub-epics" note. |
 | A003 | FOLLOW-UP, 2026-10-14T23:40:01Z. "mainly the web app, claude web / desktop mcp UI app, and claude code TUI for now": the three surfaces this design covers, phases 1 to 4 and 6; iOS, macOS and Linux deferred to separate agents, in that order. "lmk what you reocmmend": the Executive Summary and the recommendations inside D-7, D-11 and D-12. |
 | A004 | FOLLOW-UP, 2026-10-14T23:40:01Z. Incorporate the autonomous task queue and its dashboard with the queue left where it is: R-14, the Integration table, phase 3's queue adapter and D-11 (escalated, with the recommendation that the web app becomes the queue's unbuilt Phase 2 member app). Where the queue should live is Open Question 1, deferred as the entry asks. |
-| A005 | FOLLOW-UP, 2026-10-21T04:55:47Z. Sergei's review: D-7 option (a), D-11 option (a), and D-12 a new option (d), backups per launch repository with bms-semantic-knowledge-graph sessions going to sw-bms-workspace, recorded in those decisions, Feedback Round 1 and the Approval Log. "now /delegate opus 5.5 /orchestrate /auto-flow the rest as appropriate now": the build run in the Run Ledger (`entry->implement`), Phases 0 and 1 under run `beads-ui-build-2026-10-21-aih-ec2-3`. |
+| A005 | FOLLOW-UP, 2026-10-21T04:55:47Z. Sergei's review: D-7 option (a), D-11 option (a), and D-12 a new option (d), backups per launch repository with bms-semantic-knowledge-graph sessions going to sw-bms-workspace, recorded in those decisions, Feedback Round 1 and the Approval Log. "now /delegate opus 5.5 /orchestrate /auto-flow the rest as appropriate now": the build run in the Run Ledger (`entry->implement`), Phases 0 and 1 under run `beads-ui-build-2026-10-21-ops-vm-3`. |
 | ai-harness `docs/asks/BU-epic-agentic-ai-native-beads-ylx.md` A001 | ORIGINAL-ASK of epic BU-ylx, 2026-10-23T17:12:15Z, recorded in ai-harness. The band's counts by owning session, with a firstmate session's two labelled rows: T-1.8 (BU-mg2.3.12). The `/show-beads-ui` rename: T-1.7 (BU-mg2.3.13). Both in Feedback Round 2 and the Approval Log. The rest of that entry (an MCP-backed Beads plugin, exporting the ai-harness Beads setup, the fork) belongs to epic BU-ylx and is outside this design. |
-| ai-harness `docs/asks/BU-epic-agentic-ai-native-beads-ylx.md` A002 | FOLLOW-UP, 2026-10-23T23:37:48Z. Only the firstmate session sees everything, with its own counts on a second line; every other session sees only what it owns: R-19, T-1.8 (unchanged) and T-1B.3, with D-25 explaining why kg-ec2-2's band read 1 in progress against 4 CC tasks (the bd assignee was never set on claim). "you don't need to show the 'as of ...' for every second ... I'm fine with every minute": D-26 and T-1B.5. "if it does add overhead ... ideally ... a single detached daemon (with self-healing and auto-restart etc as appropriate) or whatever makes sense that is shared across all cc sessions": the measurement in D-26's context, the host refresher in D-26 and T-1B.4. The task panel that replaces the CC task panel, with config for both or either and a later cutover, keyboard and mouse navigation, collapsed tasks, select to open details, edit fields, popup option menus and shortcuts for every capability, right and left click, a shortcut that moves the cursor from the prompt into the panel, auto-commit, push and sync of edits with formatted commits, a conflict fallback that tells the session to resolve it, and a root-cause loop for that automation, then kanban, sprint, backlog, timeline, a menu bar or side nav and settings views: R-20 to R-22, Phase 2B and Open Question 10. "if you need to ... /research-doc to see if / how that's possible": Open Question 10 and the research doc it names. |
+| ai-harness `docs/asks/BU-epic-agentic-ai-native-beads-ylx.md` A002 | FOLLOW-UP, 2026-10-23T23:37:48Z. Only the firstmate session sees everything, with its own counts on a second line; every other session sees only what it owns: R-19, T-1.8 (unchanged) and T-1B.3, with D-25 explaining why qa-vm-2's band read 1 in progress against 4 CC tasks (the bd assignee was never set on claim). "you don't need to show the 'as of ...' for every second ... I'm fine with every minute": D-26 and T-1B.5. "if it does add overhead ... ideally ... a single detached daemon (with self-healing and auto-restart etc as appropriate) or whatever makes sense that is shared across all cc sessions": the measurement in D-26's context, the host refresher in D-26 and T-1B.4. The task panel that replaces the CC task panel, with config for both or either and a later cutover, keyboard and mouse navigation, collapsed tasks, select to open details, edit fields, popup option menus and shortcuts for every capability, right and left click, a shortcut that moves the cursor from the prompt into the panel, auto-commit, push and sync of edits with formatted commits, a conflict fallback that tells the session to resolve it, and a root-cause loop for that automation, then kanban, sprint, backlog, timeline, a menu bar or side nav and settings views: R-20 to R-22, Phase 2B and Open Question 10. "if you need to ... /research-doc to see if / how that's possible": Open Question 10 and the research doc it names. |
 | ai-harness `docs/asks/BU-epic-agentic-ai-native-beads-ylx.md` A003 | FOLLOW-UP, 2026-10-23. The `/show-beads-ui` name must be the one that loads, so `/beads-task` autocompletes again: T-1.7 built it; T-1B.2 makes it load, because six stale project-scope installs of 0.1.0 and 0.1.1 (four session worktrees and two agent worktrees, measured 2026-10-24T00:23Z) still loaded the build that registers `/beads`. |
-| ai-harness `docs/asks/BU-epic-agentic-ai-native-beads-ylx.md` A004 | FOLLOW-UP, 2026-10-23T23:42:51Z. The pane fails with "no beads database found" in a kg-ec2-* session: D-24 and T-1B.1, with a regression test frozen first. Order: the `/show-beads-ui` fix first, then or with the pane bug, then research, design and the rest: the Phase 1B task order. |
-| Sergei, 2026-10-23T23:44Z, relayed by aih-ec2-3 (how to enter, use, hide and close the pane; separate skills or shortcuts) | Answered in chat at 23:50Z, then D-27 and T-1B.6: the usage section in `docs/procedures/mod-install.md`, the README and the pane's help. |
+| ai-harness `docs/asks/BU-epic-agentic-ai-native-beads-ylx.md` A004 | FOLLOW-UP, 2026-10-23T23:42:51Z. The pane fails with "no beads database found" in a qa-vm-* session: D-24 and T-1B.1, with a regression test frozen first. Order: the `/show-beads-ui` fix first, then or with the pane bug, then research, design and the rest: the Phase 1B task order. |
+| Sergei, 2026-10-23T23:44Z, relayed by ops-vm-3 (how to enter, use, hide and close the pane; separate skills or shortcuts) | Answered in chat at 23:50Z, then D-27 and T-1B.6: the usage section in `docs/procedures/mod-install.md`, the README and the pane's help. |
 | ai-harness ask record A006, 2026-10-24T00:36:40Z, and A007, 2026-10-24T00:39:54Z (a CORRECTION of A006's format) | The band reads `[bd] {N} tasks ({N} in progress, {N} blocked, {N} open, {N} done last 24h)`, in progress and blocked first (A007), with no session name and no store count: D-30 and T-1B.10. The read time only in a dev, test or debug mode: T-1B.5. The done window, and the order and set of the band's parts, set from the config file and from the pane: T-1B.11. "build the rest of our own version of the beads-ui task panel ... to replace the entire cc task panel. i'd prefer that": R-20, R-21 and Phase 2B. "what should we call this component": the band, Claude Code's `AbovePrompt` render site, as the Architecture section says; the side panel is a `Pane`. A002's firstmate second line is kept under the new format (D-30). |
 | ai-harness ask record A008, 2026-10-24T01:03:49Z | The firstmate's lines: `[bd][all]` totals over an aligned `[fm]` line with the firstmate's own counts, both in A007's part order: D-34 (superseding D-30's `all repos:` label) and T-1B.10. A001's totals label is met by `[all]`. The sync-drift signal today's line 1 carries is kept as a short marker shown only while a store is out of step, recorded in D-34. |
-| Sergei, 2026-10-25, in chat to aih-ec2-3, before 01:32:17Z and 01:32Z to 01:38:10Z, verbatim in the bodies of BU-mg2.3.16, BU-mg2.3.17 and BU-mg2.3.18, and in A006 | Fields cut short and the missing comments: BU-mg2.3.14 and BU-mg2.3.15, built by a parallel leaf. The name of the two surfaces: the band (`AbovePrompt`) and the pane, as Feedback Round 4 answered. The old band format: fixed by the D-26 version rule (0.9.4). "all the decisions / blockers etc (anything that i need to review and action basically) and all that info from the held docs inside the beads-ui pane": R-26, R-27, D-37, D-39, D-40 and T-2C.4 to T-2C.6, with every held kind and bd blockers in scope and the full body readable. Per issue, "select a tab / pane / option ... or they just appear by default in the task details pane": D-40's Review section, shown by default (T-2C.5). "an icon system ... next to task rows on the left side ... agent working ... blocked ... review items ... we can build out": R-29, D-41, D-42, T-2C.3 and T-2C.7. "its own tab ... filter / organize / sort them by task or epic or priority or last updated / created date or label": the Review view, D-40 and T-2C.6. The firstmate's "own beads tasks and also all of them in the fleet for its machine host pair": R-28, D-38. "eventually ... all my machine hosts with some access control restrictiosn for client repos": BU-mg2.3.17.4, later, as Sergei placed it; D-38 keeps the pair filter in the data so the later scope has one place to widen. |
-| Sergei, 2026-10-25, in chat to aih-ec2-3, shortly before 01:53Z and about 01:58Z, verbatim in the bodies of BU-mg2.3.20 and BU-mg2.3.21, and in A006 | "add more rows under band and actually build out the task panel there under the band which is separate from the pane": R-30, D-36's row level, T-2C.2. The docked panel missing after `/reload-plugins` (BU-mg2.3.20 part 2): reversed by Sergei shortly before 02:27Z, "i don't want it to open by default or whenever i reload the plugin", so the pane opens only when asked, built by aih-ec2-3 (`[panel] open_at_start`, default false). "all the buttons should appear to the left", clickable counts that expand rows, "N amount and the rest collapse", "keep expanding", "collapse back to the default amount or ... to just the top band row(s)": D-36 and T-2C.2. "as much interactive funcitonality as we can add into bands", "the pane does possibly have advantages at scale. so we cna keep that surface": D-36's overview level, with the pane kept. "components that can be shared / reused / combined / stacked ... adapters ... for each tui surface": R-31, D-35, T-2C.1. "proper progressive disclosure": D-36's three levels. "then we can start to work towards retiring the cc task panel": Phase 5, after this phase. The 02:02Z amendment (verbatim in BU-mg2.3.21's comment): "same for all the others, not just in progress": D-36's every count; "i don't want two separate implementations for the bands views and pane views ... by default should render in both surfaces": D-35's view registry with `surfaces` both by default and the `[surfaces]` switch, T-2C.1 and T-2C.8 (BU-mg2.3.21.1 to .5). |
-| Sergei, 2026-10-25, in chat to aih-ec2-3, 03:37:51Z, 03:42:13Z and about 03:50Z, verbatim in the bodies of BU-mg2.3.21.6, BU-mg2.3.21.6.6 and BU-mg2.3.21.6.7, and in A006 | "do the visual design pass for both band and pane": R-32, D-43, T-2C.9 to T-2C.13, built once in the shared components; "i don't want live browser": out of scope, as Sergei said. The `beads` button "shouldn't be called "beads"", "a more useful button icon", and "anything clickable with funcitonality should have clear indicators that its clickable. that needs to be a user interface language standard throughout": R-33, D-43's clickable affordance, T-2C.14. |
+| Sergei, 2026-10-25, in chat to ops-vm-3, before 01:32:17Z and 01:32Z to 01:38:10Z, verbatim in the bodies of BU-mg2.3.16, BU-mg2.3.17 and BU-mg2.3.18, and in A006 | Fields cut short and the missing comments: BU-mg2.3.14 and BU-mg2.3.15, built by a parallel leaf. The name of the two surfaces: the band (`AbovePrompt`) and the pane, as Feedback Round 4 answered. The old band format: fixed by the D-26 version rule (0.9.4). "all the decisions / blockers etc (anything that i need to review and action basically) and all that info from the held docs inside the beads-ui pane": R-26, R-27, D-37, D-39, D-40 and T-2C.4 to T-2C.6, with every held kind and bd blockers in scope and the full body readable. Per issue, "select a tab / pane / option ... or they just appear by default in the task details pane": D-40's Review section, shown by default (T-2C.5). "an icon system ... next to task rows on the left side ... agent working ... blocked ... review items ... we can build out": R-29, D-41, D-42, T-2C.3 and T-2C.7. "its own tab ... filter / organize / sort them by task or epic or priority or last updated / created date or label": the Review view, D-40 and T-2C.6. The firstmate's "own beads tasks and also all of them in the fleet for its machine host pair": R-28, D-38. "eventually ... all my machine hosts with some access control restrictiosn for client repos": BU-mg2.3.17.4, later, as Sergei placed it; D-38 keeps the pair filter in the data so the later scope has one place to widen. |
+| Sergei, 2026-10-25, in chat to ops-vm-3, shortly before 01:53Z and about 01:58Z, verbatim in the bodies of BU-mg2.3.20 and BU-mg2.3.21, and in A006 | "add more rows under band and actually build out the task panel there under the band which is separate from the pane": R-30, D-36's row level, T-2C.2. The docked panel missing after `/reload-plugins` (BU-mg2.3.20 part 2): reversed by Sergei shortly before 02:27Z, "i don't want it to open by default or whenever i reload the plugin", so the pane opens only when asked, built by ops-vm-3 (`[panel] open_at_start`, default false). "all the buttons should appear to the left", clickable counts that expand rows, "N amount and the rest collapse", "keep expanding", "collapse back to the default amount or ... to just the top band row(s)": D-36 and T-2C.2. "as much interactive funcitonality as we can add into bands", "the pane does possibly have advantages at scale. so we cna keep that surface": D-36's overview level, with the pane kept. "components that can be shared / reused / combined / stacked ... adapters ... for each tui surface": R-31, D-35, T-2C.1. "proper progressive disclosure": D-36's three levels. "then we can start to work towards retiring the cc task panel": Phase 5, after this phase. The 02:02Z amendment (verbatim in BU-mg2.3.21's comment): "same for all the others, not just in progress": D-36's every count; "i don't want two separate implementations for the bands views and pane views ... by default should render in both surfaces": D-35's view registry with `surfaces` both by default and the `[surfaces]` switch, T-2C.1 and T-2C.8 (BU-mg2.3.21.1 to .5). |
+| Sergei, 2026-10-25, in chat to ops-vm-3, 03:37:51Z, 03:42:13Z and about 03:50Z, verbatim in the bodies of BU-mg2.3.21.6, BU-mg2.3.21.6.6 and BU-mg2.3.21.6.7, and in A006 | "do the visual design pass for both band and pane": R-32, D-43, T-2C.9 to T-2C.13, built once in the shared components; "i don't want live browser": out of scope, as Sergei said. The `beads` button "shouldn't be called "beads"", "a more useful button icon", and "anything clickable with funcitonality should have clear indicators that its clickable. that needs to be a user interface language standard throughout": R-33, D-43's clickable affordance, T-2C.14. |
 | ai-harness ask record A005, 2026-10-23T23:51:05Z (on an ai-harness PR not yet merged at this writing) | Tab `3`: D-28 and T-1B.7. "performance and caching or loading fast", "by default actually show useful stuff": D-29 and T-1B.8, fed by D-26's snapshots. Reflow to the terminal and pane size with no overflow and compact labels: T-1B.9 now, and R-24 in Phase 2B. Buttons, dropdowns, side nav and menu bars, icons when space is short, a richer stack (TypeScript, JavaScript, CSS or a framework) if it is fast and light, and "i saw someone load an entire browser": R-24, R-25 and Open Question 10, whose research comes first. |
-| Sergei to aih-ec2-3 in chat, before 2026-10-25T01:32:17Z, verbatim in BU-mg2.3.14 and BU-mg2.3.15 | "some fields not showing the full text if there's space": T-2B.10. "i don't see comments? or an ability to add a comment": T-2B.11. The rest of that ask (blockers, decisions and held-doc information in the pane, and the band's format) is tracked outside these two tasks. |
+| Sergei to ops-vm-3 in chat, before 2026-10-25T01:32:17Z, verbatim in BU-mg2.3.14 and BU-mg2.3.15 | "some fields not showing the full text if there's space": T-2B.10. "i don't see comments? or an ability to add a comment": T-2B.11. The rest of that ask (blockers, decisions and held-doc information in the pane, and the band's format) is tracked outside these two tasks. |
 
-**Status:** Approved by Sergei on 2026-10-21 (Feedback Round 1); Phases 0 and 1 built under run `beads-ui-build-2026-10-21-aih-ec2-3`; Feedback Rounds 3 to 5 (D-24 to D-34, Phase 1B, Phase 2B) under run `beads-ui-band-pane-panel-2026-10-24-aih-ec2-3`; Feedback Round 6 (D-35 to D-42, Phase 2C) under run `beads-ui-review-band-2026-10-25-aih-ec2-3`
+**Status:** Approved by Sergei on 2026-10-21 (Feedback Round 1); Phases 0 and 1 built under run `beads-ui-build-2026-10-21-ops-vm-3`; Feedback Rounds 3 to 5 (D-24 to D-34, Phase 1B, Phase 2B) under run `beads-ui-band-pane-panel-2026-10-24-ops-vm-3`; Feedback Round 6 (D-35 to D-42, Phase 2C) under run `beads-ui-review-band-2026-10-25-ops-vm-3`
 
 **Created:** 2026-10-15
 
@@ -300,7 +300,7 @@ Board tab in the mod pane (120 columns by 30 rows, fullscreen rendering):
 | Region | Content |
 |---|---|
 | Header row | Tab buttons `1 Board`, `2 Backlog`, `3 Sprint`, `4 Detail`; the store name and a freshness stamp (`as of 01:12:04`) |
-| Filter row | `Input` for a filter expression (`type:task label:ui assignee:aih-3`), a `Select` for sprint, a `Select` for swimlane (none, assignee, epic) |
+| Filter row | `Input` for a filter expression (`type:task label:ui assignee:ops-3`), a `Select` for sprint, a `Select` for swimlane (none, assignee, epic) |
 | Columns | One `Box` per status category group in order `active`, `wip`, `frozen`, `done`, each headed by status name and count, each a vertical list of cards; a count over a configured soft limit turns the header's colour key to `warning` |
 | Card | Display id in `dimColor`, title truncated to the column width, priority badge `P1`, assignee, a `Select` labelled `Move to` with the other statuses, a `Button` `d` for detail |
 | Footer | Hotkey hints: `n` new, `s` swimlane, `/` filter (an `Input`, since `/` is not a valid hotkey), `?` help (a `Button` with hotkey `h`) |
@@ -508,7 +508,7 @@ Each phase carries its scope, deliverables, tasks with EARS acceptance criteria 
   - **T-1B.1 The store a session reads** (D-24)
     - [x] `When a session's directory has no Beads store and beads-ui.toml maps the directory's name to a store directory, the pane shall read that store, and the band shall include it in its sum over the inventory's stores when the inventory does not already list it.`
     - [x] `When no mapping applies and the session's directory has a store, the system shall read it as before.`
-    - [x] `When neither applies and the session name's prefix, upper-cased with hyphens turned to underscores, is a store prefix in the store inventory, the system shall read that store; kg-ec2-3 shall read the KG store.`
+    - [x] `When neither applies and the session name's prefix, upper-cased with hyphens turned to underscores, is a store prefix in the store inventory, the system shall read that store; qa-vm-3 shall read the QA store.`
     - [x] `If no store resolves, then the pane shall draw an empty state naming the directory, the mapping file and the inventory it checked, and how to add a mapping, and shall schedule no bd retry.`
     - [x] `When the pane draws, its header shall name the store it reads.`
   - **T-1B.2 The build that loads is the installed one** (ai-harness)
@@ -517,7 +517,7 @@ Each phase carries its scope, deliverables, tasks with EARS acceptance criteria 
     - [x] `If the CLI cannot remove a row, then the step shall print a named warning for it and shall not fail the install.`
     - [x] `Where a machine profile disables the plugin, the step shall leave its rows alone.`
   - **T-1B.3 Ownership is recorded when work is claimed** (D-25, ai-harness)
-    - Moved 2026-10-24 to the ai-harness epic AIH-0u8srz (display id AIH-epic-beads-assignee-matches-0u8srz), which Sergei asked for at 02:36:36Z: a fleet-wide fix making the Beads assignee match every session's task panel, enforced by hooks and automation, with the data cleaned on both hosts. That run owns these criteria; the assignee stays the bare session name, so the band's D-17 filter does not change.
+    - Moved 2026-10-24 to an ai-harness epic, which Sergei asked for at 02:36:36Z: a fleet-wide fix making the Beads assignee match every session's task panel, enforced by hooks and automation, with the data cleaned on both hosts. That run owns these criteria; the assignee stays the bare session name, so the band's D-17 filter does not change.
     - [ ] `When bd-new creates an in_progress issue in a session whose name CLAUDE_CODE_TASK_LIST_ID carries and the caller names no assignee, the system shall set the assignee to that name; when the caller names one, that assignee is the owner, as when a session files work for another.`
     - [ ] `When /beads-task or the fleet's claim path moves an issue to in_progress for a session, the system shall set the assignee to that session's name in every case, first copying any assignee that is not a session name to metadata.owner.`
     - [ ] `When the ownership reconcile runs, it shall list, and with --apply set, the empty assignee of each in-progress issue that exactly one session's task panel holds in progress, and shall leave issues held by two sessions or by none untouched and named.`
@@ -525,9 +525,9 @@ Each phase carries its scope, deliverables, tasks with EARS acceptance criteria 
   - **T-1B.4 One refresher for the host** (D-26)
     - [x] `While at least one session with the mod loaded is open, at most one refresher process per host shall run, it shall read every inventory store's counts, by session and in total, once a minute (no sooner than every 50 seconds and no later than every 90), and shall write them to the host snapshot with a read time; after a refresher stops, a new one shall be running within two minutes.`
     - [x] `When a store's head has not changed since the last board read, the refresher shall not re-read that store's issues.`
-    - As built (PR #41, d5c8e7e): the refresher (`plugins/beads-ui/refresher/refresher.mjs`) runs detached in its own session, holds a file lease in the state directory, writes counts once a minute (36 `bd count` calls a beat over 9 stores, whatever the number of sessions), and exits when no session has registered for its idle window. Sessions register in the state directory rather than `$.store`, because the refresher is a separate process with no mods API. Board snapshots, the lease-heartbeat restart and the prompt redraw after a write followed in PR #43 (a19033f, plugin 0.4.0): a board file per store a pane reads, re-read only when `bd vc status` reports a new Dolt head (0.46 to 0.65 s a store a minute); a session restarts a refresher whose lease heartbeat is 50 seconds old (a killed one was replaced 100.3 s after the kill, live); a session's write drops a wake marker and shows within 9 s. The lease is race-free: each refresher renews only its own `lease-<token>.json`, `lease.json` is a hard link that changes holder only by atomic rename, and release checks the inode first. Residual, accepted: an ousted refresher that stalls just after a passing check can still write one stale `counts.json`, which the holder overwrites at its next beat; it can no longer touch the lease (Risk 11). Fixed after a live check (PR #53, 9174713, 0.7.2): a session in a linked worktree registered its own `.beads` path, so the refresher counted the main tree's database a second time (aih-ec2-1's band read 12/27/14 against a hand count of 6/15/8). Stores are now one entry per database: `sameStore` in `core/src/views/band.ts` and `sameDatabase` in the refresher compare the prefix `bd where` reports (the database's name on the shared server, and the inventory's key), falling back to the symlink-resolved path where a store has no prefix. A session still on an older build registers without a prefix until it loads 0.7.2.
+    - As built (PR #41, d5c8e7e): the refresher (`plugins/beads-ui/refresher/refresher.mjs`) runs detached in its own session, holds a file lease in the state directory, writes counts once a minute (36 `bd count` calls a beat over 9 stores, whatever the number of sessions), and exits when no session has registered for its idle window. Sessions register in the state directory rather than `$.store`, because the refresher is a separate process with no mods API. Board snapshots, the lease-heartbeat restart and the prompt redraw after a write followed in PR #43 (a19033f, plugin 0.4.0): a board file per store a pane reads, re-read only when `bd vc status` reports a new Dolt head (0.46 to 0.65 s a store a minute); a session restarts a refresher whose lease heartbeat is 50 seconds old (a killed one was replaced 100.3 s after the kill, live); a session's write drops a wake marker and shows within 9 s. The lease is race-free: each refresher renews only its own `lease-<token>.json`, `lease.json` is a hard link that changes holder only by atomic rename, and release checks the inode first. Residual, accepted: an ousted refresher that stalls just after a passing check can still write one stale `counts.json`, which the holder overwrites at its next beat; it can no longer touch the lease (Risk 11). Fixed after a live check (PR #53, 9174713, 0.7.2): a session in a linked worktree registered its own `.beads` path, so the refresher counted the main tree's database a second time (ops-vm-1's band read 12/27/14 against a hand count of 6/15/8). Stores are now one entry per database: `sameStore` in `core/src/views/band.ts` and `sameDatabase` in the refresher compare the prefix `bd where` reports (the database's name on the shared server, and the inventory's key), falling back to the symlink-resolved path where a store has no prefix. A session still on an older build registers without a prefix until it loads 0.7.2.
     - [x] `When a session's minute check finds the refresher's lease heartbeat older than 90 seconds, it shall take the lease and start a refresher; a second session finding a live lease shall start nothing; the band shall mark the counts stale once the snapshot is older than three minutes.`
-      - Wording repair (Gate C, aih-ec2-3 Opus coordinator, 2026-10-24). Before: "When a session's minute check finds the snapshot older than three minutes and no live lease, it shall start the refresher and take the lease". The ratified intent is this task's first criterion, "after a refresher stops, a new one shall be running within two minutes", which a three-minute trigger cannot meet for a refresher that is killed; band v2 (PR #41) measured exactly that. Not changed: one refresher per host, the lease, the three-minute stale mark.
+      - Wording repair (Gate C, ops-vm-3 Opus coordinator, 2026-10-24). Before: "When a session's minute check finds the snapshot older than three minutes and no live lease, it shall start the refresher and take the lease". The ratified intent is this task's first criterion, "after a refresher stops, a new one shall be running within two minutes", which a three-minute trigger cannot meet for a refresher that is killed; band v2 (PR #41) measured exactly that. Not changed: one refresher per host, the lease, the three-minute stale mark.
     - [x] `If the snapshot is older than three minutes and the refresher cannot be started, then the session shall read its own counts directly and the band shall mark the counts as read by this session.`
   - **T-1B.5 The band's cadence and stamp** (D-26, D-30)
     - [x] `While the session is open, the band shall redraw from the newest counts at least once every 90 seconds and at most once a minute, plus once after any write the session makes.`
@@ -537,7 +537,7 @@ Each phase carries its scope, deliverables, tasks with EARS acceptance criteria 
     - [x] `When the user presses the band's beads button, by click or Enter, the system shall open the pane focused if it is closed and move focus into it with $.ui.focus if it is open.`
     - [x] `When the user presses h in the pane, the help shall list how focus enters (Ctrl+X then Tab, a click, the band's beads button), how it leaves (Esc), how to close (Esc, Ctrl+X then X, /bu) and how to reopen (/bu, a command:bu chord), with a ready keybindings.json block.`
     - [x] `When README.md and docs/procedures/mod-install.md are read, each shall carry the same usage section.`
-      - Wording repair (Gate C, aih-ec2-3 Opus coordinator, 2026-10-24). Before: "When the user presses h or ? in the pane". Claude Code 2.1.310 accepts a button hotkey only of the form `^[0-9a-z]$`, so `?` cannot be bound; the ratified intent, D-27's "help (`h`, `?`) and the same usage section", is help reachable by a key the pane names, which `h` meets. Not changed: what the help lists, or the usage section.
+      - Wording repair (Gate C, ops-vm-3 Opus coordinator, 2026-10-24). Before: "When the user presses h or ? in the pane". Claude Code 2.1.310 accepts a button hotkey only of the form `^[0-9a-z]$`, so `?` cannot be bound; the ratified intent, D-27's "help (`h`, `?`) and the same usage section", is help reachable by a key the pane names, which `h` meets. Not changed: what the help lists, or the usage section.
   - **T-1B.7 Tab 3** (D-28)
     - [x] `When the pane draws its tabs, it shall draw 3 Sprint dimmed, and pressing it shall show that the Sprint view is planned and not built, without leaving the current tab.`
   - **T-1B.8 First paint and default view** (D-29)
@@ -556,7 +556,7 @@ Each phase carries its scope, deliverables, tasks with EARS acceptance criteria 
     - [x] `When beads-ui.toml sets the done window, the order of the band's parts, adds a part from the part list or removes one, the band shall draw the result at its next redraw without a restart.`
     - [x] `When the user changes the done window, reorders the parts, adds a part from the part list or removes one in the pane's band settings, the system shall apply the change at once, keep it in $.store, and write it to beads-ui.toml when the user chooses Save to file.`
     - [x] `When the part list is read, it shall offer at least the four counts, the total, the done count and window, the unpublished-edit count of T-2B.6 and the drift marker of D-34, each addable and removable.`
-- **Exit gate:** `npm run lint` and `npm test` green in beads-ui; ai-harness `pytest` green for T-1B.2 and T-1B.3; on sem-kg-ec2, after the chief's install, `installed_plugins.json` holds no local beads-ui row, a restarted kg session's pane lists the KG store, a restarted non-firstmate session's band equals a hand `bd count --assignee=<session> --by-status` summed across its stores, the firstmate's band shows both lines, and `ps -eo pid,etime,args` shows one refresher; each recorded in the Approval Log.
+- **Exit gate:** `npm run lint` and `npm test` green in beads-ui; ai-harness `pytest` green for T-1B.2 and T-1B.3; on host-c, after the chief's install, `installed_plugins.json` holds no local beads-ui row, a restarted kg session's pane lists the KG store, a restarted non-firstmate session's band equals a hand `bd count --assignee=<session> --by-status` summed across its stores, the firstmate's band shows both lines, and `ps -eo pid,etime,args` shows one refresher; each recorded in the Approval Log.
 
 ### Phase 2: Mod enhancements, pointer drag, sprints and sparklines
 
@@ -624,19 +624,19 @@ Each phase carries its scope, deliverables, tasks with EARS acceptance criteria 
     - As built (slice 2B-e, beads-ui #56, c3c1b7f, plugin 0.9.0): the view model is `core/src/views/timeline.ts` (`timelineView` picks type `epic` or `milestone`, sorts by due day, then priority and age; `timelineLayout` fits labels and bars to the width; `barCells` encodes a one-row Raster). `hooks/panel.ts` `drawTimeline` draws it; `register.ts` passes the terminal's `Raster` only on the terminal surface, so the desktop and VS Code draw Text rows. The axis starts at the earliest due date, or at the day of the last read when every due date is later. Bars are coloured by status category; the label sits beside the bar from the wide tier and above it below that. Key `5` opens it; Enter, a click or `d` opens an item's detail. It reads the board's bounded read (open issues plus the 25 newest closed), so an older closed epic is not drawn. Tested at 40 to 120 columns on both paths. Not yet checked live: the Raster cell encoding on a real terminal, and a store with due dates (none on this host had one at build time); both belong to this phase's exit gate.
   - **T-2B.10 Fields drawn whole when the pane has room** (R-24; the 2026-10-25 ask, BU-mg2.3.14)
     - [x] `When the pane is wide enough for a field's whole text, the system shall draw it whole; when it is not, the system shall cut only that field, ending it with an ellipsis, within the column it is drawn in.`
-    - As built (plugin 0.11.0): the Detail view cut every field, its heading and each dependency and history row to the fields column less 14, even where a row spans the whole view; at 140 columns the heading stopped at 42 of its 119 characters. `detailView` now takes the view's `width`, which the heading and each dependency and history row (`line`) may use in full, and the fields column's `fieldWidth`, which each `label: value` row fits after its own label. The Backlog's id, type and assignee columns had fixed caps (32, 8 and 12), so `@aih-ec2-firstmate-1` and `milestone` were cut on any width; they now take the longest value on the drawn page, up to a cap (28 or 30% of the width, 12 and 24), and the title takes the rest. Board cards and the Tasks view's rows already cut only at their column's edge and are unchanged. Frozen in `hooks/fields.test.ts` at 48, 140 and 200 columns: red at 090b3f4, green after.
+    - As built (plugin 0.11.0): the Detail view cut every field, its heading and each dependency and history row to the fields column less 14, even where a row spans the whole view; at 140 columns the heading stopped at 42 of its 119 characters. `detailView` now takes the view's `width`, which the heading and each dependency and history row (`line`) may use in full, and the fields column's `fieldWidth`, which each `label: value` row fits after its own label. The Backlog's id, type and assignee columns had fixed caps (32, 8 and 12), so `@ops-vm-firstmate-1` and `milestone` were cut on any width; they now take the longest value on the drawn page, up to a cap (28 or 30% of the width, 12 and 24), and the title takes the rest. Board cards and the Tasks view's rows already cut only at their column's edge and are unchanged. Frozen in `hooks/fields.test.ts` at 48, 140 and 200 columns: red at 090b3f4, green after.
   - **T-2B.11 An issue's comments, and a comment added from the pane** (R-20, D-33; the 2026-10-25 ask, BU-mg2.3.15)
     - [x] `When an issue's detail opens, from a card, a Backlog row or a task in the task panel, the system shall list every comment bd comments <id> --json returns, oldest first and newest last, each with its author, time and body.`
     - [x] `When a comment is typed in the Detail view and submitted, the system shall write it with bd comments add as the session's actor, re-read the comments and draw them, and hand the write to T-2B.6's sync.`
     - [x] `If the write fails, then the system shall show why and keep the typed text in the control; if it is empty, the system shall say so and write nothing.`
     - As built (plugin 0.11.0): `bd show --json` leaves comments out (`comments_omitted`), so the Detail view reads them with a third call beside `bd show` and `bd history`, on open and on each re-read. The view model is `core/src/views/comments.ts` (`commentsView`, `parseCommentDraft`); `hooks/pane.ts` draws it after the history as its own section (`drawComments`), so the Detail view's other parts are unchanged. The bodies are Markdown blocks sharing a 30,000-character budget, newest first, each at most 10,000; a body past what is left keeps its author and time and says how to read it whole, so no comment drops off the list. The control is a one-line `Input`, as the description's is (`\n` is a line break). The write is `bd comments add <id> --actor=<session> --json -- <text>`: bd records `--actor` as the comment's author (measured on bd 1.3.2, 2026-10-25), the text after `--` is never read as a flag, and a session with no name lets bd choose the author. The task panel has no row of its own that expands in place: a task opens into this Detail view (T-2B.3), which is where its comments are drawn. No hotkey or menu entry focuses the control yet; Tab reaches it like the other Detail controls.
-- **Exit gate:** `npm run lint` and `npm test` green; a live run on sem-kg-ec2 in tmux over SSM and in one local terminal covering T-2B.1 to T-2B.9, including left and right clicks reaching the `Client` in the local terminal and, inside tmux, either the `Client` or each row's menu button answering a left click (Open Question 2), recorded in the Approval Log; one profile run with panel.mode beads and the CC task panel retired for one day.
+- **Exit gate:** `npm run lint` and `npm test` green; a live run on host-c in tmux over SSM and in one local terminal covering T-2B.1 to T-2B.9, including left and right clicks reaching the `Client` in the local terminal and, inside tmux, either the `Client` or each row's menu button answering a left click (Open Question 2), recorded in the Approval Log; one profile run with panel.mode beads and the CC task panel retired for one day.
 
 ### Phase 2C: The band as the primary surface, review items and row indicators
 
-- **Scope:** Feedback Round 6, R-26 to R-31, under D-35 to D-42: one component layer with a band adapter and a pane adapter (D-35); the band's three disclosure levels, its controls at the left and its clickable counts (D-36); the pane no longer opening unasked, which Sergei ruled shortly before 02:27Z (BU-mg2.3.20 part 2 reversed) and aih-ec2-3 builds in its own PR with `[panel] open_at_start` defaulting to false; review items read from the ai-harness held store at refresh (D-37), scoped per session and per machine pair (D-38), answerable from the pane (D-39), drawn in the Detail by default and in a Review view (D-40); left-side row indicators from a registry (D-41), with agent detection by D-42. One task lands in ai-harness (T-2C.4). Order, as Sergei and aih-ec2-3 set it: the framework first (T-2C.1), then T-2C.2, T-2C.3, T-2C.4, T-2C.5, T-2C.6, T-2C.7 built on it, the visual pass (T-2C.9, T-2C.10 and T-2C.14 first, then T-2C.11 and T-2C.12, then T-2C.13) in the same components, and T-2C.8 moving every remaining pane view onto it, the parallel leaf's Detail fields and comments (BU-mg2.3.14, BU-mg2.3.15) included; one leaf at a time under the host's load cap, each merged before the next starts. Sub-epic BU-mg2.3.21's children map as: .1 to T-2C.1, .2 and .3 to T-2C.2, .4 to T-2C.2's overview with T-2C.8, .5 to T-2C.8.
+- **Scope:** Feedback Round 6, R-26 to R-31, under D-35 to D-42: one component layer with a band adapter and a pane adapter (D-35); the band's three disclosure levels, its controls at the left and its clickable counts (D-36); the pane no longer opening unasked, which Sergei ruled shortly before 02:27Z (BU-mg2.3.20 part 2 reversed) and ops-vm-3 builds in its own PR with `[panel] open_at_start` defaulting to false; review items read from the ai-harness held store at refresh (D-37), scoped per session and per machine pair (D-38), answerable from the pane (D-39), drawn in the Detail by default and in a Review view (D-40); left-side row indicators from a registry (D-41), with agent detection by D-42. One task lands in ai-harness (T-2C.4). Order, as Sergei and ops-vm-3 set it: the framework first (T-2C.1), then T-2C.2, T-2C.3, T-2C.4, T-2C.5, T-2C.6, T-2C.7 built on it, the visual pass (T-2C.9, T-2C.10 and T-2C.14 first, then T-2C.11 and T-2C.12, then T-2C.13) in the same components, and T-2C.8 moving every remaining pane view onto it, the parallel leaf's Detail fields and comments (BU-mg2.3.14, BU-mg2.3.15) included; one leaf at a time under the host's load cap, each merged before the next starts. Sub-epic BU-mg2.3.21's children map as: .1 to T-2C.1, .2 and .3 to T-2C.2, .4 to T-2C.2's overview with T-2C.8, .5 to T-2C.8.
 - **Deliverables:**
-  - Files created: `plugins/beads-ui/hooks/components/` (the shared drawing components and the two adapters, D-35), `plugins/beads-ui/core/src/views/disclosure.ts` (the band's levels as a reducer), `plugins/beads-ui/core/src/indicators.ts` (the registry), `plugins/beads-ui/core/src/review.ts` (the review snapshot's parser, scope, filter grammar, sorts and groups), `plugins/beads-ui/core/src/views/review.ts` (the Review view model). In ai-harness: the `review` verb in `scripts/held_cli.py`, and the `[review]` lines in the install step that writes `[sync]` (AIH-qsmn3u's step).
+  - Files created: `plugins/beads-ui/hooks/components/` (the shared drawing components and the two adapters, D-35), `plugins/beads-ui/core/src/views/disclosure.ts` (the band's levels as a reducer), `plugins/beads-ui/core/src/indicators.ts` (the registry), `plugins/beads-ui/core/src/review.ts` (the review snapshot's parser, scope, filter grammar, sorts and groups), `plugins/beads-ui/core/src/views/review.ts` (the Review view model). In ai-harness: the `review` verb in `scripts/held_cli.py`, and the `[review]` lines in the install step that writes `[sync]` (the ai-harness step that writes `[sync]`).
   - Files changed: `plugins/beads-ui/hooks/{register,pane,panel,bands,tally}.ts`, `plugins/beads-ui/refresher/refresher.mjs`, `plugins/beads-ui/core/src/{config,snapshot,argv,parsers}.ts`, `plugins/beads-ui/core/src/views/{detail,panel,nav,menu,settings,band}.ts`, `plugins/beads-ui/validate-allowlist.json` when a call or environment read is added, `docs/procedures/mod-install.md`, `README.md`.
   - Tests added: component parity tests that draw one model through both adapters; hooks-entry tests for each disclosure level, each indicator, the Detail section, the reader and the answer path (with a stub held command), the Review view's every filter, sort and group, and the scope rule; refresher tests for the review beat; ai-harness pytest for the verb and the install lines.
 - **Tasks + acceptance criteria:**
@@ -711,13 +711,13 @@ Each phase carries its scope, deliverables, tasks with EARS acceptance criteria 
   - **T-2C.13 Image and Svg where the surface draws them** (D-43, BU-mg2.3.21.6.5)
     - [x] `When a view offers a picture (the Timeline, a burndown), it shall draw an Image only where the surface profile says the terminal can show one, Svg on the desktop, VS Code and mobile surfaces, and the alt text elsewhere; a test shall cover each fallback.`
     - [x] `Before Image is enabled on a host, this host's tmux allow-passthrough setting shall be probed and the result recorded in the design doc.`
-    - As built (T-2C.13, BU-mg2.3.21.6.5): the Timeline's picture, the terminal rule, the tmux probe on sem-kg-ec2 and the forms each surface draws, in D-43's as-built note. No burndown view exists yet, so the Timeline is the one view with a picture. The mobile pane draws a notice and no view, so its Svg form has no view to draw in yet.
+    - As built (T-2C.13, BU-mg2.3.21.6.5): the Timeline's picture, the terminal rule, the tmux probe on host-c and the forms each surface draws, in D-43's as-built note. No burndown view exists yet, so the Timeline is the one view with a picture. The mobile pane draws a notice and no view, so its Svg form has no view to draw in yet.
   - **T-2C.14 Every clickable element looks clickable, and the pane toggle** (D-43, BU-mg2.3.21.6.6, BU-mg2.3.21.6.7)
     - [x] `When any component draws a Button, or any element with an onPress, it shall draw the shared clickable affordance (a button frame or bracket, a theme-accent colour and a hover style where the surface supports hover), and a test over every view's drawn tree, on both surfaces, shall fail on a pressable element drawn without it.`
     - [x] `When the band draws its pane control, it shall draw an icon-first button with one glyph for open and another for close, from the glyph table, with its ASCII form, the affordance above and the same hotkey, and no text label "beads".`
     - [x] `When this task lands, the design doc's visual language (D-43) shall state the standard and list each interactive element of the band and the pane with the affordance it draws.`
     - As built (T-2C.14, BU-mg2.3.21.6.6 and .6.7): the affordance, the pane toggle's glyphs and why, the list of interactive elements and the before and after captures, in D-43's as-built note. The per-element audit, each element's look at 473b5ff and after, is the table in D-43's T-2C.12 note.
-- **Exit gate:** `npm run lint` and `npm test` green in beads-ui and the ai-harness pytest green for T-2C.4; the plugin version raised by each release; on sem-kg-ec2, after the chief installs each release and the session runs `/reload-plugins`, recorded in the Approval Log: no pane opening at session start or after `/reload-plugins` unless `[panel] open_at_start` is set; the summary line with its controls at the left; a count expanding rows, "+M more", collapse and summary; the overview; an issue with a held item showing its Review section and the reader; the firstmate's Review view holding an `acn-mac` item and no `fw-lnx` or `mac` item; the indicators on a blocked issue and on an issue with a live agent row.
+- **Exit gate:** `npm run lint` and `npm test` green in beads-ui and the ai-harness pytest green for T-2C.4; the plugin version raised by each release; on host-c, after the chief installs each release and the session runs `/reload-plugins`, recorded in the Approval Log: no pane opening at session start or after `/reload-plugins` unless `[panel] open_at_start` is set; the summary line with its controls at the left; a count expanding rows, "+M more", collapse and summary; the overview; an issue with a held item showing its Review section and the reader; the firstmate's Review view holding an `host-a` item and no `host-b` or `mac` item; the indicators on a blocked issue and on an issue with a live agent row.
 
 ### Phase 3: The web app, locally and as the queue dashboard's board
 
@@ -805,9 +805,9 @@ iOS and Android (shared or separate), macOS, Linux and Windows native apps follo
 | # | Phase | Section / Decision | Verified | Notes |
 |---|-------|--------------------|---------|-------|
 | 1 | N/A | **Design Overview filled**: confirm the `## Design Overview` section above is filled in with concrete implementation knowledge, not left as a stub | - [x] | Filled 2026-10-21 for Phases 0 and 1 as built, at the Phase 1 landing; later phases add their own paragraphs |
-| 2 | 0 | D-2 package boundaries and the five core rules | - [x] | Verified 2026-10-21 on wt/aih-ec2-3/bu-build at dad9a35 by two fresh-context verifiers and a Codex review: core compiles under es2023 with no ambient types; the purity gate names file and line (code generation and computed imports included); no runtime dependency; pure core suites run under Vitest and `claude plugin test`; `$` calls only in the hooks module. Core sits in the plugin as decided; the T-3.6 review stays open |
+| 2 | 0 | D-2 package boundaries and the five core rules | - [x] | Verified 2026-10-21 on wt/ops-vm-3/bu-build at dad9a35 by two fresh-context verifiers and a Codex review: core compiles under es2023 with no ambient types; the purity gate names file and line (code generation and computed imports included); no runtime dependency; pure core suites run under Vitest and `claude plugin test`; `$` calls only in the hooks module. Core sits in the plugin as decided; the T-3.6 review stays open |
 | 3 | 0 | D-15 mod packaging and validate allow-list | - [x] | Verified 2026-10-21 at dad9a35: plugin at `plugins/beads-ui` with no runtime dependencies, root marketplace listing it, `claude plugin validate .` passes, the `validate --strict --json` allow-list gate, the 1 MB gate over tracked and staged files, `claude plugin test` in `npm test` and pre-commit. Codex findings on the gates fixed in PR #20 |
-| 4 | 1 | D-3 MVP scope; D-4 access route; D-9 display-id minting; D-13 delete ladder | - [x] | Verified 2026-10-21 on wt/aih-ec2-3/bu-build by two Codex reviews, a fresh-context Opus verifier and the coordinator. D-3: a read-mostly mod with Board, Backlog and Detail, no drag, sprints or charts. D-4: every read and write is a `bd` argument list through `$.process.run`, with no `bd serve` or HTTP route in core or hooks. D-9: core mints bd-new's id under `id_policy`, honours its budget overrides with parity tests against `bd_new.py`, and retries a failed attach with the same id after a fresh re-read. D-13: Close instead, a forced delete only after bd's dry-run preview and a full re-check, a typed id for a cascade, and undo after a close. Gate at the landing tip: lint 3/3, Vitest 279 and 37 passed, `claude plugin test` 287 pass 0 fail, tsc 0, allow-list matches |
+| 4 | 1 | D-3 MVP scope; D-4 access route; D-9 display-id minting; D-13 delete ladder | - [x] | Verified 2026-10-21 on wt/ops-vm-3/bu-build by two Codex reviews, a fresh-context Opus verifier and the coordinator. D-3: a read-mostly mod with Board, Backlog and Detail, no drag, sprints or charts. D-4: every read and write is a `bd` argument list through `$.process.run`, with no `bd serve` or HTTP route in core or hooks. D-9: core mints bd-new's id under `id_policy`, honours its budget overrides with parity tests against `bd_new.py`, and retries a failed attach with the same id after a fresh re-read. D-13: Close instead, a forced delete only after bd's dry-run preview and a full re-check, a typed id for a cascade, and undo after a close. Gate at the landing tip: lint 3/3, Vitest 279 and 37 passed, `claude plugin test` 287 pass 0 fail, tsc 0, allow-list matches |
 | 5 | 2 | D-8 drag in a Client; D-5 sprint convention; D-16 metrics source | - [ ] | |
 | 5a | 1B | D-24 store resolution; D-25 ownership on claim; D-26 host refresher; D-27 focus and visibility; D-28 tab 3; D-29 first paint and default view; D-30 band format; D-34 firstmate lines and drift marker | - [ ] | |
 | 5b | 2B | D-31 panel drawing; D-32 placement and co-existence; D-33 edit publishing; R-20 to R-22, R-24, R-25 | - [ ] | |
@@ -836,10 +836,10 @@ iOS and Android (shared or separate), macOS, Linux and Windows native apps follo
 | 11 | Two refreshers race when two sessions take the lease in the same second, or a stalled refresher wakes after another took over | Duplicate reads, the cost D-26 removes; a clobbered lease | Built (PR #43): per-token lease files with `lease.json` as a hard link moved only by atomic rename and released only after an inode check, tested by pausing a holder across a takeover. Hardened (PR #58, 92a117f, 0.9.2): each refresher writes `counts-<token>.json` and its board files under its own token, re-checks the lease after writing before it replaces the shared files, and drops other tokens' files; sessions accept counts and boards only from the token the current lease names. Store reads run four at a time under a 28-second cycle deadline, so snapshots are at most 88 seconds apart, and a store that has not answered by then is marked unread (a board keeps its last entry). Residual: an ousted refresher that stalls between its last lease check and the rename can still replace the shared `counts.json`, which sessions read only when no lease file exists |
 | 12 | Setting the assignee on claim overwrites a human assignee | A human's name on an issue is replaced by a session name | D-17 already keeps the human in `metadata.owner`; the claim path copies a non-session assignee there before writing; the reconcile only fills empty assignees |
 | 13 | A session hosted by Claude Code's background daemon runs in a worker whose environment copies the daemon's, so `CLAUDE_CODE_TASK_LIST_ID` names whichever session started the daemon (seen 2026-10-24: two aih sessions drew the firstmate's `[bd][all]` and `[fm]` rows and registered under its id) | Another session's counts, scope and registry id; the firstmate's form on a session that is not the firstmate | Built (PR #57, 73cbcda, 0.9.1): `sessionNameOf` in `hooks/store.ts` takes the name from `CLAUDE_CODE_SESSION_NAME` (less a ` (N)` copy suffix) when `CLAUDE_CODE_SESSION_KIND=bg` or `CLAUDE_BG_BACKEND=daemon`, and a hosted session with no name counts as unnamed, never as the firstmate; band, scope, tally and registry id read that one name. Residual: `CLAUDE_CODE_SESSION_NAME` is undocumented and a claimed spare may carry the spare's own id, which fails safe to one `[bd]` line. The daemon trigger and a session-start detector are tracked in ai-harness |
-| 14 | The held store's read is heavy: `held_cli.py list --status open --json` took 3.7 s and wrote 541,233 bytes for 641 open items across 2 stores on sem-kg-ec2 at a LOOK reading (2026-10-25T01:50Z) | Host load grows if every session runs it, or if it runs every beat | One run per host, in the refresher (D-37); `--if-changed` makes an unchanged beat a few `git rev-parse` calls; the snapshot is pair-scoped and carries no bodies, which are read one at a time when the reader opens |
-| 15 | The pair partner's items reach this host only when this host's ai-harness main tree moves: an `acn-mac` item exists on sem-kg-ec2 once its PR is merged and the main tree is fast-forwarded | The firstmate's view lags the partner host | The snapshot records its read time and fingerprint, drawn in the Review view's header; the chief already keeps the main tree in step (AIH-x99vg) |
+| 14 | The held store's read is heavy: `held_cli.py list --status open --json` took 3.7 s and wrote 541,233 bytes for 641 open items across 2 stores on host-c at a LOOK reading (2026-10-25T01:50Z) | Host load grows if every session runs it, or if it runs every beat | One run per host, in the refresher (D-37); `--if-changed` makes an unchanged beat a few `git rev-parse` calls; the snapshot is pair-scoped and carries no bodies, which are read one at a time when the reader opens |
+| 15 | The pair partner's items reach this host only when this host's ai-harness main tree moves: an `host-a` item exists on host-c once its PR is merged and the main tree is fast-forwarded | The firstmate's view lags the partner host | The snapshot records its read time and fingerprint, drawn in the Review view's header; the chief already keeps the main tree in step |
 | 16 | An answer written from the pane commits in the owning session's landing pad while that session may be using it | One of the two writes is refused | `held_cli.py answer` refuses a pad with any uncommitted change, so a race refuses one write and corrupts nothing; the pane keeps the text and offers Send to session (T-2C.5) |
-| 17 | The agent-row convention is new: measured 2026-10-25, 8 of 89 beads-ui issues and 7 of 7,228 ai-harness issues carry the `<name> agent:` title, every one filed by aih-ec2-3, while 33 of 78 in-progress CC panel rows on the host name an agent owner | Agents launched by other sessions show no indicator until those sessions file agent rows | D-42 reads the label `agent` as well as the title, and ai-harness AIH-7m40p6 asks the launch path to set it; the CC panel signal stays out because its rows outlive their agents (rows owned by `bu-ylx6-coordinator`, long finished, still read in progress) |
+| 17 | The agent-row convention is new: measured 2026-10-25, 8 of 89 beads-ui issues and 7 of 7,228 ai-harness issues carry the `<name> agent:` title, every one filed by ops-vm-3, while 33 of 78 in-progress CC panel rows on the host name an agent owner | Agents launched by other sessions show no indicator until those sessions file agent rows | D-42 reads the label `agent` as well as the title, and an ai-harness issue asks the launch path to set it; the CC panel signal stays out because its rows outlive their agents (rows owned by `bu-ylx6-coordinator`, long finished, still read in progress) |
 | 18 | The band takes rows from the transcript: at most half the terminal's rows (maxRows), and every row it adds is one fewer line of conversation | A tall band crowds the session | The band opens at the summary level by default (D-36); rows and overview appear only when the user presses a control; band.rows is configurable; summary is one press away |
 
 ## Open Questions
@@ -865,7 +865,7 @@ iOS and Android (shared or separate), macOS, Linux and Windows native apps follo
 
 ## Run Ledger
 
-This design doc hosts the `/auto-flow` Run Ledger for the beads-ui epic's research and design stages, because the run has no audit stage and so no audit doc. Written by the aih-3 Fable coordinator. The authority resolver reads the version from the next line, since it does not parse the table cell below.
+This design doc hosts the `/auto-flow` Run Ledger for the beads-ui epic's research and design stages, because the run has no audit stage and so no audit doc. Written by the ops-3 Fable coordinator. The authority resolver reads the version from the next line, since it does not parse the table cell below.
 
 `ledger-version`: `1`
 
@@ -881,11 +881,11 @@ This design doc hosts the `/auto-flow` Run Ledger for the beads-ui epic's resear
 | stages | explicit, by the launcher's brief: `research`, `doc`; `doc-audit`, `implement` and `impl-audit` withheld (the run stops at the design stage for Sergei's review) |
 | model-family | claude (employer-API-billed host; Claude is the delegation default; no per-task launch permission) |
 | research route | claude / opus / high, three `researcher` leaves; synthesis by the Fable coordinator under the orchestrator authorship override |
-| doc route | session: the Fable coordinator authors this doc under `/doc --kind design --mode automated`, through `flow_dispatch_doc.py --phase prepare` and `--phase complete`. First prepare pinned the integration snapshot at `f68067e` (lineage receipt `complete`, lineage root `docs/research/beads-ui-task-manager-landscape.md`, no protected decisions). The first `--phase complete` was refused: `integration snapshot changed after doc-stage preparation` (main had moved to `17bf08c` through PRs #7, #8 and #9, all merged into this branch). Remedy: a second `--phase prepare` against `origin/main` at `17bf08c` (fresh boundary state, the authored document moved aside for the scaffold and restored byte-identical, tree clean), then `--phase complete` passed on 2026-10-14 (lineage receipt `complete`, verdict `complete`). Tooling note: `--phase complete` with a relative `--path` fails in `verify_document` (`parse_document` calls `path.relative_to(root)` on the unresolved path); an absolute `--path` works. Filed as ai-harness `AIH-me0be` |
+| doc route | session: the Fable coordinator authors this doc under `/doc --kind design --mode automated`, through `flow_dispatch_doc.py --phase prepare` and `--phase complete`. First prepare pinned the integration snapshot at `f68067e` (lineage receipt `complete`, lineage root `docs/research/beads-ui-task-manager-landscape.md`, no protected decisions). The first `--phase complete` was refused: `integration snapshot changed after doc-stage preparation` (main had moved to `17bf08c` through PRs #7, #8 and #9, all merged into this branch). Remedy: a second `--phase prepare` against `origin/main` at `17bf08c` (fresh boundary state, the authored document moved aside for the scaffold and restored byte-identical, tree clean), then `--phase complete` passed on 2026-10-14 (lineage receipt `complete`, verdict `complete`). Tooling note: `--phase complete` with a relative `--path` fails in `verify_document` (`parse_document` calls `path.relative_to(root)` on the unresolved path); an absolute `--path` works. Filed as an ai-harness issue |
 | decider | the Fable coordinator (`us.anthropic.claude-fable-5-1[1m]`, an allowlisted tier) through `/decision-framework`; two `researcher` opus spikes for open questions |
 | max-agents | 3 concurrent children (launcher's cap); a host memory hold from 00:06Z to 00:35Z on 2026-10-15 paused launches |
 | target commit (beads-ui) | `c9261f3` at research launch; `f68067e` at the first design-stage prepare; `17bf08c` at the re-prepare and `doc done` |
-| worktree + branch | `/data/projects/beads-ui/.worktrees/aih-3-agents/fable-auto-flow` on `wt/aih-3/fable-auto-flow` |
+| worktree + branch | `/data/projects/beads-ui/.worktrees/ops-3-agents/fable-auto-flow` on `wt/ops-3/fable-auto-flow` |
 | stage cursor | `doc done` (`flow_dispatch_doc.py --phase complete` passed on this document against `17bf08c`); both spike packets folded in (PRs #8 and #9); the run stops here for Sergei's review |
 | last completed integration boundary | research landed on main at `f68067e` (PR #5); child PRs #2, #3, #4; spike PRs #8 (`9a43c80`) and #9 (`17bf08c`); README fix PR #7 (`9929009`) merged into this branch |
 
@@ -893,11 +893,11 @@ This design doc hosts the `/auto-flow` Run Ledger for the beads-ui epic's resear
 
 | Run ID | Contract | Decision classes | Push |
 |---|---|---|---|
-| `beads-ui-auto-flow-2026-10-14-aih-3` | `auto-flow/AIH-701#d-7` | `["adn:in-scope"]` | `true` |
-| `beads-ui-build-2026-10-21-aih-ec2-3` | `auto-flow/AIH-701#d-7` | `["adn:in-scope"]` | `true` |
-| `beads-ui-band-pane-panel-2026-10-24-aih-ec2-3` | `auto-flow/AIH-701#d-7` | `["adn:in-scope"]` | `true` |
-| `beads-ui-review-band-2026-10-25-aih-ec2-3` | `auto-flow/AIH-701#d-7` | `["adn:in-scope"]` | `true` |
-| `beads-ui-webapp-goals-2026-10-28-aih-ec2-3` | the auto-flow authority contract, decision D-7 | `["adn:in-scope"]` | `true` |
+| `beads-ui-auto-flow-2026-10-14-ops-3` | the auto-flow authority contract, decision D-7 | `["adn:in-scope"]` | `true` |
+| `beads-ui-build-2026-10-21-ops-vm-3` | the auto-flow authority contract, decision D-7 | `["adn:in-scope"]` | `true` |
+| `beads-ui-band-pane-panel-2026-10-24-ops-vm-3` | the auto-flow authority contract, decision D-7 | `["adn:in-scope"]` | `true` |
+| `beads-ui-review-band-2026-10-25-ops-vm-3` | the auto-flow authority contract, decision D-7 | `["adn:in-scope"]` | `true` |
+| `beads-ui-webapp-goals-2026-10-28` | the auto-flow authority contract, decision D-7 | `["adn:in-scope"]` | `true` |
 
 The launcher granted integration ownership (land on `main` by PR, self-merge on green, sync, reap), so `push` is `true`. `adn:in-scope` records that design decisions are resolved through `/decision-framework` by default; what the Authority test escalates goes to the launcher for Sergei.
 
@@ -907,11 +907,11 @@ The launcher granted integration ownership (land on `main` by PR, self-merge on 
 |---|---:|---|---|---|---|---|
 | `entry->research` | 0 | `research-run` | `explicit` | Sergei's founding ask A001 names the stage: "the fable agent will /delegate /orchestrate /research-doc and then do the /doc --kind design stage"; the launcher's brief repeats it | `session` | `862bb31` |
 | `research->doc` | 1 | `converged` | `rubric` | none open: G1 to G3, G5 and G6 clear; G4 classified (OQ-1 design choice deferred by Sergei; OQ-2, OQ-3, OQ-5, OQ-6 need a live measurement; OQ-4 and OQ-9 handed to the design-stage spikes; OQ-7 and OQ-8 depend on the vendor) | `session` | `842db74` (landed at `f68067e`) |
-| `entry->implement` | 0 | `implement-run` | `explicit` | Sergei approved the design and ruled D-7 (a), D-11 (a) and D-12 (d) in entry A005, closing with "now /delegate opus 5.5 /orchestrate /auto-flow the rest as appropriate now"; the launcher's brief (`docs/prompts/orchestrator/bu-mg2-build-run.md`) names the stages implement and impl-audit for Phases 0 and 1 only. Run `beads-ui-build-2026-10-21-aih-ec2-3`, Opus coordinator, worktree `.worktrees/aih-ec2-3-agents/bu-build` | `session` | `12a870f` |
+| `entry->implement` | 0 | `implement-run` | `explicit` | Sergei approved the design and ruled D-7 (a), D-11 (a) and D-12 (d) in entry A005, closing with "now /delegate opus 5.5 /orchestrate /auto-flow the rest as appropriate now"; the launcher's brief (`docs/prompts/orchestrator/bu-mg2-build-run.md`) names the stages implement and impl-audit for Phases 0 and 1 only. Run `beads-ui-build-2026-10-21-ops-vm-3`, Opus coordinator, worktree `.worktrees/ops-vm-3-agents/bu-build` | `session` | `12a870f` |
 | `impl-audit` (Phase 0) | 1 | `converged` | `findings-closed` | Codex review of 12a870f..cad816b (5 major, 2 minor) and of packages/bd-node 155981f..8d3e524 (4 major); every finding fixed in PR #20 or justified (the leaf delete preview stays text because the confirm pane shows it verbatim); a fresh-context verifier passed every Phase 0 AC and every fix at dad9a35 | `session` | `dad9a35` |
 | `impl-audit` (Phase 1) | 2 | `converged` | `findings-closed` | Round 1: Codex review and a fresh-context Opus verifier of the Phase 1 branch at f6c71ec. Eight findings fixed in PR #23 (board and Backlog paging, so Move to reaches every card; inline description edit; slug budget overrides; display-id retry; full cascade re-check; doc labels; a positive filter test). Justified: the 15-second process timeout (time inside `$` calls is outside the hook budget), analytics (Phases 2 and 3), the band's `blocked` count, and the human steps. The employer-infrastructure-name finding was escalated to the launcher and closed by option (b) in 9e21420. Round 2: Codex review of the fixes at 032a5de, plus the coordinator's tmux run. Five findings fixed in PR #24 (status-priced card cost with column windows, re-read before a retry write, Unicode-digit budget parity, whole Detail labels, the stale hint). The residual metadata race is justified: bd 1.3.1 has no compare-and-set | `session` | `9d7148c` |
-| `entry->doc` (Feedback Round 3) | 0 | `doc-run` | `explicit` | Sergei's ylx entries A002 and A004 name the stages: "/research-doc --refine ... and updates to /doc --kind design and all the rest of /auto-flow ... end-to-end, all phases". Run `beads-ui-band-pane-panel-2026-10-24-aih-ec2-3`, Opus coordinator for aih-ec2-3; this doc's D-24 to D-33, Phase 1B and Phase 2B; Open Question 10's research (`docs/research/claude-code-mod-panel-rendering-and-focus.md`) came first, and a Codex review of the changes returned eleven findings, each fixed in the same PR | `session` | pending (this change) |
-| `entry->doc` (Feedback Round 6) | 0 | `doc-run` | `explicit` | Sergei's 2026-10-25 messages (verbatim on BU-mg2.3.16, BU-mg2.3.17, BU-mg2.3.18, BU-mg2.3.20 and BU-mg2.3.21) close with "do all this as autonomoulsy as possible now via /orchestrate /implement / /bug-fix / /auto-flow"; aih-ec2-3's brief names design first, then build. Run `beads-ui-review-band-2026-10-25-aih-ec2-3`, Opus coordinator (architect profile) for aih-ec2-3; D-35 to D-42 and Phase 2C | `session` | `9bd55df` (PR #63); D-43 `7ec3c5c` (PR #66) |
+| `entry->doc` (Feedback Round 3) | 0 | `doc-run` | `explicit` | Sergei's ylx entries A002 and A004 name the stages: "/research-doc --refine ... and updates to /doc --kind design and all the rest of /auto-flow ... end-to-end, all phases". Run `beads-ui-band-pane-panel-2026-10-24-ops-vm-3`, Opus coordinator for ops-vm-3; this doc's D-24 to D-33, Phase 1B and Phase 2B; Open Question 10's research (`docs/research/claude-code-mod-panel-rendering-and-focus.md`) came first, and a Codex review of the changes returned eleven findings, each fixed in the same PR | `session` | pending (this change) |
+| `entry->doc` (Feedback Round 6) | 0 | `doc-run` | `explicit` | Sergei's 2026-10-25 messages (verbatim on BU-mg2.3.16, BU-mg2.3.17, BU-mg2.3.18, BU-mg2.3.20 and BU-mg2.3.21) close with "do all this as autonomoulsy as possible now via /orchestrate /implement / /bug-fix / /auto-flow"; ops-vm-3's brief names design first, then build. Run `beads-ui-review-band-2026-10-25-ops-vm-3`, Opus coordinator (architect profile) for ops-vm-3; D-35 to D-42 and Phase 2C | `session` | `9bd55df` (PR #63); D-43 `7ec3c5c` (PR #66) |
 | `doc->implement` (Feedback Round 6) | 0 | `implement-run` | `explicit` | The same messages ask to build it end to end; Phase 2C built one leaf at a time under the host's load cap, each a claude/engineer leaf on Opus, each merged on its own gate and installed by the chief: T-2C.1 #67 `473b5ff`, T-2C.9, T-2C.10 and T-2C.14 #68 `0d38db2`, T-2C.2 #69 `0123360`, T-2C.3 #70 `144d463`, T-2C.5 #71 `9120fd3`, T-2C.6 and T-2C.7 #72 `2b4da0c`, T-2C.12 #73 `419193c`, T-2C.8 #74 `05f2a02`, T-2C.11 and T-2C.13 #75 `bffc152`; T-2C.4 is ai-harness PR #6108, open under that repository's merge hold | `session` | `bffc152` |
 
 <!-- /doc:region name="overview" -->
@@ -920,61 +920,61 @@ The launcher granted integration ownership (land on `main` by PR, self-merge on 
 
 ## Design Decisions
 
-Every decision below ran through `/decision-framework` in its fresh-authoring context (the doc-stage boundary's lineage receipt is `complete` with no protected predecessor): the five criteria in order, then the scorer. An item is marked `✅ Resolved by aih-3 Fable coordinator` when the Authority test let the coordinator take it; the human-choice column stays empty for Sergei's later override. Three items are `⏳ PENDING (human)` because a gate fired: D-7 and D-11 change a requirement Sergei stated or another ratified design states (Gate C), and D-12 decides where employer data goes (a one-way, cross-boundary call with medium confidence, Gate D). Each pending item carries its options and the coordinator's recommendation.
+Every decision below ran through `/decision-framework` in its fresh-authoring context (the doc-stage boundary's lineage receipt is `complete` with no protected predecessor): the five criteria in order, then the scorer. An item is marked `✅ Resolved by ops-3 Fable coordinator` when the Authority test let the coordinator take it; the human-choice column stays empty for Sergei's later override. Three items are `⏳ PENDING (human)` because a gate fired: D-7 and D-11 change a requirement Sergei stated or another ratified design states (Gate C), and D-12 decides where employer data goes (a one-way, cross-boundary call with medium confidence, Gate D). Each pending item carries its options and the coordinator's recommendation.
 
 ### Decision Summary
 
 | # | Decision | Options Considered | Recommended (AI) | Chosen (Sergei) | Diverged? | Rationale | Status |
 |---|----------|-------------------|------------------|--------|-----------|-----------|--------|
-| D-1 | Repository shape | (a) one monorepo for the three surfaces, later repos for mobile and native unless they reuse the web app; (b) one repo per surface with a published core; (c) everything in one repo including mobile | (a) | | | Sergei's stated lean; criterion 2: one core crosses three surfaces, so one repo keeps it one source of truth; two-way door while nothing is published | `✅ Resolved by aih-3 Fable coordinator` |
-| D-2 | Package boundaries and the shared core's location | (a) a DOM-free, timer-free core with five checkable rules whose source lives inside the plugin directory through phase 2, imported by the DOM packages through a path alias, with a `packages/core` move re-evaluated at phase 3; (b) `packages/core` from day one with a copy build into the plugin; (c) per-surface apps with no shared core | (a) | | | Criterion 2: the core is the foundation three surfaces build on and an installed plugin is a copy that cannot reach `../packages`; aligns with the doc-editor sibling repo's D-9; the research's proposal (b) is the phase 3 candidate | `✅ Resolved by aih-3 Fable coordinator` |
-| D-3 | MVP scope | (a) read-mostly mod: board, backlog, detail, quick-add, keyboard moves, delete flow; (b) drag-first mod; (c) web app first | (a) | | | Sergei named the mod first; criterion 3: drag rests on undocumented behaviour, so it ships second | `✅ Resolved by aih-3 Fable coordinator` |
-| D-4 | Beads access route | (a) `bd --json` subprocess in every surface, `bd serve` later behind loopback or a token; (b) `bd serve` everywhere; (c) Dolt SQL for writes | (a) | | | `bd serve` skips hooks and exposes bulk delete; criterion 1: a subprocess adapter is a two-way door | `✅ Resolved by aih-3 Fable coordinator` |
-| D-5 | Sprint modelling on Beads | (a) `sprint:<name>` label plus a `milestone` issue for dates, members linked by `tracks`; (b) `bd set-state sprint=<name>`; (c) a metadata key | (a) | | | Labels are indexed and filterable; `set-state` mints an event issue per change; criterion 4 weighted pass | `✅ Resolved by aih-3 Fable coordinator` |
-| D-6 | Board order | (a) no manual rank in the MVP, sort by priority then created; (b) `metadata.rank` fractional index from the start; (c) rank as a sidecar file | (a) now, (b) as the phase 3 enhancement | | | Criterion 5: rank is a feature nobody has asked to use yet; a fractional index in metadata stays available with no migration | `✅ Resolved by aih-3 Fable coordinator` |
+| D-1 | Repository shape | (a) one monorepo for the three surfaces, later repos for mobile and native unless they reuse the web app; (b) one repo per surface with a published core; (c) everything in one repo including mobile | (a) | | | Sergei's stated lean; criterion 2: one core crosses three surfaces, so one repo keeps it one source of truth; two-way door while nothing is published | `✅ Resolved by ops-3 Fable coordinator` |
+| D-2 | Package boundaries and the shared core's location | (a) a DOM-free, timer-free core with five checkable rules whose source lives inside the plugin directory through phase 2, imported by the DOM packages through a path alias, with a `packages/core` move re-evaluated at phase 3; (b) `packages/core` from day one with a copy build into the plugin; (c) per-surface apps with no shared core | (a) | | | Criterion 2: the core is the foundation three surfaces build on and an installed plugin is a copy that cannot reach `../packages`; aligns with the doc-editor sibling repo's D-9; the research's proposal (b) is the phase 3 candidate | `✅ Resolved by ops-3 Fable coordinator` |
+| D-3 | MVP scope | (a) read-mostly mod: board, backlog, detail, quick-add, keyboard moves, delete flow; (b) drag-first mod; (c) web app first | (a) | | | Sergei named the mod first; criterion 3: drag rests on undocumented behaviour, so it ships second | `✅ Resolved by ops-3 Fable coordinator` |
+| D-4 | Beads access route | (a) `bd --json` subprocess in every surface, `bd serve` later behind loopback or a token; (b) `bd serve` everywhere; (c) Dolt SQL for writes | (a) | | | `bd serve` skips hooks and exposes bulk delete; criterion 1: a subprocess adapter is a two-way door | `✅ Resolved by ops-3 Fable coordinator` |
+| D-5 | Sprint modelling on Beads | (a) `sprint:<name>` label plus a `milestone` issue for dates, members linked by `tracks`; (b) `bd set-state sprint=<name>`; (c) a metadata key | (a) | | | Labels are indexed and filterable; `set-state` mints an event issue per change; criterion 4 weighted pass | `✅ Resolved by ops-3 Fable coordinator` |
+| D-6 | Board order | (a) no manual rank in the MVP, sort by priority then created; (b) `metadata.rank` fractional index from the start; (c) rank as a sidecar file | (a) now, (b) as the phase 3 enhancement | | | Criterion 5: rank is a feature nobody has asked to use yet; a fractional index in metadata stays available with no migration | `✅ Resolved by ops-3 Fable coordinator` |
 | D-7 | The command alias (the npm scope is resolved inside this decision) | (a) alias `bu`, with npm `@sergeiwallace/beads-ui` and command `beads-ui`; (b) keep `bv` and accept the shadow with Beads Viewer; (c) rename the project | (a) | (a) | no | The npm scope is self-resolved (no stated requirement, two-way door); the alias `bv` was Sergei's stated choice and is taken by Beads Viewer, so changing it fires Gate C | `✅ Approved by Sergei (human)` |
-| D-8 | Drag in the mod | (a) keyboard "Move to" first, `Client` pointer drag in phase 2 behind fullscreen and tmux mouse mode; (b) `Client` drag in the MVP; (c) no pointer drag | (a) | | | Criterion 3: pointer capture is documented only in the types file and untested live | `✅ Resolved by aih-3 Fable coordinator` |
-| D-9 | Display-id minting | (a) core mints fleet-style ids behind `id_policy = auto`, on when the store already uses them; (b) call `bd-new`; (c) never mint | (a) | | | A create without minting reddens the fleet gate; the convention is fleet-only so a public tool needs the switch; criterion 2 | `✅ Resolved by aih-3 Fable coordinator` |
-| D-10 | Web stack | (a) React 19, Vite, TanStack Query, Table and Virtual, Zustand vanilla, shadcn/ui on Base UI, Pragmatic drag and drop, Recharts, cmdk; (b) Solid plus OpenTUI pattern; (c) lit-html as in mantoni's beads-ui | (a) | | | Research measured maintenance signals; app-portal already uses React 19 and shadcn-derived components; criterion 2 consistency | `✅ Resolved by aih-3 Fable coordinator` |
+| D-8 | Drag in the mod | (a) keyboard "Move to" first, `Client` pointer drag in phase 2 behind fullscreen and tmux mouse mode; (b) `Client` drag in the MVP; (c) no pointer drag | (a) | | | Criterion 3: pointer capture is documented only in the types file and untested live | `✅ Resolved by ops-3 Fable coordinator` |
+| D-9 | Display-id minting | (a) core mints fleet-style ids behind `id_policy = auto`, on when the store already uses them; (b) call `bd-new`; (c) never mint | (a) | | | A create without minting reddens the fleet gate; the convention is fleet-only so a public tool needs the switch; criterion 2 | `✅ Resolved by ops-3 Fable coordinator` |
+| D-10 | Web stack | (a) React 19, Vite, TanStack Query, Table and Virtual, Zustand vanilla, shadcn/ui on Base UI, Pragmatic drag and drop, Recharts, cmdk; (b) Solid plus OpenTUI pattern; (c) lit-html as in mantoni's beads-ui | (a) | | | Research measured maintenance signals; app-portal already uses React 19 and shadcn-derived components; criterion 2 consistency | `✅ Resolved by ops-3 Fable coordinator` |
 | D-11 | Relationship to the work-queue dashboard | (a) the beads-ui web app becomes the queue's unbuilt Phase 2 member app; (b) two separate boards that deep-link; (c) the queue SPA imports beads-ui packages | (a) | (a) | no | Gate C: option (a) changes a deliverable of another ratified design; the queue stays where it is under every option | `✅ Approved by Sergei (human)` |
 | D-12 | Task-panel backup destination | (a) a private repo per machine class (ai-harness for personal machines, the employer workspace repo for employer machines); (b) one private archive outside any repo; (c) ai-harness for every machine | (a) | (d) | yes | Employer session data cannot enter a public repo; medium confidence on a cross-boundary data-classification call, Gate D | `✅ Approved by Sergei (human)` |
-| D-13 | Delete and close ladder | (a) undo for close, modal with `bd delete --dry-run` for delete, typed id for cascade; (b) modal for everything; (c) undo toast for everything | (a) | | | Sergei asked for a confirmation step; Beads delete is permanent and has no trash; criterion 1 | `✅ Resolved by aih-3 Fable coordinator` |
-| D-14 | MCP server topology | (a) one server package: stdio under Claude Desktop in phase 4, HTTP with auth from the hosted web app in phase 6; (b) remote only; (c) stdio only | (a) | | | Desktop needs local stdio; claude.ai needs an internet-reachable server; criterion 3 phases the costly half | `✅ Resolved by aih-3 Fable coordinator` |
-| D-15 | Mod packaging and install | (a) the plugin at `plugins/beads-ui` is the source of truth with core inside and no runtime dependencies, listed by a root marketplace, with `validate .`, `validate --json` allow-list and `claude plugin test` in the gate; (b) a generated plugin folder built by copying core from `packages/core`; (c) install from a third-party marketplace | (a) | | | No build step, as the fleet's mods design prefers; plugin code cannot import outside its folder; (b) becomes relevant only if D-2's phase 3 review moves the core | `✅ Resolved by aih-3 Fable coordinator` |
-| D-16 | Metrics data source | (a) `bd history --events` (the events audit table) plus Dolt history; (b) the events journal; (c) the queue's event stream | (a) | | | The audit table keeps every transition indefinitely; the journal is off by default with 7-day retention; the queue is fleet-only | `✅ Resolved by aih-3 Fable coordinator` |
-| D-17 | Session identity on Beads | (a) `assignee` = `<machine>/<session>` as the queue does, human in `metadata.owner`; (b) assignee = human, session in metadata; (c) a `delegate` convention in labels | (a) | | | Matches the queue's existing convention; no schema change; criterion 2 consistency | `✅ Resolved by aih-3 Fable coordinator` |
-| D-18 | Monorepo tooling | (a) npm workspaces with Turborepo, Vite, tsdown, Vitest, Playwright, changesets, Biome; (b) pnpm workspaces with the same tools; (c) Nx or Bun workspaces as opencode | (a) | | | Claude Code's plugin dependency install reads `package-lock.json` and skips `pnpm-lock.yaml` and workspace links (doc-editor finding 2); the sibling repo chose npm; the research's pnpm pick is a two-way door | `✅ Resolved by aih-3 Fable coordinator` |
-| D-19 | Theme tokens | (a) one semantic token set in core mapped per surface (CSS variables, Claude style variables, theme keys); (b) per-surface themes; (c) Claude's tokens everywhere | (a) | | | Only names are shareable across the mod; the MCP App must use host variables | `✅ Resolved by aih-3 Fable coordinator` |
-| D-20 | Testing strategy | (a) Vitest for core and servers, `claude plugin test` for the mod, Playwright for the web app and the MCP view in `basic-host`; (b) Vitest only; (c) end-to-end only | (a) | | | A mod is not an Ink app so `ink-testing-library` does not apply; each surface has one runner | `✅ Resolved by aih-3 Fable coordinator` |
-| D-21 | Task-panel retirement switch | (a) a per-machine-profile key in ai-harness that drops `CLAUDE_CODE_ENABLE_TODO_TOOLS` and adds bare-name deny rules, with guards on the panel readers, retired one profile at a time; (b) delete the panel data and the env key fleet-wide at once; (c) a Claude Code setting that hides the panel | (a) | | | No hide setting exists; the panel exists only because of one env line; the fleet's own tooling reads it; criterion 1 | `✅ Resolved by aih-3 Fable coordinator` |
-| D-22 | WIP limits | (a) soft limits coloured in the UI, hard limits only at claim time in the queue; (b) hard limits in the UI; (c) none | (a) | | | Jira and GitHub use soft limits; a UI limit cannot stop an agent's claim | `✅ Resolved by aih-3 Fable coordinator` |
-| D-23 | Quick-add grammar | (a) Todoist-shaped tokens `p0`..`p4`, `type:`, `@assignee`, `+label`, `due:`, `sprint:`, mapped to `bd create` flags; (b) a form only; (c) natural-language dates | (a) | | | Text-first creation is what the surveyed products praise; Beads flags map one to one | `✅ Resolved by aih-3 Fable coordinator` |
-| D-24 | The store a session reads | (a) a `beads-ui.toml` mapping, then the session's directory, then the session name's prefix against the store inventory, then an explanatory empty state; (b) a mapping only; (c) the directory, or `BEADS_DIR` | (a) | | | Criterion 2: the band and the pane share one rule; the inventory already names every store; works with no fleet config for an outside user | `✅ Resolved by aih-ec2-3 Opus coordinator` |
-| D-25 | What "owned" means for the band | (a) the bd assignee is the session's name (D-17), set by every claim, with a one-time reconcile from the task panels; (b) count the CC task panel's in-progress rows; (c) the union of both | (a) | | | Criterion 2: Beads is the record and the panel a mirror that is being retired (R-15); measured cause of kg-ec2-2's mismatch | `✅ Resolved by aih-ec2-3 Opus coordinator` |
-| D-26 | How counts and boards are refreshed | (a) one host refresher shipped in the plugin, started and supervised by sessions through a lease, writing snapshots once a minute with change detection, with a per-session fallback; (b) each session reads every store once a minute; (c) one session elected through `$.store` reads for all, inside its Claude Code process | (a) | | | Criterion 2 and the measured cost: about 75 `bd` processes every 30 s across 8 sessions and a 7.2 MB list every 10 s per open pane; one reader for the host is what Sergei asked for | `✅ Resolved by aih-ec2-3 Opus coordinator` |
-| D-27 | How focus enters and leaves the pane, and how it is shown and hidden | (a) keep `/bu` and Esc as they are, document a `command:bu` chord and Claude Code's own Ctrl+X Tab, and add a band button that opens or focuses the pane; (b) separate show, hide and focus commands; (c) Esc only returns focus and the pane stays open | (a) | | | Criterion 1, two-way door; Sergei uses Esc to close (ylx A005); Claude Code has no hide-without-close, and its keybindings already run a command from a chord | `✅ Resolved by aih-ec2-3 Opus coordinator` |
-| D-28 | Tab 3 | (a) draw `3 Sprint` dimmed with a planned notice until Phase 2 builds it; (b) renumber Detail to 3; (c) build the Sprint tab now | (a) | | | Criterion 1: keeps the digits stable for the Phase 2 tab; answers "why is there no 3" on screen | `✅ Resolved by aih-ec2-3 Opus coordinator` |
-| D-29 | First paint and the default view | (a) draw from the refresher's snapshot at once, default to the session's own open issues (the firstmate's to all), one key to all, and read open issues plus recent closed ones; (b) keep the whole-store board and add a cache only; (c) open on the Backlog | (a) | | | Criterion 5: "by default actually show useful stuff" is a definite requirement; the measured 7.2 MB whole-store read is mostly closed issues | `✅ Resolved by aih-ec2-3 Opus coordinator` |
-| D-30 | The band's format and the firstmate's lines | (a) `[bd] {N} tasks ({N} in progress, {N} blocked, {N} open, {N} done last 24h)` on every line, the firstmate's first line prefixed `all repos:`, its own line second; (b) the format on non-firstmate sessions only, the firstmate keeping today's labels; (c) one line for the firstmate, its own counts dropped | (a) | | | Sergei's format (ylx A006, A007) applied everywhere, and A002's firstmate second line kept with the A001 label it needs | `✅ Resolved by aih-ec2-3 Opus coordinator` |
-| D-31 | How the task panel is drawn | (a) the element tree for frame, nav, menus, forms and detail, a `Client` for the task list and board, the element tree as fallback; (b) the element tree only; (c) a `Client` for everything | (a) | | | Research (Open Question 10): right-click, hover and drag exist only in a `Client`, which VS Code does not draw; `Image` shows alt text in tmux | `✅ Resolved by aih-ec2-3 Opus coordinator` |
-| D-32 | Where the panel sits and how it lives beside the CC task panel | (a) a docked pane opened at session start under `panel.mode` (`both` by default, `beads`, `native`), the cutover being D-21's per-profile switch plus `beads`; (b) open only on `/bu`; (c) replace the CC task panel on every profile at once | (a), amended | | | Sergei asked for co-existence by config and a later cutover (ylx A002) and prefers the full replacement (A006); a requested feature ships enabled. Amended 2026-10-25 by Sergei (BU-ylx.10): the pane opens only when asked, and the session-start open needs `panel.open_at_start = true` | `✅ Resolved by aih-ec2-3 Opus coordinator`; amended by Sergei |
-| D-33 | How a panel edit is published, and what happens on failure | (a) the mod runs a configured `sync.command` after a 10-second quiet, and hands any failure to the session with `$.prompt.submit` and a notification; (b) the host refresher publishes on its minute beat; (c) leave publishing to the session's own hooks | (a) | | | The failure must reach the session that made the edit, and only the mod can start a turn there; the fleet's publish tool already serializes per store | `✅ Resolved by aih-ec2-3 Opus coordinator` |
-| D-34 | The firstmate's two band lines and the sync-drift signal | (a) `[bd][all]` then an indented `[fm]` line, as Sergei wrote them, with a short drift marker on line 1 only while a store is out of step and the stores named in the pane; (b) the same lines with drift moved to the pane only; (c) keep D-30's `all repos:` label | (a) | | | Sergei's format (ylx A008); A001's totals label is met by `[all]`; the drift signal stays on the band because an unsynced store makes the totals wrong | `✅ Resolved by aih-ec2-3 Opus coordinator` |
-| D-35 | One component layer for the band and the pane | (a) one framework: every view registered once with its surfaces (both by default, switchable in config and Settings), composed of shared components fed by core models, drawn by a band adapter and a pane adapter; (b) shared core models only, each surface drawing its own elements, as today; (c) one surface, the pane's drawing put inside the band | (a) | | | Sergei asked for one implementation with adapters, a feature in one surface appearing in the other, both by default (BU-mg2.3.21 and its 02:02Z amendment) | `✅ Resolved by aih-ec2-3 Opus coordinator` |
-| D-36 | The band's disclosure levels and where its controls sit | (a) three levels, summary, rows and overview, with the counts as buttons in the summary text and the controls right after it; (b) a fixed task list always under the summary; (c) the summary line only, with the pane for everything else | (a) | | | Sergei's words set every part: left controls, clickable counts, N rows with "+M more", collapse to N or to the summary, an overview, progressive disclosure | `✅ Resolved by aih-ec2-3 Opus coordinator` |
-| D-37 | Where review items come from | (a) a new `held_cli.py review` verb that applies the held README's read-time rules and the pair scope, run once a beat by the host refresher behind a fingerprint, its command set in the user's `beads-ui.toml` by the ai-harness install step; (b) the refresher runs `held_cli.py list` and the core re-implements the selection rules; (c) the mod parses the `docs/held` trees itself | (a) | | | The selection rules (supersession, escalation, AI-resolved) and the pair table belong to ai-harness, so the tool that owns them applies them; one read per host, as D-26 set for counts | `✅ Resolved by aih-ec2-3 Opus coordinator` |
-| D-38 | Whose review items a session sees | (a) the snapshot holds only the host pair's items; the firstmate's Review view lists all of them with a key for its own; any other session's lists the items it holds and those about issues it owns; an issue's Detail lists every pair item about that issue; (b) every session sees every pair item; (c) every session, the firstmate included, sees only items it holds | (a) | | | Sergei's firstmate rule, with the pair filter applied before anything is written so the later all-hosts scope has one place to widen | `✅ Resolved by aih-ec2-3 Opus coordinator` |
-| D-39 | Acting on a review item from the pane | (a) an Answer control that records Sergei's text with `held_cli.py answer`, then starts a turn in the session to record, ship and act, or to tell the owner; comments for bd blockers; (b) send the text to the session, which runs `answer` itself; (c) read in the pane, act in chat | (a) | | | Sergei asked to review and act from the pane (Gate 0 keeps the action); Sergei's exact bytes are recorded at once by the store's own verb, and the follow-through stays with a session | `✅ Resolved by aih-ec2-3 Opus coordinator` |
-| D-40 | Where review items are shown | (a) a Review section at the top of the Detail, shown unasked when an issue has items, and a Review view in the pane's nav and the band's overview, with a filter grammar, sorts and groups; (b) a Detail sub-tab and a Review view; (c) the Review view only | (a) | | | Sergei offered "a tab ... or they just appear by default"; shown by default needs no key to find them, and the view meets "its own tab ... filter / organize / sort" | `✅ Resolved by aih-ec2-3 Opus coordinator` |
-| D-41 | The row indicator registry | (a) a data registry in core, each entry a detection function, a one-cell glyph, an ASCII form and a label, drawn as a left gutter on every task row, with a legend and a switch per entry; (b) icons coded into each view; (c) colour only | (a) | | | "we can build out the task icon / status / indicator system": a new indicator is one registry entry | `✅ Resolved by aih-ec2-3 Opus coordinator` |
-| D-42 | How "an agent is working on it" is detected | (a) an in-progress agent-row child issue (label `agent`, or the `<name> agent:` title), dimmed when its session is not live on the host; (b) the CC task panel's rows with an agent owner; (c) agent transcripts and worktree liveness | (a) | | | Beads is the record and the fleet files one child issue per agent launch (AIH-813, owner-sync D-9); the panel is a mirror being retired and its rows outlive their agents | `✅ Resolved by aih-ec2-3 Opus coordinator` |
-| D-43 | The visual language of the band and the pane | (a) D-19's tokens on Claude Code theme keys with [theme] hex overrides, one glyph table shared with the indicator registry, Raster in the band, a pane restyle, Image and Svg behind the surface profile, and one clickable affordance on every pressable element, all in the shared components with text fallbacks; (b) a fixed hex palette chosen now; (c) wait for the fleet palette (AIH-zl3bv) | (a) | | | Sergei asked for the pass now on both surfaces, and for every clickable element to look clickable; theme keys follow light and dark with no palette pick | `✅ Resolved by aih-ec2-3 Opus coordinator` |
+| D-13 | Delete and close ladder | (a) undo for close, modal with `bd delete --dry-run` for delete, typed id for cascade; (b) modal for everything; (c) undo toast for everything | (a) | | | Sergei asked for a confirmation step; Beads delete is permanent and has no trash; criterion 1 | `✅ Resolved by ops-3 Fable coordinator` |
+| D-14 | MCP server topology | (a) one server package: stdio under Claude Desktop in phase 4, HTTP with auth from the hosted web app in phase 6; (b) remote only; (c) stdio only | (a) | | | Desktop needs local stdio; claude.ai needs an internet-reachable server; criterion 3 phases the costly half | `✅ Resolved by ops-3 Fable coordinator` |
+| D-15 | Mod packaging and install | (a) the plugin at `plugins/beads-ui` is the source of truth with core inside and no runtime dependencies, listed by a root marketplace, with `validate .`, `validate --json` allow-list and `claude plugin test` in the gate; (b) a generated plugin folder built by copying core from `packages/core`; (c) install from a third-party marketplace | (a) | | | No build step, as the fleet's mods design prefers; plugin code cannot import outside its folder; (b) becomes relevant only if D-2's phase 3 review moves the core | `✅ Resolved by ops-3 Fable coordinator` |
+| D-16 | Metrics data source | (a) `bd history --events` (the events audit table) plus Dolt history; (b) the events journal; (c) the queue's event stream | (a) | | | The audit table keeps every transition indefinitely; the journal is off by default with 7-day retention; the queue is fleet-only | `✅ Resolved by ops-3 Fable coordinator` |
+| D-17 | Session identity on Beads | (a) `assignee` = `<machine>/<session>` as the queue does, human in `metadata.owner`; (b) assignee = human, session in metadata; (c) a `delegate` convention in labels | (a) | | | Matches the queue's existing convention; no schema change; criterion 2 consistency | `✅ Resolved by ops-3 Fable coordinator` |
+| D-18 | Monorepo tooling | (a) npm workspaces with Turborepo, Vite, tsdown, Vitest, Playwright, changesets, Biome; (b) pnpm workspaces with the same tools; (c) Nx or Bun workspaces as opencode | (a) | | | Claude Code's plugin dependency install reads `package-lock.json` and skips `pnpm-lock.yaml` and workspace links (doc-editor finding 2); the sibling repo chose npm; the research's pnpm pick is a two-way door | `✅ Resolved by ops-3 Fable coordinator` |
+| D-19 | Theme tokens | (a) one semantic token set in core mapped per surface (CSS variables, Claude style variables, theme keys); (b) per-surface themes; (c) Claude's tokens everywhere | (a) | | | Only names are shareable across the mod; the MCP App must use host variables | `✅ Resolved by ops-3 Fable coordinator` |
+| D-20 | Testing strategy | (a) Vitest for core and servers, `claude plugin test` for the mod, Playwright for the web app and the MCP view in `basic-host`; (b) Vitest only; (c) end-to-end only | (a) | | | A mod is not an Ink app so `ink-testing-library` does not apply; each surface has one runner | `✅ Resolved by ops-3 Fable coordinator` |
+| D-21 | Task-panel retirement switch | (a) a per-machine-profile key in ai-harness that drops `CLAUDE_CODE_ENABLE_TODO_TOOLS` and adds bare-name deny rules, with guards on the panel readers, retired one profile at a time; (b) delete the panel data and the env key fleet-wide at once; (c) a Claude Code setting that hides the panel | (a) | | | No hide setting exists; the panel exists only because of one env line; the fleet's own tooling reads it; criterion 1 | `✅ Resolved by ops-3 Fable coordinator` |
+| D-22 | WIP limits | (a) soft limits coloured in the UI, hard limits only at claim time in the queue; (b) hard limits in the UI; (c) none | (a) | | | Jira and GitHub use soft limits; a UI limit cannot stop an agent's claim | `✅ Resolved by ops-3 Fable coordinator` |
+| D-23 | Quick-add grammar | (a) Todoist-shaped tokens `p0`..`p4`, `type:`, `@assignee`, `+label`, `due:`, `sprint:`, mapped to `bd create` flags; (b) a form only; (c) natural-language dates | (a) | | | Text-first creation is what the surveyed products praise; Beads flags map one to one | `✅ Resolved by ops-3 Fable coordinator` |
+| D-24 | The store a session reads | (a) a `beads-ui.toml` mapping, then the session's directory, then the session name's prefix against the store inventory, then an explanatory empty state; (b) a mapping only; (c) the directory, or `BEADS_DIR` | (a) | | | Criterion 2: the band and the pane share one rule; the inventory already names every store; works with no fleet config for an outside user | `✅ Resolved by ops-vm-3 Opus coordinator` |
+| D-25 | What "owned" means for the band | (a) the bd assignee is the session's name (D-17), set by every claim, with a one-time reconcile from the task panels; (b) count the CC task panel's in-progress rows; (c) the union of both | (a) | | | Criterion 2: Beads is the record and the panel a mirror that is being retired (R-15); measured cause of qa-vm-2's mismatch | `✅ Resolved by ops-vm-3 Opus coordinator` |
+| D-26 | How counts and boards are refreshed | (a) one host refresher shipped in the plugin, started and supervised by sessions through a lease, writing snapshots once a minute with change detection, with a per-session fallback; (b) each session reads every store once a minute; (c) one session elected through `$.store` reads for all, inside its Claude Code process | (a) | | | Criterion 2 and the measured cost: about 75 `bd` processes every 30 s across 8 sessions and a 7.2 MB list every 10 s per open pane; one reader for the host is what Sergei asked for | `✅ Resolved by ops-vm-3 Opus coordinator` |
+| D-27 | How focus enters and leaves the pane, and how it is shown and hidden | (a) keep `/bu` and Esc as they are, document a `command:bu` chord and Claude Code's own Ctrl+X Tab, and add a band button that opens or focuses the pane; (b) separate show, hide and focus commands; (c) Esc only returns focus and the pane stays open | (a) | | | Criterion 1, two-way door; Sergei uses Esc to close (ylx A005); Claude Code has no hide-without-close, and its keybindings already run a command from a chord | `✅ Resolved by ops-vm-3 Opus coordinator` |
+| D-28 | Tab 3 | (a) draw `3 Sprint` dimmed with a planned notice until Phase 2 builds it; (b) renumber Detail to 3; (c) build the Sprint tab now | (a) | | | Criterion 1: keeps the digits stable for the Phase 2 tab; answers "why is there no 3" on screen | `✅ Resolved by ops-vm-3 Opus coordinator` |
+| D-29 | First paint and the default view | (a) draw from the refresher's snapshot at once, default to the session's own open issues (the firstmate's to all), one key to all, and read open issues plus recent closed ones; (b) keep the whole-store board and add a cache only; (c) open on the Backlog | (a) | | | Criterion 5: "by default actually show useful stuff" is a definite requirement; the measured 7.2 MB whole-store read is mostly closed issues | `✅ Resolved by ops-vm-3 Opus coordinator` |
+| D-30 | The band's format and the firstmate's lines | (a) `[bd] {N} tasks ({N} in progress, {N} blocked, {N} open, {N} done last 24h)` on every line, the firstmate's first line prefixed `all repos:`, its own line second; (b) the format on non-firstmate sessions only, the firstmate keeping today's labels; (c) one line for the firstmate, its own counts dropped | (a) | | | Sergei's format (ylx A006, A007) applied everywhere, and A002's firstmate second line kept with the A001 label it needs | `✅ Resolved by ops-vm-3 Opus coordinator` |
+| D-31 | How the task panel is drawn | (a) the element tree for frame, nav, menus, forms and detail, a `Client` for the task list and board, the element tree as fallback; (b) the element tree only; (c) a `Client` for everything | (a) | | | Research (Open Question 10): right-click, hover and drag exist only in a `Client`, which VS Code does not draw; `Image` shows alt text in tmux | `✅ Resolved by ops-vm-3 Opus coordinator` |
+| D-32 | Where the panel sits and how it lives beside the CC task panel | (a) a docked pane opened at session start under `panel.mode` (`both` by default, `beads`, `native`), the cutover being D-21's per-profile switch plus `beads`; (b) open only on `/bu`; (c) replace the CC task panel on every profile at once | (a), amended | | | Sergei asked for co-existence by config and a later cutover (ylx A002) and prefers the full replacement (A006); a requested feature ships enabled. Amended 2026-10-25 by Sergei (BU-ylx.10): the pane opens only when asked, and the session-start open needs `panel.open_at_start = true` | `✅ Resolved by ops-vm-3 Opus coordinator`; amended by Sergei |
+| D-33 | How a panel edit is published, and what happens on failure | (a) the mod runs a configured `sync.command` after a 10-second quiet, and hands any failure to the session with `$.prompt.submit` and a notification; (b) the host refresher publishes on its minute beat; (c) leave publishing to the session's own hooks | (a) | | | The failure must reach the session that made the edit, and only the mod can start a turn there; the fleet's publish tool already serializes per store | `✅ Resolved by ops-vm-3 Opus coordinator` |
+| D-34 | The firstmate's two band lines and the sync-drift signal | (a) `[bd][all]` then an indented `[fm]` line, as Sergei wrote them, with a short drift marker on line 1 only while a store is out of step and the stores named in the pane; (b) the same lines with drift moved to the pane only; (c) keep D-30's `all repos:` label | (a) | | | Sergei's format (ylx A008); A001's totals label is met by `[all]`; the drift signal stays on the band because an unsynced store makes the totals wrong | `✅ Resolved by ops-vm-3 Opus coordinator` |
+| D-35 | One component layer for the band and the pane | (a) one framework: every view registered once with its surfaces (both by default, switchable in config and Settings), composed of shared components fed by core models, drawn by a band adapter and a pane adapter; (b) shared core models only, each surface drawing its own elements, as today; (c) one surface, the pane's drawing put inside the band | (a) | | | Sergei asked for one implementation with adapters, a feature in one surface appearing in the other, both by default (BU-mg2.3.21 and its 02:02Z amendment) | `✅ Resolved by ops-vm-3 Opus coordinator` |
+| D-36 | The band's disclosure levels and where its controls sit | (a) three levels, summary, rows and overview, with the counts as buttons in the summary text and the controls right after it; (b) a fixed task list always under the summary; (c) the summary line only, with the pane for everything else | (a) | | | Sergei's words set every part: left controls, clickable counts, N rows with "+M more", collapse to N or to the summary, an overview, progressive disclosure | `✅ Resolved by ops-vm-3 Opus coordinator` |
+| D-37 | Where review items come from | (a) a new `held_cli.py review` verb that applies the held README's read-time rules and the pair scope, run once a beat by the host refresher behind a fingerprint, its command set in the user's `beads-ui.toml` by the ai-harness install step; (b) the refresher runs `held_cli.py list` and the core re-implements the selection rules; (c) the mod parses the `docs/held` trees itself | (a) | | | The selection rules (supersession, escalation, AI-resolved) and the pair table belong to ai-harness, so the tool that owns them applies them; one read per host, as D-26 set for counts | `✅ Resolved by ops-vm-3 Opus coordinator` |
+| D-38 | Whose review items a session sees | (a) the snapshot holds only the host pair's items; the firstmate's Review view lists all of them with a key for its own; any other session's lists the items it holds and those about issues it owns; an issue's Detail lists every pair item about that issue; (b) every session sees every pair item; (c) every session, the firstmate included, sees only items it holds | (a) | | | Sergei's firstmate rule, with the pair filter applied before anything is written so the later all-hosts scope has one place to widen | `✅ Resolved by ops-vm-3 Opus coordinator` |
+| D-39 | Acting on a review item from the pane | (a) an Answer control that records Sergei's text with `held_cli.py answer`, then starts a turn in the session to record, ship and act, or to tell the owner; comments for bd blockers; (b) send the text to the session, which runs `answer` itself; (c) read in the pane, act in chat | (a) | | | Sergei asked to review and act from the pane (Gate 0 keeps the action); Sergei's exact bytes are recorded at once by the store's own verb, and the follow-through stays with a session | `✅ Resolved by ops-vm-3 Opus coordinator` |
+| D-40 | Where review items are shown | (a) a Review section at the top of the Detail, shown unasked when an issue has items, and a Review view in the pane's nav and the band's overview, with a filter grammar, sorts and groups; (b) a Detail sub-tab and a Review view; (c) the Review view only | (a) | | | Sergei offered "a tab ... or they just appear by default"; shown by default needs no key to find them, and the view meets "its own tab ... filter / organize / sort" | `✅ Resolved by ops-vm-3 Opus coordinator` |
+| D-41 | The row indicator registry | (a) a data registry in core, each entry a detection function, a one-cell glyph, an ASCII form and a label, drawn as a left gutter on every task row, with a legend and a switch per entry; (b) icons coded into each view; (c) colour only | (a) | | | "we can build out the task icon / status / indicator system": a new indicator is one registry entry | `✅ Resolved by ops-vm-3 Opus coordinator` |
+| D-42 | How "an agent is working on it" is detected | (a) an in-progress agent-row child issue (label `agent`, or the `<name> agent:` title), dimmed when its session is not live on the host; (b) the CC task panel's rows with an agent owner; (c) agent transcripts and worktree liveness | (a) | | | Beads is the record and the fleet files one child issue per agent launch (owner-sync D-9); the panel is a mirror being retired and its rows outlive their agents | `✅ Resolved by ops-vm-3 Opus coordinator` |
+| D-43 | The visual language of the band and the pane | (a) D-19's tokens on Claude Code theme keys with [theme] hex overrides, one glyph table shared with the indicator registry, Raster in the band, a pane restyle, Image and Svg behind the surface profile, and one clickable affordance on every pressable element, all in the shared components with text fallbacks; (b) a fixed hex palette chosen now; (c) wait for the fleet palette | (a) | | | Sergei asked for the pass now on both surfaces, and for every clickable element to look clickable; theme keys follow light and dark with no palette pick | `✅ Resolved by ops-vm-3 Opus coordinator` |
 
 ### Decision Details
 
 <a id="d-1"></a>
 
-#### D-1: Repository shape — `✅ Resolved by aih-3 Fable coordinator`
+#### D-1: Repository shape — `✅ Resolved by ops-3 Fable coordinator`
 
 **Context.** Sergei asked for one public repo, `beads-ui`, for the TUI mod, the MCP UI app and the web app, with mobile and native desktop as later sub-epics or separate repos, and said he leans toward one repo "unless you have a reason not to do that". The research found that three surfaces share one DOM-free core and that the two DOM surfaces share React components.
 
@@ -1009,7 +1009,7 @@ Every decision below ran through `/decision-framework` in its fresh-authoring co
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-3 Fable coordinator (2026-10-15); confidence: high — (a) One monorepo for the three surfaces
+> **Decision:** ✅ Resolved by ops-3 Fable coordinator (2026-10-15); confidence: high — (a) One monorepo for the three surfaces
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-fable-5-1[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-1; decision-topic=repository shape for the three surfaces; governs=repo:beads-ui; normalized-proposition=one monorepo serves the TUI mod, the MCP App and the web app from one core; applicability=surfaces:tui,mcp,web; outcome-id=monorepo; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -1019,7 +1019,7 @@ Criterion 2 decides it: the core is a foundation three surfaces build on, and a 
 
 <a id="d-2"></a>
 
-#### D-2: Package boundaries and the shared core's location — `✅ Resolved by aih-3 Fable coordinator`
+#### D-2: Package boundaries and the shared core's location — `✅ Resolved by ops-3 Fable coordinator`
 
 **Context.** A Claude Code mod renders a plain element tree drawn by Ink, with no React, DOM, Node or timers, and may import only its own files and `claude-code`. The MCP App and the web app are browser DOM. The research's layer table and leg B's package proposal give the measured boundary. The doc-editor sibling repo's evidence adds the install fact: a marketplace plugin is copied into Claude Code's cache and "Files outside the plugin directory aren't copied", so a plugin cannot import `../packages/core`; doc-editor's D-9 therefore keeps its core inside the plugin until its phase 3 and asks beads-ui to align layouts.
 
@@ -1054,7 +1054,7 @@ Criterion 2 decides it: the core is a foundation three surfaces build on, and a 
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-3 Fable coordinator (2026-10-15); confidence: medium — (a) A DOM-free core inside the plugin through phase 2, with the `packages/core` move re-evaluated at phase 3
+> **Decision:** ✅ Resolved by ops-3 Fable coordinator (2026-10-15); confidence: medium — (a) A DOM-free core inside the plugin through phase 2, with the `packages/core` move re-evaluated at phase 3
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-fable-5-1[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-2; decision-topic=package boundaries and location of the shared core; governs=repo:beads-ui/plugins,packages; normalized-proposition=a DOM-free, timer-free core is the only module every surface imports, and it lives inside the plugin until phase 3; applicability=surfaces:tui,mcp,web; outcome-id=dom-free-core-in-plugin; relation=different-question; related-decision-id=BU-mg2.2/D-1; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -1064,7 +1064,7 @@ Criterion 2 decides the boundary: the core is the shared foundation and is a one
 
 <a id="d-3"></a>
 
-#### D-3: MVP scope — `✅ Resolved by aih-3 Fable coordinator`
+#### D-3: MVP scope — `✅ Resolved by ops-3 Fable coordinator`
 
 **Context.** Sergei asked for phases starting with an MVP and named the TUI mod first. Pointer drag in a mod rests on the `Client` type contract, is untested live, and needs fullscreen rendering and tmux mouse mode on the fleet's hosts.
 
@@ -1096,7 +1096,7 @@ Criterion 2 decides the boundary: the core is the shared foundation and is a one
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-3 Fable coordinator (2026-10-15); confidence: high — (a) A read-mostly mod first
+> **Decision:** ✅ Resolved by ops-3 Fable coordinator (2026-10-15); confidence: high — (a) A read-mostly mod first
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-fable-5-1[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-3; decision-topic=scope of the first shippable increment; governs=phase:1; normalized-proposition=the MVP is a read-mostly Claude Code mod with keyboard moves and guarded writes; applicability=surface:tui; outcome-id=read-mostly-mod; relation=different-question; related-decision-id=BU-mg2.2/D-8; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -1106,7 +1106,7 @@ Criterion 3: the MVP must stay usable for months, and the parts that rest on und
 
 <a id="d-4"></a>
 
-#### D-4: Beads access route — `✅ Resolved by aih-3 Fable coordinator`
+#### D-4: Beads access route — `✅ Resolved by ops-3 Fable coordinator`
 
 **Context.** Six routes reach a Beads store. `bd ... --json` is the contract every fleet tool uses; `bd serve` is new, skips hooks, has no TLS and exposes bulk delete on loopback; Dolt SQL bypasses `bd`'s write paths; the JSONL mirror is not the source of truth.
 
@@ -1138,7 +1138,7 @@ Criterion 3: the MVP must stay usable for months, and the parts that rest on und
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-3 Fable coordinator (2026-10-15); confidence: medium — (a) `bd --json` subprocess in every surface, `bd serve` later behind loopback or a token
+> **Decision:** ✅ Resolved by ops-3 Fable coordinator (2026-10-15); confidence: medium — (a) `bd --json` subprocess in every surface, `bd serve` later behind loopback or a token
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-fable-5-1[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-4; decision-topic=how surfaces read and write the Beads store; governs=packages:core,bd-node,claude-mod; normalized-proposition=every surface reads and writes Beads through bd --json; applicability=phases:0-4; outcome-id=bd-subprocess; relation=different-question; related-decision-id=BU-mg2.2/D-16; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -1148,7 +1148,7 @@ Criterion 1: the adapter is a two-way door; swapping its transport to `bd serve`
 
 <a id="d-5"></a>
 
-#### D-5: Sprint modelling on Beads — `✅ Resolved by aih-3 Fable coordinator`
+#### D-5: Sprint modelling on Beads — `✅ Resolved by ops-3 Fable coordinator`
 
 **Context.** Beads has no sprint, iteration or rank field. The research costed four representations: a label, a milestone issue, a `set-state` dimension and a metadata key. The queue design measured that `set-state` mints an event issue per change and broke the display-id invariant until its bridge minted ids.
 
@@ -1181,7 +1181,7 @@ Criterion 1: the adapter is a two-way door; swapping its transport to `bd serve`
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-3 Fable coordinator (2026-10-15); confidence: medium — (a) `sprint:<name>` label plus a `milestone` issue for dates
+> **Decision:** ✅ Resolved by ops-3 Fable coordinator (2026-10-15); confidence: medium — (a) `sprint:<name>` label plus a `milestone` issue for dates
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-fable-5-1[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-5; decision-topic=how sprints are represented on Beads; governs=convention:sprint; normalized-proposition=sprint membership is a sprint label and sprint dates live on a milestone issue; applicability=phases:2-3; outcome-id=label-plus-milestone; relation=different-question; related-decision-id=BU-mg2.2/D-6; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -1191,7 +1191,7 @@ Criterion 4's weighted pass: (a) scores best on filterability and on avoiding mi
 
 <a id="d-6"></a>
 
-#### D-6: Board order — `✅ Resolved by aih-3 Fable coordinator`
+#### D-6: Board order — `✅ Resolved by ops-3 Fable coordinator`
 
 **Context.** Sergei asked to "reorder" and "sort". Beads has no rank field; Linear's single shared manual order is a documented complaint; a fractional index in metadata costs one Dolt commit per reorder.
 
@@ -1222,7 +1222,7 @@ Criterion 4's weighted pass: (a) scores best on filterability and on avoiding mi
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-3 Fable coordinator (2026-10-15); confidence: medium — (a) No manual rank in the MVP, with (b) as the phase 3 enhancement behind `views.rank`
+> **Decision:** ✅ Resolved by ops-3 Fable coordinator (2026-10-15); confidence: medium — (a) No manual rank in the MVP, with (b) as the phase 3 enhancement behind `views.rank`
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-fable-5-1[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-6; decision-topic=manual ordering of cards within a column; governs=convention:rank; normalized-proposition=sorting is by priority then age until a view enables a fractional-index rank in metadata; applicability=phases:1-3; outcome-id=sort-then-rank-later; relation=different-question; related-decision-id=BU-mg2.2/D-5; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -1275,7 +1275,7 @@ The coordinator recommends (a). The repo name stays; the npm scope is the only w
 
 <a id="d-8"></a>
 
-#### D-8: Drag in the mod — `✅ Resolved by aih-3 Fable coordinator`
+#### D-8: Drag in the mod — `✅ Resolved by ops-3 Fable coordinator`
 
 **Context.** Pointer input exists only inside a `Client` element; its types file documents capture from `down` to `up`, fullscreen rendering adds mouse support, tmux passes whole cells only, and nothing was tested live.
 
@@ -1306,7 +1306,7 @@ The coordinator recommends (a). The repo name stays; the npm scope is the only w
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-3 Fable coordinator (2026-10-15); confidence: high — (a) Keyboard first, `Client` drag in phase 2 with the keyboard path kept
+> **Decision:** ✅ Resolved by ops-3 Fable coordinator (2026-10-15); confidence: high — (a) Keyboard first, `Client` drag in phase 2 with the keyboard path kept
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-fable-5-1[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-8; decision-topic=pointer drag inside the Claude Code mod; governs=app:claude-mod; normalized-proposition=drag is a Client region that posts moves to the hooks module, after a keyboard-first MVP; applicability=phases:1-2; outcome-id=client-drag-phase-2; relation=different-question; related-decision-id=BU-mg2.2/D-3; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -1316,7 +1316,7 @@ Criterion 3 decides it. Mitigation for the Con: phase 2 is the next increment, a
 
 <a id="d-9"></a>
 
-#### D-9: Display-id minting — `✅ Resolved by aih-3 Fable coordinator`
+#### D-9: Display-id minting — `✅ Resolved by ops-3 Fable coordinator`
 
 **Context.** The fleet gives every issue a readable `metadata.display_id` with an `id:<slug>` label echo; `bd` resolves only hash ids; a published id is immutable; the sanctioned create path is `bd-new`. The queue's own creates once skipped minting and reddened the fleet push gate. The convention is fleet-only and must not bind a public tool's other users.
 
@@ -1347,7 +1347,7 @@ Criterion 3 decides it. Mitigation for the Con: phase 2 is the next increment, a
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-3 Fable coordinator (2026-10-15); confidence: high — (a) Core mints behind `id_policy = auto`
+> **Decision:** ✅ Resolved by ops-3 Fable coordinator (2026-10-15); confidence: high — (a) Core mints behind `id_policy = auto`
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-fable-5-1[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-9; decision-topic=who mints the fleet display id on create; governs=packages:core,bd-node; normalized-proposition=beads-ui mints fleet-shaped display ids when the store already carries them and never changes a published one; applicability=phases:1-6; outcome-id=core-minting-auto; relation=different-question; related-decision-id=BU-mg2.2/D-4; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -1357,7 +1357,7 @@ Criterion 2: a create path is foundation code every surface shares, and the flee
 
 <a id="d-10"></a>
 
-#### D-10: Web stack — `✅ Resolved by aih-3 Fable coordinator`
+#### D-10: Web stack — `✅ Resolved by ops-3 Fable coordinator`
 
 **Context.** The research measured maintenance signals on 2026-10-15: Pragmatic drag and drop and dnd-kit lead for drag; TanStack Query, Table and Virtual for data; shadcn/ui switched its default to Base UI in July 2026; react-beautiful-dnd and gantt-task-react are archived; Planby went all-rights-reserved; app-portal already uses React 19, Tailwind 4 and shadcn-derived components.
 
@@ -1388,7 +1388,7 @@ Criterion 2: a create path is foundation code every surface shares, and the flee
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-3 Fable coordinator (2026-10-15); confidence: high — (a) The React 19 stack above
+> **Decision:** ✅ Resolved by ops-3 Fable coordinator (2026-10-15); confidence: high — (a) The React 19 stack above
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-fable-5-1[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-10; decision-topic=web and MCP App front-end stack; governs=packages:web-ui,apps:web,mcp-app-view; normalized-proposition=the DOM surfaces are React 19 with TanStack data, Base UI primitives and Pragmatic drag and drop; applicability=phases:3-4; outcome-id=react-stack; relation=different-question; related-decision-id=BU-mg2.2/D-2; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -1492,7 +1492,7 @@ The coordinator recommends (a). Re-running the Authority test: no act is perform
 
 <a id="d-13"></a>
 
-#### D-13: Delete and close ladder — `✅ Resolved by aih-3 Fable coordinator`
+#### D-13: Delete and close ladder — `✅ Resolved by ops-3 Fable coordinator`
 
 **Context.** Sergei asked for an "are you sure?" step before delete. `bd delete` is permanent with no trash, previews by default, refuses dependents unless `--cascade` or `--force`. Linear keeps deletes 30 days with undo; GitHub requires a typed name for its irreversible delete; Nielsen Norman reserves confirmation dialogs for actions that cannot be undone.
 
@@ -1523,7 +1523,7 @@ The coordinator recommends (a). Re-running the Authority test: no act is perform
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-3 Fable coordinator (2026-10-15); confidence: high — (a) The three-step ladder
+> **Decision:** ✅ Resolved by ops-3 Fable coordinator (2026-10-15); confidence: high — (a) The three-step ladder
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-fable-5-1[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-13; decision-topic=confirmation flow for close, delete and cascade; governs=feature:delete; normalized-proposition=close has undo, delete has a preview modal, cascade needs a typed id; applicability=phases:1-4; outcome-id=three-step-ladder; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -1533,7 +1533,7 @@ Criterion 1: deletion is a one-way door and the ladder matches each step's rever
 
 <a id="d-14"></a>
 
-#### D-14: MCP server topology — `✅ Resolved by aih-3 Fable coordinator`
+#### D-14: MCP server topology — `✅ Resolved by ops-3 Fable coordinator`
 
 **Context.** Claude Desktop runs MCP App servers locally over stdio from its config file; claude.ai reaches only an internet-reachable server, with `ui.domain` derived from the server URL; Claude Code is not an MCP Apps host.
 
@@ -1564,7 +1564,7 @@ Criterion 1: deletion is a one-way door and the ladder matches each step's rever
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-3 Fable coordinator (2026-10-15); confidence: high — (a) One server, stdio first, HTTP later
+> **Decision:** ✅ Resolved by ops-3 Fable coordinator (2026-10-15); confidence: high — (a) One server, stdio first, HTTP later
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-fable-5-1[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-14; decision-topic=transports and hosting for the MCP App server; governs=packages:mcp-server; normalized-proposition=one server serves stdio to Claude Desktop and authenticated HTTP to claude.ai; applicability=phases:4,6; outcome-id=stdio-then-http; relation=different-question; related-decision-id=BU-mg2.2/D-10; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -1574,7 +1574,7 @@ Criterion 3 phases the half that needs hosting and auth. Mitigation for the Con:
 
 <a id="d-15"></a>
 
-#### D-15: Mod packaging and install — `✅ Resolved by aih-3 Fable coordinator`
+#### D-15: Mod packaging and install — `✅ Resolved by ops-3 Fable coordinator`
 
 **Context.** Plugin code cannot import outside its folder and an installed plugin is a copy; a hooks module over 1 MB is not read; Claude Code installs a plugin's `package.json` dependencies only from registry packages with a `package-lock.json`, `npm-shrinkwrap.json` or `bun.lock`; `claude plugin validate --json` lists hooks and calls; the fleet's mods design mandates one plugin per mod, no build step at load time and `claude plugin test` in the gate.
 
@@ -1606,7 +1606,7 @@ Criterion 3 phases the half that needs hosting and auth. Mitigation for the Con:
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-3 Fable coordinator (2026-10-15); confidence: high — (a) The plugin directory is the source of truth, no build step, gated by validate and test
+> **Decision:** ✅ Resolved by ops-3 Fable coordinator (2026-10-15); confidence: high — (a) The plugin directory is the source of truth, no build step, gated by validate and test
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-fable-5-1[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-15; decision-topic=how the mod is packaged and installed; governs=plugins:beads-ui; normalized-proposition=the plugin is source, carries core inside and no runtime dependencies, and is validated and tested in the gate; applicability=phases:0-2; outcome-id=source-plugin; relation=different-question; related-decision-id=BU-mg2.2/D-2; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -1616,7 +1616,7 @@ Criterion 2: the install path and the gate are shared with the fleet's own mods 
 
 <a id="d-16"></a>
 
-#### D-16: Metrics data source — `✅ Resolved by aih-3 Fable coordinator`
+#### D-16: Metrics data source — `✅ Resolved by ops-3 Fable coordinator`
 
 **Context.** Beads keeps three history surfaces: Dolt commit snapshots, the `events` audit table (kept indefinitely, 58 rows in this store today) and the durable journal (off by default, 7-day retention, off here). The queue's event stream is fleet-only.
 
@@ -1646,7 +1646,7 @@ Criterion 2: the install path and the gate are shared with the fleet's own mods 
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-3 Fable coordinator (2026-10-15); confidence: high — (a) The events audit table and Dolt history
+> **Decision:** ✅ Resolved by ops-3 Fable coordinator (2026-10-15); confidence: high — (a) The events audit table and Dolt history
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-fable-5-1[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-16; decision-topic=data source for flow metrics; governs=packages:core/metrics; normalized-proposition=metrics read the events audit table and Dolt history; live updates use polling or the queue stream; applicability=phases:2-3; outcome-id=events-table; relation=different-question; related-decision-id=BU-mg2.2/D-4; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -1656,7 +1656,7 @@ Criterion 3: metrics need the whole history, and only (a) keeps it. Mitigation f
 
 <a id="d-17"></a>
 
-#### D-17: Session identity on Beads — `✅ Resolved by aih-3 Fable coordinator`
+#### D-17: Session identity on Beads — `✅ Resolved by ops-3 Fable coordinator`
 
 **Context.** Beads has one `assignee` field; the queue already writes `assignee = <machine>/<session>`; Linear separates a human `assignee` from an agent `delegate`.
 
@@ -1687,7 +1687,7 @@ Criterion 3: metrics need the whole history, and only (a) keeps it. Mitigation f
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-3 Fable coordinator (2026-10-15); confidence: high — (a) Session in `assignee`, human in `metadata.owner`
+> **Decision:** ✅ Resolved by ops-3 Fable coordinator (2026-10-15); confidence: high — (a) Session in `assignee`, human in `metadata.owner`
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-fable-5-1[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-17; decision-topic=how a Claude Code session and its human owner are recorded on an issue; governs=convention:assignee; normalized-proposition=assignee is the session id and the human owner is metadata.owner; applicability=phases:1-3; outcome-id=session-assignee; relation=different-question; related-decision-id=BU-mg2.2/D-11; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -1697,7 +1697,7 @@ Criterion 2: consistency with the queue, which already owns claims. Mitigation f
 
 <a id="d-18"></a>
 
-#### D-18: Monorepo tooling — `✅ Resolved by aih-3 Fable coordinator`
+#### D-18: Monorepo tooling — `✅ Resolved by ops-3 Fable coordinator`
 
 **Context.** The research measured pnpm, Turborepo, Nx, Vite, tsdown, tsup (unmaintained), Vitest, Playwright, changesets, Biome, oxlint, ESLint and Prettier on 2026-10-15, and what opencode, ext-apps and mantoni's beads-ui use; it proposed pnpm. The doc-editor sibling repo's evidence (finding 2) then established that Claude Code's plugin dependency install "needs `bun.lock`, `npm-shrinkwrap.json` or `package-lock.json`, skips `yarn.lock` and `pnpm-lock.yaml`, and gives 'no install' to 'a git, GitHub, folder, workspace, or linked dependency'", and doc-editor's D-10 chose npm workspaces on that basis.
 
@@ -1730,7 +1730,7 @@ Criterion 2: consistency with the queue, which already owns claims. Mitigation f
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-3 Fable coordinator (2026-10-15); confidence: high — (a) npm workspaces with Turborepo, Vite, tsdown, Vitest, Playwright, changesets, Biome
+> **Decision:** ✅ Resolved by ops-3 Fable coordinator (2026-10-15); confidence: high — (a) npm workspaces with Turborepo, Vite, tsdown, Vitest, Playwright, changesets, Biome
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-fable-5-1[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-18; decision-topic=monorepo tooling; governs=repo:beads-ui/tooling; normalized-proposition=npm workspaces with Turborepo, Vite, tsdown, Vitest, Playwright, changesets and Biome; applicability=phases:0-6; outcome-id=npm-turbo-biome; relation=different-question; related-decision-id=BU-mg2.2/D-1; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -1740,7 +1740,7 @@ This re-resolves the research doc's pnpm recommendation after the doc-editor evi
 
 <a id="d-19"></a>
 
-#### D-19: Theme tokens — `✅ Resolved by aih-3 Fable coordinator`
+#### D-19: Theme tokens — `✅ Resolved by ops-3 Fable coordinator`
 
 **Context.** The mod colours `Text` by theme key or named colour and draws `Raster` cells in a reduced palette; the MCP App must use Claude's style variables and support light and dark; the web app owns its CSS.
 
@@ -1770,7 +1770,7 @@ This re-resolves the research doc's pnpm recommendation after the doc-editor evi
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-3 Fable coordinator (2026-10-15); confidence: high — (a) One semantic token set, mapped per surface
+> **Decision:** ✅ Resolved by ops-3 Fable coordinator (2026-10-15); confidence: high — (a) One semantic token set, mapped per surface
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-fable-5-1[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-19; decision-topic=design tokens across surfaces; governs=packages:core/tokens; normalized-proposition=semantic token names live in core and each surface maps them to its colour system; applicability=phases:1-4; outcome-id=semantic-tokens; relation=different-question; related-decision-id=BU-mg2.2/D-2; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -1780,7 +1780,7 @@ Criterion 2: tokens are shared foundation. Mitigation for the Con: a test assert
 
 <a id="d-20"></a>
 
-#### D-20: Testing strategy — `✅ Resolved by aih-3 Fable coordinator`
+#### D-20: Testing strategy — `✅ Resolved by ops-3 Fable coordinator`
 
 **Context.** A mod is not an Ink app, so `ink-testing-library` does not apply; `claude plugin test` runs hooks in an environment like the runtime with stubs for every `$` call; the MCP App can be driven in the ext-apps `basic-host`.
 
@@ -1810,7 +1810,7 @@ Criterion 2: tokens are shared foundation. Mitigation for the Con: a test assert
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-3 Fable coordinator (2026-10-15); confidence: high — (a) Three runners, one per runtime
+> **Decision:** ✅ Resolved by ops-3 Fable coordinator (2026-10-15); confidence: high — (a) Three runners, one per runtime
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-fable-5-1[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-20; decision-topic=test runners per surface; governs=repo:beads-ui/testing; normalized-proposition=Vitest, claude plugin test and Playwright each cover the runtime they match; applicability=phases:0-6; outcome-id=three-runners; relation=different-question; related-decision-id=BU-mg2.2/D-18; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -1820,7 +1820,7 @@ Behaviour-first at each real entry point, per the fleet's test standard. Mitigat
 
 <a id="d-21"></a>
 
-#### D-21: Task-panel retirement switch — `✅ Resolved by aih-3 Fable coordinator`
+#### D-21: Task-panel retirement switch — `✅ Resolved by ops-3 Fable coordinator`
 
 **Context.** The Task tools are off by default on models newer than Opus 4.7; the fleet turns them on with `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` in `settings.template.json`; a bare-name `permissions.deny` removes a tool from the model's context; no setting hides the panel while keeping the tools; the fleet's own skills and the queue read the panel. The second spike names the renderer's insertion points.
 
@@ -1852,7 +1852,7 @@ Behaviour-first at each real entry point, per the fleet's test standard. Mitigat
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-3 Fable coordinator (2026-10-15); confidence: medium — (a) A per-profile key with deny rules and reader guards
+> **Decision:** ✅ Resolved by ops-3 Fable coordinator (2026-10-15); confidence: medium — (a) A per-profile key with deny rules and reader guards
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-fable-5-1[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-21; decision-topic=mechanism for retiring the Claude Code task panel per machine profile; governs=repo:ai-harness/settings-renderer; normalized-proposition=a per-profile key drops the Task-tools env opt-in and denies the Task tools, with guards on fleet readers; applicability=phase:5; outcome-id=per-profile-switch; relation=different-question; related-decision-id=BU-mg2.2/D-12; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -1862,7 +1862,7 @@ Criterion 1: per-profile is a two-way door, fleet-wide is not. The second design
 
 <a id="d-22"></a>
 
-#### D-22: WIP limits — `✅ Resolved by aih-3 Fable coordinator`
+#### D-22: WIP limits — `✅ Resolved by ops-3 Fable coordinator`
 
 **Context.** Jira and GitHub colour a column header past a soft limit and block nothing; for agents that claim work automatically a UI limit cannot stop a claim; the queue enforces capacity at claim time.
 
@@ -1892,7 +1892,7 @@ Criterion 1: per-profile is a two-way door, fleet-wide is not. The second design
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-3 Fable coordinator (2026-10-15); confidence: high — (a) Soft in the UI, hard in the queue
+> **Decision:** ✅ Resolved by ops-3 Fable coordinator (2026-10-15); confidence: high — (a) Soft in the UI, hard in the queue
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-fable-5-1[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-22; decision-topic=work-in-progress limits; governs=feature:wip-limits; normalized-proposition=the UI shows soft limits and only the queue enforces hard ones; applicability=phases:1-3; outcome-id=soft-ui-hard-queue; relation=different-question; related-decision-id=BU-mg2.2/D-11; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -1902,7 +1902,7 @@ Criterion 2: enforcement belongs where claims happen. Mitigation: the UI reads t
 
 <a id="d-23"></a>
 
-#### D-23: Quick-add grammar — `✅ Resolved by aih-3 Fable coordinator`
+#### D-23: Quick-add grammar — `✅ Resolved by ops-3 Fable coordinator`
 
 **Context.** Todoist's one-line grammar is the praised pattern; Beads create flags map one to one; Todoist's own sigil change shows a grammar is a public interface.
 
@@ -1932,7 +1932,7 @@ Criterion 2: enforcement belongs where claims happen. Mitigation: the UI reads t
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-3 Fable coordinator (2026-10-15); confidence: high — (a) Explicit tokens mapped to `bd create` flags
+> **Decision:** ✅ Resolved by ops-3 Fable coordinator (2026-10-15); confidence: high — (a) Explicit tokens mapped to `bd create` flags
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-fable-5-1[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-23; decision-topic=quick-add grammar; governs=packages:core/quickadd; normalized-proposition=creation parses explicit tokens into bd create flags; applicability=phases:1-4; outcome-id=token-grammar; relation=different-question; related-decision-id=BU-mg2.2/D-9; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -1942,14 +1942,14 @@ Criterion 3: the grammar lives for the product's life, so it is explicit and ver
 
 <a id="d-24"></a>
 
-#### D-24: The store a session reads — `✅ Resolved by aih-ec2-3 Opus coordinator`
+#### D-24: The store a session reads — `✅ Resolved by ops-vm-3 Opus coordinator`
 
-**Context.** The pane runs every `bd` read in the session's directory (`hooks/register.ts`, `cwd: e.cwd`). A kg-ec2-* session runs in bms-semantic-knowledge-graph, which has no `.beads` and must never get one; its work lives in the sw-bms-workspace store, prefix `KG`. Sergei's screen showed `bd list failed (exit 1): Error: no beads database found ... retrying on the next refresh` (ylx A004). The store inventory at `~/.beads/shared-server/publish-sweep.json` maps every prefix to its repository (`KG` to sw-bms-workspace, measured 2026-10-24T00:27Z) and the band already reads it (T-1.8); it has no row for bms-semantic-knowledge-graph, because that repository has no store.
+**Context.** The pane runs every `bd` read in the session's directory (`hooks/register.ts`, `cwd: e.cwd`). A qa-vm-* session runs in bms-semantic-knowledge-graph, which has no `.beads` and must never get one; its work lives in the sw-bms-workspace store, prefix `KG`. Sergei's screen showed `bd list failed (exit 1): Error: no beads database found ... retrying on the next refresh` (ylx A004). The store inventory at `~/.beads/shared-server/publish-sweep.json` maps every prefix to its repository (`KG` to sw-bms-workspace, measured 2026-10-24T00:27Z) and the band already reads it (T-1.8); it has no row for bms-semantic-knowledge-graph, because that repository has no store.
 
 ##### (a) A mapping, then the directory, then the session name's prefix, then an empty state
 
 **Pros:**
-- One pure function in core serves the pane and the band, and its prefix step needs no configuration on the fleet: `kg-ec2-3` gives `KG`, `aih-ec2-3` gives `AIH`, `ai-cli-ec2-1` gives `AI_CLI`.
+- One pure function in core serves the pane and the band, and its prefix step needs no configuration on the fleet: `qa-vm-3` gives `QA`, `ops-vm-3` gives `OPS`, `ai-cli-vm-1` gives `AI_CLI`.
 - An outside user with no inventory still gets the directory's store, or a mapping line.
 
 **Cons:**
@@ -1974,7 +1974,7 @@ Criterion 3: the grammar lives for the product's life, so it is explicit and ver
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-24); confidence: high — (a) A mapping, then the directory, then the session name's prefix, then an explanatory empty state
+> **Decision:** ✅ Resolved by ops-vm-3 Opus coordinator (2026-10-24); confidence: high — (a) A mapping, then the directory, then the session name's prefix, then an explanatory empty state
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-24; decision-topic=which Beads store a session's pane and band read; governs=packages:core/resolve,claude-mod; normalized-proposition=the store is resolved by an explicit mapping, then the session directory, then the session-name prefix against the store inventory, else an explanatory empty state; applicability=surface:tui; outcome-id=mapping-dir-prefix-empty; relation=different-question; related-decision-id=BU-mg2.2/D-17; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -1984,9 +1984,9 @@ Criterion 2: the band and the pane must agree on a session's store, so the rule 
 
 <a id="d-25"></a>
 
-#### D-25: What "owned" means for the band — `✅ Resolved by aih-ec2-3 Opus coordinator`
+#### D-25: What "owned" means for the band — `✅ Resolved by ops-vm-3 Opus coordinator`
 
-**Context.** T-1.8 counts issues whose bd assignee is the session's name (D-17). Sergei saw kg-ec2-2's band at 1 in progress against 4 in-progress CC tasks (ylx A002). Measured 2026-10-24T00:30Z: 11 of the 15 in-progress KG issues have no assignee; kg-ec2-1's panel holds 4 in progress while bd assigns it 2; kg-ec2-3's panel holds 9 while bd assigns it 0. The fleet's filing path (`bd-new`, the `/beads-task` skill) never sets an assignee, so the band is right about bd and wrong about what the session owns.
+**Context.** T-1.8 counts issues whose bd assignee is the session's name (D-17). Sergei saw qa-vm-2's band at 1 in progress against 4 in-progress CC tasks (ylx A002). Measured 2026-10-24T00:30Z: 11 of the 15 in-progress KG issues have no assignee; qa-vm-1's panel holds 4 in progress while bd assigns it 2; qa-vm-3's panel holds 9 while bd assigns it 0. The fleet's filing path (`bd-new`, the `/beads-task` skill) never sets an assignee, so the band is right about bd and wrong about what the session owns.
 
 ##### (a) The assignee is the session's name, set by every claim, with a one-time reconcile
 
@@ -2016,11 +2016,11 @@ Criterion 2: the band and the pane must agree on a session's store, so the rule 
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-24); confidence: high — (a) The assignee is the session's name, set by every claim, with a one-time reconcile
+> **Decision:** ✅ Resolved by ops-vm-3 Opus coordinator (2026-10-24); confidence: high — (a) The assignee is the session's name, set by every claim, with a one-time reconcile
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-25; decision-topic=what makes an issue owned by a session for its counts; governs=convention:assignee,repo:ai-harness/bd-new; normalized-proposition=an issue is owned by the session named in its bd assignee, which every claim sets; applicability=surfaces:tui,web; outcome-id=assignee-set-on-claim; relation=refines; related-decision-id=BU-mg2.2/D-17; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-Moved 2026-10-24: the implementation of this decision (T-1B.3) belongs to the ai-harness epic AIH-0u8srz, which Sergei opened for a fleet-wide fix; the decision itself, the assignee as the ownership record, stands and is what that run implements.
+Moved 2026-10-24: the implementation of this decision (T-1B.3) belongs to an ai-harness epic, which Sergei opened for a fleet-wide fix; the decision itself, the assignee as the ownership record, stands and is what that run implements.
 
 Criterion 2: the assignee is the shared record every surface reads, and D-17 already chose it. Mitigations: the ai-harness change is T-1B.3 with its own tests and lands through that repository's PR path; the reconcile is dry-run by default, fills only empty assignees, and leaves an issue two panels hold untouched and named; a non-session assignee is copied to `metadata.owner` before a claim writes, as D-17 keeps the human there.
 
@@ -2028,9 +2028,9 @@ Criterion 2: the assignee is the shared record every surface reads, and D-17 alr
 
 <a id="d-26"></a>
 
-#### D-26: How counts and boards are refreshed — `✅ Resolved by aih-ec2-3 Opus coordinator`
+#### D-26: How counts and boards are refreshed — `✅ Resolved by ops-vm-3 Opus coordinator`
 
-**Context.** Sergei asked whether the band's "as of" stamp costs process calls, said once a minute is fine, and asked for one shared, self-healing host daemon if the per-session refresh has real overhead (ylx A002). Measured on sem-kg-ec2, 2026-10-24T00:27Z, under a HOLD reading: one `bd count --assignee=<s> --by-status --json` takes 0.22 to 0.28 s wall, 0.09 s CPU and 88 MB peak memory, before the Dolt server's own work; the band runs one per store per session every 30 s (two for the firstmate) over 9 stores, so about 75 `bd` processes every 30 s across 8 sessions. The stamp itself redraws only when a read lands; it does not tick every second and starts no process. The open pane runs `bd list --json --all --brief --limit 0` every 10 s: 7,225,735 bytes from the ai-harness store, 0.45 to 0.58 s and 143 MB, then a JSON parse inside Claude Code; open issues alone are 2,066,109 bytes. The cost is real and grows with every session.
+**Context.** Sergei asked whether the band's "as of" stamp costs process calls, said once a minute is fine, and asked for one shared, self-healing host daemon if the per-session refresh has real overhead (ylx A002). Measured on host-c, 2026-10-24T00:27Z, under a HOLD reading: one `bd count --assignee=<s> --by-status --json` takes 0.22 to 0.28 s wall, 0.09 s CPU and 88 MB peak memory, before the Dolt server's own work; the band runs one per store per session every 30 s (two for the firstmate) over 9 stores, so about 75 `bd` processes every 30 s across 8 sessions. The stamp itself redraws only when a read lands; it does not tick every second and starts no process. The open pane runs `bd list --json --all --brief --limit 0` every 10 s: 7,225,735 bytes from the ai-harness store, 0.45 to 0.58 s and 143 MB, then a JSON parse inside Claude Code; open issues alone are 2,066,109 bytes. The cost is real and grows with every session.
 
 ##### (a) One host refresher, supervised by the sessions
 
@@ -2062,7 +2062,7 @@ A small Node process with no dependencies, shipped inside the plugin so it reach
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-24); confidence: medium — (a) One host refresher, supervised by the sessions, with a per-session fallback
+> **Decision:** ✅ Resolved by ops-vm-3 Opus coordinator (2026-10-24); confidence: medium — (a) One host refresher, supervised by the sessions, with a per-session fallback
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-26; decision-topic=how band counts and board data are refreshed across sessions on a host; governs=plugins:beads-ui/refresher,claude-mod; normalized-proposition=one supervised host refresher reads every store once a minute with change detection and writes snapshots every session reads; applicability=surface:tui; outcome-id=host-refresher; relation=different-question; related-decision-id=BU-mg2.2/D-4; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -2081,7 +2081,7 @@ Chosen over reading `counts.json` compatibly, which would stop the direct reads 
 
 <a id="d-27"></a>
 
-#### D-27: How focus enters and leaves the pane, and how it is shown and hidden — `✅ Resolved by aih-ec2-3 Opus coordinator`
+#### D-27: How focus enters and leaves the pane, and how it is shown and hidden — `✅ Resolved by ops-vm-3 Opus coordinator`
 
 **Context.** Sergei asked how to enter the pane and use its keys, how to hide and show it, and whether separate skills or shortcuts are better (2026-10-23T23:44Z), then found he can click in and that Esc closes it (ylx A005). Claude Code's mods docs (read 2026-10-23T23:48Z, `plugins/mods/interface.md` § Keyboard focus and hotkeys, and `reference.md` § Elements): a pane gets focus when the mod opens it with `focus: true` (granted only while the prompt is empty and nothing else holds focus), when the user presses Ctrl+X then Tab, or on a click under fullscreen rendering; Esc returns focus to the prompt and, with `closeOnEscape`, closes the pane; Ctrl+X then X closes it; no API hides a pane without closing it; a mod cannot own a global shortcut, but a band button's digit hotkey fires from an empty prompt, and a button's `action` names one of Claude Code's keybinding actions so the user's chord for it presses the button. Claude Code's keybindings page (read 2026-10-24T00:45Z, `keybindings.md`) adds two routes: `command:<name>` in the `Chat` context runs a command from a chord, and `abovePrompt:focus` (Ctrl+X Tab) moves focus into the band, then each open pane, then back to the prompt.
 
@@ -2113,7 +2113,7 @@ Chosen over reading `counts.json` compatibly, which would stop the direct reads 
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-24); confidence: high — (a) Keep `/bu` and Esc as they are, document a `command:bu` chord and Ctrl+X Tab, and add a band button that opens or focuses the pane
+> **Decision:** ✅ Resolved by ops-vm-3 Opus coordinator (2026-10-24); confidence: high — (a) Keep `/bu` and Esc as they are, document a `command:bu` chord and Ctrl+X Tab, and add a band button that opens or focuses the pane
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-27; decision-topic=how keyboard focus reaches the pane and how it is shown and hidden; governs=claude-mod:band,pane; normalized-proposition=the pane is toggled by /bu or a command:bu chord and closed by Esc, focus enters by Ctrl+X Tab, a click or a band button that opens or focuses it; applicability=surface:tui; outcome-id=band-focus-button; relation=different-question; related-decision-id=BU-mg2.2/D-7; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -2125,7 +2125,7 @@ Revised 2026-10-24T00:50Z, before any build: the first wording used a band digit
 
 <a id="d-28"></a>
 
-#### D-28: Tab 3 — `✅ Resolved by aih-ec2-3 Opus coordinator`
+#### D-28: Tab 3 — `✅ Resolved by ops-vm-3 Opus coordinator`
 
 **Context.** The pane's tabs are `1` Board, `2` Backlog and `4` Detail; `3` is held for the Sprint tab Phase 2 builds (T-2.2). Sergei asked "why is there no `3` option?" (ylx A005).
 
@@ -2155,7 +2155,7 @@ Revised 2026-10-24T00:50Z, before any build: the first wording used a band digit
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-24); confidence: high — (a) Draw `3 Sprint` dimmed with a planned notice until Phase 2 builds it
+> **Decision:** ✅ Resolved by ops-vm-3 Opus coordinator (2026-10-24); confidence: high — (a) Draw `3 Sprint` dimmed with a planned notice until Phase 2 builds it
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-28; decision-topic=what the pane shows for tab 3 before the Sprint view exists; governs=claude-mod:pane; normalized-proposition=tab 3 is drawn as a dimmed Sprint tab that says it is planned; applicability=surface:tui; outcome-id=dim-sprint-tab; relation=different-question; related-decision-id=BU-mg2.2/D-5; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -2165,7 +2165,7 @@ Criterion 1: a two-way door. Mitigation: the notice names the Sprint view as pla
 
 <a id="d-29"></a>
 
-#### D-29: First paint and the default view — `✅ Resolved by aih-ec2-3 Opus coordinator`
+#### D-29: First paint and the default view — `✅ Resolved by ops-vm-3 Opus coordinator`
 
 **Context.** "its not really loading anything. we need it to by default actually show useful stuff" (ylx A005). The pane draws "loading…" until a 7.2 MB whole-store list (closed issues included) returns and is parsed, every 10 s while open (D-26's context).
 
@@ -2197,7 +2197,7 @@ Criterion 1: a two-way door. Mitigation: the notice names the Sprint view as pla
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-24); confidence: high — (a) Draw from the snapshot at once, default to the session's own open issues (the firstmate's to all), and read open issues plus recent closed ones
+> **Decision:** ✅ Resolved by ops-vm-3 Opus coordinator (2026-10-24); confidence: high — (a) Draw from the snapshot at once, default to the session's own open issues (the firstmate's to all), and read open issues plus recent closed ones
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-29; decision-topic=what the pane draws first and by default; governs=claude-mod:pane,packages:core/views; normalized-proposition=the pane paints from the host snapshot and defaults to the session's own open issues, with one key to all; applicability=surface:tui; outcome-id=snapshot-mine-default; relation=different-question; related-decision-id=BU-mg2.2/D-26; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -2207,9 +2207,9 @@ Criterion 5: useful-by-default is a definite requirement, so the structure for i
 
 <a id="d-30"></a>
 
-#### D-30: The band's format and the firstmate's lines — `✅ Resolved by aih-ec2-3 Opus coordinator`
+#### D-30: The band's format and the firstmate's lines — `✅ Resolved by ops-vm-3 Opus coordinator`
 
-**Context.** Sergei asked for a short band: "we don't even needs to show aih-ec2-3 cc session. we know its the aih-ec2-3 cc sessino from the cc statusline", no "all 9 stores", and a label that matches the native panel's `52 tasks (0 done, 6 in progress, 46 open)` with `[bd]` as the differentiator (ylx A006), then corrected the order to `[bd] {N} tasks ({N} in progress, {N} blocked, {N} open, {N} done last 24h)`, "in progress and blocked first as those are most important" (A007). A006 and A007 do not mention the firstmate. A001 asks that the firstmate see "both total counts in a row (labeled to indicate its totals across all repo beads stores on that machine host pair set) and also the aggregate task counts for the firstmate cc sesion specifically", and A002 repeats it.
+**Context.** Sergei asked for a short band: "we don't even needs to show ops-vm-3 cc session. we know its the ops-vm-3 cc sessino from the cc statusline", no "all 9 stores", and a label that matches the native panel's `52 tasks (0 done, 6 in progress, 46 open)` with `[bd]` as the differentiator (ylx A006), then corrected the order to `[bd] {N} tasks ({N} in progress, {N} blocked, {N} open, {N} done last 24h)`, "in progress and blocked first as those are most important" (A007). A006 and A007 do not mention the firstmate. A001 asks that the firstmate see "both total counts in a row (labeled to indicate its totals across all repo beads stores on that machine host pair set) and also the aggregate task counts for the firstmate cc sesion specifically", and A002 repeats it.
 
 ##### (a) The format on every line; the firstmate's first line prefixed `all repos:`, its own line second
 
@@ -2237,11 +2237,11 @@ Criterion 5: useful-by-default is a definite requirement, so the structure for i
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-24); confidence: high — (a) The `[bd]` format on every line, the firstmate's first line prefixed `all repos:`, its own line second
+> **Decision:** ✅ Resolved by ops-vm-3 Opus coordinator (2026-10-24); confidence: high — (a) The `[bd]` format on every line, the firstmate's first line prefixed `all repos:`, its own line second
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-30; decision-topic=the band's text and the firstmate's two lines; governs=claude-mod:band,packages:core/views/band; normalized-proposition=every band line reads [bd] N tasks (in progress, blocked, open, done in window), and the firstmate adds an all-repos line above its own; applicability=surface:tui; outcome-id=bd-format-everywhere; relation=refines; related-decision-id=BU-mg2.2/D-25; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-Gate 0 keeps A001's label and A002's second line; A006 and A007 set the format. Mitigation: `all repos:` is the shortest label that still says the line covers every store, and T-1B.11 lets the user reorder, add or remove parts from the config file or the pane, so a longer line can be trimmed without a code change. The total counts the parts drawn, including done within the window, as the native panel's total includes its done. A total of one reads `1 task`, the grammatical form of Sergei's `{N} tasks` (resolved by aih-ec2-3 Opus coordinator, 2026-10-24, after band v2 drew `1 tasks`).
+Gate 0 keeps A001's label and A002's second line; A006 and A007 set the format. Mitigation: `all repos:` is the shortest label that still says the line covers every store, and T-1B.11 lets the user reorder, add or remove parts from the config file or the pane, so a longer line can be trimmed without a code change. The total counts the parts drawn, including done within the window, as the native panel's total includes its done. A total of one reads `1 task`, the grammatical form of Sergei's `{N} tasks` (resolved by ops-vm-3 Opus coordinator, 2026-10-24, after band v2 drew `1 tasks`).
 
 Later change (Feedback Round 5, 2026-10-24): Sergei set the firstmate's labels himself (ylx A008), so the `all repos:` prefix of option (a) is superseded by D-34. The format on every line and the firstmate's second line stand.
 
@@ -2249,7 +2249,7 @@ Later change (Feedback Round 5, 2026-10-24): Sergei set the firstmate's labels h
 
 <a id="d-31"></a>
 
-#### D-31: How the task panel is drawn — `✅ Resolved by aih-ec2-3 Opus coordinator`
+#### D-31: How the task panel is drawn — `✅ Resolved by ops-vm-3 Opus coordinator`
 
 **Context.** Sergei asked for real-looking controls, a side nav and menu bars, icons when space is short, mouse control with left and right click, and a richer stack if it is fast and light (ylx A002, A005). The research doc (`docs/research/claude-code-mod-panel-rendering-and-focus.md`) found that the element tree draws on every surface with buttons, a dropdown `Select`, inputs, borders and hover styles; that only a `Client` region receives pointer events with a `right` button, and VS Code does not draw one; and that `Image` shows its alt text inside tmux, where the fleet's sessions run.
 
@@ -2280,7 +2280,7 @@ Later change (Feedback Round 5, 2026-10-24): Sergei set the firstmate's labels h
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-24); confidence: medium — (a) The element tree for the frame, nav, menus, forms and detail, a `Client` for the task list and board, the element tree as fallback
+> **Decision:** ✅ Resolved by ops-vm-3 Opus coordinator (2026-10-24); confidence: medium — (a) The element tree for the frame, nav, menus, forms and detail, a `Client` for the task list and board, the element tree as fallback
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-31; decision-topic=what the beads-ui task panel is drawn with; governs=claude-mod:panel,plugins:beads-ui/client; normalized-proposition=the panel's frame and forms are element trees and its task list and board are a Client region with an element-tree fallback; applicability=surface:tui; outcome-id=elements-plus-client; relation=refines; related-decision-id=BU-mg2.2/D-8; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -2290,7 +2290,7 @@ Criterion 5: right-click and drag are definite requirements, so the structure fo
 
 <a id="d-32"></a>
 
-#### D-32: Where the panel sits and how it lives beside the CC task panel — `✅ Resolved by aih-ec2-3 Opus coordinator`
+#### D-32: Where the panel sits and how it lives beside the CC task panel — `✅ Resolved by ops-vm-3 Opus coordinator`
 
 **Context.** "we need to create our own tui claude code mod task panel ... that will sit in that same space as the cc task panel and we can have config file flags / settings to have both of them co-exist, or one or the other ... and eventually we'll do full cutover" (ylx A002); "build the rest of our own version of the beads-ui task panel / pane ui to replace the entire cc task panel. i'd prefer that" (A006). A mod cannot draw inside Claude Code's own panel; it draws in a pane, and an unasked pane appears only from 144 columns, or 110 once the user has opened it (research section 4). D-21 already retires the CC task panel per machine profile.
 
@@ -2320,7 +2320,7 @@ Criterion 5: right-click and drag are definite requirements, so the structure fo
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-24); confidence: high — (a) A docked pane opened at session start under `panel.mode`, `both` by default, the cutover being D-21's per-profile switch plus `panel.mode = beads`
+> **Decision:** ✅ Resolved by ops-vm-3 Opus coordinator (2026-10-24); confidence: high — (a) A docked pane opened at session start under `panel.mode`, `both` by default, the cutover being D-21's per-profile switch plus `panel.mode = beads`
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-32; decision-topic=placement of the beads-ui task panel and its co-existence with the Claude Code task panel; governs=claude-mod:panel,config:panel.mode,repo:ai-harness/task-panel-switch; normalized-proposition=the panel opens docked at session start under panel.mode and the cutover is the per-profile retirement switch; applicability=surface:tui; outcome-id=docked-panel-mode; relation=refines; related-decision-id=BU-mg2.2/D-21; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -2332,7 +2332,7 @@ Sergei's ask decides it; the default ships enabled. Mitigation: Claude Code itse
 
 <a id="d-33"></a>
 
-#### D-33: How a panel edit is published, and what happens on failure — `✅ Resolved by aih-ec2-3 Opus coordinator`
+#### D-33: How a panel edit is published, and what happens on failure — `✅ Resolved by ops-vm-3 Opus coordinator`
 
 **Context.** "edit the fields and ideally the get auto-committed / pushed / /sync-git if possible with formatted commits and automation to handle all that; and maybe fallback alert / hook / context injection to tell the cc session to handle any git conflict resolution ... and also /delegate opus 5.5 (or just do inline in driving cc session if no agent slots are available) to investigate root cause and /bug-fix any issues" (ylx A002). Every write is a `bd` call (D-4). On the fleet, publishing is `bd_dolt_publish.py --repo <repo> --attest --json`, whose exit codes separate published, unverified, refused, pull failed, conflict aborted and push failed, and which locks per store. `$.prompt.submit` starts a turn in the session once it is idle (research section 5).
 
@@ -2363,19 +2363,19 @@ Sergei's ask decides it; the default ships enabled. Mitigation: Claude Code itse
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-24); confidence: high — (a) The mod runs a configured `sync.command` after a 10-second quiet and hands any failure to the session with `$.prompt.submit` and a notification
+> **Decision:** ✅ Resolved by ops-vm-3 Opus coordinator (2026-10-24); confidence: high — (a) The mod runs a configured `sync.command` after a 10-second quiet and hands any failure to the session with `$.prompt.submit` and a notification
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-33; decision-topic=publishing panel edits and the failure path; governs=claude-mod:sync,config:sync.command; normalized-proposition=the mod publishes edits through a configured command after a quiet period and starts a turn in the session on any failure; applicability=surface:tui; outcome-id=mod-publishes-session-resolves; relation=different-question; related-decision-id=BU-mg2.2/D-4; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-Criterion 2: the failure path must end in the session, and only the mod can start a turn there. Mitigations: the fleet's publish tool already takes a per-store lock, so two sessions' publishes serialize instead of colliding, and a session keeps at most one publish in flight; the 10-second quiet turns a burst of edits into one publish; the band counts unpublished edits (T-2B.6) so a slow or failed publish is visible. The fleet sets `sync.command` to its publish tool in the user's `beads-ui.toml` through an ai-harness install step (AIH-qsmn3u); the mod ships with the setting read at call time, so it is on wherever it is set. The fleet's command runs `bd_dolt_publish.py --repo {store} --json` without `--attest` (resolved by aih-ec2-3 Opus coordinator, 2026-10-24): the push is still verified by the tool's own `remotes/origin/main == pushed` check, and a full attestation, which refetches the store's whole Dolt data (about 661 MB for the largest store), would cost more than the edit; it happens instead on the host publish sweep's cadence, once per store every 24 hours by default (`--attest-after` in `scripts/bd_publish_sweep.py`), retried on every 15-minute sweep after a failure.
+Criterion 2: the failure path must end in the session, and only the mod can start a turn there. Mitigations: the fleet's publish tool already takes a per-store lock, so two sessions' publishes serialize instead of colliding, and a session keeps at most one publish in flight; the 10-second quiet turns a burst of edits into one publish; the band counts unpublished edits (T-2B.6) so a slow or failed publish is visible. The fleet sets `sync.command` to its publish tool in the user's `beads-ui.toml` through an ai-harness install step; the mod ships with the setting read at call time, so it is on wherever it is set. The fleet's command runs `bd_dolt_publish.py --repo {store} --json` without `--attest` (resolved by ops-vm-3 Opus coordinator, 2026-10-24): the push is still verified by the tool's own `remotes/origin/main == pushed` check, and a full attestation, which refetches the store's whole Dolt data (about 661 MB for the largest store), would cost more than the edit; it happens instead on the host publish sweep's cadence, once per store every 24 hours by default (`--attest-after` in `scripts/bd_publish_sweep.py`), retried on every 15-minute sweep after a failure.
 
 ---
 
 <a id="d-34"></a>
 
-#### D-34: The firstmate's two band lines and the sync-drift signal — `✅ Resolved by aih-ec2-3 Opus coordinator`
+#### D-34: The firstmate's two band lines and the sync-drift signal — `✅ Resolved by ops-vm-3 Opus coordinator`
 
-**Context.** Sergei wrote the firstmate's lines himself (ylx A008, 2026-10-24T01:03:49Z): `[bd][all] {N} tasks ({N} in progress, {N} blocked, {N} open, {N} done last 24h)` over `     [fm] {N} tasks (...)`, replacing today's `beads host pair, all 9 stores, 1 not synced with the pair ... as of 21:00:18` and `beads aih-ec2-firstmate-1, all 9 stores ...`. A001 asks that the totals line be "labeled to indicate its totals across all repo beads stores on that machine host pair set", which `[all]` now does. Today's first line also carries "1 not synced with the pair", the only place the band says the totals may be wrong because a store has not converged with the other host; A008 does not mention it.
+**Context.** Sergei wrote the firstmate's lines himself (ylx A008, 2026-10-24T01:03:49Z): `[bd][all] {N} tasks ({N} in progress, {N} blocked, {N} open, {N} done last 24h)` over `     [fm] {N} tasks (...)`, replacing today's `beads host pair, all 9 stores, 1 not synced with the pair ... as of 21:00:18` and `beads ops-vm-firstmate-1, all 9 stores ...`. A001 asks that the totals line be "labeled to indicate its totals across all repo beads stores on that machine host pair set", which `[all]` now does. Today's first line also carries "1 not synced with the pair", the only place the band says the totals may be wrong because a store has not converged with the other host; A008 does not mention it.
 
 ##### (a) Sergei's two lines, with a short drift marker on line 1 only while a store is out of step
 
@@ -2403,7 +2403,7 @@ Criterion 2: the failure path must end in the session, and only the mod can star
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-24); confidence: high — (a) `[bd][all]` then `[fm]` right-aligned under it, with a short drift marker such as `1 unsynced` on line 1 only while a store is out of step, and each such store named in the pane's header
+> **Decision:** ✅ Resolved by ops-vm-3 Opus coordinator (2026-10-24); confidence: high — (a) `[bd][all]` then `[fm]` right-aligned under it, with a short drift marker such as `1 unsynced` on line 1 only while a store is out of step, and each such store named in the pane's header
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-34; decision-topic=the firstmate's band labels and where sync drift is shown; governs=claude-mod:band,packages:core/views/band; normalized-proposition=the firstmate's band reads [bd][all] totals over an aligned [fm] line, and an out-of-step store adds a short count marker to the totals line; applicability=surface:tui; outcome-id=bd-all-fm-drift-marker; relation=supersedes; related-decision-id=BU-mg2.2/D-30; supersedes=BU-mg2.2/D-30; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -2413,7 +2413,7 @@ Gate 0: A008 sets the labels, A001's totals label is met by `[all]`, and A002's 
 
 <a id="d-35"></a>
 
-#### D-35: One component layer for the band and the pane — `✅ Resolved by aih-ec2-3 Opus coordinator`
+#### D-35: One component layer for the band and the pane — `✅ Resolved by ops-vm-3 Opus coordinator`
 
 **Context.** "we can can properly abstract it so that there are components that can be shared / reused / combined / stacked or whatever in modular ways so we don't have to implement two separate surfaces for both bands and pane interfaces. if we can have underlying shared code / components etc and just have adapters or whatever for each tui surface, then do that" (BU-mg2.3.21). About 02:02Z Sergei added (BU-mg2.3.21's amendment comment, verbatim there): "i don't want two separate implementations for the bands views and pane views. it should be modular, abstract, library / framework / inheritance / class etc system. whatever abstraction makes sense so that when we add something to the pane it gets automatically added to the band and vice versa (perhaps we can configure it to be enabled / disabled for one or the other or both, but by default should render in both surfaces unless there's a reason not to, and should have proper adapters over re-used components / code etc to render and be properly usable and interactive and viewable etc in bands vs pane." Today the core holds the view models (`core/src/views/*`) and each surface draws its own elements: `hooks/bands.ts` draws the band from `Box`, `Text` and `Button` (its `BandUi` type picks those three), and `hooks/pane.ts` (2,606 lines) and `hooks/panel.ts` draw the pane from the same three plus `Select`, `Input`, `Markdown` and the `Client` task list. Review items, indicators and the band's task rows (D-36, D-40, D-41) would each be drawn twice under that split.
 
@@ -2453,7 +2453,7 @@ The band adapter draws a view inside the band's overview level (D-36) with the b
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-25); confidence: high — (a) One component framework in `hooks/components/`: views registered once with `surfaces` (`both` by default, overridable in `[surfaces]` and Settings), composed of shared components fed by the core models, drawn by a band adapter and a pane adapter, each surface's nav generated from the registry
+> **Decision:** ✅ Resolved by ops-vm-3 Opus coordinator (2026-10-25); confidence: high — (a) One component framework in `hooks/components/`: views registered once with `surfaces` (`both` by default, overridable in `[surfaces]` and Settings), composed of shared components fed by the core models, drawn by a band adapter and a pane adapter, each surface's nav generated from the registry
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-35; decision-topic=how the band and the pane share their views and drawing; governs=claude-mod:band,pane,panel,plugins:beads-ui/hooks/components,config:surfaces; normalized-proposition=every view is registered once with the surfaces it draws on, both by default and overridable in config, and is drawn from shared components by a band adapter and a pane adapter that state what each surface can draw; applicability=surface:tui; outcome-id=view-registry-two-adapters; relation=refines; related-decision-id=BU-mg2.2/D-31; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -2484,7 +2484,7 @@ Sergei's ask decides the shape, one implementation with surfaces both by default
 
 <a id="d-36"></a>
 
-#### D-36: The band's disclosure levels and where its controls sit — `✅ Resolved by aih-ec2-3 Opus coordinator`
+#### D-36: The band's disclosure levels and where its controls sit — `✅ Resolved by ops-vm-3 Opus coordinator`
 
 **Context.** Sergei, about 01:58Z on 2026-10-25 (BU-mg2.3.21): "can you add the expand button right after the rest of the text on the left side at the end of the task summary text? or just add it to the left of the band text? ... all the buttons should appear to the left. also, can we make it so that the {N} in progress can be clicked and expand band rows to show some of them (can be configured via config file / beads-ui pane settings to display N amount and the rest collapse with it displaying how many are still collapsed) and i should be able to click to keep expanding to view more or should be able to collapse back to the default amount or collapse back to just the top band row(s) ... with proper progressive disclosure so that we can start from just the summary band". Shortly before 01:53Z (BU-mg2.3.20): "add more rows under band and actually build out the task panel there under the band which is separate from the pane". The `beads [-]` at the right end of the line Sergei pasted is Claude Code's own mark for the band, in the five cells the engine reserves, so beads-ui cannot move it; the beads button beads-ui draws is the one at the end of its text (D-27). A band may take up to its `maxRows`: in fullscreen, what the bottom slot has left above the prompt, capped at half the terminal's rows with the prompt included, and a taller tree scrolls with an "n more" row (BU-mg2.3.20, from the 2.1.310 types).
 
@@ -2524,7 +2524,7 @@ The firstmate's `[bd][all]` and `[fm]` lines each carry their own count buttons;
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-25); confidence: high — (a) Summary, rows and overview levels; each count a button inside the summary text; the expand and overview controls directly after the text; `band.rows` (5) and `band.level` (summary) set in `beads-ui.toml` and Settings
+> **Decision:** ✅ Resolved by ops-vm-3 Opus coordinator (2026-10-25); confidence: high — (a) Summary, rows and overview levels; each count a button inside the summary text; the expand and overview controls directly after the text; `band.rows` (5) and `band.level` (summary) set in `beads-ui.toml` and Settings
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-36; decision-topic=what the band shows at each level and where its controls sit; governs=claude-mod:band,config:band.rows,config:band.level; normalized-proposition=the band opens at a one-line summary whose counts are buttons and whose controls follow the text at the left, expands a pressed count into N task rows with more and collapse controls, and offers an overview of the pane's views within maxRows; applicability=surface:tui; outcome-id=band-three-levels-left-controls; relation=refines; related-decision-id=BU-mg2.2/D-34; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -2551,10 +2551,10 @@ The rows of `[▾]`, after one "+M more":
 
 ```text
 [bd] [t: 7 tasks] (◒[p: 4 in progress], ◉[b: 1 blocked], ◦[o: 1 open], ✓[d: 1 done last 24h]) * [e: ▾] [v: ◫] [◨]
-  [◒ P0 AIH-qsmn3u write beads-ui's [sync] command]
+  [◒ P0 OPS-k3x9qa write beads-ui's [sync] command]
   [◒ P1 BU-mg2.3.21.2 T-2C.2: the band's disclosure levels]
   [◒ P1 BU-mg2.3.21.3 the count buttons and their rows]
-  [◒ P2 AIH-p811n7 idle session wakes]
+  [◒ P2 OPS-w7m2rd idle session wakes]
   [◉ P2 BU-mg2.3.18.1 T-2C.3: row indicators]
   [◦ P2 BU-mg2.3.21.5 T-2C.8: every pane view on the framework]
   [✓ P2 BU-mg2.3.21.1 T-2C.1: the component framework]
@@ -2582,8 +2582,8 @@ A row's detail in the overview:
 ```text
 [bd] [t: 7 tasks] (◒[p: 4 in progress], ◉[b: 1 blocked], ◦[o: 1 open], ✓[d: 1 done last 24h]) * [e: ▾] [v: ◫] [◨]
 [Tasks]  [Board]  [Bklg]  [Spr]  [Dtl]  [Time]  [Set]
-◒ P0 AIH-qsmn3u write beads-ui's [sync] command
-  in_progress, task, @aih-ec2-3
+◒ P0 OPS-k3x9qa write beads-ui's [sync] command
+  in_progress, task, @ops-vm-3
   ai-harness, updated 2026-10-20T08:32:04.000Z
   [back] [s: summary]
 ```
@@ -2597,11 +2597,11 @@ The firstmate's two lines at the summary, and with the `[bd][all]` line's in-pro
 
 ```text
 [bd][all] [a: 9 tasks] (◒[i: 5 in progress], ◉[k: 1 blocked], ◦[l: 2 open], ✓[j: 1 done last 24h]) * [e: ▾] [v: ◫] [◨]
-  [◒ P0 AIH-qsmn3u write beads-ui's [sync] command]
+  [◒ P0 OPS-k3x9qa write beads-ui's [sync] command]
   [◒ P1 BU-mg2.3.21.2 T-2C.2: the band's disclosure levels]
   [◒ P1 BU-mg2.3.21.3 the count buttons and their rows]
-  [◒ P1 AIH-x1 chief loop]
-  [◒ P2 AIH-p811n7 idle session wakes]
+  [◒ P1 OPS-x1 chief loop]
+  [◒ P2 OPS-w7m2rd idle session wakes]
   [s: summary]
      [fm] [t: 2 tasks] (◒[p: 1 in progress], ◉[b: 0 blocked], ◦[o: 1 open], ✓[d: 0 done last 24h]) *
 ```
@@ -2622,12 +2622,12 @@ The overview at 120 columns from Claude Code 2.1.310's test kit, a 14-row band, 
 Filter: _
 New: _
 open 12
-    P1 BU-t-0-1-core-module-gset T-0.1: core module and purity gate @aih-ec2-3 open v [detail]
-    P1 BU-t-0-2-bd-node-nrrb T-0.2: bd-node adapter @aih-ec2-3 open v [detail]
-    P1 BU-t-0-3-mod-plugin-fumv T-0.3: mod plugin and marketplace @aih-ec2-3 open v [detail]
-    P1 BU-t-0-4-repository-zach T-0.4: repository hygiene for a public repo @aih-ec2-3 open v [detail]
-    P1 BU-t-1-1-board-tab-nxdt T-1.1: Board tab with keyboard Move to @aih-ec2-3 open v [detail]
-    P1 BU-t-1-2-backlog-tab-vptb T-1.2: Backlog tab with sort and filter @aih-ec2-3 open v [detail]
+    P1 BU-t-0-1-core-module-gset T-0.1: core module and purity gate @ops-vm-3 open v [detail]
+    P1 BU-t-0-2-bd-node-nrrb T-0.2: bd-node adapter @ops-vm-3 open v [detail]
+    P1 BU-t-0-3-mod-plugin-fumv T-0.3: mod plugin and marketplace @ops-vm-3 open v [detail]
+    P1 BU-t-0-4-repository-zach T-0.4: repository hygiene for a public repo @ops-vm-3 open v [detail]
+    P1 BU-t-1-1-board-tab-nxdt T-1.1: Board tab with keyboard Move to @ops-vm-3 open v [detail]
+    P1 BU-t-1-2-backlog-tab-vptb T-1.2: Backlog tab with sort and filter @ops-vm-3 open v [detail]
 [⇣ 18 below]
   [⋮ menu] [s: summary]
 ```
@@ -2640,12 +2640,12 @@ The Backlog:
 Filter: _
 New: _
 12 of 12 open issues, priority order
-    P1 BU-t-0-1-core-module-gset         task T-0.1: core module and purity gate          @aih-ec2-3 2026-10-21 [detail]
-    P1 BU-t-0-2-bd-node-nrrb             task T-0.2: bd-node adapter                      @aih-ec2-3 2026-10-21 [detail]
-    P1 BU-t-0-3-mod-plugin-fumv          task T-0.3: mod plugin and marketplace           @aih-ec2-3 2026-10-21 [detail]
-    P1 BU-t-0-4-repository-zach          task T-0.4: repository hygiene for a public re⋯  @aih-ec2-3 2026-10-21 [detail]
-    P1 BU-t-1-1-board-tab-nxdt           task T-1.1: Board tab with keyboard Move to      @aih-ec2-3 2026-10-21 [detail]
-    P1 BU-t-1-2-backlog-tab-vptb         task T-1.2: Backlog tab with sort and filter     @aih-ec2-3 2026-10-21 [detail]
+    P1 BU-t-0-1-core-module-gset         task T-0.1: core module and purity gate          @ops-vm-3 2026-10-21 [detail]
+    P1 BU-t-0-2-bd-node-nrrb             task T-0.2: bd-node adapter                      @ops-vm-3 2026-10-21 [detail]
+    P1 BU-t-0-3-mod-plugin-fumv          task T-0.3: mod plugin and marketplace           @ops-vm-3 2026-10-21 [detail]
+    P1 BU-t-0-4-repository-zach          task T-0.4: repository hygiene for a public re⋯  @ops-vm-3 2026-10-21 [detail]
+    P1 BU-t-1-1-board-tab-nxdt           task T-1.1: Board tab with keyboard Move to      @ops-vm-3 2026-10-21 [detail]
+    P1 BU-t-1-2-backlog-tab-vptb         task T-1.2: Backlog tab with sort and filter     @ops-vm-3 2026-10-21 [detail]
 [⇣ 6 below]
   [⋮ menu] [s: summary]
 ```
@@ -2672,9 +2672,9 @@ Assignee: _
 
 <a id="d-37"></a>
 
-#### D-37: Where review items come from — `✅ Resolved by aih-ec2-3 Opus coordinator`
+#### D-37: Where review items come from — `✅ Resolved by ops-vm-3 Opus coordinator`
 
-**Context.** Every output Sergei must review or act on is a held item in ai-harness's held store (`docs/held/README.md` there): a Markdown file under `docs/held/<host>--<slug>/` with `kind` (decision, blocker, exit-goal, progress-review, summary, fleet-brief, other), `status` (open, answered), `session`, `machine`, `task`, `title`, `ask` and timestamps, routed to one of several stores (`ai-harness`, and `sw-bms-workspace` for employer work) and written first into each session's landing pad. `held_cli.py list --json` walks every routed store and pad; `show <path> --json` prints one body. Measured on sem-kg-ec2, 2026-10-25T01:50Z, at a LOOK reading: `list --status open --json` ran 3.7 s and printed 541,233 bytes, 641 open items, 552 in ai-harness and 89 in sw-bms-workspace, from five machines (`sem-kg-ec2` 251, `fw-lnx` 330, `acn-mac` 31, `mac` 29), 186 of them with `task: none`. The README also sets read-time rules that `list` does not apply: only the newest open briefing of each kind per session is current, the rest superseded (142 of `fw-lnx`'s open items are summaries); an item addressed to a decider is not Sergei's; an AI-resolved decision is left out (`held_output.briefing_kinds`, `escalated`, `ai_resolved_decision`, used by `compile`). Pair membership is `config/message-transports.json`'s `pairs` block (one pair is `acn-mac` and `sem-kg-ec2`, the other `fw-lnx` and `mac`, the machine Sergei calls sw-mac). The aih-ec2-3 brief named the data source as the held store's read verbs and the git-tracked held tree, read at refresh.
+**Context.** Every output Sergei must review or act on is a held item in ai-harness's held store (`docs/held/README.md` there): a Markdown file under `docs/held/<host>--<slug>/` with `kind` (decision, blocker, exit-goal, progress-review, summary, fleet-brief, other), `status` (open, answered), `session`, `machine`, `task`, `title`, `ask` and timestamps, routed to one of several stores (`ai-harness`, and `sw-bms-workspace` for employer work) and written first into each session's landing pad. `held_cli.py list --json` walks every routed store and pad; `show <path> --json` prints one body. Measured on host-c, 2026-10-25T01:50Z, at a LOOK reading: `list --status open --json` ran 3.7 s and printed 541,233 bytes, 641 open items, 552 in ai-harness and 89 in sw-bms-workspace, from five machines (`host-c` 251, `host-b` 330, `host-a` 31, `mac` 29), 186 of them with `task: none`. The README also sets read-time rules that `list` does not apply: only the newest open briefing of each kind per session is current, the rest superseded (142 of `host-b`'s open items are summaries); an item addressed to a decider is not Sergei's; an AI-resolved decision is left out (`held_output.briefing_kinds`, `escalated`, `ai_resolved_decision`, used by `compile`). Pair membership is `config/message-transports.json`'s `pairs` block (one pair is `host-a` and `host-c`, the other `host-b` and `mac`, the machine Sergei calls host-f). The ops-vm-3 brief named the data source as the held store's read verbs and the git-tracked held tree, read at refresh.
 
 ##### (a) A `held_cli.py review` verb, run once a beat by the host refresher behind a fingerprint, its command set by the ai-harness install step
 
@@ -2707,11 +2707,11 @@ The verb (T-2C.4) prints every open and answered item of every routed store and 
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-25); confidence: high — (a) A `held_cli.py review --scope pair --json` verb with a fingerprint, run once a beat by the host refresher into a pair-scoped snapshot joined to its issues, its command in the user's `beads-ui.toml` `[review]`, written by ai-harness's install step
+> **Decision:** ✅ Resolved by ops-vm-3 Opus coordinator (2026-10-25); confidence: high — (a) A `held_cli.py review --scope pair --json` verb with a fingerprint, run once a beat by the host refresher into a pair-scoped snapshot joined to its issues, its command in the user's `beads-ui.toml` `[review]`, written by ai-harness's install step
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-37; decision-topic=the source of the review items beads-ui shows; governs=plugins:beads-ui/refresher,config:review.command,repo:ai-harness/held_cli; normalized-proposition=review items come from an ai-harness held store verb that applies the store's own selection rules and the host pair scope, read once a beat by the host refresher behind a fingerprint, its command configured in the user's beads-ui config by the ai-harness install; applicability=surface:tui; outcome-id=held-review-verb-refresher; relation=different-question; related-decision-id=BU-mg2.2/D-26; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-Criterion 2: the selection rules are the held store's, so its own tool applies them, and the read is host infrastructure, so the refresher does it once (D-26). Mitigations: the ai-harness change is T-2C.4, a small verb over functions `compile` already calls, with its own pytest, landed first so that nothing in beads-ui waits on it; the install writes the command where it writes `[sync]` (ai-harness's AIH-qsmn3u step), so the feature ships on wherever `[sync]` does; the minute's lag is the band's own (D-26), a write from the pane drops a wake marker that re-reads at once, and the Review view's header shows the snapshot's read time. Bodies are never in the snapshot: the reader runs `show --json` for one item when it opens.
+Criterion 2: the selection rules are the held store's, so its own tool applies them, and the read is host infrastructure, so the refresher does it once (D-26). Mitigations: the ai-harness change is T-2C.4, a small verb over functions `compile` already calls, with its own pytest, landed first so that nothing in beads-ui waits on it; the install writes the command where it writes `[sync]` (ai-harness's `[sync]` step), so the feature ships on wherever `[sync]` does; the minute's lag is the band's own (D-26), a write from the pane drops a wake marker that re-reads at once, and the Review view's header shows the snapshot's read time. Bodies are never in the snapshot: the reader runs `show --json` for one item when it opens.
 
 **As built (T-2C.5; BU-mg2.3.17.1).**
 
@@ -2719,16 +2719,16 @@ Criterion 2: the selection rules are the held store's, so its own tool applies t
 - The beat. The refresher runs `<held> review --scope pair --json`, with `--if-changed <fingerprint>` once it holds one, in the home directory, beside the counts and by the same 28-second deadline, at most 20 seconds (`REVIEW_TIMEOUT_MS`). It reads stdout whatever the exit, since the verb exits 1 with its payload when one routed store could not be read; that exit is named in the snapshot's `error`. It writes `review-<token>.json` whole after a lease check: `schema`, `token`, `readAt` (when items were last printed), `checkedAt`, `fingerprint`, `host`, `pair`, `scope`, `pairNote`, `error`, `items` and `joins`. Each item carries the verb's keys (path, store, relpath, kind, status, session, machine, task, title, ask, created and answered times, answer_recorded_in, decider, selection, superseded_by), never a body, and `issue` when joined. With the command unset nothing runs and the file is removed. A run that fails keeps the last items and names why. No shared fallback file is written: a session reads only the file of the token `lease.json` names. A refresher taking over keeps the last token's fingerprint and joins in memory, so its first run prints `unchanged`, and it drops another token's review file with that token's counts.
 - The join. `joinPlan` sends each task to the inventory store whose prefix starts it, `_` read as `-` (`AI_CLI` holds `AI-CLI-...`), the longest prefix first. Each beat, each store with tasks gets `bd vc status --json`. Only when its head moved or its tasks changed is it read again, with `bd list --json --brief --all --limit 0 --id=<tasks>` and `--label-any=id:<tasks>`, since a task is either a bd id or a display id. A store whose head or rows cannot be read keeps its last join.
 - The wake. After the held store records an answer, the reader drops `wake/review.json`. The refresher, polling every second, runs the verb again then. A wake's review read and a beat's are queued, never run at once.
-- Measured on sem-kg-ec2, 2026-10-25T12:00Z under a LOOK reading, with this build's refresher in a scratch state directory, the real store inventory, and PR #6108's verb (head fafc77f) run by the main venv: a changed beat's verb run took 0.91 s and printed 282,119 bytes for 305 items. The whole review read, verb, six head checks, six joins and the write, took 1.82 s, and wrote a 319,575-byte snapshot with 212 items joined in 6 stores. The next beat's run with `--if-changed` took 0.52 s and printed 109 bytes; with no join read again, the whole review read took 1.08 s and kept the items and their read time.
+- Measured on host-c, 2026-10-25T12:00Z under a LOOK reading, with this build's refresher in a scratch state directory, the real store inventory, and PR #6108's verb (head fafc77f) run by the main venv: a changed beat's verb run took 0.91 s and printed 282,119 bytes for 305 items. The whole review read, verb, six head checks, six joins and the write, took 1.82 s, and wrote a 319,575-byte snapshot with 212 items joined in 6 stores. The next beat's run with `--if-changed` took 0.52 s and printed 109 bytes; with no join read again, the whole review read took 1.08 s and kept the items and their read time.
 - The Review view's heading draws the snapshot's read time (`held items read <time>`) in the pane (T-2C.6).
 
 ---
 
 <a id="d-38"></a>
 
-#### D-38: Whose review items a session sees — `✅ Resolved by aih-ec2-3 Opus coordinator`
+#### D-38: Whose review items a session sees — `✅ Resolved by ops-vm-3 Opus coordinator`
 
-**Context.** "for firstmate cc sesion, it should be able to view all of them for both its own beads tasks and also all of them in the fleet for its machine host pair (and eventually we can expand it to all my machine hosts with some access control restrictiosn for client repos / information so that doesn't get shared on my acn-mac or sw-mac or fw-lnx machine host cc sessions in beads-ui. so we'll eventually get there. but for now firstmate cc session should just be able to see everythign across its machine profile pair" (BU-mg2.3.17). The ai-harness held tree on every host carries every host's items once synced (D-37's measurement holds `fw-lnx` and `mac` items on sem-kg-ec2), and `sw-bms-workspace`, an employer-work store, exists only on the employer pair. Sergei does not say what a non-firstmate session sees. A session is the firstmate when its name ends `-firstmate-<N>` (`isFirstmate`, D-30).
+**Context.** "for firstmate cc sesion, it should be able to view all of them for both its own beads tasks and also all of them in the fleet for its machine host pair (and eventually we can expand it to all my machine hosts with some access control restrictiosn for client repos / information so that doesn't get shared on my host-a or host-f or host-b machine host cc sessions in beads-ui. so we'll eventually get there. but for now firstmate cc session should just be able to see everythign across its machine profile pair" (BU-mg2.3.17). The ai-harness held tree on every host carries every host's items once synced (D-37's measurement holds `host-b` and `mac` items on host-c), and `sw-bms-workspace`, an employer-work store, exists only on the employer pair. Sergei does not say what a non-firstmate session sees. A session is the firstmate when its name ends `-firstmate-<N>` (`isFirstmate`, D-30).
 
 ##### (a) A pair-scoped snapshot; the firstmate lists all of it, any other session its own; an issue's Detail lists every pair item about it
 
@@ -2763,7 +2763,7 @@ Criterion 2: the selection rules are the held store's, so its own tool applies t
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-25); confidence: high — (a) The snapshot holds the host pair's items; the firstmate's Review view lists all of them with a key for its own; any other session's lists the items it holds and those about issues it owns; every session's Detail lists the pair's items about that issue
+> **Decision:** ✅ Resolved by ops-vm-3 Opus coordinator (2026-10-25); confidence: high — (a) The snapshot holds the host pair's items; the firstmate's Review view lists all of them with a key for its own; any other session's lists the items it holds and those about issues it owns; every session's Detail lists the pair's items about that issue
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-38; decision-topic=which review items each session sees; governs=packages:core/review,claude-mod:review,repo:ai-harness/held_cli; normalized-proposition=the review snapshot holds only the host pair's items, the firstmate lists all of them, another session lists the items it holds or whose issue it owns, and an issue's detail lists the pair's items about that issue; applicability=surface:tui; outcome-id=pair-snapshot-firstmate-all; relation=refines; related-decision-id=BU-mg2.2/D-25; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -2772,7 +2772,7 @@ Gate 0 keeps the firstmate's own items and its pair. Mitigations: a Detail is op
 **As built (T-2C.6; BU-mg2.3.17.2, BU-mg2.3.17.3).**
 
 - The pair boundary is one place in the session: `ReviewFeed.items` (`hooks/review.ts`) keeps only the items whose `machine` is a member of the snapshot's `pair`, or this host alone when the verb named no pair, and none when the snapshot names neither (`inPair`, `pairMembers` in `core/src/reviewList.ts`). The Review view, every Detail and the review indicator read that getter, so an item from outside the pair is drawn nowhere. The verb already prints only the pair's items; this keeps a snapshot written some other way from widening it, and the later all-hosts scope (BU-mg2.3.17.4) widens these two functions.
-- Holding is `holdsItem`: the item's `session` is `<session name>@<this host>`, the host read from the snapshot's `host`, or the name alone when `session` names no host. So `aih-ec2-3@acn-mac` is not held by `aih-ec2-3` on sem-kg-ec2. Owning is `ownsItem`: the joined issue's assignee is the session's name. A session with no name lists nothing on its own scope.
+- Holding is `holdsItem`: the item's `session` is `<session name>@<this host>`, the host read from the snapshot's `host`, or the name alone when `session` names no host. So `ops-vm-3@host-a` is not held by `ops-vm-3` on host-c. Owning is `ownsItem`: the joined issue's assignee is the session's name. A session with no name lists nothing on its own scope.
 - The firstmate (`isFirstmate`, D-30) opens on `pair`, every item of the snapshot; its key is `a`, the board's Mine and All key (D-29), shown as the `Showing: the pair's` and `Showing: mine` control, which switches to the items it holds or owns, the same rule as any other session's, and back. The choice lasts the session and is kept apart from the board's Mine and All. Any other session draws no scope control; `a` on its Review view says that only the firstmate lists the pair.
 - Tests: `core/test/review-list.test.ts` (whose items the Review view lists: mine, pair, a session with no name, the pair boundary with and without a pair) and `hooks/review-view.test.ts` (a non-firstmate's held-or-owned list with the default filter and with `selection:all`, the firstmate's whole pair and `a` both ways, an item from outside the pair drawn in no Review view, Detail or gutter, and a non-firstmate's list on the band).
 
@@ -2780,7 +2780,7 @@ Gate 0 keeps the firstmate's own items and its pair. Mitigations: a Detail is op
 
 <a id="d-39"></a>
 
-#### D-39: Acting on a review item from the pane — `✅ Resolved by aih-ec2-3 Opus coordinator`
+#### D-39: Acting on a review item from the pane — `✅ Resolved by ops-vm-3 Opus coordinator`
 
 **Context.** "anything that i need to review and action basically ... i want to be able to use the beads-ui pane" (BU-mg2.3.16, BU-mg2.3.17); the sub-epic's Done-when reads "Sergei can review and act on a held decision from the pane". The held lifecycle (README § Lifecycle): Sergei's answer is written verbatim under `## Answer` by `held_cli.py answer <path> --text-file <f>`, which commits in the owning session's landing pad, refuses an item that is not open and refuses a pad with any uncommitted change; the owning session then records the answer in its durable home, ships and retires; an answered item a session has not acted on shows at its next window start and is a prod condition for the chief. `answer` checks authority only when the text makes a Gate 0 claim. `$.prompt.submit` starts a turn in the session once it is idle (D-33). Leaf BU-mg2.3.15 adds posting a bd comment from the pane.
 
@@ -2814,7 +2814,7 @@ The reader (D-40) carries an Answer input. On submit the mod writes the text, by
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-25); confidence: medium — (a) An Answer control that runs `held_cli.py answer` with Sergei's text exactly as typed, then a fixed-template turn in the session to record, ship and act, or to tell the owner; a comment for a bd blocker
+> **Decision:** ✅ Resolved by ops-vm-3 Opus coordinator (2026-10-25); confidence: medium — (a) An Answer control that runs `held_cli.py answer` with Sergei's text exactly as typed, then a fixed-template turn in the session to record, ship and act, or to tell the owner; a comment for a bd blocker
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-39; decision-topic=how Sergei acts on a review item from the pane; governs=claude-mod:review,config:review.command; normalized-proposition=the pane records Sergei's typed answer with the held store's answer verb and then hands the follow-through to the session in a fixed-template turn, and a bd blocker is answered with a comment; applicability=surface:tui; outcome-id=answer-verb-then-session-turn; relation=refines; related-decision-id=BU-mg2.2/D-33; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -2853,7 +2853,7 @@ This session holds the item. Record the answer in its durable home (a bd comment
 
 <a id="d-40"></a>
 
-#### D-40: Where review items are shown — `✅ Resolved by aih-ec2-3 Opus coordinator`
+#### D-40: Where review items are shown — `✅ Resolved by ops-vm-3 Opus coordinator`
 
 **Context.** "all decisions / blockers etc that i need to review per issue so if i click a beads task and go to the details, i can select a tab / pane / option or whatever and veiw those. or they just appear by default in the task details pane ... also i want to be able to view all decisions / blockers / open questions (held doc info) in the beads-ui not just in task details view, but also as its own tab where i can view all of them and can filter / organize / sort them by task or epic or priority or last updated / created date or label or whatever teh case may be" (BU-mg2.3.17). The pane's keys are `t`, `1` to `6`, `k`, `r`, `e` and `m` (T-2B.4). A held item has `created_at` and `answered_at` and no updated time of its own; its issue has `updated_at`, priority, labels and parent. The fleet holds an open question that needs Sergei as a held decision, so open questions arrive as decisions.
 
@@ -2888,7 +2888,7 @@ This session holds the item. Record the answer in its durable home (a bd comment
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-25); confidence: high — (a) A Review section at the top of the Detail, shown unasked when the issue has items, and a Review view (key `7`, and the band's overview) with the filter grammar, sorts and groups above
+> **Decision:** ✅ Resolved by ops-vm-3 Opus coordinator (2026-10-25); confidence: high — (a) A Review section at the top of the Detail, shown unasked when the issue has items, and a Review view (key `7`, and the band's overview) with the filter grammar, sorts and groups above
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-40; decision-topic=where review items are drawn; governs=claude-mod:pane,claude-mod:band,packages:core/views/review; normalized-proposition=an issue's review items show by default at the top of its detail, and every item in scope is listed in a review view with filters, sorts and groups by task, epic, priority, dates, label, kind and session; applicability=surface:tui; outcome-id=detail-section-review-view; relation=different-question; related-decision-id=BU-mg2.2/D-38; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -2911,18 +2911,18 @@ Criterion 5: per-issue and all-item views are both definite requirements. Mitiga
 │[3: Sprint]  │ Review (9)
 │[4: Detail]  │ [decision: D-37: where review items come from]
 │[5: Timeline]│   Approve (a), the held_cli.py review verb; one word is enough.
-│[6: Settings]│   open, aih-ec2-3@sem-kg-ec2, held 2026-10-25 09:00
-╰─────────────╯ [blocker: the review command is not installed on acn-mac]
-                  Run the install on acn-mac, or say to wait.
-                  open, aih-ec2-firstmate-1@sem-kg-ec2, held 2026-10-25 10:00
+│[6: Settings]│   open, ops-vm-3@host-c, held 2026-10-25 09:00
+╰─────────────╯ [blocker: the review command is not installed on host-a]
+                  Run the install on host-a, or say to wait.
+                  open, ops-vm-firstmate-1@host-c, held 2026-10-25 10:00
                 [blocker: Sergei to approve the Confluence space]
                   Approve the space request.
-                  open, kg-ec2-1@sem-kg-ec2, held 2026-10-25 08:00; the blocked transition waits on it
+                  open, qa-vm-1@host-c, held 2026-10-25 08:00; the blocked transition waits on it
                 bd blockers
                   blocked by BU-mg2.3.9: T-1.5: delete confirmation flow (open)
-                  blocked 2026-10-25 08:05 from in_progress by kg-ec2-1@sem-kg-ec2
+                  blocked 2026-10-25 08:05 from in_progress by qa-vm-1@host-c
                   why: the Confluence space must exist before the pages move.
-                  waits on: owner:ai-harness/docs/held/sem-kg-ec2--kg-ec2-1/2026-10-25-01-blocker-owner.md
+                  waits on: owner:ai-harness/docs/held/host-c--qa-vm-1/2026-10-25-01-blocker-owner.md
                   to done: the pages are published in the space.
                   to in_progress: the space is approved; publish from the drafts.
                 Title: beads-ui Claude Code mod: the task manager inside the Claude Code TUI, with mouse control_
@@ -2939,8 +2939,8 @@ Criterion 5: per-issue and all-item views are both definite requirements. Mitiga
 │[t: Tasks]   │ [a: Showing: mine]  [s: Swimlane: none]  [o: Sort: priority]  [n: New]  [d: Detail]  [m: Move to]
 │[1: Board]   │ [x: Delete]  [g: Band]  [k: Menu]  [h: Help]
 │[2: Backlog] │ decision: D-37: where review items come from
-│[3: Sprint]  │ /home/me/projects/ai-harness/docs/held/sem-kg-ec2--aih-ec2-3/2026-10-25-01-decision-d37.md
-│[4: Detail]  │ open, aih-ec2-3@sem-kg-ec2, held 2026-10-25 09:00
+│[3: Sprint]  │ /home/me/projects/ai-harness/docs/held/host-c--ops-vm-3/2026-10-25-01-decision-d37.md
+│[4: Detail]  │ open, ops-vm-3@host-c, held 2026-10-25 09:00
 │[5: Timeline]│ Ask: Approve (a), the held_cli.py review verb; one word is enough.
 │[6: Settings]│ ## D-37: where review items come from
 ╰─────────────╯
@@ -2964,24 +2964,24 @@ Criterion 5: per-issue and all-item views are both definite requirements. Mitiga
 - Opening an item opens the reader of T-2C.5 over the Review view (`readerOn`), so `Close` returns to the list and `Go to issue` opens the issue's Detail; in the band an item opens the pane's reader. With `[review] command` unset the view draws `REVIEW_UNSET_TEXT`; with a snapshot missing or failed, the same note the Detail draws.
 - The help adds a line naming the Review view's filter keys and its default.
 
-The Review view at 120 columns, from Claude Code 2.1.310's test kit (`hooks/tests/render.ts`; colour and hover not shown), for a snapshot of a pair `acn-mac` and `sem-kg-ec2` holding: a blocker held by `kg-ec2-1` about BU-1 (assigned to `aih-ec2-3`), a decision held by `aih-ec2-3`, a decision held by `kg-ec2-1` about its own BU-3, a question on `acn-mac`, an item on `fw-lnx` that names BU-1 (drawn nowhere), a superseded summary and an answered decision. The firstmate's pane:
+The Review view at 120 columns, from Claude Code 2.1.310's test kit (`hooks/tests/render.ts`; colour and hover not shown), for a snapshot of a pair `host-a` and `host-c` holding: a blocker held by `qa-vm-1` about BU-1 (assigned to `ops-vm-3`), a decision held by `ops-vm-3`, a decision held by `qa-vm-1` about its own BU-3, a question on `host-a`, an item on `host-b` that names BU-1 (drawn nowhere), a superseded summary and an answered decision. The firstmate's pane:
 
 ```text
 ╭─────────────╮ BU (beads-ui)  as of 21:12:04
 │[t: Tasks]   │ [k: Menu]  [g: Band]  [h: Help]
-│[1: Board]   │ Review: 4 of 6 items, the pair's (acn-mac, sem-kg-ec2)  held items read 2026-10-21 01:11
+│[1: Board]   │ Review: 4 of 6 items, the pair's (host-a, host-c)  held items read 2026-10-21 01:11
 │[2: Backlog] │ [a: Showing: the pair's]  [o: Sort: updated (answered, else held)]  [s: Group: none]
 │[3: Sprint]  │ Filter: status:open selection:current_
 │[4: Detail]  │ [blocker: a blocker on my issue]
 │[5: Timeline]│   Approve the space request.
-│[6: Settings]│   open, kg-ec2-1@sem-kg-ec2, held 2026-10-25 10:00, task BU-1, P1
+│[6: Settings]│   open, qa-vm-1@host-c, held 2026-10-25 10:00, task BU-1, P1
 │[7: Review]  │ [decision: my own decision]
 ╰─────────────╯   Pick (a) or (b).
-                  open, aih-ec2-3@sem-kg-ec2, held 2026-10-25 09:00, no task
+                  open, ops-vm-3@host-c, held 2026-10-25 09:00, no task
                 [decision: someone else's decision]
-                  open, kg-ec2-1@sem-kg-ec2, held 2026-10-25 08:00, task BU-3, P2
+                  open, qa-vm-1@host-c, held 2026-10-25 08:00, task BU-3, P2
                 [decision: the partner host's question]
-                  open, aih-3@acn-mac, held 2026-10-25 07:00, no task
+                  open, ops-3@host-a, held 2026-10-25 07:00, no task
                 t Tasks ⋅ 1 Board ⋅ 2 Backlog ⋅ 3 Sprint ⋅ 4 Detail ⋅ 5 Timeline ⋅ 6 Settings ⋅ 7 Review ⋅ k menu ⋅ r
 ```
 
@@ -2992,19 +2992,19 @@ The same, grouped by task (`s` once):
                 BU-1: the reviewed work (1)
                 [blocker: a blocker on my issue]
                   Approve the space request.
-                  open, kg-ec2-1@sem-kg-ec2, held 2026-10-25 10:00, task BU-1, P1
+                  open, qa-vm-1@host-c, held 2026-10-25 10:00, task BU-1, P1
                 no task (2)
                 [decision: my own decision]
                   Pick (a) or (b).
-                  open, aih-ec2-3@sem-kg-ec2, held 2026-10-25 09:00, no task
+                  open, ops-vm-3@host-c, held 2026-10-25 09:00, no task
                 [decision: the partner host's question]
-                  open, aih-3@acn-mac, held 2026-10-25 07:00, no task
+                  open, ops-3@host-a, held 2026-10-25 07:00, no task
                 BU-3: someone else's (1)
                 [decision: someone else's decision]
-                  open, kg-ec2-1@sem-kg-ec2, held 2026-10-25 08:00, task BU-3, P2
+                  open, qa-vm-1@host-c, held 2026-10-25 08:00, task BU-3, P2
 ```
 
-`aih-ec2-3`'s pane, the items it holds and the one about the issue it owns:
+`ops-vm-3`'s pane, the items it holds and the one about the issue it owns:
 
 ```text
 ╭─────────────╮ BU (beads-ui)  as of 21:12:04
@@ -3014,26 +3014,26 @@ The same, grouped by task (`s` once):
 │[3: Sprint]  │ Filter: status:open selection:current_
 │[4: Detail]  │ [blocker: a blocker on my issue]
 │[5: Timeline]│   Approve the space request.
-│[6: Settings]│   open, kg-ec2-1@sem-kg-ec2, held 2026-10-25 10:00, task BU-1, P1
+│[6: Settings]│   open, qa-vm-1@host-c, held 2026-10-25 10:00, task BU-1, P1
 │[7: Review]  │ [decision: my own decision]
 ╰─────────────╯   Pick (a) or (b).
-                  open, aih-ec2-3@sem-kg-ec2, held 2026-10-25 09:00, no task
+                  open, ops-vm-3@host-c, held 2026-10-25 09:00, no task
                 t Tasks ⋅ 1 Board ⋅ 2 Backlog ⋅ 3 Sprint ⋅ 4 Detail ⋅ 5 Timeline ⋅ 6 Settings ⋅ 7 Review ⋅ k menu ⋅ r
 ```
 
-The band's overview on Review, a 14-row band, for the firstmate and for `aih-ec2-3`:
+The band's overview on Review, a 14-row band, for the firstmate and for `ops-vm-3`:
 
 ```text
 [bd][all] [a: 4 tasks] (◒[i: 1 in progress], ◉[k: 0 blocked], ◦[l: 3 open], ✓[j: 0 done last 24h]) * [e: ▾] [v: ◫] [◨]
      [fm] [t: 0 tasks] (◒[p: 0 in progress], ◉[b: 0 blocked], ◦[o: 0 open], ✓[d: 0 done last 24h]) *
 [Tasks]  [Board]  [Bklg]  [Spr]  [Dtl]  [Time]  [Set]  [Rev]
-Review: 4 of 6 items, the pair's (acn-mac, sem-kg-ec2)
+Review: 4 of 6 items, the pair's (host-a, host-c)
 [Showing: the pair's]  [Sort: updated (answered, else held)]  [Group: none]
 Filter: status:open selection:current_
-[blocker: a blocker on my issue] open, kg-ec2-1@sem-kg-ec2, held 2026-10-25 10:00, task BU-1, P1
-[decision: my own decision] open, aih-ec2-3@sem-kg-ec2, held 2026-10-25 09:00, no task
-[decision: someone else's decision] open, kg-ec2-1@sem-kg-ec2, held 2026-10-25 08:00, task BU-3, P2
-[decision: the partner host's question] open, aih-3@acn-mac, held 2026-10-25 07:00, no task
+[blocker: a blocker on my issue] open, qa-vm-1@host-c, held 2026-10-25 10:00, task BU-1, P1
+[decision: my own decision] open, ops-vm-3@host-c, held 2026-10-25 09:00, no task
+[decision: someone else's decision] open, qa-vm-1@host-c, held 2026-10-25 08:00, task BU-3, P2
+[decision: the partner host's question] open, ops-3@host-a, held 2026-10-25 07:00, no task
   [s: summary]
 ```
 
@@ -3043,8 +3043,8 @@ Filter: status:open selection:current_
 Review: 2 of 4 items, this session's own
 [Sort: updated (answered, else held)]  [Group: none]
 Filter: status:open selection:current_
-[blocker: a blocker on my issue] open, kg-ec2-1@sem-kg-ec2, held 2026-10-25 10:00, task BU-1, P1
-[decision: my own decision] open, aih-ec2-3@sem-kg-ec2, held 2026-10-25 09:00, no task
+[blocker: a blocker on my issue] open, qa-vm-1@host-c, held 2026-10-25 10:00, task BU-1, P1
+[decision: my own decision] open, ops-vm-3@host-c, held 2026-10-25 09:00, no task
   [s: summary]
 ```
 
@@ -3054,7 +3054,7 @@ Filter: status:open selection:current_
 
 <a id="d-41"></a>
 
-#### D-41: The row indicator registry — `✅ Resolved by aih-ec2-3 Opus coordinator`
+#### D-41: The row indicator registry — `✅ Resolved by ops-vm-3 Opus coordinator`
 
 **Context.** "i want an icon system to appear next to task rows on the left side so i can know if they have an agent working on them, if they are blocked, if they have any review items (blockers / decisions / open questions etc) or anythign else. i think those are the main ones for now but we can build out the task icon / status / indicator system" (BU-mg2.3.17, BU-mg2.3.18). Task rows draw in the band (D-36), the Tasks view, the Backlog and on Board cards. A glyph of ambiguous East Asian width, or one with emoji presentation, takes two cells on some terminals and breaks alignment.
 
@@ -3088,7 +3088,7 @@ Filter: status:open selection:current_
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-25); confidence: high — (a) An ordered indicator registry in `core/src/indicators.ts`, drawn as a left gutter of one cell per enabled entry on every task row through the shared row component, with a legend and a switch per entry
+> **Decision:** ✅ Resolved by ops-vm-3 Opus coordinator (2026-10-25); confidence: high — (a) An ordered indicator registry in `core/src/indicators.ts`, drawn as a left gutter of one cell per enabled entry on every task row through the shared row component, with a legend and a switch per entry
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-41; decision-topic=how row status indicators are defined and drawn; governs=packages:core/indicators,claude-mod:rows,config:indicators; normalized-proposition=row indicators are entries of one ordered registry, each a detection function, a one-cell glyph, an ASCII form and a label, drawn as a left gutter on every task row with a generated legend; applicability=surface:tui; outcome-id=indicator-registry-gutter; relation=different-question; related-decision-id=BU-mg2.2/D-19; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -3180,25 +3180,25 @@ The band's rows of every status the session owns:
 
 <a id="d-42"></a>
 
-#### D-42: How "an agent is working on it" is detected — `✅ Resolved by aih-ec2-3 Opus coordinator`
+#### D-42: How "an agent is working on it" is detected — `✅ Resolved by ops-vm-3 Opus coordinator`
 
-**Context.** The signals, measured on sem-kg-ec2 on 2026-10-25 between 01:50Z and 01:58Z:
+**Context.** The signals, measured on host-c on 2026-10-25 between 01:50Z and 01:58Z:
 
-- Agent-row child issues. Each agent launch files its own child issue under the issue it works on, in progress at launch and closed at collection (AIH-813 Step 7c in ai-harness's `agent-delegation.md`; owner-sync design D-9). Titles of the form `<name> agent: <task>` or `<name> coordinator agent: <task>`: 8 of 89 beads-ui issues (2 in progress) and 7 of 7,228 ai-harness issues, every one filed by aih-ec2-3. Free-text matching on "agent" is useless: 459 other ai-harness titles carry the word ("Agent Mail", "agent-process ledger"). No child carries a lease or heartbeat.
-- The CC task panel. 78 in-progress rows across the host's ten named panels, 33 with an owner other than the session: agent ids, agent names, and also old session names (`aih-4`, `ai-cli-1`), `Sergei`, and coordinators long finished (`bu-ylx6-coordinator` on four rows). The panel is a mirror being retired (R-15).
+- Agent-row child issues. Each agent launch files its own child issue under the issue it works on, in progress at launch and closed at collection (Step 7c in ai-harness's `agent-delegation.md`; owner-sync design D-9). Titles of the form `<name> agent: <task>` or `<name> coordinator agent: <task>`: 8 of 89 beads-ui issues (2 in progress) and 7 of 7,228 ai-harness issues, every one filed by ops-vm-3. Free-text matching on "agent" is useless: 459 other ai-harness titles carry the word ("Agent Mail", "agent-process ledger"). No child carries a lease or heartbeat.
+- The CC task panel. 78 in-progress rows across the host's ten named panels, 33 with an owner other than the session: agent ids, agent names, and also old session names (`ops-4`, `ai-cli-1`), `Sergei`, and coordinators long finished (`bu-ylx6-coordinator` on four rows). The panel is a mirror being retired (R-15).
 - Agent worktree liveness. ai-harness's `agent_worktree_liveness.py` answers whether a path is live from its transcript and `git worktree lock`; it is keyed on a path, and a path names no issue. One session's `subagents/` directory held 20,371 files.
 - The beads-ui session registry. Each live session with the mod registers in the refresher's state directory (D-26), so the host knows which sessions are live.
 
 ##### (a) An in-progress agent-row child, dimmed when its session is not live
 
-An issue shows the agent indicator when it has an in-progress child that is an agent row (label `agent`, or a title matching `^<name>( coordinator)? agent: `), or is one itself. While the row's assignee is a session the host's session registry does not hold live, the glyph is dimmed (the agent may be finished and its row not yet closed). ai-harness AIH-7m40p6 asks the launch path to set the `agent` label, so every session's agents are seen whatever their title.
+An issue shows the agent indicator when it has an in-progress child that is an agent row (label `agent`, or a title matching `^<name>( coordinator)? agent: `), or is one itself. While the row's assignee is a session the host's session registry does not hold live, the glyph is dimmed (the agent may be finished and its row not yet closed). an ai-harness issue asks the launch path to set the `agent` label, so every session's agents are seen whatever their title.
 
 **Pros:**
 - Beads is the record, and the fleet's launch rule files exactly this row, so the indicator and the band's in-progress count agree.
 - No read beyond the board's: children are issues with a `parent` field in the read.
 
 **Cons:**
-- Today only aih-ec2-3's agents carry the title, so other sessions' agents show nothing until they file agent rows or the label lands.
+- Today only ops-vm-3's agents carry the title, so other sessions' agents show nothing until they file agent rows or the label lands.
 - A row left in progress after its agent ended shows the indicator, dimmed only once its session is gone.
 
 ##### (b) The CC task panel's rows with an agent owner
@@ -3219,27 +3219,27 @@ An issue shows the agent indicator when it has an in-progress child that is an a
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-25); confidence: medium — (a) An in-progress agent-row child issue (label `agent`, or the `<name> agent:` and `<name> coordinator agent:` titles), or the issue being one, dimmed while its assignee session is not live in the host's session registry; ai-harness asked to set the label at launch
+> **Decision:** ✅ Resolved by ops-vm-3 Opus coordinator (2026-10-25); confidence: medium — (a) An in-progress agent-row child issue (label `agent`, or the `<name> agent:` and `<name> coordinator agent:` titles), or the issue being one, dimmed while its assignee session is not live in the host's session registry; ai-harness asked to set the label at launch
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-42; decision-topic=the signal behind the agent-working indicator; governs=packages:core/indicators,convention:agent-row,repo:ai-harness/agent-launch; normalized-proposition=an issue has an agent working when it has an in-progress agent-row child issue marked by label or title, dimmed when that row's session is not live on the host; applicability=surface:tui; outcome-id=agent-row-child-liveness-dim; relation=refines; related-decision-id=BU-mg2.2/D-25; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-Criterion 2: the indicator reads the record every surface reads. Medium confidence because coverage depends on a convention most sessions have not used yet (Risk 17). Mitigations: the label route lets the launch path mark every agent row whatever its title, and AIH-7m40p6 is filed in ai-harness for the owner-sync work that already prints the launch command (its T-2.3 hook); the dimmed state separates a row whose session is live from one whose session is gone, and a row whose session is live but whose agent has ended is the launching session's own collection duty (AIH-813: close the row at collection); the rule is one registry entry (D-41), so a better signal replaces it without touching a view. One such signal exists for a session's own rows: the mods API's `$.agent.list()` returns this session's subagents with a status (`running`, `idle`, `completed` and others; mods reference, read 2026-10-25T02:15Z), which could later confirm that an agent row's agent is still running; it sees one session only and names no issue, so it would refine the dimmed state and leave the Beads rule in place.
+Criterion 2: the indicator reads the record every surface reads. Medium confidence because coverage depends on a convention most sessions have not used yet (Risk 17). Mitigations: the label route lets the launch path mark every agent row whatever its title, and an issue is filed in ai-harness for the owner-sync work that already prints the launch command (its T-2.3 hook); the dimmed state separates a row whose session is live from one whose session is gone, and a row whose session is live but whose agent has ended is the launching session's own collection duty (close the row at collection); the rule is one registry entry (D-41), so a better signal replaces it without touching a view. One such signal exists for a session's own rows: the mods API's `$.agent.list()` returns this session's subagents with a status (`running`, `idle`, `completed` and others; mods reference, read 2026-10-25T02:15Z), which could later confirm that an agent row's agent is still running; it sees one session only and names no issue, so it would refine the dimmed state and leave the Beads rule in place.
 
 **As built (T-2C.3; BU-mg2.3.18.2).**
 
 - The rule is `detectAgent` in `core/src/indicators.ts`: the issue and its children in the read (issues whose `parent` is its id), kept when in progress and an agent row (`isAgentRow`: the label `agent`, or a title matching `AGENT_TITLE`, `^\S+( coordinator)? agent: `). Grandchildren do not count, a closed agent row does not, and a title that only mentions an agent ("Agent Mail: ...") does not. Shown when any is kept; dimmed when the host's session registry was read and none of their assignees is in it (a row with no assignee counts as not live).
 - The session registry. The mod cannot list a directory, so the refresher, which reads `sessions/` every beat (D-26), now writes the ids it holds live into its snapshot as `sessions`; each session's tally reads them at its minute check, adds its own id, and hands them to the gutter (`setLiveSessions`). With no live snapshot, or one from a refresher built before this, the registry is unread and no glyph is dimmed, so a missing refresher never dims a live agent. An agent row assigned to a session on the pair's other host is dimmed, since this host's registry does not hold it.
-- Measured on this repository's store on 2026-10-25 before building (`bd list --json --brief --all`): 13 issues match the rule, 5 by the `agent` label and 8 by the title alone (BU-mg2.3.17.5, the coordinator's own row, among them), and every one's assignee is `aih-ec2-3`, the launching session and the id it registers under; 2 were in progress.
+- Measured on this repository's store on 2026-10-25 before building (`bd list --json --brief --all`): 13 issues match the rule, 5 by the `agent` label and 8 by the title alone (BU-mg2.3.17.5, the coordinator's own row, among them), and every one's assignee is `ops-vm-3`, the launching session and the id it registers under; 2 were in progress.
 
 ---
 
 <a id="d-43"></a>
 
-#### D-43: The visual language of the band and the pane — `✅ Resolved by aih-ec2-3 Opus coordinator`
+#### D-43: The visual language of the band and the pane — `✅ Resolved by ops-vm-3 Opus coordinator`
 
 **Context.** Sergei, 2026-10-25T03:37:51Z: "also, can you do like custom javascript / CSS etc for all this? what can you customize aesthetically? like i saw someone do a claude code mod of a literal browser, so i think you can customize the actual aesthetic a lot, right? are we just not doing that right now?" At 03:42:13Z: "i don't want live browser. was just using as an example of (apparent) UI complexity availble in claude code mod TUI. but yeah, do the visual design pass for both band and pane etc." About 03:50Z, on the band's `beads` button: "it needs to be more apparent that its to expand and show the pane. it shouldn't be called "beads". make it a more useful button icon / indicator of what its function is ... (or combination, i think ideally not text though and make it clear its a button, the text alone doesn't make it obvious i can click the "beads" text. in general, anything clickable with funcitonality should have clear indicators that its clickable. that needs to be a user interface language standard throughout."
 
-What the engine allows (Claude Code 2.1.310 types, measured by aih-ec2-3 on 2026-10-25 and recorded on BU-mg2.3.21.6): no CSS and no HTML for a mod's own elements; `Box` carries flex layout, padding, borders and background; `Text` carries any colour (hex, or a theme key that follows the person's theme), bold, italic, underline, inverse, dim and truncate modes; `Box`, `Text` and `Button` take `hover` styles on the terminal; the terminal adds `Raster` (a cell grid up to 512 by 256, repainted in place by `$.ui.blit`), `Image` (pixels in kitty, Ghostty and iTerm2 3.5 or later, and in tmux only with allow-passthrough; alt text elsewhere) and `Client`; the desktop, VS Code and mobile add `Svg`, which renders CSS inside a sandboxed frame. The core already maps every D-19 token to a theme key (`core/src/tokens.ts`). The fleet palette pick (ai-harness AIH-zl3bv) waits on Sergei. The band site accepts `Select`, `Input` and `Markdown` as well as `Box`, `Text` and `Button` (measured by the T-2C.1 leaf, 2026-10-25, D-35's as-built note).
+What the engine allows (Claude Code 2.1.310 types, measured by ops-vm-3 on 2026-10-25 and recorded on BU-mg2.3.21.6): no CSS and no HTML for a mod's own elements; `Box` carries flex layout, padding, borders and background; `Text` carries any colour (hex, or a theme key that follows the person's theme), bold, italic, underline, inverse, dim and truncate modes; `Box`, `Text` and `Button` take `hover` styles on the terminal; the terminal adds `Raster` (a cell grid up to 512 by 256, repainted in place by `$.ui.blit`), `Image` (pixels in kitty, Ghostty and iTerm2 3.5 or later, and in tmux only with allow-passthrough; alt text elsewhere) and `Client`; the desktop, VS Code and mobile add `Svg`, which renders CSS inside a sandboxed frame. The core already maps every D-19 token to a theme key (`core/src/tokens.ts`). The fleet palette pick (in ai-harness) waits on Sergei. The band site accepts `Select`, `Input` and `Markdown` as well as `Box`, `Text` and `Button` (measured by the T-2C.1 leaf, 2026-10-25, D-35's as-built note).
 
 ##### (a) D-19's tokens on theme keys, one glyph table, Raster, a pane restyle, Image and Svg behind the surface profile, one clickable affordance
 
@@ -3268,7 +3268,7 @@ Each lives in the shared components, so both surfaces get it once, and each has 
 **Cons:**
 - Ignores the person's light or dark theme, and pre-empts the fleet palette Sergei has not picked.
 
-##### (c) Wait for the fleet palette (AIH-zl3bv)
+##### (c) Wait for the fleet palette
 
 **Pros:**
 - One palette decision, once.
@@ -3278,7 +3278,7 @@ Each lives in the shared components, so both surfaces get it once, and each has 
 
 ##### Recommendation
 
-> **Decision:** ✅ Resolved by aih-ec2-3 Opus coordinator (2026-10-25); confidence: high — (a) D-19's tokens on Claude Code theme keys with `[theme]` hex overrides, one glyph table shared with the indicator registry, one clickable affordance on every pressable element (the band's pane control an icon-first toggle), one `Raster` row in the band, a pane restyle, and `Image` and `Svg` behind the surface profile, all in the shared components with text fallbacks
+> **Decision:** ✅ Resolved by ops-vm-3 Opus coordinator (2026-10-25); confidence: high — (a) D-19's tokens on Claude Code theme keys with `[theme]` hex overrides, one glyph table shared with the indicator registry, one clickable affordance on every pressable element (the band's pane control an icon-first toggle), one `Raster` row in the band, a pane restyle, and `Image` and `Svg` behind the surface profile, all in the shared components with text fallbacks
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5[1m]; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.2/D-43; decision-topic=the visual language of the mod's band and pane; governs=packages:core/tokens,plugins:beads-ui/hooks/components,config:theme; normalized-proposition=the band and pane draw colours from theme-key tokens with optional hex overrides, glyphs from one shared table, every pressable element with one shared clickable affordance, a raster row in the band and pictures only where the surface shows them, each with a text fallback, built once in the shared components; applicability=surface:tui; outcome-id=theme-key-tokens-one-glyph-table-clickable-affordance; relation=refines; related-decision-id=BU-mg2.2/D-19; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
@@ -3491,12 +3491,12 @@ After:
 │[4: Detail]  │ open 20                   in_progress 2             deferred 0                closed 8
 │[5: Timeline]│     BU-t-0-1-core-module-     BU-epic-beads-ui-bead pinned 0                      BU-research-beads-ui-
 │[6: Settings]│ T-0.1: core module and⋯   EPIC beads-ui: Beads ta⋯                            Research for beads-ui:⋯
-│[7: Review]  │ P1                        P1 @aih-ec2-3                                       P1 @aih-3
+│[7: Review]  │ P1                        P1 @ops-vm-3                                       P1 @ops-3
 ╰─────────────╯ Move to: open v           Move to: in_progress v                              Move to: closed v
                 [detail]                  [detail]                                            [detail]
                     BU-t-0-2-bd-node-nrrb     BU-beads-ui-claude-co                               BU-doc-beads-ui-prd-f
                 T-0.2: bd-node adapter    beads-ui Claude Code mo⋯                            Design doc for beads-ui⋯
-                P1                        P1                                                  P1 @aih-ec2-3
+                P1                        P1                                                  P1 @ops-vm-3
                 Move to: open v           Move to: in_progress v                              Move to: closed v
                 [detail]                  [detail]                                            [detail]
 ```
@@ -3514,7 +3514,7 @@ After:
 │[6: Settings]│ ╭───────────────────────╮ ╭───────────────────────╮ pinned 0                  ╭───────────────────────╮
 │[7: Review]  │ │    BU-t-0-1-core-modul│ │    BU-epic-beads-ui-be│                           │    BU-research-beads-u│
 ╰─────────────╯ │T-0.1: core module an⋯ │ │EPIC beads-ui: Beads⋯  │                           │Research for beads-ui⋯ │
-                │P1                     │ │P1 @aih-ec2-3          │                           │P1 @aih-3              │
+                │P1                     │ │P1 @ops-vm-3          │                           │P1 @ops-3              │
                 │Move to: open v        │ │Move to: in_progress v │                           │Move to: closed v      │
                 │[detail]               │ │[detail]               │                           │[detail]               │
                 ╰───────────────────────╯ ╰───────────────────────╯                           ╰───────────────────────╯
@@ -3829,12 +3829,12 @@ After:
 
 **As built (T-2C.11 and T-2C.13; BU-mg2.3.21.6.3 and .6.5).**
 
-- What the engine does, measured with Claude Code 2.1.310's test kit on sem-kg-ec2 on 2026-10-25 with a scratch mod mounted by `claude plugin test`, and read from the 2.1.310 binary. Claude Code's site table lists `AbovePrompt` for `terminal` and `desktop` only, so VS Code has no band. The band site resolves every element (`Box,Button,Client,Code,Image,Input,Link,Markdown,Raster,Select,Svg,Text`) in the kit on the terminal, the desktop and VS Code alike, but a `Raster` off the terminal draws an empty Box; in the pane an `Image` draws only on the terminal and an `Svg` only on the desktop, VS Code and mobile, each an empty Box elsewhere. `$.ui.blit` takes `{ requestId, key, cells }` for a Raster (or `{ requestId, key, source }` for an Image) and answers `deny` when it did not paint. The `requestId` is the site's id from the `ui.render` that drew the Raster (`above-prompt` for the band in the engine's own protocol, `mount-1` for an unnamed kit mount), as the built-in mod in the 2.1.310 binary that animates a picture inside `AskUserQuestion` does. The test kit has no blit of its own, so the test world answers each one and keeps it. The engine itself tests whether a terminal draws pictures, and its refusal text inside tmux names `allow-passthrough` and `focus-events`; the Svg element takes `source`, `alt` and optional `width`, `height` and `isInteractive`, with no unit stated for `width`, so the mod leaves `width` out and the SVG scales from its `viewBox` at `width="100%"`.
+- What the engine does, measured with Claude Code 2.1.310's test kit on host-c on 2026-10-25 with a scratch mod mounted by `claude plugin test`, and read from the 2.1.310 binary. Claude Code's site table lists `AbovePrompt` for `terminal` and `desktop` only, so VS Code has no band. The band site resolves every element (`Box,Button,Client,Code,Image,Input,Link,Markdown,Raster,Select,Svg,Text`) in the kit on the terminal, the desktop and VS Code alike, but a `Raster` off the terminal draws an empty Box; in the pane an `Image` draws only on the terminal and an `Svg` only on the desktop, VS Code and mobile, each an empty Box elsewhere. `$.ui.blit` takes `{ requestId, key, cells }` for a Raster (or `{ requestId, key, source }` for an Image) and answers `deny` when it did not paint. The `requestId` is the site's id from the `ui.render` that drew the Raster (`above-prompt` for the band in the engine's own protocol, `mount-1` for an unnamed kit mount), as the built-in mod in the 2.1.310 binary that animates a picture inside `AskUserQuestion` does. The test kit has no blit of its own, so the test world answers each one and keeps it. The engine itself tests whether a terminal draws pictures, and its refusal text inside tmux names `allow-passthrough` and `focus-events`; the Svg element takes `source`, `alt` and optional `width`, `height` and `isInteractive`, with no unit stated for `width`, so the mod leaves `width` out and the SVG scales from its `viewBox` at `width="100%"`.
 - The figures row (T-2C.11). At the summary level, when `maxRows` leaves a row after the line or lines, the band draws one row under them (`beads-band:figures`); the rows and overview levels draw none, so the row costs a transcript line only at the summary. Its figures are the first line's, the one the controls follow: the session's own, or a firstmate's `[bd][all]`. Choices made here, under D-43 and recorded with why: the sparkline cuts the done window into 12 parts (two hours each for `24h`), oldest first, and draws each part's count as a Braille height, `⡀` for none and `⣀` `⣤` `⣶` `⣿` for up to a quarter, a half, three quarters and all of the busiest part. Braille is East Asian width N and no emoji, so the five glyphs join the glyph table and pass the D-41 width rule, which the block elements (`▁` to `█`, ambiguous width) would not; their ASCII forms are `.` `_` `-` `=` `#`. Then one bar for each status count the line draws (in progress, blocked, open and done, in the line's own part order, so a part `[band] parts` drops loses its bar), each 1 to 16 cells, filled by its count's share of their sum: done is one of the bars, so the row shows how the session's work splits between done and what is left. Each bar starts with its status glyph in its colour. A Raster cell takes a 24-bit colour, not a theme key, so each token has a mid value readable on light and dark backgrounds (`RASTER_TOKEN_COLORS`, the Timeline's bar colours among them), and `[theme]` sets any of them. Under `[indicators] ascii` the Raster's glyph cells draw their ASCII forms. The row is at most `14 + 18 × bars` cells wide (86 with four bars) and needs 26 columns for four one-cell bars; narrower, it is left out.
 - The Text form. On the desktop the band draws the same figures as one line of Text, the sparkline in the done token and each bar's glyph and percent in its count's token, cut at the band's edge. The band now draws on the desktop at all: until this task its hook drew on the terminal alone, though the site exists on both.
 - The reads and the repaint. The counts still come from the host refresher. The sparkline needs each done task's close time, which the counts do not carry, so the band reads `bd list --json --brief --limit 0 --status=closed --closed-after=<window start> [--assignee=<session>]` in each store whose done count for the line is above zero, and again only when that store's count moves; a quiet minute reads nothing, and the reads cover only the stores whose count is above zero. When a read lands after the band drew its Raster, the mod repaints that Raster in place through `$.ui.blit`, naming the drawn site and `band-figures`, and sends no second blit until the band redraws (the minute beat, a press or a write redraws it, drawing every read landed since). With no Raster drawn (the desktop, another level) or a refused blit, the band redraws instead.
-- The cost of one blit, measured with Claude Code 2.1.310's test kit on sem-kg-ec2 (16 cores, load 6 to 12) on 2026-10-25 at 16:13Z, three runs each: one `$.ui.blit` of the figures row at 120 columns (86 cells, 1,376 characters of cells) from a hooks module to the engine and back took 0.21 to 0.28 ms (mean of 1,000 calls; the kit's answer stands in for the terminal's paint). Encoding the row's cells took 0.05 to 0.08 ms. One redraw of the whole band by the mod, with its counts and figures row (a tree of about 6,040 characters), took 2.8 to 3.7 ms (mean of 200). So a blit costs about a tenth of a redraw before the terminal paints. The terminal's own paint of 86 cells is not in either figure; a live session would measure it, and no live session was allotted here.
-- The tmux probe, on sem-kg-ec2, read-only, nothing changed. My launcher ran it at 15:44Z: `tmux -V` printed `tmux 3.7c`, `tmux show-options -g allow-passthrough` printed `allow-passthrough off` and `tmux show-options -gv allow-passthrough` printed `off`. I read it again at 16:29Z: `tmux 3.7c` and `off`. So on this host's tmux sessions no Image draws, and the Timeline draws its alt text.
+- The cost of one blit, measured with Claude Code 2.1.310's test kit on host-c (16 cores, load 6 to 12) on 2026-10-25 at 16:13Z, three runs each: one `$.ui.blit` of the figures row at 120 columns (86 cells, 1,376 characters of cells) from a hooks module to the engine and back took 0.21 to 0.28 ms (mean of 1,000 calls; the kit's answer stands in for the terminal's paint). Encoding the row's cells took 0.05 to 0.08 ms. One redraw of the whole band by the mod, with its counts and figures row (a tree of about 6,040 characters), took 2.8 to 3.7 ms (mean of 200). So a blit costs about a tenth of a redraw before the terminal paints. The terminal's own paint of 86 cells is not in either figure; a live session would measure it, and no live session was allotted here.
+- The tmux probe, on host-c, read-only, nothing changed. My launcher ran it at 15:44Z: `tmux -V` printed `tmux 3.7c`, `tmux show-options -g allow-passthrough` printed `allow-passthrough off` and `tmux show-options -gv allow-passthrough` printed `off`. I read it again at 16:29Z: `tmux 3.7c` and `off`. So on this host's tmux sessions no Image draws, and the Timeline draws its alt text.
 - The surface profile's rule for pictures (T-2C.13). At session start the mod reads `TERM`, `TERM_PROGRAM`, `TERM_PROGRAM_VERSION` and `TMUX` (`hooks/terminal.ts`, `core/src/views/picture.ts`'s `terminalImages`). Outside tmux an Image draws on kitty (`TERM=xterm-kitty`), Ghostty (`xterm-ghostty` or `TERM_PROGRAM=ghostty`) and iTerm2 3.5 or later (`TERM_PROGRAM=iTerm.app` with its version). Inside tmux (`TMUX` set) the mod asks `tmux show-options -gv allow-passthrough`; only when that answers `on` (or `all`, refused for iTerm2, which needs `on`) does it ask `tmux display-message -p '#{client_termtype}'`, and an Image draws only when that names kitty, Ghostty or iTerm2 3.5 or later. Anything else, a fact that could not be read included, draws the alt text. The desktop, VS Code and mobile draw an Svg. The mod never sets a tmux or terminal option.
 - Which views draw a picture. The pane's Timeline, after its axis line: its dated epics and milestones (up to 12), each a bar from the axis start to its due date in its status colour, and a line at today when today is on the axis. On the terminal it is an `Image` keyed `timeline-picture`, a 4-bit palette PNG (`palettePng`, palette entry 0 transparent, four pixels a column and eight a row, its data in stored deflate blocks, since the core has no compressor and four bits a pixel keep a 118-column picture of six rows to about 15,000 characters of the 100,000-character tree), with the Raster bars still drawn under it. On the desktop and VS Code it is an `Svg` with `isInteractive`, each bar's label and due date its hover title. Elsewhere it is its alt text, one line: `Picture: 4 due 2026-10-21 to 2026-12-15, today 2026-10-21`. A picture takes its rows (one for the alt text) out of the items' window. No picture: the band's overview, which keeps its rows for its levels; a burndown, since no view draws one yet; and the mobile pane, which draws a notice and no view.
 - Captures at 120 and 48 columns from the test kit, laid out by `hooks/tests/render.ts` (a bar's filled cell drawn as `#`, colour not shown), for a session owning tasks in two stores with four done in the window. The terminal:
@@ -3898,11 +3898,11 @@ Resolution: the command is `/show-beads-ui` (T-1.7, BU-mg2.3.13); `/bu` stays be
 
 ### Feedback Round 3 (Sergei, 2026-10-23, in chat)
 
-Recorded in ai-harness as `docs/asks/BU-epic-agentic-ai-native-beads-ylx.md`, entries A002 (23:37:48Z), A003, A004 (23:42:51Z) and A005 (23:51:05Z), plus a question at 23:44Z relayed by aih-ec2-3. The raw entries govern; the lines that concern this design:
+Recorded in ai-harness as `docs/asks/BU-epic-agentic-ai-native-beads-ylx.md`, entries A002 (23:37:48Z), A003, A004 (23:42:51Z) and A005 (23:51:05Z), plus a question at 23:44Z relayed by ops-vm-3. The raw entries govern; the lines that concern this design:
 
-> why do i still see: > beads aih-ec2-3  2408 open  165 in progress  113 blocked  as of 1… [-] i only want the firstmate cc session to see everythign. and also see on a second line their own owned /beads-task(s) that are open, in progress, and blocked.
+> why do i still see: > beads ops-vm-3  2408 open  165 in progress  113 blocked  as of 1… [-] i only want the firstmate cc session to see everythign. and also see on a second line their own owned /beads-task(s) that are open, in progress, and blocked.
 
-> kg-ec2-2 cc session has 4 in progress cc tasks in their cc task panel but only 1 in progress in the beads-ui tui component. also, you don't need to show the "as of ..." for every second.
+> qa-vm-2 cc session has 4 in progress cc tasks in their cc task panel but only 1 in progress in the beads-ui tui component. also, you don't need to show the "as of ..." for every second.
 
 > also, the `/beads` beads-ui tui pane is still broken: [...] bd list failed (exit 1): Error: no beads database found
 
@@ -3912,13 +3912,13 @@ Recorded in ai-harness as `docs/asks/BU-epic-agentic-ai-native-beads-ylx.md`, en
 
 A002 also asks for the task panel that replaces the CC task panel, with its config, navigation, detail and edit, menus and shortcuts, mouse control, a focus shortcut, auto-commit and sync of edits, and later kanban, sprint, backlog, timeline and nav views.
 
-Resolution: the 2408-open band was the 0.1.x build, still loaded through stale project-scope installs; T-1B.2 removes them so the T-1.8 band (own counts, the firstmate's two lines) is what sessions see. kg-ec2-2's mismatch is the never-set assignee: D-25 and T-1B.3. The refresh: D-26 and T-1B.4, T-1B.5. The pane bug: D-24 and T-1B.1. Focus, show and hide: D-27 and T-1B.6, answered in chat at 23:50Z. Tab 3: D-28. Speed and a useful default: D-29 and T-1B.8. Reflow: T-1B.9, with the rest of A005 and the task panel in Phase 2B behind Open Question 10's research.
+Resolution: the 2408-open band was the 0.1.x build, still loaded through stale project-scope installs; T-1B.2 removes them so the T-1.8 band (own counts, the firstmate's two lines) is what sessions see. qa-vm-2's mismatch is the never-set assignee: D-25 and T-1B.3. The refresh: D-26 and T-1B.4, T-1B.5. The pane bug: D-24 and T-1B.1. Focus, show and hide: D-27 and T-1B.6, answered in chat at 23:50Z. Tab 3: D-28. Speed and a useful default: D-29 and T-1B.8. Reflow: T-1B.9, with the rest of A005 and the task panel in Phase 2B behind Open Question 10's research.
 
 ### Feedback Round 4 (Sergei, 2026-10-24, in chat)
 
 Recorded in ai-harness as `docs/asks/BU-epic-agentic-ai-native-beads-ylx.md`, entries A006 (00:36:40Z) and A007 (00:39:54Z, a CORRECTION of A006's format). The lines that concern this design:
 
-> why does it say "all 9 stores"? idk if we need to have that shown for the beads-ui claude code mods display text bar above the cc tui prompt box. i want this to be short and concise. also, we don't even needs to show aih-ec2-3 cc session. [...] and then we should build the rest of our own version of the beads-ui task panel / pane ui to replace the entire cc task panel. i'd prefer that. and only include the following ` as of 20:35:21` in dev / test / debug mode or whatever to make sure its rendering the latest.
+> why does it say "all 9 stores"? idk if we need to have that shown for the beads-ui claude code mods display text bar above the cc tui prompt box. i want this to be short and concise. also, we don't even needs to show ops-vm-3 cc session. [...] and then we should build the rest of our own version of the beads-ui task panel / pane ui to replace the entire cc task panel. i'd prefer that. and only include the following ` as of 20:35:21` in dev / test / debug mode or whatever to make sure its rendering the latest.
 
 > `[bd] {N} tasks ({N} in progress, {N} blocked, {N} open, {N} done last 24h)` [...] i want to see in progress and blocked first as those are most important. also, we can change via config file / the beads-ui claude code mod tui pane what the time range is for `{N} done last 24h` and perhaps also even configure via config / tui editor how to arrange them / rearrange them / add new components to the overview headline bar. what should we call this component btw?
 
@@ -3938,7 +3938,7 @@ Resolution: D-34 and T-1B.10. Line 1 is `[bd][all]` over every store, line 2 the
 
 ### Feedback Round 6 (Sergei, 2026-10-25, in chat)
 
-Five messages to aih-ec2-3, each recorded verbatim in the body of the issue it opened, and all of them, with the later ones below, in this repository's ask record as entry A006 (generation 6): before 01:32:17Z (BU-mg2.3.16), 01:32Z to 01:38:10Z (BU-mg2.3.17 and BU-mg2.3.18), shortly before 01:53Z (BU-mg2.3.20), about 01:58Z (BU-mg2.3.21) and about 02:02Z (BU-mg2.3.21's amendment comment). The raw text governs; the lines that concern this design:
+Five messages to ops-vm-3, each recorded verbatim in the body of the issue it opened, and all of them, with the later ones below, in this repository's ask record as entry A006 (generation 6): before 01:32:17Z (BU-mg2.3.16), 01:32Z to 01:38:10Z (BU-mg2.3.17 and BU-mg2.3.18), shortly before 01:53Z (BU-mg2.3.20), about 01:58Z (BU-mg2.3.21) and about 02:02Z (BU-mg2.3.21's amendment comment). The raw text governs; the lines that concern this design:
 
 > also, i need to see any blockers / decisions / held doc info surfaced in the beads-ui pane.
 
@@ -3952,13 +3952,13 @@ Five messages to aih-ec2-3, each recorded verbatim in the body of the issue it o
 
 Resolution: the fields and comments are BU-mg2.3.14 and BU-mg2.3.15, built by a parallel leaf and moved onto the framework in T-2C.8. Review items: D-37 to D-40, T-2C.4 to T-2C.6. Row indicators: D-41, D-42, T-2C.3, T-2C.7. The band: D-36, T-2C.2. The docked panel after a reload was first filed as a bug (BU-mg2.3.20 part 2), then reversed by Sergei (below). One implementation: D-35, T-2C.1 and T-2C.8. The scope over all hosts with client-repo access control is BU-mg2.3.17.4, later, as Sergei placed it.
 
-A sixth message, shortly before 02:27Z, relayed verbatim by aih-ec2-3, reverses BU-mg2.3.20 part 2 and D-32's open at session start:
+A sixth message, shortly before 02:27Z, relayed verbatim by ops-vm-3, reverses BU-mg2.3.20 part 2 and D-32's open at session start:
 
 > can you update the beads-ui plugin so that on session-start or plugin reload or whatever, it doesn't default try to open the pane. i'll open the pane with the button if i want to but i don't want it to open by default or whenever i reload the plugin or whatever. and especially as we're building out the bands surface to be interactive and to be a primary viewing and interaction surface for beads-ui anyway.
 
-Resolution: aih-ec2-3 builds it in its own PR (`[panel] open_at_start`, false by default) and records it against D-32; Phase 2C carries no reload criterion, and its exit gate checks that no pane opens unasked.
+Resolution: ops-vm-3 builds it in its own PR (`[panel] open_at_start`, false by default) and records it against D-32; Phase 2C carries no reload criterion, and its exit gate checks that no pane opens unasked.
 
-Three more, relayed verbatim by aih-ec2-3 and recorded on BU-mg2.3.21.6, BU-mg2.3.21.6.6 and BU-mg2.3.21.6.7:
+Three more, relayed verbatim by ops-vm-3 and recorded on BU-mg2.3.21.6, BU-mg2.3.21.6.6 and BU-mg2.3.21.6.7:
 
 > also, can you do like custom javascript / CSS etc for all this? what can you customize aesthetically? like i saw someone do a claude code mod of a literal browser, so i think you can customize the actual aesthetic a lot, right? are we just not doing that right now?
 
@@ -3977,14 +3977,14 @@ Resolution: R-32, R-33, D-43 and T-2C.9 to T-2C.14, after T-2C.1: T-2C.9, T-2C.1
 | Date | Decision | Notes |
 |------|----------|-------|
 | 2026-10-21 | Design approved; D-7 (a), D-11 (a), D-12 (d) | Sergei, Feedback Round 1. D-12 (d) is his added option: per launch repository, bms-semantic-knowledge-graph sessions to sw-bms-workspace. Build proceeds through /delegate opus /orchestrate /auto-flow |
-| 2026-10-21 | Phase 1 manual check, 120-column tmux on sem-kg-ec2 (first run) | The hooks child ran the mod with `claude --plugin-dir plugins/beads-ui` on Claude Code 2.1.306 in a 120-column tmux session against the beads-ui store, using one throwaway issue, BU-2r4, which it moved once with Move to and closed through the delete pane's Close instead; no other issue changed. It found three bugs the test kit cannot see, all fixed before merge: the confirmation pane opened behind the board, a tab switch dropped the keyboard to the prompt, and layouts overflowed a 48-column dock |
-| 2026-10-21 | Phase 1 manual check, 120-column tmux on sem-kg-ec2 (coordinator, at 9e21420) | The Opus build coordinator ran the same command at 9e21420. The band read `beads bu-build 17 open 2 in progress 0 blocked`, `/beads` opened the pane, `1` drew the Board with status columns and a Move to control on each card, `2` drew the Backlog as "17 of 17 open issues, priority order", and Esc closed the pane. No issue was written |
-| 2026-10-21 | Phase 1 manual check, 120-column tmux on sem-kg-ec2 (after the round-1 fixes) | The fixes child ran the mod with a read-only `bd` stub serving 600 synthetic issues. The open column stepped through 9 pages and wrapped, the Backlog reached its last page, and the Description control showed its escaped text. The run found a focus bug the test kit cannot see, fixed in 950aa58. The coordinator then ran the real store at 032a5de. Tab and Enter on a card opened the Detail with every field, the Backlog listed 17 of 17, and `x` opened the delete pane with bd's dry-run text verbatim and Close instead, Delete and Esc; Esc wrote nothing. It found a split Description label and a stale hint, both fixed in PR #24 |
-| 2026-10-21 | Phase 1 manual check, 120-column tmux on sem-kg-ec2 (after the round-2 fixes) | The round-2 child ran a stub serving 30 custom statuses of 40 characters: the board drew column windows, with "columns 1-6 of 39". Detail labels drew whole at 120 columns and at the 48-column dock. The coordinator rechecked the real store on the merged branch: `Description:` drew whole, and the focus hint cleared once a card opened. BU-mg2.3.5 kept updated_at 05:48:41Z throughout. The Ghostty or kitty run and Sergei's use of the MVP remain, as his steps |
+| 2026-10-21 | Phase 1 manual check, 120-column tmux on host-c (first run) | The hooks child ran the mod with `claude --plugin-dir plugins/beads-ui` on Claude Code 2.1.306 in a 120-column tmux session against the beads-ui store, using one throwaway issue, BU-2r4, which it moved once with Move to and closed through the delete pane's Close instead; no other issue changed. It found three bugs the test kit cannot see, all fixed before merge: the confirmation pane opened behind the board, a tab switch dropped the keyboard to the prompt, and layouts overflowed a 48-column dock |
+| 2026-10-21 | Phase 1 manual check, 120-column tmux on host-c (coordinator, at 9e21420) | The Opus build coordinator ran the same command at 9e21420. The band read `beads bu-build 17 open 2 in progress 0 blocked`, `/beads` opened the pane, `1` drew the Board with status columns and a Move to control on each card, `2` drew the Backlog as "17 of 17 open issues, priority order", and Esc closed the pane. No issue was written |
+| 2026-10-21 | Phase 1 manual check, 120-column tmux on host-c (after the round-1 fixes) | The fixes child ran the mod with a read-only `bd` stub serving 600 synthetic issues. The open column stepped through 9 pages and wrapped, the Backlog reached its last page, and the Description control showed its escaped text. The run found a focus bug the test kit cannot see, fixed in 950aa58. The coordinator then ran the real store at 032a5de. Tab and Enter on a card opened the Detail with every field, the Backlog listed 17 of 17, and `x` opened the delete pane with bd's dry-run text verbatim and Close instead, Delete and Esc; Esc wrote nothing. It found a split Description label and a stale hint, both fixed in PR #24 |
+| 2026-10-21 | Phase 1 manual check, 120-column tmux on host-c (after the round-2 fixes) | The round-2 child ran a stub serving 30 custom statuses of 40 characters: the board drew column windows, with "columns 1-6 of 39". Detail labels drew whole at 120 columns and at the 48-column dock. The coordinator rechecked the real store on the merged branch: `Description:` drew whole, and the focus hint cleared once a card opened. BU-mg2.3.5 kept updated_at 05:48:41Z throughout. The Ghostty or kitty run and Sergei's use of the MVP remain, as his steps |
 | 2026-10-23 | Command renamed to `/show-beads-ui`; band counts by owner | Sergei, Feedback Round 2: "also, can you change the skill to `/show-beads-ui`. i don't like it starting with `/beads` because it prevents me from auto-completing to `/beads-task` which i invoke a lot." The band change is T-1.8 |
-| 2026-10-24 | Install fix live on sem-kg-ec2 | ai-harness #5768 (67c521cd) merged on the chief's go and installed; `installed_plugins.json` then held one beads-ui row, user scope, no project path, and all 7 local rows were gone; `claude plugin update beads-ui@beads-ui --scope user` moved it to 0.2.1. Read by the chief after the install |
+| 2026-10-24 | Install fix live on host-c | ai-harness #5768 (67c521cd) merged on the chief's go and installed; `installed_plugins.json` then held one beads-ui row, user scope, no project path, and all 7 local rows were gone; `claude plugin update beads-ui@beads-ui --scope user` moved it to 0.2.1. Read by the chief after the install |
 | 2026-10-24 | Open Question 11 probe | Band v2 build, 02:34:28Z to 02:34:43Z, in a throwaway tmux session: a directly spawned child ended with its session, a detached grandchild survived and was stopped by its pgid |
 | 2026-10-24 | Phase 1B built | beads-ui #40 (store resolution, 0.2.1), #41 (band v2 and refresher, 0.3.0) and #43 (pane first paint, default view, focus and help, reflow, board snapshots, restart bound, prompt write redraw, race-free lease, 0.4.0); coordinator gate on #43's head: lint 3/3, Vitest 37 and 313 passed, `claude plugin test` 380 pass 0 fail. Live checks outstanding: a kg session's pane on the KG store, the focus ring, and a non-firstmate band against a hand count |
-| 2026-10-25 | Phase 2C built | beads-ui #67 (component framework, 0.12.0), #68 (visual base: tokens, glyph table, clickable affordance, pane toggle, 0.13.0), #69 (band levels, 0.14.0), #70 (row indicators, 0.15.0), #71 (review items in the Detail, reader and answering, 0.16.0), #72 (Review view and review indicator, 0.17.0), #73 (pane visual pass and the per-element affordance audit, 0.18.0), #74 (every view on the framework, 0.18.1) and #75 (band figures row and the Timeline's picture, 0.19.0), each installed by the chief on sem-kg-ec2 after a tree check. Gate on #75's branch (b1b7e31, base 05f2a02): test-gate 498 passed, VERIFIED=full; lint 3 of 3; Vitest 37 and 461 passed; claude plugin test 867 pass, 0 fail. Still owed: ai-harness #6108 (the held store's review verb and the [review] install line) under that repository's merge hold, without which the Detail's Review section and the Review view show no items live; Sergei's /reload-plugins look at the band levels and the pane toggle; live captures in both themes; the mobile surface (BU-mg2.3.21.6.9). This host's tmux has allow-passthrough off, so Image shows its alt text here |
+| 2026-10-25 | Phase 2C built | beads-ui #67 (component framework, 0.12.0), #68 (visual base: tokens, glyph table, clickable affordance, pane toggle, 0.13.0), #69 (band levels, 0.14.0), #70 (row indicators, 0.15.0), #71 (review items in the Detail, reader and answering, 0.16.0), #72 (Review view and review indicator, 0.17.0), #73 (pane visual pass and the per-element affordance audit, 0.18.0), #74 (every view on the framework, 0.18.1) and #75 (band figures row and the Timeline's picture, 0.19.0), each installed by the chief on host-c after a tree check. Gate on #75's branch (b1b7e31, base 05f2a02): test-gate 498 passed, VERIFIED=full; lint 3 of 3; Vitest 37 and 461 passed; claude plugin test 867 pass, 0 fail. Still owed: ai-harness #6108 (the held store's review verb and the [review] install line) under that repository's merge hold, without which the Detail's Review section and the Review view show no items live; Sergei's /reload-plugins look at the band levels and the pane toggle; live captures in both themes; the mobile surface (BU-mg2.3.21.6.9). This host's tmux has allow-passthrough off, so Image shows its alt text here |
 
 <!-- /doc:region name="approval_log" -->

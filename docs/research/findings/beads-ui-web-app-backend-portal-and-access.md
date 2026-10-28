@@ -49,15 +49,15 @@ they meet this topic and cited as sources.
    TaskDetail and the Lexical composer) is already built in ai-core `web/`, but it is not mounted on
    the employer host (`/` answers 404). D-11 makes the beads-ui web app its replacement, so that
    code is the port source and the scope overlap needs an owner ruling. [VERIFIABLE][^28][^33]
-7. Work pair access: bind the server to loopback on the employer host. acn-mac reaches it through
+7. Work pair access: bind the server to loopback on the employer host. host-a reaches it through
    one more entry in the pair transport's `forwards` map, the supervised Session Manager port
    forward the fleet already runs. An SSH `LocalForward` over the existing SSH-over-Session-Manager
-   alias is the measured fallback (`ssh -L` returned `rc=0` from acn-mac). [VERIFIABLE][^1][^30][^31]
-8. Personal pair access: bind loopback on fw-lnx and publish with `tailscale serve --bg --set-path
+   alias is the measured fallback (`ssh -L` returned `rc=0` from host-a). [VERIFIABLE][^1][^30][^31]
+8. Personal pair access: bind loopback on host-b and publish with `tailscale serve --bg --set-path
    /beads` from `apps.yaml`. The app reads `Tailscale-User-Login` for identity, and can read an app
    capability from grants (`--accept-app-caps`, Tailscale 1.92 or later) to decide who may dispatch
    prompts. [VERIFIABLE][^4][^5][^6]
-9. Neither transport authenticates the browser request. Any web page or local process on acn-mac
+9. Neither transport authenticates the browser request. Any web page or local process on host-a
    can reach `localhost:<port>`. A server that sends prompts to shell-capable agents therefore
    needs its own layer: a Host allowlist, an Origin and `Sec-Fetch-Site` check on every write, and
    on the work pair a per-host session token. [VERIFIABLE][^11][^12][^33] for the mechanisms; the
@@ -158,7 +158,7 @@ attempt. The dispatch leg recommends that record and then addressed Agent Mail. 
 the work pair the queue's `POST /api/queue/prompts` is that durable record, kept in Postgres with
 ack and consumed receipts. [VERIFIABLE][^27][^28]
 
-The personal pair has no queue. `config/work_queue.toml` marks `fw-lnx` and `mac` `disabled`, and
+The personal pair has no queue. `config/work_queue.toml` marks `host-b` and `mac` `disabled`, and
 only the employer host is `supervised`. [VERIFIABLE][^36] So the web server needs its own dispatch
 store behind the same interface when no `queue.url` is set. A small append-only file or SQLite
 database in the beads-ui state directory would do; D-11's switch already makes the queue optional.
@@ -328,7 +328,7 @@ The shell owns the root service worker. Member apps "emit a manifest only and re
 worker", and the shell's worker "never caches `/api/*`". [VERIFIABLE][^25] beads-ui must follow that
 in portal mode and may register its own worker only when it runs standalone. [INFERENCE]
 
-## 4. Access for sem-kg-ec2 and acn-mac
+## 4. Access for host-c and host-a
 
 ### 4.1 What the employer host allows
 
@@ -339,7 +339,7 @@ unreachable from any network because no inbound rule admits it. [VERIFIABLE][^27
 Two Session Manager routes are already in daily use:
 
 - SSH over Session Manager (`AWS-StartSSHSession` as a `ProxyCommand`), used by VS Code Remote-SSH
-  from acn-mac since 2026-09-23, with a pinned host key and a dedicated key pair.
+  from host-a since 2026-09-23, with a pinned host key and a dedicated key pair.
   [VERIFIABLE][^30]
 - `AWS-StartPortForwardingSession`, measured end to end on 2026-10-05 from the host to itself:
   "The tunnel is transparent: identical status and body shape, and client-certificate auth survives
@@ -357,10 +357,10 @@ client). `AWS-StartPortForwardingSessionToRemoteHost` adds `host`, reachable fro
 needs SSM Agent 3.1.1374.0 or later. [VERIFIABLE][^1] For a server bound to the instance's own
 loopback, the plain document is enough. [INFERENCE]
 
-| Route | How acn-mac opens it | Lifetime | Reconnect | Already in the fleet |
+| Route | How host-a opens it | Lifetime | Reconnect | Already in the fleet |
 |---|---|---|---|---|
 | Pair transport `forwards` entry | Supervisor starts `start-session` per declared forward | Supervised, self-healing | Capped backoff; local port probe; state file | Yes: `scripts/pair_transport.py` reads `pairs.<pair>.forwards` |
-| SSH `LocalForward` on the existing alias | `ssh -N -L 127.0.0.1:<p>:127.0.0.1:<p> <alias>` or a `LocalForward` line | Lives with the SSH master | `ControlPersist 10m`; manual | `ssh -L` measured `rc=0` from acn-mac |
+| SSH `LocalForward` on the existing alias | `ssh -N -L 127.0.0.1:<p>:127.0.0.1:<p> <alias>` or a `LocalForward` line | Lives with the SSH master | `ControlPersist 10m`; manual | `ssh -L` measured `rc=0` from host-a |
 | VS Code Ports view | "Forward a Port" in the Remote-SSH window | "for the duration of the session" unless `remote.restoreForwardedPorts` | With the window | VS Code Remote-SSH is the daily route |
 | Ad hoc `start-session` | One command | Until the terminal closes | None | Measured from the host only |
 
@@ -372,7 +372,7 @@ for the relay forward, plus one per extra forward the pair declares under `forwa
 Mail board ...)", and treats "a live child is not a working forward" by probing the local port.
 [VERIFIABLE][^31] Adding `{"beads-ui": {"remote_port": <p>, "local_port": <p>}}` to the work pair is
 a config change in ai-harness, with the SSM target and profile already in the local overlay.
-[INFERENCE] The messaging design records that on acn-mac "the pair transport was up" on 2026-10-10.
+[INFERENCE] The messaging design records that on host-a "the pair transport was up" on 2026-10-10.
 [VERIFIABLE][^32]
 
 ### 4.3 Session limits, latency and sleep
@@ -383,7 +383,7 @@ Maximum session duration is off by default and can be 1 to 1,440 minutes. [VERIF
 
 Whether bytes on a port-forward data channel count as input that resets the idle timer is not
 stated. [NO SOURCE] Searches tried: the idle-timeout and maximum-duration preference pages, and the
-start-session page. The fleet's own open question asks the same thing for acn-mac (establishment
+start-session page. The fleet's own open question asks the same thing for host-a (establishment
 time, the 20-minute idle timeout under traffic, sleep and wake, and concurrent forwards), and its
 results were still empty. [VERIFIABLE][^32] The supervised forward makes this a reconnect delay, not
 an outage: a dropped forward reads `down` and is restarted. [VERIFIABLE][^31]
@@ -392,14 +392,14 @@ Session Manager does not log port-forward or SSH sessions: "Logging isn't availa
 Manager sessions that connect through port forwarding or SSH". [VERIFIABLE][^1] The web app's audit
 trail (dispatch records, `bd comment` mirrors) is the only record of what was sent. [INFERENCE]
 
-Latency through the forward was not measured from acn-mac. The host-to-itself round trip returned
+Latency through the forward was not measured from host-a. The host-to-itself round trip returned
 the same body as the direct call, and no timing was recorded. [VERIFIABLE][^29] [NO SOURCE] for
-acn-mac latency.
+host-a latency.
 
 ### 4.4 Authenticating the user when the tunnel is the only path
 
 The tunnel authenticates whoever opened it, through AWS SSO and IAM. It does not authenticate the
-browser request that arrives at `localhost:<p>` on acn-mac. [INFERENCE] Any process on the laptop can
+browser request that arrives at `localhost:<p>` on host-a. [INFERENCE] Any process on the laptop can
 connect. A web page on any site can try too.
 
 Chrome's Local Network Access gates "any request from the public network to a local network or
@@ -427,7 +427,7 @@ OWASP calls Fetch Metadata "a lightweight and reliable method", makes origin ver
 "mandatory" fallback, and says a custom header means a browser request "must have been
 preflighted". [VERIFIABLE][^12] The combination is [INFERENCE].
 
-## 5. Access for fw-lnx and sw-mac
+## 5. Access for host-b and host-f
 
 ### 5.1 Tailscale Serve
 
@@ -435,7 +435,7 @@ Serve "lets you route traffic from other devices on your Tailscale network" to a
 requires HTTPS certificates enabled in the tailnet. [VERIFIABLE][^4] With `--bg` it "runs
 persistently in the background" and resumes after a reboot or `tailscale down` and `up`.
 [VERIFIABLE][^5] Mount points behave like Go `ServeMux` patterns. [VERIFIABLE][^5] app-portal measured
-that Serve strips the mount path and that fw-lnx already serves `/` and `/job-pilot` on one HTTPS
+that Serve strips the mount path and that host-b already serves `/` and `/job-pilot` on one HTTPS
 origin. [VERIFIABLE][^25]
 
 Funnel "does not include identity headers" and would make the app public. app-portal and the queue
@@ -506,7 +506,7 @@ in the fleet after the agent sessions themselves. The threats, with the control 
 |---|---|
 | A hostile web page posts a prompt through `localhost` | Origin and `Sec-Fetch-Site` check, custom header, `SameSite=Strict` cookie |
 | DNS rebinding to 127.0.0.1 reads tasks | Host allowlist |
-| Another local process on acn-mac calls the API | Per-host token cookie; on fw-lnx, the identity header |
+| Another local process on host-a calls the API | Per-host token cookie; on host-b, the identity header |
 | A forged prompt reaches a session | The dispatch leg's signed envelope, verified on the receiving host |
 | A private task reaches the employer host | Per-host store allowlist; the queue's ingest allowlist |
 | Secrets typed into the composer | The ai-core composer's secret-shape refusal, ported |
@@ -619,11 +619,11 @@ manifest and no service worker.
 On the work pair the same build runs at `http://localhost:<p>/beads/` through the forward, until
 app-portal gains a loopback router there.
 
-### Work pair (acn-mac and the employer EC2 host)
+### Work pair (host-a and the employer EC2 host)
 
 ```mermaid
 flowchart LR
-  subgraph mac["acn-mac"]
+  subgraph mac["host-a"]
     B["Browser<br/>http://localhost:p/beads/"]
     PT["pair transport<br/>(supervised start-session)"]
   end
@@ -646,17 +646,17 @@ flowchart LR
   W -->|"dispatch (signed envelope)"| AM
 ```
 
-### Personal pair (sw-mac and fw-lnx)
+### Personal pair (host-f and host-b)
 
 ```mermaid
 flowchart LR
-  subgraph swmac["sw-mac (fleet profile: mac)"]
-    B2["Browser<br/>https://fw-lnx.tailnet/beads/"]
+  subgraph swmac["host-f (fleet profile: mac)"]
+    B2["Browser<br/>https://host-b.tailnet/beads/"]
   end
   subgraph ts["Tailscale"]
     TN["WireGuard tailnet<br/>auth: tailnet identity, grants"]
   end
-  subgraph fw["fw-lnx"]
+  subgraph fw["host-b"]
     S["tailscale serve --bg<br/>HTTPS, strips /beads,<br/>adds Tailscale-User-Login"]
     W2["beads-ui server 127.0.0.1:p<br/>auth: identity header allowlist,<br/>app capability for dispatch,<br/>Origin + Sec-Fetch-Site on writes"]
     D2["Dolt store(s), personal allowlist"]
@@ -757,7 +757,7 @@ high. [INFERENCE]
 **Cons:**
 - Duplicates the queue's prompt, ack and consumed state on the work pair; the queue's hook pull would not see web prompts.
 
-#### (c) Bring up the queue on fw-lnx
+#### (c) Bring up the queue on host-b
 
 **Pros:**
 - One store shape everywhere.
@@ -809,12 +809,12 @@ coordinator (F-4). [INFERENCE]
 - Config only, no new code.
 
 **Cons:**
-- Depends on the acn-mac supervisor being installed and up; the acn-mac measurements are still open.
+- Depends on the host-a supervisor being installed and up; the host-a measurements are still open.
 
 #### (b) `LocalForward` on the SSH-over-Session-Manager alias
 
 **Pros:**
-- Measured from acn-mac; multiplexed with `ControlMaster`.
+- Measured from host-a; multiplexed with `ControlMaster`.
 
 **Cons:**
 - Lives with the SSH master; no supervision.
@@ -828,7 +828,7 @@ coordinator (F-4). [INFERENCE]
 - Ends with the window unless `remote.restoreForwardedPorts` is set.
 
 Recommendation: (a), with (b) documented as the fallback. Deciding criterion: the app must stay
-reachable without a terminal or editor window open. Confidence: medium, until the acn-mac
+reachable without a terminal or editor window open. Confidence: medium, until the host-a
 measurements land. [INFERENCE]
 
 ### R6. Browser authentication
@@ -848,7 +848,7 @@ measurements land. [INFERENCE]
 - Nothing to build; matches app-portal today.
 
 **Cons:**
-- Leaves `localhost` open to any page or process on acn-mac.
+- Leaves `localhost` open to any page or process on host-a.
 
 #### (c) An OAuth proxy in front
 
@@ -933,8 +933,8 @@ criterion: keep the ask's cloud option without a new public surface. Confidence:
    (section 4.3).
 6. The queue design's D-19 statement that no `authorized_keys` credential exists is out of date
    (section 4.1).
-7. The founding ask says "sw-mac"; the fleet's machine profile is `mac`, and no config file
-   contains `sw-mac`. [VERIFIABLE][^33] Config that names the personal pair must use `mac`.
+7. The founding ask says "host-f"; the fleet's machine profile is `mac`, and no config file
+   contains `host-f`. [VERIFIABLE][^33] Config that names the personal pair must use `mac`.
 8. The first `/api/queue/tasks` call timed out at 5 s; the next four took 0.27 to 0.69 s.
    [VERIFIABLE][^33] A cold first read can be slow, so the web app should show its snapshot first.
 
@@ -959,11 +959,11 @@ condition D-4 set has not been met.
 ### Blindspots not resolved
 
 - Whether Session Manager's idle timer counts port-forward bytes as activity. Not documented.
-- Latency, sleep and wake behaviour, and concurrent forwards from acn-mac. The fleet's own
+- Latency, sleep and wake behaviour, and concurrent forwards from host-a. The fleet's own
   measurement task is open; this leg could not open a session.
 - Whether Tailscale Serve speaks HTTP/2 to browsers. Not stated on the pages fetched.
-- The live state of Tailscale, app-portal and the queue on fw-lnx. This leg ran on the employer host
-  and cannot reach fw-lnx.
+- The live state of Tailscale, app-portal and the queue on host-b. This leg ran on the employer host
+  and cannot reach host-b.
 - The account's Session Manager preferences (idle timeout, maximum duration). Reading them needs a
   credential and was out of scope.
 - Whether a persistent MySQL-protocol connection to the shared Dolt server is acceptable for the web
@@ -1008,8 +1008,8 @@ condition D-4 set has not been met.
 | Open to changing backend or frontend | Kept: R3 adds a dispatch store; F-4 proposes a Node member in app-portal; no change to D-4 was warranted |
 | Fits app-portal as a modular member web app | Kept on the personal pair; on the work pair it depends on F-3 |
 | Local hosting for now | Kept: loopback binds on both pairs |
-| The employer host with acn-mac, safely and securely, "SSM or SSH or whatever makes sense" | Kept: supervised Session Manager forward, SSH fallback, plus R6's browser layer |
-| fw-lnx with sw-mac through Tailscale | Kept: Tailscale Serve with identity headers and grants |
+| The employer host with host-a, safely and securely, "SSM or SSH or whatever makes sense" | Kept: supervised Session Manager forward, SSH fallback, plus R6's browser layer |
+| host-b with host-f through Tailscale | Kept: Tailscale Serve with identity headers and grants |
 | Cloud hosting from infra-as-config templates later | Kept: R8, with Railway's template updated |
 
 Nothing in this topic was dropped. F-3's option (c) would narrow the app-portal requirement on the
@@ -1052,7 +1052,7 @@ source-vetting procedures.
 [^26]: app-portal. (2026). [apps.yaml, src/app_portal/, src/vite.ts, src/shell.tsx, package.json](https://github.com/sergeiwallace/app-portal). Private repository files at `b73683e` and `a1ddc13`, read locally 2026-10-28; link requires repository access.
 [^27]: ai-harness. (2026). [docs/designs/autonomous-work-queue-coordinator-and-pwa-dashboard.md](https://github.com/sergeiwallace/ai-harness/blob/main/docs/designs/autonomous-work-queue-coordinator-and-pwa-dashboard.md). Private repository file at `23ece1e92b6`, read locally 2026-10-28; link requires repository access.
 [^28]: ai-core. (2026). [src/ai_core/queue/router.py, src/ai_core/main.py, web/README.md](https://github.com/sergeiwallace/ai-core). Private repository files at `f40fa2bd`, read locally 2026-10-28; link requires repository access.
-[^29]: ai-harness. (2026). [docs/procedures/sem-kg-ec2-host-facts.md](https://github.com/sergeiwallace/ai-harness/blob/main/docs/procedures/sem-kg-ec2-host-facts.md), section on Session Manager. Private repository file at `23ece1e92b6`, read locally 2026-10-28; link requires repository access.
+[^29]: ai-harness. (2026). [docs/procedures/host-c-host-facts.md](https://github.com/sergeiwallace/ai-harness/blob/main/docs/procedures/host-c-host-facts.md), section on Session Manager. Private repository file at `23ece1e92b6`, read locally 2026-10-28; link requires repository access.
 [^30]: ai-harness. (2026). [VS Code remote-access procedure for the employer EC2 host](https://github.com/sergeiwallace/ai-harness/tree/main/docs/procedures). Private repository file under `docs/procedures/` at `23ece1e92b6`, read locally 2026-10-28; link requires repository access.
 [^31]: ai-harness. (2026). [scripts/pair_transport.py, scripts/wq_tunnel.py, config/message-transports.json](https://github.com/sergeiwallace/ai-harness/tree/main/scripts). Private repository files at `23ece1e92b6`, read locally 2026-10-28; link requires repository access.
 [^32]: ai-harness. (2026). [docs/designs/aih-f4o46-buzz-primary-cross-machine-messaging.md](https://github.com/sergeiwallace/ai-harness/blob/main/docs/designs/aih-f4o46-buzz-primary-cross-machine-messaging.md). Private repository file at `23ece1e92b6`, read locally 2026-10-28; link requires repository access.

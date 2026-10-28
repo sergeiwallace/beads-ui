@@ -84,7 +84,7 @@ describe("boardView", () => {
       title: "EPIC beads-ui:⋯",
       priority: "P1",
       priorityToken: "priority.p1",
-      assignee: "@aih-ec2-3",
+      assignee: "@ops-vm-3",
       moveTargets: ["open", "blocked", "hooked", "review", "uat", "deferred", "pinned", "closed"],
       pending: false,
     });
@@ -106,7 +106,7 @@ describe("boardView", () => {
   test("should draw one row per distinct assignee plus an unassigned row when the swimlane is assignee", () => {
     const view = boardView(loaded(), { columnWidth: 20, swimlane: "assignee" });
 
-    expect(view.lanes.map((lane) => lane.label)).toEqual(["aih-3", "aih-ec2-3", "unassigned"]);
+    expect(view.lanes.map((lane) => lane.label)).toEqual(["ops-3", "ops-vm-3", "unassigned"]);
     expect(view.lanes.map((lane) => lane.cells.map((cell) => cell.length))).toEqual([
       [0, 0, 0, 0, 0, 0, 0, 0, 7],
       [0, 1, 0, 0, 0, 0, 0, 0, 1],
@@ -328,7 +328,7 @@ describe("backlogView", () => {
       "BU-mg2.12",
     ]);
     expect(rowIds("label:id:BU-t-1-2-backlog-tab-vptb")).toEqual(["BU-mg2.3.6"]);
-    expect(rowIds("assignee:aih-3")).toEqual([]);
+    expect(rowIds("assignee:ops-3")).toEqual([]);
     expect(rowIds("type:bug ready:true")).toEqual(["BU-2zw"]);
     expect(rowIds("ready:false")).toEqual([]);
   });

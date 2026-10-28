@@ -48,7 +48,7 @@ fi
 next_step "Git hooks"
 if [ -f .githooks/install.sh ]; then
     # install.sh now fails non-zero when pre-commit isn't installed yet
-    # (AIH-393 loud-failure contract) — don't let that abort the rest of a
+    # (loud-failure contract) — don't let that abort the rest of a
     # fresh scaffold's setup; install.sh already printed the remediation.
     if bash .githooks/install.sh; then
         ok "Git hooks installed."
@@ -204,7 +204,7 @@ open('README.md', 'w').write(readme)
 " 2>/dev/null
             if [ $? -eq 0 ]; then
                 git add README.md
-                # Never use --no-verify here (AIH-469): pre-commit's autofix hooks
+                # Never use --no-verify here: pre-commit's autofix hooks
                 # (markdownlint, trailing-whitespace, ...) can modify README.md and
                 # fail the first attempt on purpose — re-stage their fix and retry
                 # once before giving up, instead of bypassing the gate.

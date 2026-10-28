@@ -372,7 +372,7 @@ describe("open, read and edit a task (T-2B.3)", () => {
     ["priority", "select", "0", "bd update BU-mg2.3 --priority=0"],
     ["type", "select", "feature", "bd update BU-mg2.3 --type=feature"],
     ["labels", "input", "id:BU-beads-ui-claude-code-aeyb, ui", "bd update BU-mg2.3 --add-label=ui"],
-    ["assignee", "input", "aih-ec2-4", "bd update BU-mg2.3 --assignee=aih-ec2-4 --if-assignee="],
+    ["assignee", "input", "ops-vm-4", "bd update BU-mg2.3 --assignee=ops-vm-4 --if-assignee="],
     ["due", "input", "2026-11-02", "bd update BU-mg2.3 --due=2026-11-02"],
     ["description", "input", "one\\ntwo", "bd update BU-mg2.3 --description=one\ntwo"],
   ];

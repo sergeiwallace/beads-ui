@@ -15,7 +15,7 @@ import { unwrap } from "./helpers.ts";
 const comment = (n: number, text: string): Comment => ({
   id: `c-${n}`,
   issueId: "BU-x",
-  author: "aih-ec2-3",
+  author: "ops-vm-3",
   text,
   createdAt: `2026-10-${String(10 + n).padStart(2, "0")}T08:00:00Z`,
 });
@@ -27,7 +27,7 @@ describe("commentsView", () => {
 
     expect(view.heading).toBe(`Comments (${parsed.length})`);
     expect(view.rows.map((row) => row.id)).toEqual(parsed.map((one) => one.id));
-    expect(view.rows[0]?.line).toBe("aih-ec2-3 2026-10-21 10:01");
+    expect(view.rows[0]?.line).toBe("ops-vm-3 2026-10-21 10:01");
     expect(view.rows.map((row) => row.text)).toEqual(parsed.map((one) => one.text));
   });
 
@@ -53,12 +53,12 @@ describe("adding a comment", () => {
   });
 
   test("should pass the text after -- so a comment that starts with a dash is never a flag", () => {
-    expect(commentAddArgv("BU-x", "--force is not a flag here", "aih-ec2-3")).toEqual([
+    expect(commentAddArgv("BU-x", "--force is not a flag here", "ops-vm-3")).toEqual([
       "bd",
       "comments",
       "add",
       "BU-x",
-      "--actor=aih-ec2-3",
+      "--actor=ops-vm-3",
       "--json",
       "--",
       "--force is not a flag here",

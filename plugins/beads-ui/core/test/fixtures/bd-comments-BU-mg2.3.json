@@ -2,7 +2,7 @@
   {
     "id": "3ae019d7-b664-5e9f-bb8f-851e903f6c49",
     "issue_id": "BU-mg2.3",
-    "author": "aih-ec2-3",
+    "author": "ops-vm-3",
     "text": "2026-10-21 Phases 0 and 1 landed on main: 50a98c3 (PR 21) and bbdf173 (PR 25); all eleven child tasks closed. Open under this epic: the Phase 1 exit gate's human steps (the Ghostty or kitty run and Sergei's own use of the MVP, recorded in the design's Approval Log) and the later mod phases.",
     "created_at": "2026-10-21T10:01:22Z"
   },
@@ -17,7 +17,7 @@
     "id": "f36e3299-dced-5cab-8d5d-ed41e893ea2f",
     "issue_id": "BU-mg2.3",
     "author": "Sergei Wallace",
-    "text": "2026-10-24T01:05Z, aih-ec2-3 Opus coordinator. Designed on beads-ui main (PR #38, 8a0708f): Phase 2B of docs/designs/beads-ui-design.md is the task panel that replaces the Claude Code task panel, with tasks T-2B.1 to T-2B.9 and decisions D-31 (element tree plus a Client for the list and board, element-tree fallback), D-32 (a docked panel under panel.mode, both by default; cutover by the per-profile retirement switch) and D-33 (the mod runs a configured sync command after a 10-second quiet; any failure starts a turn in the session through $.prompt.submit with a fixed, truncated template, deduplicated, retries capped, plus a terminal notification). Research behind it: docs/research/claude-code-mod-panel-rendering-and-focus.md (PR #37). Build follows Phase 1B.\n",
+    "text": "2026-10-24T01:05Z, ops-vm-3 Opus coordinator. Designed on beads-ui main (PR #38, 8a0708f): Phase 2B of docs/designs/beads-ui-design.md is the task panel that replaces the Claude Code task panel, with tasks T-2B.1 to T-2B.9 and decisions D-31 (element tree plus a Client for the list and board, element-tree fallback), D-32 (a docked panel under panel.mode, both by default; cutover by the per-profile retirement switch) and D-33 (the mod runs a configured sync command after a 10-second quiet; any failure starts a turn in the session through $.prompt.submit with a fixed, truncated template, deduplicated, retries capped, plus a terminal notification). Research behind it: docs/research/claude-code-mod-panel-rendering-and-focus.md (PR #37). Build follows Phase 1B.\n",
     "created_at": "2026-10-24T01:01:37Z"
   },
   {

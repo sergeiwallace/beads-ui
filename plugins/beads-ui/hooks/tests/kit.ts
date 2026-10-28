@@ -1,7 +1,7 @@
 import { test as kitTest } from "claude-code/testing";
 
 /**
- * The hooks tests' default per-test timeout, measured on sem-kg-ec2 (16 cores) on 2026-10-24.
+ * The hooks tests' default per-test timeout, measured on host-c (16 cores) on 2026-10-24.
  *
  * Every test pays one load of the hooks module: the kit loads register.ts and everything it
  * imports afresh in each test's `$.session.start`. That load is most of an ordinary test: about

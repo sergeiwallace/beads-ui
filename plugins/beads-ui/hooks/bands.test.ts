@@ -89,23 +89,23 @@ const HARNESS = "/work/ai-harness";
 /** Two stores holding issues of three sessions and one with no assignee. */
 const STORES: Readonly<Record<string, readonly Counted[]>> = {
   [CWD]: [
-    { status: "open", assignee: "aih-ec2-3" },
-    { status: "in_progress", assignee: "aih-ec2-3" },
-    { status: "closed", assignee: "aih-ec2-3", closedAt: START_MS - HOUR },
-    { status: "open", assignee: "kg-ec2-1" },
-    { status: "blocked", assignee: "kg-ec2-1" },
+    { status: "open", assignee: "ops-vm-3" },
+    { status: "in_progress", assignee: "ops-vm-3" },
+    { status: "closed", assignee: "ops-vm-3", closedAt: START_MS - HOUR },
+    { status: "open", assignee: "qa-vm-1" },
+    { status: "blocked", assignee: "qa-vm-1" },
     { status: "open" },
   ],
   [HARNESS]: [
-    { status: "open", assignee: "aih-ec2-3" },
-    { status: "blocked", assignee: "aih-ec2-3" },
-    { status: "closed", assignee: "aih-ec2-3", closedAt: START_MS - 72 * HOUR },
-    { status: "in_progress", assignee: "aih-ec2-firstmate-1" },
-    { status: "closed", assignee: "aih-ec2-firstmate-1", closedAt: START_MS - 2 * HOUR },
-    { status: "open", assignee: "kg-ec2-1" },
+    { status: "open", assignee: "ops-vm-3" },
+    { status: "blocked", assignee: "ops-vm-3" },
+    { status: "closed", assignee: "ops-vm-3", closedAt: START_MS - 72 * HOUR },
+    { status: "in_progress", assignee: "ops-vm-firstmate-1" },
+    { status: "closed", assignee: "ops-vm-firstmate-1", closedAt: START_MS - 2 * HOUR },
+    { status: "open", assignee: "qa-vm-1" },
   ],
 };
-const INVENTORY = inventoryOf({ BU: { repo: CWD }, AIH: { repo: HARNESS } });
+const INVENTORY = inventoryOf({ BU: { repo: CWD }, OPS: { repo: HARNESS } });
 
 const nameOf = (path: string) => path.split("/").pop() ?? path;
 
@@ -169,7 +169,7 @@ const FM = "     [fm] 2 tasks (1 in progress, 0 blocked, 0 open, 1 done last 24h
 
 describe("the band's format (T-1B.10)", () => {
   test("should read [bd] and the session's own counts with no session name or store count when a non-firstmate session draws", async ($, on) => {
-    const w = await started($, on, named("aih-ec2-3", { refresher: true, files: LIVE }));
+    const w = await started($, on, named("ops-vm-3", { refresher: true, files: LIVE }));
 
     expect(await line($, "own")).toBe(OWN);
     expect(await line($, "all")).toBeUndefined();
@@ -178,21 +178,21 @@ describe("the band's format (T-1B.10)", () => {
 
   test("should draw the snapshot of the token the lease names, never one an ousted refresher wrote", async ($, on) => {
     const OUSTED: Readonly<Record<string, readonly Counted[]>> = {
-      [CWD]: [{ status: "open", assignee: "aih-ec2-3" }],
+      [CWD]: [{ status: "open", assignee: "ops-vm-3" }],
       [HARNESS]: [],
     };
     const files = {
       ...LIVE,
       [PUBLISHED]: snapshotOf(OUSTED, { beatAt: START_MS - 1_000, token: "ousted-token-1" }),
     };
-    const w = await started($, on, named("aih-ec2-3", { refresher: true, files }));
+    const w = await started($, on, named("ops-vm-3", { refresher: true, files }));
 
     expect(await line($, "own")).toBe(OWN);
     expect(w.keys().filter(isCount)).toEqual([]);
   });
 
   test("should draw [bd][all] over every owner and [fm] right-aligned beneath it when the firstmate draws", async ($, on) => {
-    await started($, on, named("aih-ec2-firstmate-1", { refresher: true, files: LIVE }));
+    await started($, on, named("ops-vm-firstmate-1", { refresher: true, files: LIVE }));
 
     const all = await line($, "all");
     const fm = await line($, "own");
@@ -207,27 +207,27 @@ describe("the band's format (T-1B.10)", () => {
   test("should end the firstmate's first line with the unsynced count and name the stores in the pane header when a store is out of step", async ($, on) => {
     const files = {
       ...LIVE,
-      [INVENTORY_PATH]: inventoryOf({ BU: { repo: CWD }, AIH: { repo: HARNESS, synced: false } }),
+      [INVENTORY_PATH]: inventoryOf({ BU: { repo: CWD }, OPS: { repo: HARNESS, synced: false } }),
     };
-    await started($, on, named("aih-ec2-firstmate-1", { refresher: true, files }));
+    await started($, on, named("ops-vm-firstmate-1", { refresher: true, files }));
     await $.command.run(SHOW);
 
     expect(await line($, "all")).toBe(`${ALL} 1 unsynced`);
     expect(await line($, "own")).toBe(FM);
     expect((await (await pane($)).find({ key: "header" }))?.text).toContain(
-      "unsynced with the pair: AIH",
+      "unsynced with the pair: OPS",
     );
   });
 
   test("should show no drift marker when every store is in step", async ($, on) => {
-    await started($, on, named("aih-ec2-firstmate-1", { refresher: true, files: LIVE }));
+    await started($, on, named("ops-vm-firstmate-1", { refresher: true, files: LIVE }));
 
     expect(await line($, "all")).not.toContain("unsynced");
   });
 
   test("should draw from the stores that answered and end the line with ~ when a store cannot be read", async ($, on) => {
     const files = { ...LIVE, [SNAPSHOT]: snapshotOf(STORES, { failed: [HARNESS] }) };
-    await started($, on, named("aih-ec2-firstmate-1", { refresher: true, files }));
+    await started($, on, named("ops-vm-firstmate-1", { refresher: true, files }));
 
     expect(await line($, "all")).toBe(
       "[bd][all] 6 tasks (1 in progress, 1 blocked, 3 open, 1 done last 24h) ~",
@@ -247,7 +247,7 @@ describe("the band's format (T-1B.10)", () => {
   });
 
   test("should explain the band's glyphs in the pane's help", async ($, on) => {
-    await started($, on, named("aih-ec2-3", { refresher: true, files: LIVE }));
+    await started($, on, named("ops-vm-3", { refresher: true, files: LIVE }));
     await $.command.run(SHOW);
     const ui = await pane($);
 
@@ -260,59 +260,59 @@ describe("the band's format (T-1B.10)", () => {
   });
 
   test("should yield the band when a survey holds it", async ($, on) => {
-    await started($, on, named("aih-ec2-3", { refresher: true, files: LIVE }));
+    await started($, on, named("ops-vm-3", { refresher: true, files: LIVE }));
 
     expect(await (await band($, 120, true)).find({ key: "beads-band" })).toBeUndefined();
   });
 });
 
 describe("the store a session sums (T-1B.1)", () => {
-  const KG_CWD = "/work/bms-semantic-knowledge-graph";
-  const MAPPED = "/home/me/kg-store";
-  const MAPPING = '[directory_stores]\n"bms-semantic-knowledge-graph" = "~/kg-store"\n';
-  const KG_STORE: readonly Counted[] = [
-    { status: "open", assignee: "kg-ec2-3" },
-    { status: "blocked", assignee: "kg-ec2-3" },
+  const QA_CWD = "/work/bms-semantic-knowledge-graph";
+  const MAPPED = "/home/me/qa-store";
+  const MAPPING = '[directory_stores]\n"bms-semantic-knowledge-graph" = "~/qa-store"\n';
+  const QA_STORE: readonly Counted[] = [
+    { status: "open", assignee: "qa-vm-3" },
+    { status: "blocked", assignee: "qa-vm-3" },
   ];
 
   test("should add the mapped store to its sum and register it for the refresher when the inventory does not list it", async ($, on) => {
     const w = world(
       on,
-      named("kg-ec2-3", {
+      named("qa-vm-3", {
         refresher: true,
         files: {
           [USER_CONFIG]: MAPPING,
           [INVENTORY_PATH]: INVENTORY,
-          [SNAPSHOT]: snapshotOf({ ...STORES, [MAPPED]: KG_STORE }),
+          [SNAPSHOT]: snapshotOf({ ...STORES, [MAPPED]: QA_STORE }),
         },
       }),
     );
-    await $.session.start({ ...SESSION, cwd: KG_CWD });
+    await $.session.start({ ...SESSION, cwd: QA_CWD });
     await w.clock.settle();
 
     expect(await line($, "own")).toBe(
       "[bd] 2 tasks (0 in progress, 1 blocked, 1 open, 0 done last 24h)",
     );
-    const entry = JSON.parse(w.files.get(`${STATE}/sessions/kg-ec2-3.json`) ?? "{}");
+    const entry = JSON.parse(w.files.get(`${STATE}/sessions/qa-vm-3.json`) ?? "{}");
     expect(entry).toEqual({
-      id: "kg-ec2-3",
+      id: "qa-vm-3",
       seenAt: START_MS,
       windows: ["24h"],
-      stores: [{ name: "kg-store", path: MAPPED }],
+      stores: [{ name: "qa-store", path: MAPPED }],
       // The store its pane reads, whose board snapshot the refresher keeps (T-1B.8).
-      boards: [{ name: "kg-store", path: MAPPED }],
+      boards: [{ name: "qa-store", path: MAPPED }],
     });
   });
 
   test("should read the mapped store too when it reads its own counts", async ($, on) => {
     const w = world(
       on,
-      named("kg-ec2-3", {
+      named("qa-vm-3", {
         files: { [USER_CONFIG]: MAPPING, [INVENTORY_PATH]: INVENTORY },
-        script: countScript({ ...STORES, [MAPPED]: KG_STORE }),
+        script: countScript({ ...STORES, [MAPPED]: QA_STORE }),
       }),
     );
-    await $.session.start({ ...SESSION, cwd: KG_CWD });
+    await $.session.start({ ...SESSION, cwd: QA_CWD });
     await w.clock.settle();
 
     expect(await line($, "own")).toBe(
@@ -325,13 +325,13 @@ describe("the store a session sums (T-1B.1)", () => {
 });
 
 describe("a store reached through a linked worktree (BU-beads-ui-band-double-dzwp)", () => {
-  const OWN_TREE = `${HARNESS}/.worktrees/aih-ec2-3`;
-  const FM_TREE = `${HARNESS}/.worktrees/aih-ec2-firstmate-1`;
+  const OWN_TREE = `${HARNESS}/.worktrees/ops-vm-3`;
+  const FM_TREE = `${HARNESS}/.worktrees/ops-vm-firstmate-1`;
   /** bd where in a linked worktree: its own `.beads` directory, the main tree's database. */
   const worktrees: Script = (key, _argv, cwd) =>
     key === "bd where" && cwd !== undefined && cwd.startsWith(`${HARNESS}/.worktrees/`)
       ? ok(
-          `${JSON.stringify({ database_path: `${cwd}/.beads/dolt`, path: `${cwd}/.beads`, prefix: "AIH", schema_version: 1 })}\n`,
+          `${JSON.stringify({ database_path: `${cwd}/.beads/dolt`, path: `${cwd}/.beads`, prefix: "OPS", schema_version: 1 })}\n`,
         )
       : undefined;
   /** Each worktree answers bd with the main tree's issues, as one database does. */
@@ -339,19 +339,19 @@ describe("a store reached through a linked worktree (BU-beads-ui-band-double-dzw
 
   test("should count the main tree's database once in a worktree session's band and register no store of its own", async ($, on) => {
     const files = { [INVENTORY_PATH]: INVENTORY, [SNAPSHOT]: snapshotOf(SAME) };
-    const w = world(on, named("aih-ec2-3", { refresher: true, files, script: worktrees }));
+    const w = world(on, named("ops-vm-3", { refresher: true, files, script: worktrees }));
     await $.session.start({ ...SESSION, cwd: OWN_TREE });
     await w.clock.settle();
 
     expect(await line($, "own")).toBe(OWN);
-    const entry = JSON.parse(w.files.get(`${STATE}/sessions/aih-ec2-3.json`) ?? "{}");
+    const entry = JSON.parse(w.files.get(`${STATE}/sessions/ops-vm-3.json`) ?? "{}");
     expect(entry.stores).toEqual([]);
   });
 
   test("should read the main tree's database once when a worktree session reads its own counts", async ($, on) => {
     const w = world(
       on,
-      named("aih-ec2-3", {
+      named("ops-vm-3", {
         files: { [INVENTORY_PATH]: INVENTORY },
         script: both(worktrees, countScript(SAME)),
       }),
@@ -367,10 +367,7 @@ describe("a store reached through a linked worktree (BU-beads-ui-band-double-dzw
 
   test("should count the main tree's database once in the firstmate's [bd][all] totals and [fm] line from a worktree", async ($, on) => {
     const files = { [INVENTORY_PATH]: INVENTORY, [SNAPSHOT]: snapshotOf(SAME) };
-    const w = world(
-      on,
-      named("aih-ec2-firstmate-1", { refresher: true, files, script: worktrees }),
-    );
+    const w = world(on, named("ops-vm-firstmate-1", { refresher: true, files, script: worktrees }));
     await $.session.start({ ...SESSION, cwd: FM_TREE });
     await w.clock.settle();
 
@@ -388,7 +385,7 @@ describe("one refresher for the host (T-1B.4)", () => {
   const spawned = (w: ReturnType<typeof world>) => w.runs.filter((argv) => isStart(keyOf(argv)));
 
   test("should start the refresher under a lease it took when the snapshot is older than three minutes and no lease is held", async ($, on) => {
-    const w = await started($, on, named("aih-ec2-3", { files: STALE, script: starts }));
+    const w = await started($, on, named("ops-vm-3", { files: STALE, script: starts }));
 
     const [argv, ...more] = spawned(w);
     expect(more).toEqual([]);
@@ -417,7 +414,7 @@ describe("one refresher for the host (T-1B.4)", () => {
     const w = await started(
       $,
       on,
-      named("aih-ec2-3", {
+      named("ops-vm-3", {
         files: STALE,
         script: starts,
         stored: { [LEASE_KEY]: { token: "other-session", at: START_MS - 10_000 } },
@@ -433,7 +430,7 @@ describe("one refresher for the host (T-1B.4)", () => {
     const w = await started(
       $,
       on,
-      named("aih-ec2-3", {
+      named("ops-vm-3", {
         files: STALE,
         script: starts,
         afterStoreSet: (key, store) => {
@@ -453,7 +450,7 @@ describe("one refresher for the host (T-1B.4)", () => {
     const w = await started(
       $,
       on,
-      named("aih-ec2-3", {
+      named("ops-vm-3", {
         files: STALE,
         script: starts,
         stored: { [LEASE_KEY]: { token: "other-session", at: START_MS } },
@@ -471,7 +468,7 @@ describe("one refresher for the host (T-1B.4)", () => {
     const w = await started(
       $,
       on,
-      named("aih-ec2-3", {
+      named("ops-vm-3", {
         refresher: true,
         files: LIVE,
         script: starts,
@@ -497,7 +494,7 @@ describe("one refresher for the host (T-1B.4)", () => {
       const w = await started(
         $,
         on,
-        named("aih-ec2-3", { refresher: true, files: LIVE, script: starts }),
+        named("ops-vm-3", { refresher: true, files: LIVE, script: starts }),
       );
       await w.clock.advance(offset);
       await w.killRefresher();
@@ -516,7 +513,7 @@ describe("one refresher for the host (T-1B.4)", () => {
     const w = await started(
       $,
       on,
-      named("aih-ec2-3", { refresher: true, files: STALE, script: countScript(STORES) }),
+      named("ops-vm-3", { refresher: true, files: STALE, script: countScript(STORES) }),
     );
 
     expect(await line($, "own")).toBe(`${OWN} *`);
@@ -528,7 +525,7 @@ describe("one refresher for the host (T-1B.4)", () => {
       [INVENTORY_PATH]: INVENTORY,
       [SNAPSHOT]: snapshotOf(STORES, { stoppedAt: START_MS - 1_000 }),
     };
-    const w = await started($, on, named("aih-ec2-3", { files, script: starts }));
+    const w = await started($, on, named("ops-vm-3", { files, script: starts }));
 
     expect(spawned(w)).toHaveLength(1);
   });
@@ -537,7 +534,7 @@ describe("one refresher for the host (T-1B.4)", () => {
     const w = await started(
       $,
       on,
-      named("aih-ec2-3", {
+      named("ops-vm-3", {
         files: STALE,
         script: both(
           (key) => (isStart(key) ? exit(1, "node: not found\n") : undefined),
@@ -561,7 +558,7 @@ describe("one refresher for the host (T-1B.4)", () => {
     const w = await started(
       $,
       on,
-      named("aih-ec2-3", {
+      named("ops-vm-3", {
         files: STALE,
         script: both((key) => (isStart(key) ? exit(1, "") : undefined), countScript(STORES)),
       }),
@@ -578,7 +575,7 @@ describe("one refresher for the host (T-1B.4)", () => {
   });
 
   test("should run no bd count of its own across five minutes while the refresher's snapshot is live", async ($, on) => {
-    const w = world(on, named("aih-ec2-3", { refresher: true, files: LIVE, script: starts }));
+    const w = world(on, named("ops-vm-3", { refresher: true, files: LIVE, script: starts }));
     await $.session.start(SESSION);
     await w.clock.settle();
 
@@ -599,7 +596,7 @@ describe("one refresher for the host (T-1B.4)", () => {
     const w = await started(
       $,
       on,
-      named("aih-ec2-3", { refresher: true, build: "0.9.4", files: OLD_WRITER, script: starts }),
+      named("ops-vm-3", { refresher: true, build: "0.9.4", files: OLD_WRITER, script: starts }),
     );
 
     expect(spawned(w)).toHaveLength(1);
@@ -611,7 +608,7 @@ describe("one refresher for the host (T-1B.4)", () => {
     const w = await started(
       $,
       on,
-      named("aih-ec2-3", { refresher: true, build: "0.9.4", files: LIVE, script: starts }),
+      named("ops-vm-3", { refresher: true, build: "0.9.4", files: LIVE, script: starts }),
     );
 
     expect(spawned(w)).toHaveLength(1);
@@ -624,7 +621,7 @@ describe("one refresher for the host (T-1B.4)", () => {
       const w = await started(
         $,
         on,
-        named("aih-ec2-3", {
+        named("ops-vm-3", {
           refresher: true,
           refresherBuild,
           build: "0.9.4",
@@ -643,7 +640,7 @@ describe("one refresher for the host (T-1B.4)", () => {
     const w = await started(
       $,
       on,
-      named("aih-ec2-3", {
+      named("ops-vm-3", {
         refresher: true,
         build: "0.9.4",
         files: LIVE,
@@ -663,7 +660,7 @@ describe("one refresher for the host (T-1B.4)", () => {
     const w = await started(
       $,
       on,
-      named("aih-ec2-3", {
+      named("ops-vm-3", {
         refresher: true,
         build: "0.9.4",
         files: OLD_WRITER,
@@ -680,11 +677,11 @@ describe("one refresher for the host (T-1B.4)", () => {
 describe("the band's cadence and stamp (T-1B.5)", () => {
   const MORE: Readonly<Record<string, readonly Counted[]>> = {
     ...STORES,
-    [CWD]: [...(STORES[CWD] ?? []), { status: "open", assignee: "aih-ec2-3" }],
+    [CWD]: [...(STORES[CWD] ?? []), { status: "open", assignee: "ops-vm-3" }],
   };
 
   test("should redraw from the newest snapshot at the next minute and not sooner", async ($, on) => {
-    const w = await started($, on, named("aih-ec2-3", { refresher: true, files: LIVE }));
+    const w = await started($, on, named("ops-vm-3", { refresher: true, files: LIVE }));
 
     w.files.set(SNAPSHOT, snapshotOf(MORE, { beatAt: START_MS + 20_000 }));
     await w.clock.advance(BEAT_MS - 1);
@@ -700,10 +697,10 @@ describe("the band's cadence and stamp (T-1B.5)", () => {
     const w = await started(
       $,
       on,
-      named("aih-ec2-3", {
+      named("ops-vm-3", {
         refresher: true,
         files: LIVE,
-        stored: { [SCOPE_KEY]: { "aih-ec2-3": "all" } },
+        stored: { [SCOPE_KEY]: { "ops-vm-3": "all" } },
       }),
     );
     await $.command.run(SHOW);
@@ -719,14 +716,14 @@ describe("the band's cadence and stamp (T-1B.5)", () => {
     );
   });
 
-  const ALL_VIEW = { [SCOPE_KEY]: { "aih-ec2-3": "all" } };
+  const ALL_VIEW = { [SCOPE_KEY]: { "ops-vm-3": "all" } };
   const MORE_LINE = "[bd] 6 tasks (1 in progress, 1 blocked, 3 open, 1 done last 24h)";
 
   test("should drop a wake marker for its store after a write and draw the refresher's read of it within 10 seconds", async ($, on) => {
     const w = await started(
       $,
       on,
-      named("aih-ec2-3", { refresher: true, files: LIVE, stored: ALL_VIEW }),
+      named("ops-vm-3", { refresher: true, files: LIVE, stored: ALL_VIEW }),
     );
     await $.command.run(SHOW);
     await w.clock.settle();
@@ -752,7 +749,7 @@ describe("the band's cadence and stamp (T-1B.5)", () => {
     const w = await started(
       $,
       on,
-      named("aih-ec2-3", {
+      named("ops-vm-3", {
         refresher: true,
         files: LIVE,
         stored: ALL_VIEW,
@@ -780,7 +777,7 @@ describe("the band's cadence and stamp (T-1B.5)", () => {
     const w = await started(
       $,
       on,
-      named("aih-ec2-3", { refresher: true, files: LIVE, stored: ALL_VIEW }),
+      named("ops-vm-3", { refresher: true, files: LIVE, stored: ALL_VIEW }),
     );
     await $.command.run(SHOW);
     await w.clock.settle();
@@ -794,14 +791,14 @@ describe("the band's cadence and stamp (T-1B.5)", () => {
   });
 
   test("should show no read time when debug mode is off", async ($, on) => {
-    await started($, on, named("aih-ec2-3", { refresher: true, files: LIVE }));
+    await started($, on, named("ops-vm-3", { refresher: true, files: LIVE }));
 
     expect(await line($, "own")).not.toContain("as of");
   });
 
   test("should end each line with the read time to the second when beads-ui.toml sets debug on", async ($, on) => {
     const files = { ...LIVE, [USER_CONFIG]: "[band]\ndebug = true\n" };
-    await started($, on, named("aih-ec2-firstmate-1", { refresher: true, files }));
+    await started($, on, named("ops-vm-firstmate-1", { refresher: true, files }));
     const at = START_MS - 10_000;
     const stamp = asOf(clockStamp(at, new Date(at).getTimezoneOffset()));
 
@@ -813,7 +810,7 @@ describe("the band's cadence and stamp (T-1B.5)", () => {
 
 describe("the band's parts (T-1B.11)", () => {
   test("should draw the parts in the order beads-ui.toml sets, at the next redraw without a restart", async ($, on) => {
-    const w = await started($, on, named("aih-ec2-3", { refresher: true, files: LIVE }));
+    const w = await started($, on, named("ops-vm-3", { refresher: true, files: LIVE }));
     expect(await line($, "own")).toBe(OWN);
 
     w.files.set(USER_CONFIG, '[band]\nparts = ["total", "open", "done", "in_progress"]\n');
@@ -824,7 +821,7 @@ describe("the band's parts (T-1B.11)", () => {
 
   test("should draw the counts alone when the file removes the total", async ($, on) => {
     const files = { ...LIVE, [USER_CONFIG]: '[band]\nparts = ["blocked", "in_progress"]\n' };
-    await started($, on, named("aih-ec2-3", { refresher: true, files }));
+    await started($, on, named("ops-vm-3", { refresher: true, files }));
 
     expect(await line($, "own")).toBe("[bd] 1 blocked, 1 in progress");
   });
@@ -834,7 +831,7 @@ describe("the band's parts (T-1B.11)", () => {
     const w = await started(
       $,
       on,
-      named("aih-ec2-3", { refresher: true, files, script: countScript(STORES) }),
+      named("ops-vm-3", { refresher: true, files, script: countScript(STORES) }),
     );
 
     expect(await line($, "own")).toBe(
@@ -844,14 +841,14 @@ describe("the band's parts (T-1B.11)", () => {
       `bd count --by-assignee --status=closed --closed-after=${new Date(START_MS - 7 * 24 * HOUR).toISOString()}`,
       `bd count --by-assignee --status=closed --closed-after=${new Date(START_MS - 7 * 24 * HOUR).toISOString()}`,
     ]);
-    expect(JSON.parse(w.files.get(`${STATE}/sessions/aih-ec2-3.json`) ?? "{}").windows).toEqual([
+    expect(JSON.parse(w.files.get(`${STATE}/sessions/ops-vm-3.json`) ?? "{}").windows).toEqual([
       "7d",
     ]);
   });
 
   test("should name a part the file gets wrong in the band settings and draw the rest", async ($, on) => {
     const files = { ...LIVE, [USER_CONFIG]: '[band]\nparts = ["total", "sparkline"]\n' };
-    await started($, on, named("aih-ec2-3", { refresher: true, files }));
+    await started($, on, named("ops-vm-3", { refresher: true, files }));
     await $.command.run(SHOW);
     const ui = await pane($);
 
@@ -865,7 +862,7 @@ describe("the band's parts (T-1B.11)", () => {
 
   test("should offer every part, the four counts, the total, the done count, the drift marker and the unpublished-edit count, each addable and removable", async ($, on) => {
     const files = { ...LIVE, [USER_CONFIG]: '[band]\nparts = ["open"]\n' };
-    await started($, on, named("aih-ec2-3", { refresher: true, files }));
+    await started($, on, named("ops-vm-3", { refresher: true, files }));
     await $.command.run(SHOW);
     const ui = await pane($);
 
@@ -886,7 +883,7 @@ describe("the band's parts (T-1B.11)", () => {
   });
 
   test("should apply a part removed, added or moved in the pane at once and keep it in $.store", async ($, on) => {
-    const w = await started($, on, named("aih-ec2-3", { refresher: true, files: LIVE }));
+    const w = await started($, on, named("ops-vm-3", { refresher: true, files: LIVE }));
     await $.command.run(SHOW);
     const ui = await pane($);
     await ui.press({ key: "band-settings" });
@@ -912,7 +909,7 @@ describe("the band's parts (T-1B.11)", () => {
     const w = await started(
       $,
       on,
-      named("aih-ec2-3", { refresher: true, files: LIVE, script: countScript(STORES) }),
+      named("ops-vm-3", { refresher: true, files: LIVE, script: countScript(STORES) }),
     );
     await $.command.run(SHOW);
     const ui = await pane($);
@@ -937,7 +934,7 @@ describe("the band's parts (T-1B.11)", () => {
     const w = await started(
       $,
       on,
-      named("aih-ec2-3", {
+      named("ops-vm-3", {
         refresher: true,
         files: { ...LIVE, [USER_CONFIG]: kept },
         script: countScript(STORES),
@@ -1014,13 +1011,13 @@ describe("the pane's refresh", () => {
 describe("the unpublished-edit count (T-2B.6)", () => {
   const PUBLISH = "/opt/fleet/bin/publish-store";
   const SYNC = `[sync]\ncommand = ["${PUBLISH}", "--repo", "{store}"]\n`;
-  const ALL_VIEW = { [SCOPE_KEY]: { "aih-ec2-3": "all" } };
+  const ALL_VIEW = { [SCOPE_KEY]: { "ops-vm-3": "all" } };
 
   /** A named session with the pane open on the board, `sync.command` set, and a publish answering `code`. */
   async function editing($: Engine, on: On, code: () => number) {
     const w = world(
       on,
-      named("aih-ec2-3", {
+      named("ops-vm-3", {
         refresher: true,
         files: { ...LIVE, [USER_CONFIG]: SYNC },
         stored: ALL_VIEW,
@@ -1098,8 +1095,8 @@ describe("the session a daemon-hosted session draws for (BU-ylx.6.9)", () => {
     ...STORES,
     [CWD]: [
       ...(STORES[CWD] ?? []),
-      { status: "open", assignee: "aih-ec2-2" },
-      { status: "in_progress", assignee: "aih-ec2-2" },
+      { status: "open", assignee: "ops-vm-2" },
+      { status: "in_progress", assignee: "ops-vm-2" },
     ],
   };
   const DAEMON_LIVE = { [INVENTORY_PATH]: INVENTORY, [SNAPSHOT]: snapshotOf(DAEMON_STORES) };
@@ -1109,7 +1106,7 @@ describe("the session a daemon-hosted session draws for (BU-ylx.6.9)", () => {
     files: DAEMON_LIVE,
     env: {
       HOME: "/home/me",
-      CLAUDE_CODE_TASK_LIST_ID: "aih-ec2-firstmate-1",
+      CLAUDE_CODE_TASK_LIST_ID: "ops-vm-firstmate-1",
       CLAUDE_CODE_SESSION_KIND: "bg",
       CLAUDE_BG_BACKEND: "daemon",
       ...(sessionName === undefined ? {} : { CLAUDE_CODE_SESSION_NAME: sessionName }),
@@ -1117,25 +1114,25 @@ describe("the session a daemon-hosted session draws for (BU-ylx.6.9)", () => {
   });
   const registry = (id: string) => `${STATE}/sessions/${id}.json`;
 
-  test("should draw its own single [bd] line and register under its own name when a daemon the firstmate started hosts aih-ec2-2", async ($, on) => {
-    const w = await started($, on, hosted("aih-ec2-2"));
+  test("should draw its own single [bd] line and register under its own name when a daemon the firstmate started hosts ops-vm-2", async ($, on) => {
+    const w = await started($, on, hosted("ops-vm-2"));
 
     expect(await line($, "all")).toBeUndefined();
     expect(await line($, "own")).toBe(
       "[bd] 2 tasks (1 in progress, 0 blocked, 1 open, 0 done last 24h)",
     );
-    expect(w.files.has(registry("aih-ec2-2"))).toBe(true);
-    expect(w.files.has(registry("aih-ec2-firstmate-1"))).toBe(false);
+    expect(w.files.has(registry("ops-vm-2"))).toBe(true);
+    expect(w.files.has(registry("ops-vm-firstmate-1"))).toBe(false);
   });
 
-  test("should count for aih-ec2-2 when Claude Code numbered its background copy aih-ec2-2 (2)", async ($, on) => {
-    const w = await started($, on, hosted("aih-ec2-2 (2)"));
+  test("should count for ops-vm-2 when Claude Code numbered its background copy ops-vm-2 (2)", async ($, on) => {
+    const w = await started($, on, hosted("ops-vm-2 (2)"));
 
     expect(await line($, "all")).toBeUndefined();
     expect(await line($, "own")).toBe(
       "[bd] 2 tasks (1 in progress, 0 blocked, 1 open, 0 done last 24h)",
     );
-    expect(w.files.has(registry("aih-ec2-2"))).toBe(true);
+    expect(w.files.has(registry("ops-vm-2"))).toBe(true);
   });
 
   test("should draw the single [bd] line and never the firstmate's form when a daemon-hosted session has no name of its own", async ($, on) => {
@@ -1147,14 +1144,14 @@ describe("the session a daemon-hosted session draws for (BU-ylx.6.9)", () => {
   });
 
   test("should draw [bd][all] over [fm] when the daemon hosts the firstmate itself", async ($, on) => {
-    await started($, on, hosted("aih-ec2-firstmate-1"));
+    await started($, on, hosted("ops-vm-firstmate-1"));
 
     expect(await line($, "all")).toBe(DAEMON_ALL);
     expect(await line($, "own")).toBe(FM);
   });
 
   test("should draw [bd][all] over [fm] when the firstmate runs in its own process", async ($, on) => {
-    await started($, on, named("aih-ec2-firstmate-1", { refresher: true, files: DAEMON_LIVE }));
+    await started($, on, named("ops-vm-firstmate-1", { refresher: true, files: DAEMON_LIVE }));
 
     expect(await line($, "all")).toBe(DAEMON_ALL);
     expect(await line($, "own")).toBe(FM);
@@ -1165,7 +1162,7 @@ describe("the band's colours (D-43, T-2C.9)", () => {
   const drawnOf = async ($: Engine) => JSON.stringify(await (await band($)).drawn());
 
   test("should draw each count's token on its Claude Code theme key when beads-ui.toml has no [theme]", async ($, on) => {
-    await started($, on, named("aih-ec2-3", { refresher: true, files: LIVE }));
+    await started($, on, named("ops-vm-3", { refresher: true, files: LIVE }));
 
     const drawn = await drawnOf($);
     expect(drawn).toContain('"color":"claude"');
@@ -1175,7 +1172,7 @@ describe("the band's colours (D-43, T-2C.9)", () => {
 
   test("should draw a [theme] hex value for the token it names from the next redraw", async ($, on) => {
     const files = { ...LIVE, [USER_CONFIG]: '[theme]\n"status.wip" = "#123456"\n' };
-    await started($, on, named("aih-ec2-3", { refresher: true, files }));
+    await started($, on, named("ops-vm-3", { refresher: true, files }));
 
     const drawn = await drawnOf($);
     expect(drawn).toContain('"color":"#123456"');
@@ -1184,7 +1181,7 @@ describe("the band's colours (D-43, T-2C.9)", () => {
 
   test("should ignore an invalid [theme] value with one notice naming the key in the pane", async ($, on) => {
     const files = { ...LIVE, [USER_CONFIG]: '[theme]\nwarning = "orange"\n' };
-    await started($, on, named("aih-ec2-3", { refresher: true, files }));
+    await started($, on, named("ops-vm-3", { refresher: true, files }));
     await $.command.run(SHOW);
 
     expect(await drawnOf($)).toContain('"color":"warning"');

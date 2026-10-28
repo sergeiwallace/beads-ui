@@ -3,7 +3,7 @@ import { ok, STORE_LIST, type WorldOptions } from "./world.ts";
 
 // The task panel's session (Phase 2B): the fixture store with some of its tasks this session's.
 
-export const ME = "aih-ec2-3";
+export const ME = "ops-vm-3";
 
 /**
  * The fixture store with fifteen tasks of this session's: BU-mg2 and BU-mg2.3 in progress,

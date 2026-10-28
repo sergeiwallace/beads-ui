@@ -103,7 +103,7 @@ describe("fields drawn whole when the pane has room (BU-mg2.3.14)", () => {
   test("should draw a Backlog row's type and assignee whole on a wide pane", async ($, on) => {
     const edited = (JSON.parse(list) as Record<string, unknown>[]).map((row) =>
       row.status === "open"
-        ? { ...row, issue_type: "milestone", assignee: "aih-ec2-firstmate-1" }
+        ? { ...row, issue_type: "milestone", assignee: "ops-vm-firstmate-1" }
         : row,
     );
     const { ui } = await mountAt($, on, 200, {
@@ -117,6 +117,6 @@ describe("fields drawn whole when the pane has room (BU-mg2.3.14)", () => {
     expect(first).toBeDefined();
     const row = await textOf(ui, first ?? "row:missing");
     expect(row).toContain("milestone");
-    expect(row).toContain("@aih-ec2-firstmate-1");
+    expect(row).toContain("@ops-vm-firstmate-1");
   });
 });

@@ -1,6 +1,6 @@
 # Research prompt: beads-ui leg A (task-manager UX, components and web hosting)
 
-This is the research prompt the aih-3 Fable coordinator gave the leg A researcher on 2026-10-15 for
+This is the research prompt the ops-3 Fable coordinator gave the leg A researcher on 2026-10-15 for
 BU-mg2.1.1. It is the "RESEARCH PROMPT" block of the coordinator's brief, reproduced verbatim. The
 brief's founding-ask excerpts, stage framing, alignment obligation, destructive-operation floor and
 six-field brief also bounded the run; they are summarised in the packet's Run History.

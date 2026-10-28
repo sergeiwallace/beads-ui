@@ -82,7 +82,7 @@ With auto-update on, Claude Code checks the marketplace when a session starts, n
 One refresher process per machine reads every store's counts once a minute and writes them to a snapshot that every session's band reads, so the number of `bd` calls does not grow with the number of sessions. It reads four stores at a time, and every read of a minute's pass ends within 28 seconds of its start: the snapshot is written then with the stores that answered, and a store still unanswered is listed as `not read before the beat's deadline`, which the band marks with `~`. So two snapshots are never more than 88 seconds apart, however slowly a store answers. It is a Node script inside the plugin, `refresher/refresher.mjs`, with no dependencies, so `node` (22.18 or later, which runs TypeScript files by stripping their types) must be on the `PATH` Claude Code runs under. Nothing needs to be installed or enabled: the sessions start it and restart it themselves.
 
 - Each store costs one `bd count --by-assignee --status=<s>` for each of in progress, blocked and open, and one `bd count --by-assignee --status=closed --closed-after=<now less the window>` for each done window a session asks for: four calls a store a minute with the default window, whatever the number of sessions.
-- For each store a live session's pane reads, it also keeps a board snapshot. Each minute it runs `bd vc status --json`, whose `commit` is the store's Dolt head and changes with every write; only when the head moved does it read the board again (`bd statuses` and the two `bd list` reads the pane makes). On the ai-harness store, measured on sem-kg-ec2 on 2026-10-24, the head check took 0.46 to 0.65 s and 94 bytes, and the board reads 2,080,860 bytes of open issues and 54,389 of the closed page, against 7,247,493 for every issue.
+- For each store a live session's pane reads, it also keeps a board snapshot. Each minute it runs `bd vc status --json`, whose `commit` is the store's Dolt head and changes with every write; only when the head moved does it read the board again (`bd statuses` and the two `bd list` reads the pane makes). On the ai-harness store, measured on host-c on 2026-10-24, the head check took 0.46 to 0.65 s and 94 bytes, and the board reads 2,080,860 bytes of open issues and 54,389 of the closed page, against 7,247,493 for every issue.
 - After a session writes, it drops a marker naming the store in `wake/`; the refresher, which looks every second, reads that store again and writes the snapshot, and the session draws it a few seconds later. If no read of the store after the write has arrived 9 seconds on, the session reads that store's counts itself, so a write shows within 10 seconds.
 - Every minute each session writes a small registry file with its done window and any store it reads that the inventory does not list, so the refresher counts that store too. The refresher counts only for sessions whose file is under three minutes old, and stops when no session has written one for five minutes.
 - At its minute check a session reads the snapshot and the refresher's lease, `lease.json`, which the refresher renews every 20 seconds. A lease not renewed for 50 seconds, or no lease at all, means no refresher is running: the session takes a lease in Claude Code's plugin store (it writes its own token, reads it back and goes on only if the token is still its own) and starts the refresher with that token. So a killed refresher is replaced at the first minute check after its lease goes stale, within two minutes of its last renewal. A second session finding a plugin-store lease younger than two minutes whose refresher never came up starts nothing, so a refresher that never comes up is started again within two minutes.
@@ -111,7 +111,7 @@ The pane and the band read one store for the session, found in this order; the f
 
 1. A `[directory_stores]` entry in `beads-ui.toml` for the name of the session's directory, or of a directory above it (so a worktree inside a mapped repository reads the same store). The value is the directory of the repository whose store to read, absolute or starting with `~/`. Quote a name that holds a dot.
 2. The session directory's own store, as `bd where` finds it. The mod asks once a session, and again only when bd gave no answer.
-3. The store in `~/.beads/shared-server/publish-sweep.json` whose prefix the session name implies: the name less its `-<host>-<N>` or `-<host>-firstmate-<N>` tail, upper-cased, hyphens turned to underscores. `kg-ec2-3` reads the `KG` store, `aih-ec2-3` the `AIH` store, `ai-cli-ec2-1` the `AI_CLI` store. Only an exact prefix counts.
+3. The store in `~/.beads/shared-server/publish-sweep.json` whose prefix the session name implies: the name less its `-<host>-<N>` or `-<host>-firstmate-<N>` tail, upper-cased, hyphens turned to underscores. `qa-vm-3` reads the `QA` store, `ops-vm-3` the `OPS` store, `ai-cli-vm-1` the `AI_CLI` store. Only an exact prefix counts.
 
 For example, a repository with no store of its own, whose work lives in another repository's store:
 
@@ -243,7 +243,7 @@ Type a line into the `New` field (`n` focuses it) and press Enter. Words become 
 |---|---|---|
 | `p0` to `p4` | Priority | `p1` |
 | `type:<type>` | Issue type | `type:bug` |
-| `@<name>` | Assignee | `@aih-ec2-3` |
+| `@<name>` | Assignee | `@ops-vm-3` |
 | `+<label>` | A label (repeatable) | `+ui` |
 | `due:<YYYY-MM-DD>` | Due date | `due:2026-11-02` |
 | `sprint:<name>` | The `sprint:<name>` label | `sprint:s1` |
@@ -462,7 +462,7 @@ The `Filter:` field takes `key:value` terms and free words, all combined with AN
 | `kind:` | of the kind: `decision`, `blocker`, `exit-goal`, `progress-review`, `summary`, `fleet-brief` or `other` |
 | `status:` | `open` or `answered` |
 | `selection:` | `current`, `superseded`, `escalated` (addressed to a decider), `ai-resolved`, or `all` |
-| `session:` | held by the session, by its whole name (`kg-ec2-1@sem-kg-ec2`) or its name alone |
+| `session:` | held by the session, by its whole name (`qa-vm-1@host-c`) or its name alone |
 | `machine:` | of the machine |
 | `task:` | about the issue, by the item's task or the issue's bd id or display id |
 | `epic:` | whose issue's parent is that id |

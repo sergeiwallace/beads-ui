@@ -63,7 +63,7 @@ export interface Indicator {
 
 /** D-42: an agent row's title, `<name> agent: ` or `<name> coordinator agent: `. */
 export const AGENT_TITLE = /^\S+( coordinator)? agent: /;
-/** D-42: the label the launch path sets on an agent row (ai-harness AIH-7m40p6). */
+/** D-42: the label the launch path sets on an agent row (an ai-harness issue). */
 export const AGENT_LABEL = "agent";
 
 export const isAgentRow = (issue: Issue): boolean =>

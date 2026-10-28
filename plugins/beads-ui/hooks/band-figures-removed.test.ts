@@ -49,12 +49,12 @@ const STORES: Record<string, Listed[]> = {
     { id: "BU-10", status: "closed", assignee: ME, closedAt: START_MS - 30 * HOUR },
   ],
   [HARNESS]: [
-    { id: "AIH-1", status: "in_progress", assignee: ME },
-    { id: "AIH-2", status: "open", assignee: ME },
-    { id: "AIH-3", status: "closed", assignee: ME, closedAt: START_MS - 11 * HOUR },
+    { id: "OPS-1", status: "in_progress", assignee: ME },
+    { id: "OPS-2", status: "open", assignee: ME },
+    { id: "OPS-3", status: "closed", assignee: ME, closedAt: START_MS - 11 * HOUR },
   ],
 };
-const INVENTORY = inventoryOf({ BU: { repo: CWD }, AIH: { repo: HARNESS } });
+const INVENTORY = inventoryOf({ BU: { repo: CWD }, OPS: { repo: HARNESS } });
 
 const both =
   (...scripts: (Script | undefined)[]): Script =>
@@ -131,7 +131,7 @@ describe("the band draws no figures row (removed 2026-10-27)", () => {
     const ui = await band($);
     expect(doneReads(w)).toEqual([]);
 
-    STORES[HARNESS]?.push({ id: "AIH-9", status: "closed", assignee: ME, closedAt: START_MS });
+    STORES[HARNESS]?.push({ id: "OPS-9", status: "closed", assignee: ME, closedAt: START_MS });
     try {
       await w.clock.advance(MINUTE);
       await w.clock.settle();

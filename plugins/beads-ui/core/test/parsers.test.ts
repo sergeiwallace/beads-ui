@@ -55,7 +55,7 @@ describe("parseBdList", () => {
     const closed = issues.find((issue) => issue.id === "BU-mg2.2.2");
     expect(closed).toMatchObject({
       status: "closed",
-      assignee: "aih-3",
+      assignee: "ops-3",
       closedAt: "2026-10-15T01:49:28Z",
     });
     expect(closed?.startedAt).toEqual(expect.any(String));

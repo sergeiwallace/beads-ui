@@ -1,6 +1,6 @@
 # bd 1.3.0 help output: delete and update
 
-Captured 2026-10-15T00:16Z to 00:40Z on the sem-kg-ec2 host by the leg A researcher for
+Captured 2026-10-15T00:16Z to 00:40Z on the host-c host by the leg A researcher for
 BU-mg2.1.1. Commands were run from the beads-ui worktree root and are read-only: `bd --version`,
 `bd delete --help`, `bd update --help`, `bd --help`, `bd serve --help`, `bd batch --help` and
 `bd statuses`. The global-flags block is shown once, under `bd update`.

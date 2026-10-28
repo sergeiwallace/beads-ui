@@ -30,7 +30,7 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 | A001 | "react or whatever framework is pretty and aesthetic and best practice" | [Stack and look](#stack-and-look); D-10 of the beads-ui design holds |
 | A001 | kanban, sprint and backlog, rearrange, quick edits of priority, status and owner, details, Jira, Todoist, Asana and Linear interactions | Phase 3 of the beads-ui design (T-3.1 to T-3.4) plus [Board and views](#board-and-views), [D-21](#d-21) and T-W1.0 of [Phase W1](#phase-w1-the-views-the-ask-names-the-review-queue-and-the-composer) |
 | A001 | "view the held doc blockers / decisions / open questions / details" | [The Review queue](#the-review-queue); [D-1](#d-1), [D-2](#d-2), [D-3](#d-3); detail views (T-W1.7) |
-| A001 | type and enter a prompt per task for the owning session, notified "via event-based system" built on aih-fw-1's event-driven wake | [Composer and dispatch](#composer-and-dispatch); [D-4](#d-4) to [D-8](#d-8) |
+| A001 | type and enter a prompt per task for the owning session, notified "via event-based system" built on ops-lab-1's event-driven wake | [Composer and dispatch](#composer-and-dispatch); [D-4](#d-4) to [D-8](#d-8) |
 | A001 | "agent-mail or hook context injection (should be event-based) and/or prompt injection via shared prompt injection library or configurable combination of them with fallback options" | [D-6](#d-6): all three named routes are rungs of one configurable ladder with fallbacks |
 | A001 | "i can change the owning cc session too and it should trigger the automatic /handoff" | [D-9](#d-9) |
 | A001 | "auto-triggers them to `/start-goal` if they're not in a current goal mode state" | [D-10](#d-10) |
@@ -38,7 +38,7 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 | A001 | "fit within the app-portal system ... as a modular web app" | [D-15](#d-15) |
 | A001 | shared code with the Claude Code mod and the Claude Desktop and claude.ai MCP App, "if its too limiting, then they can be separate builds" | [Shared code](#shared-code); D-1 and D-2 of the beads-ui design hold |
 | A001 | "built on our backend of beads tasks dolt db store ... and whatever else from ai-core"; open to changing backend or frontend | [Backend and live updates](#backend-and-live-updates); [D-13](#d-13), [D-14](#d-14) |
-| A001 | local hosting for now; sem-kg-ec2 with acn-mac via SSM or SSH; fw-lnx with sw-mac via Tailscale; cloud hosting from infra-as-config templates later | [Access for each machine pair](#access-for-each-machine-pair); [D-16](#d-16), [D-17](#d-17); Phase 6 of the beads-ui design (its Railway format finding is filed as BU-isu) |
+| A001 | local hosting for now; host-c with host-a via SSM or SSH; host-b with host-f via Tailscale; cloud hosting from infra-as-config templates later | [Access for each machine pair](#access-for-each-machine-pair); [D-16](#d-16), [D-17](#d-17); Phase 6 of the beads-ui design (its Railway format finding is filed as BU-isu) |
 | A001 | the goals system, goal views and the privacy guard | Out of this doc by split; [the goals system design](beads-goals-system-design.md). This doc carries the privacy guard's web app consequence as [D-18](#d-18) |
 | A001 | the process clauses (orchestrate, research, wait for the prior-work compile, merge, sync, reap, design through /auto-flow, Sergei's review) | Process, not content: the [Run Ledger](#run-ledger) |
 
@@ -178,17 +178,17 @@ The server reads task fields through the host refresher's snapshots and `bd --js
 
 ### Access for each machine pair
 
-On the work pair, the server binds to loopback on sem-kg-ec2 and acn-mac reaches it through one more entry in the pair transport's supervised Session Manager port forward, with an SSH local forward as the fallback ([D-16](#d-16)). On the personal pair, the server binds to loopback on fw-lnx and is published to sw-mac with `tailscale serve` at `/beads`, standalone ([D-16](#d-16)); it is registered in app-portal's `apps.yaml` only if Sergei rules [D-15](#d-15) for option (a). The server adds its own authentication on both pairs: a per-host token on every request, with the tailnet identity recorded but never trusted on its own ([D-17](#d-17)).
+On the work pair, the server binds to loopback on host-c and host-a reaches it through one more entry in the pair transport's supervised Session Manager port forward, with an SSH local forward as the fallback ([D-16](#d-16)). On the personal pair, the server binds to loopback on host-b and is published to host-f with `tailscale serve` at `/beads`, standalone ([D-16](#d-16)); it is registered in app-portal's `apps.yaml` only if Sergei rules [D-15](#d-15) for option (a). The server adds its own authentication on both pairs: a per-host token on every request, with the tailnet identity recorded but never trusted on its own ([D-17](#d-17)).
 
 ```mermaid
 flowchart TB
   subgraph work["Work pair"]
-    A1["acn-mac browser"] -->|"Session Manager port forward"| W1["beads-ui server, loopback, sem-kg-ec2"]
+    A1["host-a browser"] -->|"Session Manager port forward"| W1["beads-ui server, loopback, host-c"]
     W1 --> Q1["ai-core work queue"]
     W1 --> BS1["Work stores only"]
   end
   subgraph personal["Personal pair"]
-    A2["sw-mac browser"] -->|"tailscale serve /beads, identity header"| W2["beads-ui server, loopback, fw-lnx"]
+    A2["host-f browser"] -->|"tailscale serve /beads, identity header"| W2["beads-ui server, loopback, host-b"]
     W2 --> BS2["Personal and private stores"]
   end
 ```
@@ -274,7 +274,7 @@ The kill switch is the event-driven wake's own call-time policy file. With autom
 
 | System | What the web app uses | State on 2026-10-28 | If it is late |
 |---|---|---|---|
-| Event-driven idle wake (ai-harness, owner aih-fw-1) | Admission of addressed mail as a wake; the call-time kill switch | Phases 1 to 3 merged; the installer seeds the policy file create-only with automatic wakes off (ai-harness main `94de1f6b640`), so each host delivers at turn end until its policy is switched on, which the wake design's own rollout owns | Delivery at the next turn end; the composer says "waiting: automatic wakes off" |
+| Event-driven idle wake (ai-harness, owner ops-lab-1) | Admission of addressed mail as a wake; the call-time kill switch | Phases 1 to 3 merged; the installer seeds the policy file create-only with automatic wakes off (ai-harness main `94de1f6b640`), so each host delivers at turn end until its policy is switched on, which the wake design's own rollout owns | Delivery at the next turn end; the composer says "waiting: automatic wakes off" |
 | Agent Mail | The primary carrier, cross-host | Live | Buzz, then git-inbox carry a pointer |
 | Shared prompt-injection library (ai-harness) | Rung 3, a one-line pointer typed on the target host | Built | Skip the rung |
 | ai-core work queue | Sessions, dispatch records, receipts, review items, SSE | Live on the work pair; its dashboard code is built but not mounted, and is the port source for the views this app shares with it ([D-11](#d-11)) | Local append-only dispatch store; poll for receipts |
@@ -534,8 +534,8 @@ The research doc's seven open questions are each answered by a decision here: th
 
 1. **[RESOLVED]** What key format and distribution should the signed dispatch envelope use?
    - **Resolution:** framed as a choice and decided in [D-20](#d-20): Ed25519, with the signing key only on the serving host and its public key installed on receivers.
-2. **[RESOLVED]** Should the ai-core work queue run on fw-lnx too, so the personal pair gets the same prompt store and receipts as the work pair?
-   - **Resolution:** not for this design. [D-14](#d-14) (a) records dispatches in a local append-only store wherever no queue is configured, so the personal pair works without it, and a later queue on fw-lnx changes only that host's store setting. Moving the queue is ai-core's call and is not needed by any phase here.
+2. **[RESOLVED]** Should the ai-core work queue run on host-b too, so the personal pair gets the same prompt store and receipts as the work pair?
+   - **Resolution:** not for this design. [D-14](#d-14) (a) records dispatches in a local append-only store wherever no queue is configured, so the personal pair works without it, and a later queue on host-b changes only that host's store setting. Moving the queue is ai-core's call and is not needed by any phase here.
 3. **[RESOLVED]** When will the event-driven idle wake seed its wake policy on each host, so web prompts can wake an idle session rather than wait for its next turn end?
    - **Resolution:** by reading ai-harness main at `94de1f6b640` (2026-10-28): the installer now seeds the policy file create-only with automatic wakes off, so the open part is when each host is switched on, which the event-driven wake design's rollout owns. An earlier reading in this run, at `6c4b1bb68b8`, found no seeder; the reviewer's newer read corrected it. This design does not wait: Phase W2's ladder delivers at the next turn end on a host whose wakes are off, the composer says so, the build issue carries a dependency edge on the switch, and Phase W2's live exit test runs with automatic wakes switched on for the test session's host.
 
@@ -544,7 +544,7 @@ The research doc's seven open questions are each answered by a decision here: th
 
 ## Run Ledger
 
-This design doc hosts the `/auto-flow` Run Ledger for the web app's design stage. Written by the Opus coordinator for aih-ec2-3. The run's authority record is in [the beads-ui design's Run Ledger](beads-ui-design.md#run-ledger), run id `beads-ui-webapp-goals-2026-10-28-aih-ec2-3`.
+This design doc hosts the `/auto-flow` Run Ledger for the web app's design stage. Written by the Opus coordinator for ops-vm-3. The run's authority record is in [the beads-ui design's Run Ledger](beads-ui-design.md#run-ledger), run id `beads-ui-webapp-goals-2026-10-28`.
 
 `ledger-version`: `1`
 
@@ -566,7 +566,7 @@ This design doc hosts the `/auto-flow` Run Ledger for the web app's design stage
 | decider | the Opus coordinator (`us.anthropic.claude-opus-5-5`) through `/decision-framework`; three decisions left for Sergei ([D-15](#d-15), [D-21](#d-21), [D-22](#d-22)) |
 | max-agents | 3 concurrent children (launcher's cap); one at a time under the host's load holds of 2026-10-28 |
 | target commit (beads-ui) | `4a3a17c` at the design-stage prepare |
-| worktree + branch | `/data/projects/beads-ui/.worktrees/aih-ec2-3-agents/bu-goals-webapp-coordinator` on `wt/aih-ec2-3/bu-goals-webapp-coordinator` |
+| worktree + branch | `/data/projects/beads-ui/.worktrees/ops-vm-3-agents/bu-goals-webapp-coordinator` on `wt/ops-vm-3/bu-goals-webapp-coordinator` |
 | stage cursor | `doc-audit` stopped after round 6, after `doc done` (`flow_dispatch_doc.py --phase complete` passed against `4a3a17c`) with rounds 1 to 6 applied. Round sizes were 12, 11, 6, 5, 5 and 5 MUST-FIX; each round's earlier fixes held, except one renumbering slip round 5 found. The launcher stopped the rounds here because the doc goes to Sergei's review next; round 6's fixes are unaudited |
 | last completed integration boundary | research landed on main at `4a3a17c` (PRs #78, #79, #80, #81) |
 
@@ -613,7 +613,7 @@ Every decision below was taken through the decision framework (`ai-harness/docs/
 | D-11 | The ai-core dashboard code under the approved D-11 | (a) port source now, retirement after parity by ai-core's owner; (b) rebuild without it | (a) | | | Applies Sergei's approved D-11; reopens nothing | `✅ Resolved by Opus orchestrator` |
 | D-12 | Single-key shortcuts | (a) on by default with an off and remap setting; (b) off by default | (a) | | | WCAG 2.1.4 needs an off switch, not an off default; speed is the ask | `✅ Resolved by Opus orchestrator` |
 | D-13 | Live updates | (a) poll every store's Dolt head in one query, then SSE; (b) the events journal; (c) Dolt binlog replication | (a) | | | Sees synced changes; one cheap query | `✅ Resolved by Opus orchestrator` |
-| D-14 | Where dispatch records live | (a) the queue's prompt store where configured, a local append-only store otherwise; (b) local on both pairs; (c) run the queue on fw-lnx too | (a) | | | Reuses what runs on each pair; one record shape | `✅ Resolved by Opus orchestrator` |
+| D-14 | Where dispatch records live | (a) the queue's prompt store where configured, a local append-only store otherwise; (b) local on both pairs; (c) run the queue on host-b too | (a) | | | Reuses what runs on each pair; one record shape | `✅ Resolved by Opus orchestrator` |
 | D-15 | app-portal integration | (a) beads-ui's Node server as a `kind: portal` upstream; (b) a static bundle served by ai-core; (c) both | (a) | | | (a) changes app-portal's member contract in another repository | `⏳ PENDING (human)` |
 | D-16 | Access routes | (a) pair transport forward on the work pair, `tailscale serve` on the personal pair; (b) SSH forwards on both; (c) a public origin behind OAuth | (a) | | | Each pair's existing supervised transport; zero inbound ports; the ai-harness part is contingent on D-22 | `✅ Resolved by Opus orchestrator` |
 | D-17 | Authentication | (a) Host, Origin and Fetch Metadata checks and a per-host token on both pairs, tailnet identity as an extra check; (b) trust tailnet headers on the personal pair; (c) an OAuth proxy | (a) | | | Identity headers can be forged on the loopback listener | `✅ Resolved by Opus orchestrator` |
@@ -1129,7 +1129,7 @@ The poll is on the server, outside any model, so it costs no tokens; the interva
 **Cons:**
 - Duplicates the queue's receipts and SSE on the work pair.
 
-##### (c) Run the queue on fw-lnx too
+##### (c) Run the queue on host-b too
 
 **Pros:**
 - One back end, the queue's.
@@ -1143,7 +1143,7 @@ The poll is on the server, outside any model, so it costs no tokens; the interva
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.5.3/D-14; decision-topic=storage of dispatch records; governs=dispatch:record; normalized-proposition=dispatch records use the queue's prompt store where configured and a local append-only store otherwise; applicability=phase:W0; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-Mitigation: one `DispatchStore` interface in core with both implementations run through the same test suite. Whether the queue should later run on fw-lnx is Open Question 2. Confidence: medium-high.
+Mitigation: one `DispatchStore` interface in core with both implementations run through the same test suite. Whether the queue should later run on host-b is Open Question 2. Confidence: medium-high.
 
 ---
 
@@ -1192,7 +1192,7 @@ Every option keeps the ask's portal fit, so Gate 0 holds whichever is chosen. Re
 
 #### D-16: Access routes — `✅ Resolved by Opus orchestrator`
 
-**Context.** The ask: "whatever allows both acn-mac + sem-kg-ec2 cc sessions to access it safely and securely", SSM or SSH on that pair, Tailscale on fw-lnx and sw-mac. The work host is reached only through the pair transport; the fleet already runs a supervised Session Manager port forward with a `forwards` map.
+**Context.** The ask: "whatever allows both host-a + host-c cc sessions to access it safely and securely", SSM or SSH on that pair, Tailscale on host-b and host-f. The work host is reached only through the pair transport; the fleet already runs a supervised Session Manager port forward with a `forwards` map.
 
 ##### (a) One more `forwards` entry on the work pair; `tailscale serve` on the personal pair
 

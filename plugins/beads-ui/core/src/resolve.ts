@@ -48,8 +48,8 @@ export interface StoreFacts {
 
 /**
  * The store prefix a fleet session name implies: the name less its `-<host>-<N>` or
- * `-<host>-firstmate-<N>` tail, upper-cased, hyphens turned to underscores. `kg-ec2-3` gives
- * `KG`, `aih-ec2-firstmate-1` gives `AIH`, `ai-cli-ec2-1` gives `AI_CLI`.
+ * `-<host>-firstmate-<N>` tail, upper-cased, hyphens turned to underscores. `qa-vm-3` gives
+ * `QA`, `ops-vm-firstmate-1` gives `OPS`, `ai-cli-vm-1` gives `AI_CLI`.
  */
 export function sessionPrefix(session: string): string | undefined {
   const base =

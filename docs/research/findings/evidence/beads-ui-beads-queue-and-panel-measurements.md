@@ -10,7 +10,7 @@ display_id: BU-research-leg-c-beads-hrme
 
 # Measurements behind the leg C findings packet
 
-Every reading below was taken on host `sem-kg-ec2` between 2026-10-15T00:04Z and 00:13Z with
+Every reading below was taken on host `host-c` between 2026-10-15T00:04Z and 00:13Z with
 read-only commands. Times are UTC. The packet that cites these readings is
 `docs/research/findings/beads-ui-beads-queue-and-panel.md`. Nothing here is copied from a
 document; where a document disagrees, the packet says so.
@@ -158,8 +158,8 @@ app-portal 9, doc-editor 7.
 `TaskDetail.tsx`; its `package.json` names `@ai-core/queue-web` with React 19, Lexical 0.52,
 `openapi-fetch` and `@app-portal/ui` pinned to an app-portal commit.
 
-In ai-harness, `config/work_queue.toml` has `sem-kg-ec2 = "supervised"` and the `bms-shared`
-group with `service_host = "sem-kg-ec2"`. No `wq` skill exists under `skills/`.
+In ai-harness, `config/work_queue.toml` has `host-c = "supervised"` and the `bms-shared`
+group with `service_host = "host-c"`. No `wq` skill exists under `skills/`.
 
 ## M-8. The Claude Code task store (00:12:33Z)
 

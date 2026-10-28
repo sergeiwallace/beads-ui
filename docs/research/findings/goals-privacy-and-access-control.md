@@ -21,7 +21,7 @@ This packet is the privacy leg of the goals-system research for beads-ui. It ans
 4. Several fleet writers bypass `pre-commit` entirely. git-inbox builds its commits with `commit-tree` and then runs `git push`. The worktree backup transport pushes every local branch to `refs/heads/aih-backup/<branch>` from a commit-hook queue, before any review or merge. A guard placed only at commit or only at merge misses both. Pre-push over the full pushed range is the narrowest hook that sees them all. [VERIFIABLE][^7][^34][^39]
 5. Content scanning cannot be the primary guard. The word "goal" already names the fleet's session-goal feature: 585 of 8,576 tracked ai-harness paths match it, mostly `/start-goal` and `/draft-goal` skills and tests. The list of private terms a scanner would need is itself private, so it cannot live in ai-harness or on the employer host. Structure has to carry the guarantee: a record's store and marking decide where it may go. Scanning is the backstop. [VERIFIABLE][^26][^29] [INFERENCE]
 6. The fleet already ships most of the parts: a fail-closed staged gitleaks gate with a task-id rule, a public-repo checker whose denylist lives outside the guarded repo, an artifact routing table that refuses an unrouted class, and an installer step that deploys every repo's pre-commit hooks on every machine. [VERIFIABLE][^27][^28][^29][^32][^38]
-7. The existing task-id rule does not catch modern ids. It matches only the legacy `PREFIX-<digits>` form, so a hash id such as `SW-3fq9zk` and slug display ids pass. `SW` is the sergei repository's prefix. A private-id rule needs the hash and slug forms. [VERIFIABLE][^26][^27][^37]
+7. The existing task-id rule does not catch modern ids. It matches only the legacy `PREFIX-<digits>` form, so a hash id such as `SW-a1b2c3` and slug display ids pass. `SW` is the sergei repository's prefix. A private-id rule needs the hash and slug forms. [VERIFIABLE][^26][^27][^37]
 8. Links across the privacy boundary belong in the private store, and the shared store should know nothing, not even an opaque id. A Beads `external:<project>:<capability>` edge is stored as written, so it names the private project in the shared store. It "remains blocking" wherever that project is unconfigured, which on the employer host is always. [VERIFIABLE][^18][^26] Atlassian forbids links across its restriction boundary, and Linear shows a private issue's id as a linkback on pull requests. [VERIFIABLE][^19][^20]
 9. No server-side guard is available on a personal-account private GitHub repository. Pre-receive hooks are documented only for GitHub Enterprise Server. Push-protection custom patterns need Secret Protection, which requires a Team or Enterprise plan. Enforcement is therefore client-side, measured on every machine, with a periodic scan from a personal host as the regression detector. [VERIFIABLE][^2][^3][^6]
 10. Encryption inside a shared repo does not meet the ask. git-crypt leaves file names and commit messages visible and cannot revoke a key, and the ciphertext would still be cloned onto the employer host. [VERIFIABLE][^11] [INFERENCE]
@@ -33,7 +33,7 @@ The four markings answer one enforcement question: may this record exist in a sh
 
 | Marking | Meaning | Home store | Hosts that may hold it |
 |---|---|---|---|
-| `personal` | About the owner's own life: health, family, money, career outside the employer | The sergei repository | Personal pair only (fw-lnx, sw-mac) |
+| `personal` | About the owner's own life: health, family, money, career outside the employer | The sergei repository | Personal pair only (host-b, host-f) |
 | `private` | Not to be seen by anyone else, whether or not it is about the owner's life | The sergei repository or a private domain repository | Personal pair only |
 | `sensitive` | Personal or private, plus stricter handling: no prompt text in any carrier, not indexed by recall, not sent to a delegate | As for `private` | Personal pair only |
 | `domain:<repo>` | Belongs to a named domain repository that is not in the shared set | That repository's own Beads store | Whatever hosts clone that repository |
@@ -221,7 +221,7 @@ The guards are the rows of the §4 hook table, numbered for the diagram. The sto
 
 ```mermaid
 flowchart LR
-  subgraph personal["Personal pair: fw-lnx and sw-mac"]
+  subgraph personal["Personal pair: host-b and host-f"]
     PS[("Private Beads store<br/>sergei or private domain repo")]
     PW["Web app instance<br/>reads private and shared"]
     TL["Private term list<br/>in the private repo"]

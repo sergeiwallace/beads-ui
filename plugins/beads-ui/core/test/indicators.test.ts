@@ -148,17 +148,17 @@ describe("the blocked indicator (T-2C.3)", () => {
 
 describe("the agent indicator (D-42, T-2C.3)", () => {
   const agentRow = (id: string, fields: Partial<Issue>) =>
-    issue(id, { parent: "BU-1", status: "in_progress", assignee: "aih-ec2-3", ...fields });
+    issue(id, { parent: "BU-1", status: "in_progress", assignee: "ops-vm-3", ...fields });
 
   test("should show when an in-progress child carries the agent label", () => {
     const child = agentRow("BU-1.1", { title: "a plain title", labels: ["agent"] });
-    expect(shown(at(issue("BU-1"), [child], new Set(["aih-ec2-3"])))).toEqual(["agent", "-", "-"]);
+    expect(shown(at(issue("BU-1"), [child], new Set(["ops-vm-3"])))).toEqual(["agent", "-", "-"]);
   });
 
   test("should show when an in-progress child's title names an agent or a coordinator agent", () => {
     for (const title of ["bu-row agent: the gutter", "bu-review coordinator agent: review items"]) {
       const child = agentRow("BU-1.1", { title });
-      expect(shown(at(issue("BU-1"), [child], new Set(["aih-ec2-3"]))), title).toEqual([
+      expect(shown(at(issue("BU-1"), [child], new Set(["ops-vm-3"]))), title).toEqual([
         "agent",
         "-",
         "-",
@@ -168,21 +168,23 @@ describe("the agent indicator (D-42, T-2C.3)", () => {
 
   test("should show on the agent row itself while it is in progress", () => {
     const row = agentRow("BU-1.1", { labels: ["agent"] });
-    expect(shown(at(row, [], new Set(["aih-ec2-3"])))).toEqual(["agent", "-", "-"]);
+    expect(shown(at(row, [], new Set(["ops-vm-3"])))).toEqual(["agent", "-", "-"]);
   });
 
   test("should not show for a closed agent row, a title that only mentions an agent, or a grandchild", () => {
     const closed = agentRow("BU-1.1", { labels: ["agent"], status: "closed" });
     const mention = agentRow("BU-1.2", { title: "Agent Mail: the agent-process ledger" });
     const grandchild = agentRow("BU-1.3.1", { labels: ["agent"], parent: "BU-1.3" });
-    expect(shown(at(issue("BU-1"), [closed, mention, grandchild], new Set(["aih-ec2-3"])))).toEqual(
-      ["-", "-", "-"],
-    );
+    expect(shown(at(issue("BU-1"), [closed, mention, grandchild], new Set(["ops-vm-3"])))).toEqual([
+      "-",
+      "-",
+      "-",
+    ]);
   });
 
   test("should dim the glyph when the row's assignee is not live in the session registry", () => {
     const child = agentRow("BU-1.1", { labels: ["agent"], assignee: "aih-gone" });
-    expect(shown(at(issue("BU-1"), [child], new Set(["aih-ec2-3"])))).toEqual([
+    expect(shown(at(issue("BU-1"), [child], new Set(["ops-vm-3"])))).toEqual([
       "agent:dim",
       "-",
       "-",
@@ -192,7 +194,7 @@ describe("the agent indicator (D-42, T-2C.3)", () => {
       status: "in_progress",
       labels: ["agent"],
     });
-    expect(shown(at(issue("BU-1"), [unassigned], new Set(["aih-ec2-3"])))).toEqual([
+    expect(shown(at(issue("BU-1"), [unassigned], new Set(["ops-vm-3"])))).toEqual([
       "agent:dim",
       "-",
       "-",
@@ -221,17 +223,17 @@ describe("the gutter (D-41, T-2C.3)", () => {
       parent: "BU-1",
       status: "in_progress",
       labels: ["agent"],
-      assignee: "aih-ec2-3",
+      assignee: "ops-vm-3",
     });
     const both = issue("BU-1", { status: "blocked" });
     const narrow = NARROW_GUTTER_COLUMNS - 1;
-    expect(shown(at(both, [child], new Set(["aih-ec2-3"]), narrow))).toEqual(["agent"]);
+    expect(shown(at(both, [child], new Set(["ops-vm-3"]), narrow))).toEqual(["agent"]);
     expect(shown(at(issue("BU-2", { status: "blocked" }), [], undefined, narrow))).toEqual([
       "blocked",
     ]);
     expect(shown(at(issue("BU-3"), [], undefined, narrow))).toEqual(["-"]);
     expect(gutterColumns(enabled, narrow)).toBe(2);
-    expect(shown(at(both, [child], new Set(["aih-ec2-3"]), NARROW_GUTTER_COLUMNS))).toEqual([
+    expect(shown(at(both, [child], new Set(["ops-vm-3"]), NARROW_GUTTER_COLUMNS))).toEqual([
       "agent",
       "blocked",
       "-",
@@ -267,13 +269,13 @@ describe("the gutter (D-41, T-2C.3)", () => {
 
 describe("the review indicator (T-2C.7)", () => {
   const item = (task: string, extra: Partial<ReviewItem> = {}): ReviewItem => ({
-    path: `/p/docs/held/sem-kg-ec2--aih-ec2-3/${task}-${extra.title ?? "x"}.md`,
+    path: `/p/docs/held/host-c--ops-vm-3/${task}-${extra.title ?? "x"}.md`,
     store: "ai-harness",
     relpath: "",
     kind: "decision",
     status: "open",
-    session: "aih-ec2-3@sem-kg-ec2",
-    machine: "sem-kg-ec2",
+    session: "ops-vm-3@host-c",
+    machine: "host-c",
     task,
     title: "x",
     ask: "",

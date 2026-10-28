@@ -632,7 +632,7 @@ Anchor-bias counter: the ask framed the choice as "plugin with MCP" against "CLI
 
 ## Appendix: Research Prompt
 
-**Registry ID:** unregistered (ad hoc researcher leaf of session aih-ec2-3)
+**Registry ID:** unregistered (ad hoc researcher leaf of session ops-vm-3)
 **Method:** Claude ad-hoc web (research-doc skill), WebFetch plus the GitHub REST API through `ghp api`; no native WebSearch on this host
 **Model:** `us.anthropic.claude-opus-5-5[1m]`, effort high
 **Date:** 2026-10-23
@@ -802,11 +802,11 @@ block; use a four-backtick outer fence when the prompt itself contains a code fe
 
 ## Appendix: Measurements
 
-Each line is a read-only measurement taken in this run, 2026-10-23, from this host (`sem-kg-ec2`).
+Each line is a read-only measurement taken in this run, 2026-10-23, from this host (`host-c`).
 
 | # | Measurement | Result |
 |---|---|---|
-| M-1 | `sha256sum` of `docs/asks/BU-epic-agentic-ai-native-beads-ylx.md` in the aih-ec2-3 worktree, and `git cat-file -p 66af21d` | `061c246d…bfbe`, matching `content_sha256`; blob content read in full |
+| M-1 | `sha256sum` of `docs/asks/BU-epic-agentic-ai-native-beads-ylx.md` in the ops-vm-3 worktree, and `git cat-file -p 66af21d` | `061c246d…bfbe`, matching `content_sha256`; blob content read in full |
 | M-2 | `ghp api repos/gastownhall/beads/contents/integrations` | `beads-mcp`, `claude-code`, `junie` |
 | M-3 | `ghp api repos/gastownhall/beads/contents/plugins/beads` | `.claude-plugin`, `.codex-plugin`, `.copilot-plugin`, `skills`, `agents`, `README.md` |
 | M-4 | Registered `@mcp.tool` names in `server.py` | `admin blocked claim close comment comments context create dep discover_tools get_tool_info list note ready reopen show stats update` (18) |
@@ -890,6 +890,6 @@ Quotes from files read as raw text through the GitHub REST API were checked as w
 
 ## Run History
 
-- 2026-10-23, `us.anthropic.claude-opus-5-5[1m]`, effort high, researcher leaf of aih-ec2-3, no sub-agents. Read the research-doc skill, both research templates, the canonical prompt template, the writing anti-patterns procedure, the six prior docs and the founding ask record. Read upstream Beads through the GitHub REST API (`ghp api`, read-only): the `beads-mcp` package, the plugin directory and its three manifests, the HTTP package docs, `go.mod`, setup docs and seven issues and PRs. Fetched 31 vendor and practitioner pages with WebFetch; two returned 404 (the Codex plugin build guide and one Stainless guide path, replaced by the Stainless MCP page), one returned truncated content (Fern's CLI generator post, dropped), and three redirected (followed). One read-only `curl` GET to the PyPI JSON API was made; later reads used WebFetch and `ghp`. A host HOLD arrived early; the run kept to light reads and writing after it. No build, test, server or model call was run. 56 sources cited, all fetched or read in this run. Spot check: the 25 raw-file quotes in the ledger were re-opened from the downloaded copies and substring-checked (25 passed); five WebFetch claims (tool search, `bin/`, the plugin connector rule, Agent Plugins' two components, the Gemini CLI notice) were read twice in the fetch output and each supports its claim.
+- 2026-10-23, `us.anthropic.claude-opus-5-5[1m]`, effort high, researcher leaf of ops-vm-3, no sub-agents. Read the research-doc skill, both research templates, the canonical prompt template, the writing anti-patterns procedure, the six prior docs and the founding ask record. Read upstream Beads through the GitHub REST API (`ghp api`, read-only): the `beads-mcp` package, the plugin directory and its three manifests, the HTTP package docs, `go.mod`, setup docs and seven issues and PRs. Fetched 31 vendor and practitioner pages with WebFetch; two returned 404 (the Codex plugin build guide and one Stainless guide path, replaced by the Stainless MCP page), one returned truncated content (Fern's CLI generator post, dropped), and three redirected (followed). One read-only `curl` GET to the PyPI JSON API was made; later reads used WebFetch and `ghp`. A host HOLD arrived early; the run kept to light reads and writing after it. No build, test, server or model call was run. 56 sources cited, all fetched or read in this run. Spot check: the 25 raw-file quotes in the ledger were re-opened from the downloaded copies and substring-checked (25 passed); five WebFetch claims (tool search, `bin/`, the plugin connector rule, Agent Plugins' two components, the Gemini CLI notice) were read twice in the fetch output and each supports its claim.
 
 <!-- /doc:region name="run_history" -->

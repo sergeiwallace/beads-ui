@@ -11,7 +11,7 @@ template_version: "research-findings-1.0.0"
 
 # Evidence: host and history probes behind the event-dispatch findings
 
-Measured on sem-kg-ec2 between 2026-10-27T23:58Z and 2026-10-28T00:06Z by the research leg
+Measured on host-c between 2026-10-27T23:58Z and 2026-10-28T00:06Z by the research leg
 BU-agent-research-event-xjpz. Every command was read-only. Outputs are bounded and carry no
 secrets, mail bodies or personal content. The ai-harness checkout was at
 `23ece1e92b6409eac80155d61f386c35df4e4816`, equal to `origin/main` at the time
@@ -34,7 +34,7 @@ a452401e054 2026-10-27T19:26:41-04:00 fix(agent-mail): quiet, withdraw and expir
 3904eed0d2c 2026-10-24T21:19:13-04:00 docs(design): event-driven admission for idle session wakes (#6032)
 ```
 
-`git branch -r --list 'origin/wt/aih-fw-1/*'` listed, among others, `idle-wake-design`,
+`git branch -r --list 'origin/wt/ops-lab-1/*'` listed, among others, `idle-wake-design`,
 `interim-i1-sync-owner`, `interim-i2-view-dedupe`, `phase1-admission`, `phase2-snapshots`,
 `phase2-snapshots-final`, `phase2-fixes`, `phase3-recovery` and `wake-cost-measure`. No
 `phase4` or `phase5` branch existed.
@@ -56,11 +56,11 @@ a452401e054 2026-10-27T19:26:41-04:00 fix(agent-mail): quiet, withdraw and expir
 ◐ 6/10 complete (60%)
 ```
 
-The epic's newest note (2026-10-27) says Phases 1 to 3 are merged and installed on fw-lnx and that
+The epic's newest note (2026-10-27) says Phases 1 to 3 are merged and installed on host-b and that
 "Automatic wakes remain off (no idle-wake.json)".
 
 `bd show` on the work-queue epic: `[EPIC] ... [P1 · BLOCKED]`, assignee
-`aih-ec2-3`. `bd show` on its dashboard issue: `[P2 · OPEN]`, "work-queue Phase 2:
+`ops-vm-3`. `bd show` on its dashboard issue: `[P2 · OPEN]`, "work-queue Phase 2:
 dashboard member app -- ai-core web/ SPA (Board, Task detail, Sessions) + SSE + app-portal apps.yaml
 registration". The epic's notes from early October name the Phase 2 prerequisites as absent on
 this host (no queue services and no Tailscale); section 4 below shows that has moved.

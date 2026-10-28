@@ -42,7 +42,7 @@ const TASKS: readonly Listed[] = [
   {
     id: "BU-1.1",
     status: "in_progress",
-    assignee: "kg-ec2-1",
+    assignee: "qa-vm-1",
     parent: "BU-1",
     labels: ["agent"],
     title: "a labelled agent row",
@@ -64,7 +64,7 @@ const TASKS: readonly Listed[] = [
     title: "blocked by BU-5",
     blockedBy: ["BU-5"],
   },
-  { id: "BU-5", status: "in_progress", assignee: "kg-ec2-1", priority: 2, title: "the blocker" },
+  { id: "BU-5", status: "in_progress", assignee: "qa-vm-1", priority: 2, title: "the blocker" },
   { id: "BU-6", status: "open", assignee: ME, priority: 3, title: "nothing to show" },
 ];
 const OWN = ["BU-1", "BU-2", "BU-3", "BU-4", "BU-6"];
@@ -101,7 +101,7 @@ async function started(
     env: { HOME: "/home/me", CLAUDE_CODE_TASK_LIST_ID: ME },
     refresher: true,
     files: {
-      [SNAPSHOT]: snapshot(options.sessions ?? [ME, "kg-ec2-1"]),
+      [SNAPSHOT]: snapshot(options.sessions ?? [ME, "qa-vm-1"]),
       ...(options.config === undefined ? {} : { [USER_CONFIG]: options.config }),
     },
     script: SCRIPT,

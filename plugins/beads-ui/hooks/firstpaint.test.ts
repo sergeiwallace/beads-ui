@@ -217,7 +217,7 @@ describe("the board's bounded read (T-1B.8)", () => {
 
 describe("Mine and All (D-29)", () => {
   test("should open a non-firstmate session's board on its own issues, and show every issue after a", async ($, on) => {
-    const { w, ui } = await opened($, on, named("aih-ec2-3"));
+    const { w, ui } = await opened($, on, named("ops-vm-3"));
 
     expect((await cards(ui)).sort()).toEqual(["card:BU-mg2", "card:BU-mg2.2"]);
     expect((await ui.find({ key: "scope" }))?.props.label).toBe("Showing: mine");
@@ -226,16 +226,16 @@ describe("Mine and All (D-29)", () => {
 
     expect(await cards(ui)).toHaveLength(30);
     expect((await ui.find({ key: "scope" }))?.props.label).toBe("Showing: all");
-    expect(w.store.get(SCOPE_KEY)).toEqual({ "aih-ec2-3": "all" });
+    expect(w.store.get(SCOPE_KEY)).toEqual({ "ops-vm-3": "all" });
   });
 
   test("should open on the choice $.store keeps for the session, and leave another session's alone", async ($, on) => {
-    const stored = { [SCOPE_KEY]: { "aih-ec2-3": "all", "kg-ec2-1": "mine" } };
-    const { w, ui } = await opened($, on, named("aih-ec2-3", { stored }));
+    const stored = { [SCOPE_KEY]: { "ops-vm-3": "all", "qa-vm-1": "mine" } };
+    const { w, ui } = await opened($, on, named("ops-vm-3", { stored }));
 
     expect(await cards(ui)).toHaveLength(30);
     await ui.press({ key: "scope" });
-    expect(w.store.get(SCOPE_KEY)).toEqual({ "aih-ec2-3": "mine", "kg-ec2-1": "mine" });
+    expect(w.store.get(SCOPE_KEY)).toEqual({ "ops-vm-3": "mine", "qa-vm-1": "mine" });
     // The view key the other preferences live in carries no scope.
     expect(Object.keys((w.store.get(PREFS_KEY) as object | undefined) ?? {})).not.toContain(
       "scope",
@@ -243,18 +243,18 @@ describe("Mine and All (D-29)", () => {
   });
 
   test("should open the firstmate's board on every issue", async ($, on) => {
-    const { ui } = await opened($, on, named("aih-ec2-firstmate-1"));
+    const { ui } = await opened($, on, named("ops-vm-firstmate-1"));
 
     expect(await cards(ui)).toHaveLength(30);
     expect((await ui.find({ key: "scope" }))?.props.label).toBe("Showing: all");
   });
 
   test("should say how to see every issue when the session owns no open one", async ($, on) => {
-    const { ui } = await opened($, on, named("aih-3"));
+    const { ui } = await opened($, on, named("ops-3"));
 
-    // aih-3's seven issues are all closed: the board draws them and says so.
+    // ops-3's seven issues are all closed: the board draws them and says so.
     expect((await ui.find({ key: "mine-empty" }))?.text).toBe(
-      "No open issues are assigned to aih-3; a shows all 22 open.",
+      "No open issues are assigned to ops-3; a shows all 22 open.",
     );
   });
 

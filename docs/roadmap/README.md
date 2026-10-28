@@ -1,7 +1,7 @@
 # Roadmap — retired, archive only
 
 Roadmap markdown is a **historical record**. It was retired fleet-wide on 2026-07-25 by the
-SW-841 Phase-3 cutover. **Beads (`bd`) is the task system of record.**
+Phase-3 cutover. **Beads (`bd`) is the task system of record.**
 
 Never add a task here, check one off, or re-tag one. Look the live task up with `bd`:
 

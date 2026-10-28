@@ -10,7 +10,7 @@ display_id: BU-spike-beads-ui-bd-dvdg
 
 # Measurements behind the bd serve and tool-visibility spike
 
-Every reading below was taken on host `sem-kg-ec2` on 2026-10-15 between 01:06Z and 02:00Z with
+Every reading below was taken on host `host-c` on 2026-10-15 between 01:06Z and 02:00Z with
 read-only commands. The packet that cites these readings is
 `docs/research/findings/beads-ui-spike-bd-serve-and-tool-visibility.md`. The help text for
 `bd delete`, `bd update`, `bd serve`, `bd batch` and `bd --help` is already captured in

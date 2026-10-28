@@ -3,7 +3,7 @@
 Cross-session delegation context and startup docs.
 
 ## What belongs here
-- Handoff context docs for delegating work between CC sessions (sw-1, sw-2, etc.)
+- Handoff context docs for delegating work between CC sessions (ws-1, ws-2, etc.)
 - Session startup context for a specific delegated task
 - Event-driven architecture or platform handoff briefs
 

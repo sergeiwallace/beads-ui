@@ -872,7 +872,7 @@ only through WebFetch were copied from the fetch output, as each row's last colu
 
 ## Run History
 
-- 2026-10-15, claude-opus-5-5 (researcher leaf for aih-3), effort high. Read the founding ask and the
+- 2026-10-15, claude-opus-5-5 (researcher leaf for ops-3), effort high. Read the founding ask and the
   three seed docs in full, then the code.claude.com mods pages, the public mods types file, the
   changelog, the MCP Apps spec and Claude's connector docs, terminal mouse references, GitHub and npm
   for mods and Beads prior art, cross-target UI frameworks and monorepo tools. About 95 live fetches

@@ -86,13 +86,13 @@ bd.db
 issues.jsonl
 interactions.jsonl
 
-# A machine-local Dolt server endpoint config, never shared (AIH-v9tbf). One machine's
+# A machine-local Dolt server endpoint config, never shared. One machine's
 # cfg_dir committed here makes dolt_server.py refuse to infer this repo's database
 # endpoint on every OTHER machine, and that guard tests presence on disk, so untracking
 # the file is not enough -- it has to be ignored.
 dolt-server-config.yaml
 
-# Display-id machinery's per-machine runtime state, never shared (AIH-271c8). The
+# Display-id machinery's per-machine runtime state, never shared. The
 # pending/ journal holds bd-new's in-flight write-ahead records between `bd create` and
 # the `bd update` that attaches the display id; the heartbeat records when the repair
 # sweep last ran so bd-new can alarm on a dead scheduler. Committing either lets one
@@ -100,7 +100,7 @@ dolt-server-config.yaml
 .displayid-pending/
 .displayid-sweep-heartbeat.json
 
-# bd's import stat cache: machine-local, never shared (AIH-0dwsih). bd 1.3.x still writes
+# bd's import stat cache: machine-local, never shared. bd 1.3.x still writes
 # it but no longer ignores it in the file it generates, so an unignored copy is
 # one `git add -A` away from being published as though it were this repo's state.
 .auto-import-issues.jsonl

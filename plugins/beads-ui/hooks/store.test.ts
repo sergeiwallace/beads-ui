@@ -28,21 +28,21 @@ import {
 } from "./tests/world.ts";
 
 const LIST = OPEN_LIST;
-/** A kg session's directory: a repository that holds no Beads store, and must never get one. */
-const KG_CWD = "/work/bms-semantic-knowledge-graph";
-/** The repository whose store holds the kg sessions' work. */
-const KG_STORE = "/work/sw-bms-workspace";
+/** A qa session's directory: a repository that holds no Beads store, and must never get one. */
+const QA_CWD = "/work/bms-semantic-knowledge-graph";
+/** The repository whose store holds the qa sessions' work. */
+const QA_STORE = "/work/sw-bms-workspace";
 const HARNESS = "/work/ai-harness";
 const CLI = "/work/ai-cli-utils";
 /** A directory with no store whose name maps to nothing: where a prefix is the only lead. */
 const SCRATCH = "/work/scratch";
 const USER_CONFIG = "/home/me/.config/beads-ui/beads-ui.toml";
-const ALL_STORES = [KG_STORE, CWD, HARNESS, CLI];
+const ALL_STORES = [QA_STORE, CWD, HARNESS, CLI];
 const INVENTORY = {
   [INVENTORY_PATH]: inventoryOf({
     BU: { repo: CWD },
-    KG: { repo: KG_STORE },
-    AIH: { repo: HARNESS },
+    QA: { repo: QA_STORE },
+    OPS: { repo: HARNESS },
     AI_CLI: { repo: CLI },
   }),
 };
@@ -55,7 +55,7 @@ const stores =
     if (key === "bd where") return has ? undefined : NO_STORE_WHERE;
     if (!has) return exit(1, NO_STORE_STDERR);
     return key.startsWith("bd count ")
-      ? countOf([{ status: "open", assignee: "kg-ec2-3" }], argv)
+      ? countOf([{ status: "open", assignee: "qa-vm-3" }], argv)
       : undefined;
   };
 
@@ -97,30 +97,30 @@ const cwdsOf = (w: ReturnType<typeof world>, prefix: string) =>
   w.keys().flatMap((key, i) => (key.startsWith(prefix) ? [w.cwds[i]] : []));
 
 describe("the store a session reads", () => {
-  test("should read the KG store from the inventory when a kg-ec2-3 session's directory has no store", async ($, on) => {
+  test("should read the QA store from the inventory when a qa-vm-3 session's directory has no store", async ($, on) => {
     const { w, ui } = await openIn(
       $,
       on,
-      KG_CWD,
-      named("kg-ec2-3", { files: INVENTORY, script: stores(ALL_STORES) }),
+      QA_CWD,
+      named("qa-vm-3", { files: INVENTORY, script: stores(ALL_STORES) }),
     );
 
     expect(await ui.find({ key: "error-line" })).toBeUndefined();
     expect((await ui.find({ key: "column::open" }))?.text).toBe("open 20");
     expect(cwdsOf(w, LIST).length).toBeGreaterThan(0);
-    expect(new Set(cwdsOf(w, LIST))).toEqual(new Set([KG_STORE]));
-    expect((await ui.find({ key: "header" }))?.text).toContain("KG (sw-bms-workspace)");
+    expect(new Set(cwdsOf(w, LIST))).toEqual(new Set([QA_STORE]));
+    expect((await ui.find({ key: "header" }))?.text).toContain("QA (sw-bms-workspace)");
   });
 
   test("should read the store beads-ui.toml maps the directory's name to in the pane and the band", async ($, on) => {
-    const mapped = "/home/me/kg-store";
+    const mapped = "/home/me/qa-store";
     const { w, ui } = await openIn(
       $,
       on,
-      KG_CWD,
-      named("kg-ec2-3", {
+      QA_CWD,
+      named("qa-vm-3", {
         files: {
-          [USER_CONFIG]: '[directory_stores]\n"bms-semantic-knowledge-graph" = "~/kg-store"\n',
+          [USER_CONFIG]: '[directory_stores]\n"bms-semantic-knowledge-graph" = "~/qa-store"\n',
         },
         script: stores([mapped]),
       }),
@@ -129,7 +129,7 @@ describe("the store a session reads", () => {
     expect((await ui.find({ key: "column::open" }))?.text).toBe("open 20");
     expect(new Set(cwdsOf(w, LIST))).toEqual(new Set([mapped]));
     expect(new Set(cwdsOf(w, "bd count "))).toEqual(new Set([mapped]));
-    expect((await ui.find({ key: "header" }))?.text).toContain("kg-store");
+    expect((await ui.find({ key: "header" }))?.text).toContain("qa-store");
     expect(plainLine((await (await band($)).find({ key: "beads-band:own" }))?.text)).toBe(
       "[bd] 1 task (0 in progress, 0 blocked, 1 open, 0 done last 24h) *",
     );
@@ -140,7 +140,7 @@ describe("the store a session reads", () => {
       $,
       on,
       CWD,
-      named("aih-ec2-3", { files: INVENTORY, script: stores(ALL_STORES) }),
+      named("ops-vm-3", { files: INVENTORY, script: stores(ALL_STORES) }),
     );
 
     expect((await ui.find({ key: "column::open" }))?.text).toBe("open 20");
@@ -149,28 +149,28 @@ describe("the store a session reads", () => {
   });
 
   test("should name a linked worktree's store by the prefix bd gives it, and read the worktree itself", async ($, on) => {
-    const tree = `${HARNESS}/.worktrees/aih-ec2-3`;
+    const tree = `${HARNESS}/.worktrees/ops-vm-3`;
     const inTree: Script = (key, argv, cwd) =>
       cwd === tree && key === "bd where"
         ? ok(
-            `${JSON.stringify({ database_path: `${tree}/.beads/dolt`, path: `${tree}/.beads`, prefix: "AIH", schema_version: 1 })}\n`,
+            `${JSON.stringify({ database_path: `${tree}/.beads/dolt`, path: `${tree}/.beads`, prefix: "OPS", schema_version: 1 })}\n`,
           )
         : stores([...ALL_STORES, tree])(key, argv, cwd);
     const { w, ui } = await openIn(
       $,
       on,
       tree,
-      named("aih-ec2-3", { files: INVENTORY, script: inTree }),
+      named("ops-vm-3", { files: INVENTORY, script: inTree }),
     );
 
-    expect((await ui.find({ key: "header" }))?.text).toContain("AIH (aih-ec2-3)");
+    expect((await ui.find({ key: "header" }))?.text).toContain("OPS (ops-vm-3)");
     expect(new Set(cwdsOf(w, LIST))).toEqual(new Set([tree]));
   });
 
   for (const [session, store, label] of [
-    ["aih-ec2-3", HARNESS, "AIH (ai-harness)"],
-    ["aih-ec2-firstmate-1", HARNESS, "AIH (ai-harness)"],
-    ["ai-cli-ec2-1", CLI, "AI_CLI (ai-cli-utils)"],
+    ["ops-vm-3", HARNESS, "OPS (ai-harness)"],
+    ["ops-vm-firstmate-1", HARNESS, "OPS (ai-harness)"],
+    ["ai-cli-vm-1", CLI, "AI_CLI (ai-cli-utils)"],
   ] as const) {
     test(`should read the ${label} store from the session name's prefix when ${session}'s directory has no store`, async ($, on) => {
       const { w, ui } = await openIn(
@@ -187,21 +187,21 @@ describe("the store a session reads", () => {
   }
 
   test("should name what it tried and how to add a mapping, and run no bd retry, when no store resolves", async ($, on) => {
-    const inventory = { [INVENTORY_PATH]: inventoryOf({ AIH: { repo: HARNESS } }) };
+    const inventory = { [INVENTORY_PATH]: inventoryOf({ OPS: { repo: HARNESS } }) };
     const { w, ui } = await openIn(
       $,
       on,
-      KG_CWD,
-      named("kg-ec2-3", { files: inventory, script: stores([HARNESS]) }),
+      QA_CWD,
+      named("qa-vm-3", { files: inventory, script: stores([HARNESS]) }),
     );
 
     const text = (await ui.find({ key: "no-store" }))?.text ?? "";
     expect(text).toContain("beads-ui found no Beads store for this session.");
-    expect(text).toContain(`the session's directory ${KG_CWD} has no Beads store`);
-    expect(text).toContain(`${KG_CWD}/beads-ui.toml`);
+    expect(text).toContain(`the session's directory ${QA_CWD} has no Beads store`);
+    expect(text).toContain(`${QA_CWD}/beads-ui.toml`);
     expect(text).toContain(USER_CONFIG);
     expect(text).toContain(
-      `the store inventory ${INVENTORY_PATH} has no store with the prefix KG (from the session name kg-ec2-3)`,
+      `the store inventory ${INVENTORY_PATH} has no store with the prefix QA (from the session name qa-vm-3)`,
     );
     expect(text).toContain(`add this to ${USER_CONFIG}`);
     expect(text).toContain("[directory_stores]");
@@ -223,7 +223,7 @@ describe("the store a session reads", () => {
 
   test("should draw no band when an unnamed session's store does not resolve", async ($, on) => {
     const w = world(on, { script: stores([]) });
-    await $.session.start({ ...SESSION, cwd: KG_CWD });
+    await $.session.start({ ...SESSION, cwd: QA_CWD });
     await w.clock.settle();
 
     expect(await (await band($)).find({ key: "beads-band" })).toBeUndefined();

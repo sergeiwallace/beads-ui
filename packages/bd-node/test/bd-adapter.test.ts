@@ -157,7 +157,7 @@ const FULL_RECORD = {
   status: "in_progress",
   priority: 1,
   issue_type: "feature",
-  assignee: "aih-ec2-3",
+  assignee: "ops-vm-3",
   owner: "repo-owner@example.com",
   labels: ["id:every-field-x1", "sprint:s1"],
   parent: "BU-epic",
