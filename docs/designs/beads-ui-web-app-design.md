@@ -165,7 +165,7 @@ sequenceDiagram
 
 ### Owner change and goal arming
 
-Changing the owner field on a task with a live claim sends a handoff request to the current owner instead of reassigning the claim ([D-9](#d-9)). A dispatch may carry "arm a goal if none is active"; the receiving session reads its own goal state and arms `/start-goal` before it acts. A dispatch to a session whose goal is paused for a usage or rate limit waits and is released automatically when the pause clears, with a "deliver now" control beside it ([D-10](#d-10)).
+Changing the owner field on a task with a live claim sends a handoff request to the current owner instead of reassigning the claim ([D-9](#d-9)). Every prompt, and every answer or unblock that carries next-step text, asks the receiver to "arm a goal if none is active", unless Sergei clears that for one dispatch; the receiving session reads its own goal state and arms `/start-goal` before it acts. A dispatch to a session whose goal is paused for a usage or rate limit waits and is released automatically when the pause clears, with a "deliver now" control beside it ([D-10](#d-10)).
 
 ### Board and views
 
@@ -253,7 +253,7 @@ order = ["notifier", "prompt-injection", "mod-submit", "turn-end"]
 allow_repos = ["..."]            # the per-host repository allowlist (D-18)
 ```
 
-The kill switch is the event-driven wake's own call-time policy file; with automatic wakes off, only the turn-end rung delivers.
+The kill switch is the event-driven wake's own call-time policy file. With automatic wakes off, the addressed Agent Mail is still sent and stays pending; only the model wake and the active rungs 3 and 4 are suppressed, and the notifier's passive header delivers the dispatch at the session's next tool call or turn end.
 
 ## Integration
 
@@ -287,6 +287,7 @@ The phases below extend Phase 3 of the beads-ui design, which they assume built 
     - [ ] `When the user moves an issue between the backlog and a sprint, by drag, by the command palette or by the Move to menu, the system shall write the sprint membership through a guarded bd write.`
     - [ ] `When the user reorders a card in a column or a row in the backlog, by drag or by the keyboard's move up and move down commands, the system shall write metadata.rank as a fractional-index key between its neighbours (D-21).`
     - [ ] `When the user changes an issue's priority or status inline on a card or a list row, the system shall perform the guarded write and show the new value.`
+    - [ ] `When the user opens the owner picker on a card, a list row or an issue's detail, by pointer, keyboard or touch, the system shall offer the sessions the fleet's handoff rules allow, and shall apply the choice through T-W2.4.`
     - [ ] `If an inline edit's guarded write returns a conflict, then the system shall roll back to the stored value and show a conflict notice naming the field.`
     - [ ] `If the user is on a touch device, then every reorder and inline edit shall also be reachable without a drag or a hover.`
   - **T-W1.1 Review queue**
@@ -335,7 +336,7 @@ The phases below extend Phase 3 of the beads-ui design, which they assume built 
     - [ ] `Where single-key shortcuts are enabled, when the user presses a mapped key outside a text field, the system shall run its command.`
     - [ ] `While the single-key shortcut setting is off, the system shall ignore single-key presses and keep modified shortcuts.`
     - [ ] `If a remap assigns one key to two commands, then the key map shall refuse the remap and name both commands.`
-- **Exit gate:** `npx tsc --noEmit && npx vitest run` green in beads-ui; ai-harness `pytest` green for the structured-options command and the answer and unblock handlers; Playwright views, Review and composer specs green at 390 px and 1280 px; a live run on the work pair recorded in the Approval Log: one card reordered and one priority edited inline, the Queue view filtered to blocked tasks, one decision answered by key and recorded on its owning host byte for byte, one task unblocked with a follow-up prompt, one prompt delivered at a turn end.
+- **Exit gate:** `npx tsc --noEmit && npx vitest run` green in beads-ui; ai-harness `pytest` green for the structured-options command and the answer and unblock handlers; Playwright views, Review and composer specs green at 390 px and 1280 px; a live run on the work pair recorded in the Approval Log: one card reordered, one priority edited inline and one owner changed from a card, the Queue view filtered to blocked tasks, one decision answered by key and recorded on its owning host byte for byte, one task unblocked with a follow-up prompt, one prompt delivered at a turn end.
 
 ### Phase W2: Event-based dispatch, the receiver API, envelope, handoff and goal arming
 
@@ -349,7 +350,12 @@ The phases below extend Phase 3 of the beads-ui design, which they assume built 
     - [ ] `When a dispatch is written and automatic wakes are on, the system shall send addressed Agent Mail to the target session at its host naming the dispatch id.`
     - [ ] `When the mail's shown receipt arrives, the system shall record the state "shown" with the receipt as its source.`
     - [ ] `If no shown receipt arrives within shown_within_s and the target session has a pane the prompt-injection library can resolve, then the system shall request the library's one-line pointer under the same claim and record which rung delivered.`
-    - [ ] `While the wake policy reports automatic wakes off, the system shall not use rungs 1, 3 or 4 and shall show "waiting: automatic wakes off" with the dispatch delivered at the next turn end.`
+    - [ ] `While the target host's wake policy reports automatic wakes off, the system shall still send the addressed Agent Mail, shall not create a model wake or use rungs 3 or 4, and shall show "waiting: automatic wakes off".`
+    - [ ] `While the target host's automatic wakes are off, the notifier shall deliver the dispatch's passive header at the session's next tool call or turn end, and a cross-host canary shall show no idle turn created and the header delivered.`
+    - [ ] `If addressed Agent Mail cannot be delivered, then the system shall carry the dispatch by Buzz and record that rung.`
+    - [ ] `If Buzz cannot carry it either, then the system shall send a git-inbox action carrying a pointer only, and record that rung.`
+    - [ ] `If the prompt-injection library cannot resolve the target's pane, then the system shall try the mod's submit on that host, and record that rung.`
+    - [ ] `If every active rung fails, then the system shall leave the dispatch for turn-end pickup and show which rungs failed and why.`
     - [ ] `When two or more dispatches to one session are written within coalesce_window_s, the system shall deliver them as one event.`
     - [ ] `If a session exceeds max_per_session_per_hour, then the system shall hold further dispatches to it and say so in the composer.`
     - [ ] `If the dispatch policy is unreadable, then the system shall deliver at the next turn end only and show the reason.`
@@ -360,7 +366,8 @@ The phases below extend Phase 3 of the beads-ui design, which they assume built 
     - [ ] `When a dispatch is consumed or expires, the server shall delete its body from the body store and append a tombstone record, keeping the record and its receipts; backups shall exclude bodies.`
     - [ ] `Where the work queue is configured, the receiver API shall serve the queue's prompt store through the same endpoints.`
   - **T-W2.3 Envelope**
-    - [ ] `When the server writes a dispatch, the system shall sign the canonical JSON of its id, task, target, kind, body_ref, body_digest, arm_goal, created_by, created_at and expires_at with the serving host's Ed25519 key (D-20).`
+    - [ ] `When the server writes a dispatch, the system shall sign the RFC 8785 canonical JSON of its id, task, target, kind, body_ref, body_digest, arm_goal, created_by, created_at and expires_at, with timestamps as UTC RFC 3339 strings to the millisecond, using the serving host's Ed25519 key (D-20).`
+    - [ ] `When the Node signer and the Python verifier run the shared golden vectors, each shall produce and accept the same bytes, and each shall reject the malformed vectors.`
     - [ ] `When the receiving host fetches a dispatch, it shall verify the signature, then hash the fetched body and compare it with body_digest, before the session acts.`
     - [ ] `If the signature fails, any signed field differs from the record, or the body's hash differs from body_digest, then the receiving host shall mark the dispatch failed with the reason, and the session shall treat its text as unverified coordination only.`
     - [ ] `If a dispatch has passed its expires_at, or names a target other than the receiving session, or carries an id the receiver has already consumed, then the receiving host shall refuse it and record why.`
@@ -374,11 +381,13 @@ The phases below extend Phase 3 of the beads-ui design, which they assume built 
     - [ ] `If the current owner is proved gone by the fleet's liveness check, then the server shall release the abandoned claim through the documented force path, send the selected receiver a git-inbox action carrying a pointer only, and show "owner not running" until git-inbox confirm records the take.`
     - [ ] `If the current owner's liveness cannot be established, then the system shall not reassign, shall show "owner state unknown" and shall offer a retry.`
   - **T-W2.5 Goal arming**
+    - [ ] `When the composer writes a prompt dispatch, or an answer or unblock carries next-step text, the system shall set arm_goal on that dispatch.`
+    - [ ] `When the user clears the composer's arm-goal control for one dispatch, the system shall send that dispatch without arm_goal and record that the user cleared it.`
     - [ ] `When a dispatch carries arm_goal and the receiving session has no active goal, the session shall run /start-goal for the dispatched task before acting on the prompt.`
     - [ ] `When a dispatch carries arm_goal and the receiving session's goal is active, the session shall act on the prompt within that goal and shall not start a second one.`
     - [ ] `If the receiving session's goal is paused for a usage or rate limit, then the system shall show "waiting: goal paused" and shall release the dispatch automatically when the receiver reports the goal active or the recorded pause window ends.`
     - [ ] `When the user presses "deliver now" on a dispatch waiting on a paused goal, the system shall deliver it at once.`
-- **Exit gate:** beads-ui gate green; ai-harness `pytest` green including the typed-source, receiver-client and verifier tests; a live run on each pair, with automatic wakes switched on for the test session's host, recorded in the Approval Log: an idle session woken by a dispatch, a fallback rung exercised, a session on the paired machine fetching a dispatch through the receiver API, a forged and a body-tampered dispatch each refused, one owner change completed receiver-first.
+- **Exit gate:** beads-ui gate green; ai-harness `pytest` green including the typed-source, receiver-client and verifier tests; a live run on each pair, with automatic wakes switched on for the test session's host, recorded in the Approval Log: an idle session woken by a dispatch, every rung exercised in tests and one cross-host carrier failover exercised live, a wakes-off canary, a session on the paired machine fetching a dispatch through the receiver API, a forged and a body-tampered dispatch each refused, one owner change completed receiver-first.
 
 ### Phase W3: Live updates, allowlist, access and app-portal
 
@@ -401,7 +410,11 @@ The phases below extend Phase 3 of the beads-ui design, which they assume built 
     - [ ] `If the allowlist is unreadable, then the server shall open no store and shall show why.`
   - **T-W3.3 Authentication**
     - [ ] `When a request arrives, the system shall reject it unless its Host is on the allowlist.`
-    - [ ] `When a write arrives, the system shall reject it unless its Origin and Sec-Fetch-Site match the app's own origin.`
+    - [ ] `When a browser write arrives without the X-Beads-UI header, the system shall reject it.`
+    - [ ] `When a browser write arrives with Sec-Fetch-Site set to same-origin, the system shall accept it on that check.`
+    - [ ] `When a browser write arrives with Sec-Fetch-Site set to cross-site, same-site or none, the system shall reject it.`
+    - [ ] `When a browser write arrives with no Sec-Fetch-Site header, the system shall accept it on that check only if its Origin exactly equals an allowed origin.`
+    - [ ] `When a request reaches the receiver API, the system shall authorise it by the receiver token and target match of T-W2.2 and shall not apply the browser checks.`
     - [ ] `When any request arrives on either pair, the system shall require the per-host token, and shall reject the request without it whatever identity headers it carries.`
     - [ ] `Where the server runs behind Tailscale Serve, the system shall record the Tailscale-User-Login identity on each write and shall refuse a dispatch whose recorded identity is not on the host's dispatch list, in addition to the token.`
     - [ ] `If a request reaches the loopback listener directly with Tailscale identity headers and no valid token, then the system shall reject it.`
@@ -409,7 +422,9 @@ The phases below extend Phase 3 of the beads-ui design, which they assume built 
     - [ ] `When the launch command prints a one-time link, its code shall expire after five minutes, and the server shall exchange it once for a session cookie marked HttpOnly and SameSite=Strict and scoped to the app's base path.`
     - [ ] `If a one-time code is presented a second time or after it expires, then the server shall refuse it and set no cookie.`
     - [ ] `When the browser opens the SSE stream, the server shall authenticate it by the session cookie, and no token shall appear in a URL after the exchange or in browser storage.`
-    - [ ] `When a write arrives without the X-Beads-UI header, the system shall reject it.`
+    - [ ] `When a session is 12 hours old, or idle for 2 hours, the server shall end it and the cookie shall stop working.`
+    - [ ] `When the user logs out, the server shall revoke that session on the server and clear its cookie.`
+    - [ ] `When the host's revoke command names one session, the server shall end that session only.`
     - [ ] `When the per-host secret is rotated, every existing session cookie shall stop working.`
   - **T-W3.4 Access and app-portal duties**
     - [ ] `When the pair transport starts on the work pair's laptop, it shall forward the web port from the work host to a local port.`
@@ -451,7 +466,7 @@ The phases below extend Phase 3 of the beads-ui design, which they assume built 
 
 | # | Risk | Impact | Mitigation |
 |---|------|--------|------------|
-| 1 | Automatic wakes stay off because no host's wake policy is switched on | Prompts land only at a session's next turn end; the auto-trigger the ask wants is slow | The composer states the delivery mode plainly; a bd dependency edge ties the build's ladder phase to the seeding; turn-end delivery means nothing is lost |
+| 1 | Automatic wakes stay off because no host's wake policy is switched on | Prompts land only at a session's next turn end; the auto-trigger the ask wants is slow | The composer states the delivery mode plainly; a bd dependency edge ties the build's ladder phase to each host's policy being switched on, and Phase W2's exit gate proves it switched on for every host it tests; turn-end delivery means nothing is lost |
 | 2 | A web page or local process on the laptop sends a forged prompt through the forwarded port | An agent runs instructions Sergei never typed | D-17's Host, Origin and Fetch Metadata checks and per-host token; D-8's envelope verified on the receiving host; prompts never carry shell commands the session runs without its own judgment |
 | 3 | A private store is read on the work host | Personal content shown on an employer machine | D-18's per-host allowlist, enforced in the server's store registry and its queue reads, fail closed on an unlisted repository; the goals design's host-startup guard |
 | 4 | One-key approval records an answer Sergei did not mean | A decision moves on a mis-key | D-3's answer names the option and says it came from a control; a five-second undo; the held store keeps the record |
@@ -500,7 +515,7 @@ This design doc hosts the `/auto-flow` Run Ledger for the web app's design stage
 | max-agents | 3 concurrent children (launcher's cap); one at a time under the host's load holds of 2026-10-28 |
 | target commit (beads-ui) | `4a3a17c` at the design-stage prepare |
 | worktree + branch | `/data/projects/beads-ui/.worktrees/aih-ec2-3-agents/bu-goals-webapp-coordinator` on `wt/aih-ec2-3/bu-goals-webapp-coordinator` |
-| stage cursor | `doc-audit`, round 3 in progress, after `doc done` (`flow_dispatch_doc.py --phase complete` passed against `4a3a17c`) and rounds 1 and 2 applied; the run stops when the audit converges, for Sergei's review |
+| stage cursor | `doc-audit`, round 4 next, after `doc done` (`flow_dispatch_doc.py --phase complete` passed against `4a3a17c`) and rounds 1 to 3 applied; the run stops when the audit converges, for Sergei's review |
 | last completed integration boundary | research landed on main at `4a3a17c` (PRs #78, #79, #80, #81) |
 
 ### Transition verdicts
@@ -516,6 +531,7 @@ This design doc hosts the `/auto-flow` Run Ledger for the web app's design stage
 |---:|---|---|---|---|
 | 1 | codex / audit / high (cross-family), leaf BU-mg2.5.3.1 | [round 1 findings](../research/findings/evidence/beads-ui-web-app-design-audit-r1-2026-10-28.md) | 12 MUST-FIX, 2 WORTH-CONSIDERING | Fixed: D-11 applies the approved decision instead of reopening it (M1); Sprint view, manual rank on by default (D-21) and inline edits added as T-W1.0 (M2); answers run on the owning host through an answer dispatch (M3); the receiver API (M4); the envelope signs every authorization field and the receiver checks the body hash, expiry, target and replay (M5); the token is required on both pairs and identity headers are never trusted alone (M6); the portal duties are tested in T-W3.4 (M7); D-15 returned to Sergei and D-19 withdrawn to BU-isu (M8); goal arming before acting, with automatic release after a limit pause (M9); core paths normalized (M10); compound criteria split, failure-path criteria added and the composer's parity inventory written (M12); shared SSE across tabs and the impact sort key defined (both WORTH-CONSIDERING items). Partly conceded (M11): the work host's network posture sentence is removed; machine names, beads-ui's own `BU-` ids and the worktree path stay, because the approved parent design and the founding ask use the same names and the public-repository rule for this run covers counts, ports, command lines, the queue's auth posture and private-store ids, none of which the doc carries |
 | 2 | codex / audit / high (cross-family), leaf BU-mg2.5.3.1 | [round 2 findings](../research/findings/evidence/beads-ui-web-app-design-audit-r2-2026-10-28.md) | 11 MUST-FIX, 2 WORTH-CONSIDERING; round 1 closure: 10 PASS, 2 PARTIAL, 1 FAIL | Fixed: the receiver API matches host and session and refuses wrong-session fetches and receipts (M1); impact and size are the curation value and effort (M2, and round 1's impact item); the Queue view lists every open task in queue order with a blocked filter (M3); unblock runs the resolution comment and `bd-unblock` on the owning host (M4); issue and held-item detail criteria (M5); the full receiver-first handoff with live, gone, unknown and unclaimed cases (M6); the wake policy is now seeded off, so the dependency is each host's switch and W2's live test runs with wakes on (M7); the SSH fact reconciled in D-20 (M8); the event-wake design is referred to without its file name (M9); the cursor updated (M10); the browser session lifecycle specified and tested (M11); D-1 and D-2 cited for shared code; body deletion as a tombstone in an append-only log |
+| 3 | codex / audit / high (cross-family), leaf BU-mg2.5.3.1 | [round 3 findings](../research/findings/evidence/beads-ui-web-app-design-audit-r3-2026-10-28.md) | 6 MUST-FIX, 2 WORTH-CONSIDERING; rounds 1 and 2 closure: all PASS except round 2's M11 (PARTIAL) | Fixed: every actionable web dispatch sets `arm_goal` by default (M1); the owner picker on cards, rows and detail (M2); with wakes off the mail is still sent and only the wake and rungs 3 and 4 are suppressed (M3); a criterion per fallback rung (M4); the browser write rule stated exactly (M5); session expiry, logout and single-session revoke (M6); the seeding wording in Risk 1; RFC 8785 bytes with shared golden vectors |
 
 <!-- /doc:region name="overview" -->
 
@@ -756,7 +772,7 @@ Mitigation: below 600 px the three draw as one segmented chip with each segment 
 - Every named route is used: hook context injection is how rung 1 lands, the library is rung 3, Agent Mail carries rung 1.
 
 **Cons:**
-- Rungs 1, 3 and 4 are inert on a host until its wake policy is switched on; the installer seeds it off.
+- On a host whose wake policy is off, which the installer seeds by default, rung 1's mail still arrives but wakes no idle session, and rungs 3 and 4 are not used.
 - More moving parts than a single route.
 
 ##### (b) Prompt injection first
@@ -927,7 +943,7 @@ The full protocol is in T-W2.4: the selected receiver is checked against the fle
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.5.3/D-10; decision-topic=arming /start-goal from a web dispatch; governs=dispatch:goal; normalized-proposition=the receiver arms /start-goal before acting and a dispatch to a goal paused for a limit is released automatically when the pause clears; applicability=phase:W2; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-Gate 0: the ask's auto-trigger is kept for every dispatch; a limit pause changes when it fires, not whether, and "deliver now" lets Sergei override. Mitigation: the receiver-side handling ships in ai-harness with tests for no goal, an active goal and a paused goal, and the release condition is testable: the receiver reports the goal active, or the pause window it recorded ends (T-W2.5). Confidence: high.
+Gate 0: every actionable web dispatch sets the flag by default (T-W2.5), so the ask's auto-trigger is kept; a limit pause changes when it fires, not whether, and "deliver now" lets Sergei override. Mitigation: the receiver-side handling ships in ai-harness with tests for no goal, an active goal and a paused goal, and the release condition is testable: the receiver reports the goal active, or the pause window it recorded ends (T-W2.5). Confidence: high.
 
 ---
 
@@ -1193,7 +1209,7 @@ Mitigation: one procedure doc covers both shapes, and the SSH local forward over
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5; ai-effort=high; ai-profile=architect -->
 <!-- decision-lineage: decision-id=BU-mg2.5.3/D-17; decision-topic=authentication of requests to the web server; governs=apps:web,security:auth; normalized-proposition=the web server requires Host, Origin and Fetch Metadata checks and a per-host token on both pairs and never trusts identity headers alone; applicability=phase:W3; outcome-id=; relation=different-question; related-decision-id=BU-mg2.2/D-14; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-Mitigation: the per-host secret is generated at first start into the host's state directory. A launch command on the host prints a one-time link whose code expires in five minutes; the server exchanges the code once for an `HttpOnly`, `SameSite=Strict` session cookie scoped to the base path, which the browser sends on every request and on the SSE stream, so no token appears in a URL after the exchange or in browser storage. Every write also needs the `X-Beads-UI` header, and rotating the secret ends every session. The receiver token for sessions (T-W2.2) is separate. The server refuses to start beyond loopback without the auth layer, and tests pin replay, storage, CSRF, SSE, revocation and forged headers (T-W3.3). Confidence: high.
+Mitigation: the per-host secret is generated at first start into the host's state directory. A launch command on the host prints a one-time link whose code expires in five minutes; the server exchanges the code once for an `HttpOnly`, `SameSite=Strict` session cookie scoped to the base path, which the browser sends on every request and on the SSE stream, so no token appears in a URL after the exchange or in browser storage. Every write also needs the `X-Beads-UI` header. A session ends after 12 hours, or 2 idle hours; logout revokes it on the server; a host command revokes one session; rotating the secret ends every session. The receiver token for sessions (T-W2.2) is separate. The server refuses to start beyond loopback without the auth layer, and tests pin replay, storage, CSRF, SSE, revocation and forged headers (T-W3.3). Confidence: high.
 
 ---
 
