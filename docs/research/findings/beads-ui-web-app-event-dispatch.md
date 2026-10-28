@@ -314,7 +314,8 @@ The queue API reaches the work pair's other machine only by a forward that machi
 `scripts/wq_tunnel.py` keeps a joining machine's cloud session-manager port forwards alive, "client
 to instance, one direction", because the queue host has zero inbound rules. On the host it is inert.
 Its docstring says "every committed `[machines]` row is `disabled`" and the live joining wiring "is
-unverified". So acn-mac sessions cannot reach the queue today. Rationale: module docstring; the
+unverified". By the committed config, then, no machine joins the queue; a local overlay was not
+checked. Rationale: module docstring; the
 process seen on sem-kg-ec2 is the host's inert copy. [VERIFIABLE][^2][^32]
 
 ## Q4. Owner change and the automatic /handoff
