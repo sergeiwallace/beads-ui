@@ -206,11 +206,11 @@ Do not let a generic AC override a storage-specific rule, claim a formula by ref
 - `docs/research/findings/evidence/goals-system-verification-2026-10-28.md`
 - `docs/research/findings/evidence/beads-goals-system-design-audit-r1-2026-10-28.md`
 - `docs/research/findings/evidence/beads-goals-system-design-audit-r2-2026-10-28.md`
-- `/data/projects/ai-harness/.worktrees/aih-ec2-3/docs/asks/BU-epic-goals-system-usmm.md`
-- `/data/projects/ai-harness/.worktrees/aih-ec2-3-agents/bu-goals-webapp-coordinator/docs/designs/TEMPLATE.md`
-- `/data/projects/ai-harness/.worktrees/aih-ec2-3-agents/bu-goals-webapp-coordinator/docs/audits/STUB.md`
-- `/data/projects/ai-harness/.worktrees/aih-ec2-3-agents/bu-goals-webapp-coordinator/docs/audits/TEMPLATE.md`
-- `/data/projects/ai-harness/.worktrees/aih-ec2-3-agents/bu-goals-webapp-coordinator/docs/procedures/decision-framework.md`
+- `/data/projects/ai-harness/.worktrees/ops-vm-3/docs/asks/BU-epic-goals-system-usmm.md`
+- `/data/projects/ai-harness/.worktrees/ops-vm-3-agents/bu-goals-webapp-coordinator/docs/designs/TEMPLATE.md`
+- `/data/projects/ai-harness/.worktrees/ops-vm-3-agents/bu-goals-webapp-coordinator/docs/audits/STUB.md`
+- `/data/projects/ai-harness/.worktrees/ops-vm-3-agents/bu-goals-webapp-coordinator/docs/audits/TEMPLATE.md`
+- `/data/projects/ai-harness/.worktrees/ops-vm-3-agents/bu-goals-webapp-coordinator/docs/procedures/decision-framework.md`
 
 ## Appendix: Commands Run
 

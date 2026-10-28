@@ -36,7 +36,7 @@ the tracked evidence file
 3. Recommended primary route: the web app writes a durable dispatch record, then sends addressed
    Agent Mail to `<session>@<host>`. The target host's notifier admits it as addressed mail, which
    wakes an idle session through the hook and shows a header at the next tool call of a busy one.
-   Agent Mail is the fleet's primary cross-machine rung, so the same send covers acn-mac and sw-mac.
+   Agent Mail is the fleet's primary cross-machine rung, so the same send covers host-a and host-f.
    Rationale: the admission matrix and the ladder order, cited under Q1 and Q2. [INFERENCE]
 4. Recommended fallbacks, in order: the shared prompt-injection library's one-line pointer when no
    shown receipt arrives within a bound; the beads-ui mod's `$.prompt.submit` when the mod is loaded
@@ -59,7 +59,7 @@ the tracked evidence file
    session's transcript for Sergei's typed turn; a web app has no transcript, so its prompts would
    read `UNVERIFIED`. A signed dispatch envelope, verified on the receiving host, is the missing
    piece. [VERIFIABLE][^9] for the current rule; the envelope is [INFERENCE].
-9. The ai-core queue service the work-queue design specified is live on sem-kg-ec2, with prompt,
+9. The ai-core queue service the work-queue design specified is live on host-c, with prompt,
    ack, consumed, claim, gate-resolve and SSE event routes, but its idle-wake lane (the queue waker)
    is not running and its dashboard issue is still open. The web app overlaps that dashboard
    almost entirely. [VERIFIABLE][^2][^11]
@@ -127,7 +127,7 @@ Built versus designed, measured against main and the Beads epic:
 | Gone-addressee quieting and expiry | Built | `a452401e054` (#6168) |
 | Phase 4 lifecycle coexistence, config seeding, call-time gates | Designed; its Phase 4 issue in progress, no branch | Beads child list |
 | Phase 5 Windows notifier supervision | Designed | No branch |
-| `idle-wake.json` on any host | Not seeded; absent here; epic note says absent on fw-lnx | File probe, epic note |
+| `idle-wake.json` on any host | Not seeded; absent here; epic note says absent on host-b | File probe, epic note |
 
 Rationale: commit list, remote branch list and Beads children recorded in the evidence file.
 [VERIFIABLE][^2]
@@ -284,9 +284,9 @@ Rationale: synthesis of the sections above. [INFERENCE]
 
 ## Q3. Cross-host reach
 
-The two pairs are separate. `config/message-transports.json` names a work pair of acn-mac and
-sem-kg-ec2, relayed on sem-kg-ec2 through a cloud session-manager port forward,
-and a personal pair of fw-lnx and mac relayed over Tailscale. Rationale: read the
+The two pairs are separate. `config/message-transports.json` names a work pair of host-a and
+host-c, relayed on host-c through a cloud session-manager port forward,
+and a personal pair of host-b and mac relayed over Tailscale. Rationale: read the
 `pairs` block. [VERIFIABLE][^10]
 
 Agent Mail authenticates with per-machine client certificates the installer writes; a session's board
@@ -300,8 +300,8 @@ git-inbox carries them; the receiver checks the signature and never trusts the g
 field. Launch and restart stay within a pair; git-inbox wake senders cross pairs. Rationale: wake
 sidecar design, "What Phases 3 to 7 built" and pair scope. [VERIFIABLE][^7]
 
-For the web app this means: a server on sem-kg-ec2 reaches acn-mac sessions by Agent Mail (primary)
-or Buzz, both pair-local; a server on fw-lnx reaches sw-mac sessions the same way over Tailscale.
+For the web app this means: a server on host-c reaches host-a sessions by Agent Mail (primary)
+or Buzz, both pair-local; a server on host-b reaches host-f sessions the same way over Tailscale.
 Git-inbox is the only carrier that crosses pairs, and it must carry pointers only (Gaps, item 2).
 [INFERENCE]
 
@@ -316,7 +316,7 @@ to instance, one direction", because the queue host has zero inbound rules. On t
 Its docstring says "every committed `[machines]` row is `disabled`" and the live joining wiring "is
 unverified". By the committed config, then, no machine joins the queue; a local overlay was not
 checked. Rationale: module docstring; the
-process seen on sem-kg-ec2 is the host's inert copy. [VERIFIABLE][^2][^32]
+process seen on host-c is the host's inert copy. [VERIFIABLE][^2][^32]
 
 ## Q4. Owner change and the automatic /handoff
 
@@ -326,7 +326,7 @@ rendered message over the resolved rung, keeps its rows, and deletes them only a
 Rationale: read the skill. [VERIFIABLE][^16]
 
 Two rules shape a web-app owner edit. First, `bd` refuses another session's reassignment of an
-in-progress claim: "cannot reassign <task>: held by "aih-acn-1" (in_progress) ... pass --force
+in-progress claim: "cannot reassign <task>: held by "ops-mac-1" (in_progress) ... pass --force
 only if their claim is abandoned". Second, fleet work goes only to `aih-*` and `ai-cli-*` sessions,
 never a `kg-*` one. Rationale: quoted from the handoff procedure. [VERIFIABLE][^15]
 
@@ -406,8 +406,8 @@ its durable home, ships, and retires the item. An answered item not yet acted on
 condition for the chief". Rationale: held README lifecycle and beads-ui D-39 context.
 [VERIFIABLE][^14][^19]
 
-The landing pad is on the owning session's host. A web app on sem-kg-ec2 cannot run `answer` for an
-item held on acn-mac. Recommendation: the dispatch carries the answer bytes as an attachment; the
+The landing pad is on the owning session's host. A web app on host-c cannot run `answer` for an
+item held on host-a. Recommendation: the dispatch carries the answer bytes as an attachment; the
 target host's receiver writes them to a file and runs the closed verb `held_cli.py answer <path>
 --text-file <file>` itself, the way the git-inbox `session` kind runs `ai sessions relaunch` without
 a shell. The session never retypes the bytes, which the README forbids. Rationale: README rule and
@@ -445,8 +445,8 @@ against a pinned public key and labels the injected block "Sergei's instruction 
 web app, signed, id ...". The precedent is the signed launch envelope, whose receiver checks the
 signature and ignores the transport's sender field (Q3). [INFERENCE]
 
-Who may send: only Sergei's authenticated web identity. On sem-kg-ec2 the server should bind to
-loopback and be reached through the port forward the pair already uses; on fw-lnx through Tailscale
+Who may send: only Sergei's authenticated web identity. On host-c the server should bind to
+loopback and be reached through the port forward the pair already uses; on host-b through Tailscale
 identity. Rationale: the pair transports in Q3. [INFERENCE]
 
 A data-scope issue in the ai-core queue on the work host is tracked privately and constrains the
@@ -517,7 +517,7 @@ Native socket and channels stay out of the ladder until their limits are lifted 
 
 Rationale for the order: rung 1 is the fleet's single admission point, which p811n7 D-1 chose so
 busy and idle delivery share one classifier and one kill switch; it is already cross-host; and it is
-the "hook context injection ... event-based" route the ask points at through aih-fw-1's work. The
+the "hook context injection ... event-based" route the ask points at through ops-lab-1's work. The
 ask's other two named routes stay as rungs 3 and 2. [INFERENCE]
 
 ```mermaid
@@ -599,7 +599,7 @@ verify_pubkey = "~/.config/beads-ui/dispatch-ed25519.pub" # each receiving host
 
 - (a) The ai-core queue's prompt record, mirrored as a bd comment
   - **Pros:**
-    - Already models ids, receipts and SSE events, and is live on sem-kg-ec2.
+    - Already models ids, receipts and SSE events, and is live on host-c.
     - Matches the queue design's playbook mirroring into Beads.
   - **Cons:**
     - Couples the web app to ai-core, which is not running on every host.
@@ -715,7 +715,7 @@ Rationale: the measured cache-read cost in Summary item 5. [INFERENCE]
 | The idle-wake design's Phase 4 and a seeded `idle-wake.json` | Any automatic idle wake (rungs 1, 3, 4) | In progress; file absent here | Deliver at the next turn end (rung 5); show "waiting: automatic wakes off" |
 | The idle-wake design's typed source for dispatch | Clear counters and reasons | Not built; unknown addressed actions already wake with reason `unknown-source-action` | Ride ordinary addressed mail |
 | The prompt-injection library and the `inbox-nudge` pattern | Rung 3 | Built; use case on | Skip rung 3 |
-| The work-queue API | Dispatch record, receipts, SSE | Live on sem-kg-ec2; Lane B not running; no joining machine enabled; dashboard open | bd-comment-only record; poll the record |
+| The work-queue API | Dispatch record, receipts, SSE | Live on host-c; Lane B not running; no joining machine enabled; dashboard open | bd-comment-only record; poll the record |
 | The queue dashboard | Scope boundary with this web app | Open | Decide ownership before building (F-1) |
 | The fleet wake sidecar | Launch of a non-running owner | Built, enabled on four pair hosts | Leave pending and show "owner not running" |
 | held store `review`/`answer` verbs | Held answers | Built (beads-ui D-37, D-39) | Answer from the pane only |
@@ -774,7 +774,7 @@ The dependency most likely to block is the policy switch. Phases 1 to 3 are merg
 - F-2. The automatic-wake switch. Raw excerpt: "Automatic wakes remain off (no idle-wake.json).
   ... Next: Phase 4" (the idle-wake epic's notes, 2026-10-27). The ask requires that a
   prompt "auto-trigger that owning cc session to start working on it". That requirement depends on
-  aih-fw-1's Phase 4 and on the switch being turned on; this leg cannot decide it.
+  ops-lab-1's Phase 4 and on the switch being turned on; this leg cannot decide it.
 - F-3. Signed dispatch envelope (R-3) is a new mechanism with key management on four hosts. It needs
   a design decision.
 - F-4. Paused goals. The ask says the prompt should auto-trigger work and arm `/start-goal` "if

@@ -375,7 +375,7 @@ These details are not repeated here. MF1.
 - M6 (medium). Open Question 2 offers an option that D-11, approved by Sergei, rejected. Reframe it
   as which ai-core `web/` components are ported and when the dashboard retires, under D-11 (a).
 - M7 (medium). The Founding Ask Coverage row for process clauses points to an empty Run History.
-  Add the Run History entry (legs, dates, the aih-fw-2 compile wait and its state) or change the row.
+  Add the Run History entry (legs, dates, the ops-lab-2 compile wait and its state) or change the row.
 - M8 (low). §1: add impact to the review sort and filter keys and name the source fields (`value`,
   `effort`) from leg 1 §1.3.
 - M9 (low). §1: drop "and undo with Z" for GitHub, or cite a page that documents it; cite GitHub's
@@ -401,7 +401,7 @@ These details are not repeated here. MF1.
 - W2 (low; confidence high). Carry leg 3 F-6 (refresher snapshots keyed by worktree path, duplicated
   per session) and §2.2 (the queue projection lags `bd` by up to 5 minutes) into §7.
 - W3 (low; confidence high). Note leg 3's finding that the personal laptop's fleet profile is `mac`,
-  not `sw-mac`, so config naming the personal pair must use `mac`.
+  not `host-f`, so config naming the personal pair must use `mac`.
 - W4 (low; confidence high). Note the cold first read of the queue projection (leg 3 emergent 8) and
   fix leg 3's internal timing inconsistency.
 - W5 (low; confidence medium). Record both arming shapes from leg 2 R-5 in §4, and leg 1 §1.4's

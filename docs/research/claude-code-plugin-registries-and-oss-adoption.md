@@ -905,7 +905,7 @@ Scope boundaries: no publishing, posting, registering or submitting anything any
 
 canonical_root_json: {"blob_oid":"66af21d3eb6840c3551bc547aa15c19b12d383ce","capture_commit":"8862c2570993a60c7492599cb4f762fc7b70dece","content_sha256":"061c246d34d310dddf697cd3502a8e5943d9c9f4566e5e3be6e7baf7acb4bfbe","entry_ids":["A001"],"generation":1,"path":"docs/asks/BU-epic-agentic-ai-native-beads-ylx.md","previous_ref_sha256":null,"repository":"ai-harness","schema_version":1,"task_id":"BU-epic-agentic-ai-native-beads-ylx"}
 founding_ask_ref_sha256: d669898b4dc8a8a75f8791637da4f88d1f517b29ef5f9025c186d997debe04a7
-resolved_record_path: /data/projects/ai-harness/.worktrees/aih-ec2-3/docs/asks/BU-epic-agentic-ai-native-beads-ylx.md
+resolved_record_path: /data/projects/ai-harness/.worktrees/ops-vm-3/docs/asks/BU-epic-agentic-ai-native-beads-ylx.md
 relevant_verbatim_excerpts_incomplete:
 ```text
 also, on the topic of open source public registries / central open source marketplaces / listing repositories for claude code mods / plugins, here's what google ai mode said (use this as a starting point / seed for forther /orchestrate /research-doc (including the other /delegate opus 5.5 /research-doc --refine earlier) to research all this stuff as appropriate and remember to do citation validation and claim provenance and adversarial critical review and go beyond just what the google ai mode output found, so do further breadth and depth exploratory deep dive resaech on all this and how to publish / register to these surfaces and best practies etc and also how to publicize open source packages / plugins / tooling etc to get community adoption for open source software in general and agentic ai apps / tooling / plugins etc in particular. when this is in a suitable enough and baseline usable / useful state, i can share it my twitter and linkedin and substack and relevant sub-reddits and relevant discord servers and whatever other surfaces to share and try to gain traction and adoption from agentic ai coding developers and others).
@@ -915,7 +915,7 @@ also, on the topic of open source public registries / central open source market
 
 You are research leg 1 of 3 in an Opus coordinator's /research-doc run (beads-ui research issue "Research: Claude Code and AI plugin registries and marketplaces, how to publish and list, and how to grow adoption of open-source agentic AI tooling"). The coordinator authors the research doc; you gather and verify evidence and return findings. Your slice is the registries, marketplaces and directories for AI clients OTHER than the Claude Code core channels, plus the cross-client package formats. The coordinator already fetched (2026-10-23 19:05-19:40 UTC) and does NOT need again: Anthropic's three marketplaces, the claude.ai directory and developer portal, claude-plugins-community, claude.com/marketplace/plugins, the mods overview, claudemod.com, claudemarketplaces.com, buildwithclaude.com, aitmpl.com, karanb192 and whyashthakker awesome-claude-code-mods, hesreallyhim/awesome-claude-code CONTRIBUTING, skills.sh home, the official MCP Registry repo and quickstart, Smithery home, Glama directory home, PulseMCP servers page, github.com/mcp, github/awesome-copilot README, geminicli.com releasing page, learn.chatgpt.com/docs/plugins. Do not re-fetch those unless a claim of yours depends on a detail beyond what is listed here.
 
-The product being published: beads-ui (github.com/sergeiwallace/beads-ui, MIT), a Beads task manager that today ships one Claude Code mod (a plugin with a TypeScript hooks module) from its own repo marketplace; an MCP UI app for Claude Desktop/claude.ai and a web app are planned. Read /data/projects/beads-ui/.worktrees/aih-ec2-3-agents/bx-registry-research/README.md for one minute of context.
+The product being published: beads-ui (github.com/sergeiwallace/beads-ui, MIT), a Beads task manager that today ships one Claude Code mod (a plugin with a TypeScript hooks module) from its own repo marketplace; an MCP UI app for Claude Desktop/claude.ai and a web app are planned. Read /data/projects/beads-ui/.worktrees/ops-vm-3-agents/bx-registry-research/README.md for one minute of context.
 
 ## ALIGNMENT OBLIGATION
 
@@ -1070,7 +1070,7 @@ Your final message: at most 350 words: the evidence file's absolute path, the co
 You are read-only research. Allowed: WebFetch, `ghp api` GET calls (read-only GitHub API; never a POST, PATCH, PUT or DELETE, never `ghp issue`/`ghp pr` create or comment), Read/Grep/Glob on local files. Never run raw `curl` or `wget` (this host gates every such command on a human). Never post, submit, register, star, comment or sign up anywhere. No tests, builds or pytest. Never run pytest with `--showlocals` or `-l`, and never print a process environment.
 
 Writable repos (one isolated worktree each — no repo may be written via its main tree):
-- ai-harness: /data/projects/ai-harness/.worktrees/aih-ec2-3-agents/bx-reg-leg-clients
+- ai-harness: /data/projects/ai-harness/.worktrees/ops-vm-3-agents/bx-reg-leg-clients
 
 Never commit against a repo's main working tree. Write only inside the worktree paths listed above; if the work requires a repo not listed, stop and report it rather than editing that repo's main tree — that races any session live there and silently loses work.
 
@@ -1082,7 +1082,7 @@ You are a leaf: do NOT spawn sub-agents. A long fetch is not a reason to idle: d
 
 Done when the evidence file covers every named surface (or says why one could not be reached), every [VERIFIABLE] row cites a URL fetched this session, and the final message is sent. Out of scope: the adoption and promotion playbook (another leg), the Claude Code core channels listed in the stage framing, any public act.
 
-Delegated execution provenance (for reference; you make no commit): Delegated-to: claude/researcher; tier: opus; model: us.anthropic.claude-opus-5-5[1m]; effort: high; persona: auditor profile used as a read-only research leaf (no Agent tool); worktree: /data/projects/ai-harness/.worktrees/aih-ec2-3-agents/bx-reg-leg-clients; launch name: bx-reg-leg-clients.
+Delegated execution provenance (for reference; you make no commit): Delegated-to: claude/researcher; tier: opus; model: us.anthropic.claude-opus-5-5[1m]; effort: high; persona: auditor profile used as a read-only research leaf (no Agent tool); worktree: /data/projects/ai-harness/.worktrees/ops-vm-3-agents/bx-reg-leg-clients; launch name: bx-reg-leg-clients.
 
 ## 6. Failure and escalation
 
@@ -1204,7 +1204,7 @@ you wrote. A model that did not write a passage reviews it.
 
 ## 2. Context / inputs
 
-Background, read-only and not evidence: /data/projects/ai-harness/docs/research/ai-native-knowledge-substrate-oss-adoption.md section 5 (an earlier OSS-portfolio lens). Product context: /data/projects/beads-ui/.worktrees/aih-ec2-3-agents/bx-registry-research/README.md.
+Background, read-only and not evidence: /data/projects/ai-harness/docs/research/ai-native-knowledge-substrate-oss-adoption.md section 5 (an earlier OSS-portfolio lens). Product context: /data/projects/beads-ui/.worktrees/ops-vm-3-agents/bx-registry-research/README.md.
 
 These repo facts are a snapshot taken at the times stamped above. Re-verify anything load-bearing against `origin/main` before acting on it; if it has moved, say so and work from what you measured, not from this brief.
 
@@ -1242,7 +1242,7 @@ If a source will not load after two alternate URLs, record it as unreachable wit
 
 ## 1. Objective
 
-Verify the finished research doc at /data/projects/beads-ui/.worktrees/aih-ec2-3-agents/bx-registry-research/docs/research/claude-code-plugin-registries-and-oss-adoption.md against its sources. You did not write it and have not seen the run that did; read it cold. For every footnote definition under `## Sources`, fetch its URL in this session (WebFetch, or `ghp api` for GitHub API URLs) and record the HTTP outcome. For every claim tagged [VERIFIABLE] in the body, check that at least one of its cited sources supports it: the quoted words appear in the source, numbers match, and the claim does not say more than the source. Also check footnote integrity: refs contiguous from [^1], every ref defined, every definition referenced, multi-refs ascending.
+Verify the finished research doc at /data/projects/beads-ui/.worktrees/ops-vm-3-agents/bx-registry-research/docs/research/claude-code-plugin-registries-and-oss-adoption.md against its sources. You did not write it and have not seen the run that did; read it cold. For every footnote definition under `## Sources`, fetch its URL in this session (WebFetch, or `ghp api` for GitHub API URLs) and record the HTTP outcome. For every claim tagged [VERIFIABLE] in the body, check that at least one of its cited sources supports it: the quoted words appear in the source, numbers match, and the claim does not say more than the source. Also check footnote integrity: refs contiguous from [^1], every ref defined, every definition referenced, multi-refs ascending.
 
 Then do an adversarial read: name up to 6 places where the doc's recommendation or a decision's options rest on a claim weaker than the doc admits, or where a load-bearing alternative is missing.
 
@@ -1379,7 +1379,7 @@ If a URL fails, try it once more and once through an alternate route (the site's
 
 ## Appendix: Measurements
 
-Local measurements this run made, each command run once on 2026-10-23 on sem-kg-ec2.
+Local measurements this run made, each command run once on 2026-10-23 on host-c.
 
 | # | Command | Result |
 |---|---|---|
@@ -1451,7 +1451,7 @@ The verifier also confirmed provenance rows P-21 and P-22. Its working file was 
 
 ### 2026-10-23, run 1 (orchestrated /research-doc, BU-ylx.5.1)
 
-- Coordinator: Claude Opus 5.5 (`us.anthropic.claude-opus-5-5[1m]`), author of this doc, run on sem-kg-ec2 under the employer-API profile.
+- Coordinator: Claude Opus 5.5 (`us.anthropic.claude-opus-5-5[1m]`), author of this doc, run on host-c under the employer-API profile.
 - Concurrency cap: one research leg at a time, depth 1, set by the host chief. The host read HOLD from 19:03Z, so the coordinator fetched the Claude Code channels, the seed URLs and part of the adoption evidence itself before the first leg could launch.
 - Leg 1, `bx-reg-leg-clients`: family claude, role researcher (the `auditor` profile used as a read-only leaf with no Agent tool), tier opus, model `us.anthropic.claude-opus-5-5[1m]`, effort medium, the `auditor` profile's default (no effort was set at launch, so the research default of high did not apply). About 19:14Z to 19:27Z; 84 WebFetch calls (14 failed), about 38 `ghp api` reads; 42 surfaces; its evidence supplied most of section 3.
 - Leg 2, `bx-reg-leg-adoption`: same family, role, tier, model and effort. 19:28Z to about 19:49Z; about 83 WebFetch calls (23 failed or empty), about 30 `ghp api` reads; 19 channels and 8 precedents; its evidence supplied most of section 5.

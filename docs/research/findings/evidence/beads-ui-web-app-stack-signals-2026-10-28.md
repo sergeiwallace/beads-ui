@@ -2,7 +2,7 @@
 
 Raw readings behind the stack recheck in
 [beads-ui-web-app-ux-stack-and-shared-code.md](../beads-ui-web-app-ux-stack-and-shared-code.md).
-Measured on sem-kg-ec2 between 2026-10-28T00:00Z and 00:40Z by the research leg for BU-mg2.5.1.1.
+Measured on host-c between 2026-10-28T00:00Z and 00:40Z by the research leg for BU-mg2.5.1.1.
 
 ## npm registry: latest dist-tag
 

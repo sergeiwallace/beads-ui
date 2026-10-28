@@ -20,16 +20,16 @@ related_docs:
 stub: false
 ---
 
-<!-- FRONTMATTER NOTE (AIH-738): `category`, `source`, and `template_version` still read
+<!-- FRONTMATTER NOTE: `category`, `source`, and `template_version` still read
      `fable-prompt` on purpose. Those three are MACHINE TOKENS owned by aido's doc-kind registry
      (`aido/src/aido/doc_contract/region_registry.py`, `stubs.py`, `canonical_resources.py`), not prose:
      renaming them here alone would make `aido validate-doc` fail with UnknownTemplateVersion.
      The kind-token rename is a cross-repo aido change tracked separately; everything
-     human-facing in this template is model-family-agnostic as of AIH-738. -->
+     human-facing in this template is model-family-agnostic. -->
 
 # beads-ui build: Phase 0 then the Phase 1 MVP mod, run to the end
 
-**Status:** filled, launched by aih-ec2-3
+**Status:** filled, launched by ops-vm-3
 
 **Created:** 2026-10-21
 
@@ -61,7 +61,7 @@ The rendered carrier for this run, placed ahead of the Orchestrator Prompt at la
 
 canonical_root_json: {"blob_oid":"d3fde0e715f5a280374c624fede12b4a387b0d14","capture_commit":"d630f95d50bb5948399a91052bf1ce08c6750dcb","content_sha256":"ed0f188c59d248978b9de3439ccbff9100907055296df928f068ef0b05cca4ed","entry_ids":["A001","A002","A003","A004","A005"],"generation":5,"path":"docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md","previous_ref_sha256":"d7668b63750bbee3253a47d99a0b4106aede21e1952bdce105a15f6a01dde937","repository":"beads-ui","schema_version":1,"task_id":"BU-epic-beads-ui-beads-task-manager-mg2"}
 founding_ask_ref_sha256: 8079161aeffc2726c849086951f4f52781ecd07c9478b294efc80c4164b8ee05
-resolved_record_path: /data/projects/beads-ui/.worktrees/aih-ec2-3-agents/bu-build-coordinator/docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md
+resolved_record_path: /data/projects/beads-ui/.worktrees/ops-vm-3-agents/bu-build-coordinator/docs/asks/BU-epic-beads-ui-beads-task-manager-mg2.md
 relevant_verbatim_excerpts_incomplete:
 ```text
 we'll do it in phases so start with an MVP and then enhancements etc.
@@ -89,7 +89,7 @@ This run builds Phase 0 (monorepo bootstrap and the DOM-free core) and Phase 1 (
 
 ## ALIGNMENT OBLIGATION
 
-Before reconverging a child or launching the next one, check its artifact against the founding ask and the design's Phase 0 and Phase 1 acceptance criteria. Record an alignment receipt naming each requirement as kept, narrowed or dropped, with evidence. No AI decision may drop, narrow or contradict an explicit requirement in the founding ask: keyboard Move to on every card, the delete confirmation flow, a public repository with no secrets, and an MVP Sergei can use. A child decision that would do so returns to you as an escalation, and you send it to the launching session (aih-ec2-3) for Sergei. Give every child the same canonical root JSON bytes and digest above, plus the excerpts relevant to its task.
+Before reconverging a child or launching the next one, check its artifact against the founding ask and the design's Phase 0 and Phase 1 acceptance criteria. Record an alignment receipt naming each requirement as kept, narrowed or dropped, with evidence. No AI decision may drop, narrow or contradict an explicit requirement in the founding ask: keyboard Move to on every card, the delete confirmation flow, a public repository with no secrets, and an MVP Sergei can use. A child decision that would do so returns to you as an escalation, and you send it to the launching session (ops-vm-3) for Sergei. Give every child the same canonical root JSON bytes and digest above, plus the excerpts relevant to its task.
 
 
 ## DESTRUCTIVE-OPERATION FLOOR (binding)
@@ -175,9 +175,9 @@ rely on an ambient environment variable:
 ```text
 caller: auto-flow
 authority:
-  run_id: beads-ui-build-2026-10-21-aih-ec2-3
+  run_id: beads-ui-build-2026-10-21-ops-vm-3
   ledger_path: docs/designs/beads-ui-design.md#run-ledger
-  contract: auto-flow/AIH-701#d-7
+  contract: the auto-flow authority contract, decision D-7
   decision_classes: ["adn:in-scope"]
   push: true
 ```
@@ -338,7 +338,7 @@ test: keep it whenever you will resolve anything at all, even when the rest of t
 DELEGATION: Delegate independent subtasks to sub-agents and keep working while they run: the next
 in-progress task, your own authorship, then your own worktrees and then the fleet's for merge or
 proved reap (Sergei,
-2026-10-10, AIH-jna5r: "stay busy while your agents run. never just sit idle and wait for background
+2026-10-10: "stay busy while your agents run. never just sit idle and wait for background
 agents to run"). Delegating is not waiting, and a launch is held only on measured persistent slowdown,
 never on a load-average or slot-count heuristic (`agent-delegation.md` § Machine contention); read
 `machine-contention status` before a launch and size your CONCRETE CAP below so that it plus the
@@ -363,7 +363,7 @@ interactive session: fork mode is on by default (Claude Code 2.1.232+), the Agen
 hold is the one the `background-wait-guard` hook already prescribes for Bash tasks: keep the turn in
 flight with same-turn work and read the child's declared evidence file with a cheap Read between
 other work. A synchronous dispatch exists only in `-p`/SDK sessions or when
-`CLAUDE_CODE_FORK_SUBAGENT=0` or `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1` is set; AIH-g9v8's
+`CLAUDE_CODE_FORK_SUBAGENT=0` or `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1` is set; the
 "returned immediately" observations are this documented behaviour, not a defect. Whether to turn
 fork mode off fleet-wide is research 5.2 D-2, PENDING (human). Nested coordinators: Block I also
 applies. LABEL a programmatic, recurring background Bash launch that you or a child prescribe: its
@@ -521,7 +521,7 @@ withheld from every sub-agent except a fork):
     the sub-agent is a LEAF and must not spawn further agents; a brief that omits this is read as
     permission.
 
-WORKTREE ISOLATION VERIFICATION (AIH-725: verify, do not assume; a check that RAN is not a check
+WORKTREE ISOLATION VERIFICATION (verify, do not assume; a check that RAN is not a check
 that COULD HAVE FAILED). Isolation collapse (sub-agents landing commits directly on YOUR branch
 instead of their own) has happened here, and was harmless only by luck (dispatch happened to be
 strictly sequential). With parallel fan-out the same collapse silently interleaves several
@@ -541,7 +541,7 @@ agents' half-finished work onto one branch. So, per write-capable delegation:
   · IF ISOLATION COLLAPSED: stop, do not merge, and report it. Do not silently rebase over it;
     untangling interleaved work after the fact is far more expensive than re-running the child.
 
-CC TASK PANEL ROW PER CHILD (AIH-813: the panel is how the human sees your fan-out at all):
+CC TASK PANEL ROW PER CHILD (the panel is how the human sees your fan-out at all):
   · FIRST identify or file the child's backing bd issue; no CC task is allowed without one. ONE ROW
     PER CHILD YOU LAUNCH, with subject exactly `<DISPLAY_ID>: <short description>` using that
     issue's display id verbatim. `TaskCreate` at dispatch, then `TaskUpdate` it to `in_progress`
@@ -582,7 +582,7 @@ COMMIT DISCIPLINE + WORKTREE CONSOLIDATION (applies to YOU and to EVERY sub-agen
     worktree branch as the ref. This is the narrow exception for orchestrator-created second-and-
     later-generation children; it does not change the fleet's general `origin/main` default for a
     normal session's first worktree.
-  · RESERVE EVERY SLOT YOU PROVISION FOR A CHILD (AIH-vkx3p): pass `--reserve-for <leg-id>` to every
+  · RESERVE EVERY SLOT YOU PROVISION FOR A CHILD: pass `--reserve-for <leg-id>` to every
     `agent_worktree_preflight.py` call that creates a child's worktree. A slot you created but have
     not launched into yet is clean, zero-ahead and never entered, which the reaper otherwise reads
     as an abandoned copy and deletes as "fully shipped" while you are still running. The
@@ -598,7 +598,7 @@ COMMIT DISCIPLINE + WORKTREE CONSOLIDATION (applies to YOU and to EVERY sub-agen
     by content, never by ancestry; (3) `/sync-git repo:<main-tree-path>`, naming the target
     EXPLICITLY, because the bare `/sync-git` also resolves YOUR OWN worktree, and that is the one
     shape gated on an owner-session binding keyed to a per-process id you cannot present, so it
-    REFUSES a target nobody asked it to touch (AIH-icd8a); (4) ATTEMPT the reap of
+    REFUSES a target nobody asked it to touch; (4) ATTEMPT the reap of
     every child and feature worktree whose work shipped:
     `worktree_audit.py --delete --confirm-merged <path>`, invoked from the repo's MAIN tree, because
     the tool resolves policy from the main tree but runs the code at its invocation site and a
@@ -610,9 +610,9 @@ COMMIT DISCIPLINE + WORKTREE CONSOLIDATION (applies to YOU and to EVERY sub-agen
     committed-and-synced on their own branch and you integrate them. Nobody, child or coordinator,
     runs `install.sh` or links anything into `~/.claude` from a worktree before its work lands:
     installed hooks and links must resolve to the main tree, and one pointing into a worktree
-    reads as "not installed" until that script reaches `main` (AIH-83dw3). When your brief WITHHOLDS
+    reads as "not installed" until that script reaches `main`. When your brief WITHHOLDS
     integration (the launcher must say so explicitly), you stop at a pushed branch plus an open PR
-    for the launcher to merge (AIH-i73jt), and you never delete the worktree you are standing in.
+    for the launcher to merge, and you never delete the worktree you are standing in.
     Shared repos (`bms-corp/*`) keep every gate they have under either setting:
     "land on the target" there means the PR branch pushed and the PR opened, and the standing
     bot-findings and UAT gates decide the rest. Verify each child per WORKTREE ISOLATION
@@ -668,8 +668,8 @@ CONTEXT PASSING (the prompt is the only inbound channel; the return lands verbat
     boundaries, and the minimal facts the worker cannot re-derive.
   · WITHHOLD: conversation history, unrelated files, and anything already reachable via
     CLAUDE.md (sub-agents inherit that); every passed token is paid for whether used or not.
-  · NEVER launch a `fork`: no automated launch uses the fork type (owner ruling 2026-10-08,
-    AIH-rawdb). The installed `permissions.deny` carries `Agent(fork)` and the launch hook's
+  · NEVER launch a `fork`: no automated launch uses the fork type (owner ruling 2026-10-08).
+    The installed `permissions.deny` carries `Agent(fork)` and the launch hook's
     Layer F refuses every Agent-tool fork, coordinator or leaf, so every child is a named
     persona (`engineer`, `reviewer`, `researcher`; `architect` for a coordinator through
     /delegate --coordinator) with `isolation: worktree`. A sub-task that needs much of your
@@ -725,7 +725,7 @@ control-flow check: no turn ends with a critical-path child outstanding). Source
     work). The moment a child's result is the thing you are about to synthesize, it stops being fan-out
     and becomes the join: hold the turn for it (Block E). Detach to parallelize; hold to reconverge.
   · NESTED-COORDINATOR INTERIM MITIGATION (Block I): if your child is depth 2+ from main, it runs in the
-    background like every other child of an interactive session; AIH-g9v8's "returned immediately"
+    background like every other child of an interactive session; the "returned immediately"
     observations are the documented fork-mode behaviour, not a defect, and `run_in_background: false` is
     not a parameter you have. Hold as in Block E: same-turn work plus cheap evidence-file Reads, never
     TaskOutput (removed from every sub-agent), never a sleep-poll, never a blocking-resume. If your
@@ -767,7 +767,7 @@ an audit-only or research-only one included.]:
     § "Authority test": gates A-D, run in order, first one that fires decides. READ IT before your
     first resolution this run; this block is a task-shaped summary of it and THAT FILE WINS on any
     difference. Its default is SELF-RESOLVE: a human gate is a cost paid by a person, not a free
-    safety margin, and over-gating narrow calls is a real failure mode (AIH-735), not caution.
+    safety margin, and over-gating narrow calls is a real failure mode, not caution.
       - YOURS TO DECIDE: technical/architectural questions whose blast radius is contained to this
         doc/subsystem: data models, API/module contracts, scheduling/runtime behavior, which pattern
         or library, how a subsystem is structured, scope boundaries for a technical build. "Contained"
@@ -866,7 +866,7 @@ TASK:
          each as it lands. Roadmap markdown is a RETIRED historical record; never read it as a task source.
       3. Read the deliverable's own TEMPLATE.md before authoring (see Output/Deliverable Guidance).
     First steps, in order: (a) add this run's Authority row (run id
-    `beads-ui-build-2026-10-21-aih-ec2-3`, contract `auto-flow/AIH-701#d-7`, classes
+    `beads-ui-build-2026-10-21-ops-vm-3`, contract the auto-flow authority contract, decision D-7, classes
     `["adn:in-scope"]`, push `true`) and an `entry->implement` transition verdict to the design's
     Run Ledger; (b) fix the stale `**Status:** DRAFT, waiting on Sergei's review` line under the
     Founding Ask Coverage table, since the frontmatter already reads `approved`; (c) run
@@ -874,7 +874,7 @@ TASK:
     Risk 1), and this host read 2.1.296 at 05:10Z on 2026-10-21 (measured). If the version is still
     below 2.1.299, build everything that does not need `claude plugin validate` or `claude plugin
     test` (T-0.1 core and purity, T-0.2 the `bd-node` adapter, T-0.4 hygiene, and the Phase 1 core
-    modules and their Vitest tests), then message the launching session (aih-ec2-3) for the version
+    modules and their Vitest tests), then message the launching session (ops-vm-3) for the version
     and wait for its answer, working what remains. Never install or upgrade Claude Code yourself.
   · Deliverable(s): the files each phase's Deliverables list names, under the beads-ui repo; the
     design's Implementation Audit rows 1 to 4 checked for Phases 0 and 1, and its Design Overview
@@ -917,7 +917,7 @@ things (the same four Anthropic's own multi-agent system requires):
    narrows or contradicts an explicit founding-ask requirement, and that includes the brief's own
    author. Never write an escape hatch such as "if X adds nothing, skip it and say why" for a
    mechanism the ask names; an earlier harness brief did, and its worker used it to drop prompt
-   injection (AIH-7m427). Tell the worker that a decision dropping a named requirement comes back
+   injection. Tell the worker that a decision dropping a named requirement comes back
    as an escalation, and that a doc it authors passes `scripts/far_fidelity.py check` before it
    reports done (`decision-framework.md` § Gate 0).
 

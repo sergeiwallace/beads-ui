@@ -421,8 +421,8 @@ delete, reparent or label route. [MEASURED M-7]
 
 ### What has shipped, per Beads
 
-The epic `AIH-swgb4` is `blocked`. Its kickoff child `AIH-swgb4.7` is `blocked`. Phase 2's child
-`AIH-swgb4.8` is `open`. The other 17 children are closed: the research, design, audit,
+The epic is `blocked`. Its kickoff child is `blocked`. Phase 2's child
+is `open`. The other 17 children are closed: the research, design, audit,
 ratification and summary tasks, and the Phase 1 follow-ups (D-20 to D-24, the comment sync, two
 config and enum fixes). [MEASURED M-7]
 
@@ -527,7 +527,7 @@ The curate design forbids populating a panel from a shared query (its scope inva
 2026-08-16), because two sessions would mint duplicate rows for one issue.
 
 Other fleet machinery depends on the panel. The queue's `wq next` reconciles `TaskList` before
-offering pool work. The AIH-813 rule gives every agent launch its own panel row. The compact and
+offering pool work. The one-row-per-agent rule gives every agent launch its own panel row. The compact and
 resume flow pins `CLAUDE_CODE_TASK_LIST_ID` so a panel survives restarts.
 
 These four paragraphs restate the named ai-harness files; they are not a run. [INFERENCE]
@@ -541,7 +541,7 @@ A backup should preserve the optional fields, because 98 files carry `metadata` 
 `owner` that a subject-only export would drop. The curate design reached the same conclusion
 (its M-4 and D-10). [INFERENCE]
 
-The destination needs a privacy rule. The non-empty lists here include `kg-2` (171 tasks), an
+The destination needs a privacy rule. The non-empty lists here include `qa-2` (171 tasks), an
 employer-workspace session. Its subjects describe employer work. beads-ui is public (MIT), and
 ai-harness is private. [MEASURED M-8]
 
@@ -619,7 +619,7 @@ not read the renderer's per-machine merge code, so the exact key where a profile
 `task_panel: retired` is open. [INFERENCE]
 
 Retirement removes data the fleet's own tooling reads, so the switch has preconditions. `wq next`'s
-TaskList reconciliation, the AIH-813 one-row-per-agent rule, `/load-task-panel`,
+TaskList reconciliation, the one-row-per-agent rule, `/load-task-panel`,
 `/curate-task-panel`, `/clean-task-panel` and every procedure that names `TaskCreate` need a
 replacement or a guard on retired machines. The queue design already logs and skips an
 inaccessible task-list namespace. [INFERENCE]
@@ -628,7 +628,7 @@ inaccessible task-list namespace. [INFERENCE]
 
 - The config key, its schema and the renderer change: the coordinator's design stage, implemented
   in ai-harness.
-- The order of retirement (back up, switch, verify) and the replacement for the AIH-813 panel-row
+- The order of retirement (back up, switch, verify) and the replacement for the one-row-per-agent panel-row
   rule: the coordinator's design stage.
 
 ## 5. Other fleet surfaces that already read Beads for display
@@ -732,7 +732,7 @@ a loaded machine. [MEASURED M-6]
   spec is 585 kB and I read its first 100 kB.
 - Whether a `permissions.deny` rule removes the Task tools in background and cloud sessions, which
   get them "listed or not".
-- The task panel on other machines. I measured only `sem-kg-ec2`. The count and the
+- The task panel on other machines. I measured only `host-c`. The count and the
   employer-versus-personal split differ per machine.
 - The ai-harness settings renderer's per-machine merge. I read the template, not the code that
   renders it per profile.

@@ -11,7 +11,7 @@ template_version: "research-findings-1.0.0"
 
 # Evidence: read-only host probes for the backend, portal and access leg
 
-Measured on the employer-provisioned EC2 host (fleet name sem-kg-ec2) between 2026-10-28T01:16Z and
+Measured on the employer-provisioned EC2 host (fleet name host-c) between 2026-10-28T01:16Z and
 01:30Z. Every command was read-only: HTTP GETs to loopback ports, `bd` read verbs, `ss`, `ps` and
 file listings. No session, tunnel or AWS call was made. Outputs are bounded. No account id,
 instance id, profile name, credential or issue title appears below. Store and repository names
@@ -100,11 +100,11 @@ clone are not journaled ... A consumer that mirrors a synced workspace must re-b
 `wake/`. `ls -la ~/.local/state/beads-ui/boards/<token>/`:
 
 ```text
-1097119  _data_projects_ai-harness_.worktrees_aih-ec2-1.json
-1097119  _data_projects_ai-harness_.worktrees_aih-ec2-2.json
-1097119  _data_projects_ai-harness_.worktrees_aih-ec2-3.json
-1097119  _data_projects_ai-harness_.worktrees_aih-ec2-4.json
-1097139  _data_projects_ai-harness_.worktrees_aih-ec2-firstmate-1.json
+1097119  _data_projects_ai-harness_.worktrees_ops-vm-1.json
+1097119  _data_projects_ai-harness_.worktrees_ops-vm-2.json
+1097119  _data_projects_ai-harness_.worktrees_ops-vm-3.json
+1097119  _data_projects_ai-harness_.worktrees_ops-vm-4.json
+1097139  _data_projects_ai-harness_.worktrees_ops-vm-firstmate-1.json
  362549  <the employer workspace store>.json
 ```
 
@@ -113,15 +113,15 @@ path.
 
 ## 7. Access configuration read from ai-harness (no live call)
 
-- `config/message-transports.json` `pairs`: the work pair (acn-mac, sem-kg-ec2) has
+- `config/message-transports.json` `pairs`: the work pair (host-a, host-c) has
   `"transport": "ssm-port-forward"`, a relay port and a `forwards` map with one extra entry
-  (the agent-mail board); the personal pair (fw-lnx, mac) has
+  (the agent-mail board); the personal pair (host-b, mac) has
   `"transport": "tailscale"`.
-- `config/work_queue.toml` `[machines]`: `sem-kg-ec2 = "supervised"`, every other row
-  `disabled`, including `fw-lnx`, `mac` and `acn-mac`.
+- `config/work_queue.toml` `[machines]`: `host-c = "supervised"`, every other row
+  `disabled`, including `host-b`, `mac` and `host-a`.
 - The fleet's machine profile for the personal laptop is `mac`; no file under `config/` contains
-  `sw-mac`.
-- ai-harness's VS Code remote-access procedure for this host records, for acn-mac on 2026-09-23,
+  `host-f`.
+- ai-harness's VS Code remote-access procedure for this host records, for host-a on 2026-09-23,
   an SSH local forward over the existing Session Manager alias returning `rc=0` (command line omitted from this public file)
   through the SSH-over-Session-Manager alias, with `ControlMaster auto` and `ControlPersist 10m`.
 

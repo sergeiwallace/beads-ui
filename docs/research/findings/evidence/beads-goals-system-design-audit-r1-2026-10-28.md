@@ -211,9 +211,9 @@ Do not treat client installation as a hard publication boundary, a research form
 - `docs/research/findings/evidence/goals-science-beads-fields-2026-10-28.md`
 - `docs/research/findings/evidence/goals-privacy-measurements-2026-10-28.md`
 - `docs/research/findings/evidence/goals-system-verification-2026-10-28.md`
-- `/data/projects/ai-harness/.worktrees/aih-ec2-3/docs/asks/BU-epic-goals-system-usmm.md`
-- `/data/projects/ai-harness/.worktrees/aih-ec2-3-agents/bu-goals-webapp-coordinator/docs/designs/TEMPLATE.md`
-- `/data/projects/ai-harness/.worktrees/aih-ec2-3-agents/bu-goals-webapp-coordinator/docs/audits/STUB.md`
-- `/data/projects/ai-harness/.worktrees/aih-ec2-3-agents/bu-goals-webapp-coordinator/docs/audits/TEMPLATE.md`
-- `/data/projects/ai-harness/.worktrees/aih-ec2-3-agents/bu-goals-webapp-coordinator/docs/procedures/decision-framework.md`
+- `/data/projects/ai-harness/.worktrees/ops-vm-3/docs/asks/BU-epic-goals-system-usmm.md`
+- `/data/projects/ai-harness/.worktrees/ops-vm-3-agents/bu-goals-webapp-coordinator/docs/designs/TEMPLATE.md`
+- `/data/projects/ai-harness/.worktrees/ops-vm-3-agents/bu-goals-webapp-coordinator/docs/audits/STUB.md`
+- `/data/projects/ai-harness/.worktrees/ops-vm-3-agents/bu-goals-webapp-coordinator/docs/audits/TEMPLATE.md`
+- `/data/projects/ai-harness/.worktrees/ops-vm-3-agents/bu-goals-webapp-coordinator/docs/procedures/decision-framework.md`
 - `/data/projects/ai-harness/docs/designs/legacy-goal-system--daily-scoring-system.md` (approval sections)

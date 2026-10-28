@@ -68,7 +68,7 @@ The raw record lives in ai-harness at `docs/asks/BU-epic-agentic-ai-native-beads
 
 ## Context
 
-Sergei wants the beads-ui pane to become a task panel that sits where Claude Code's own task panel sits, navigable and editable by keyboard and mouse, with menus, a prompt-to-panel shortcut, edits that commit and sync themselves, and later kanban, sprint, backlog, timeline and settings views behind a nav bar. He also wants it to reflow to its size, look like a real interface, load fast, and use a richer stack if that is fast and light. The design's Open Question 10 asks what the panel should be drawn with and how edits should sync. This doc answers from Claude Code's own mods documentation and type declarations, read on 2026-10-23 and 2026-10-24 for the build installed on sem-kg-ec2 (Claude Code 2.1.310), and from the fleet's measured setup: every session on that host runs inside tmux over AWS SSM.
+Sergei wants the beads-ui pane to become a task panel that sits where Claude Code's own task panel sits, navigable and editable by keyboard and mouse, with menus, a prompt-to-panel shortcut, edits that commit and sync themselves, and later kanban, sprint, backlog, timeline and settings views behind a nav bar. He also wants it to reflow to its size, look like a real interface, load fast, and use a richer stack if that is fast and light. The design's Open Question 10 asks what the panel should be drawn with and how edits should sync. This doc answers from Claude Code's own mods documentation and type declarations, read on 2026-10-23 and 2026-10-24 for the build installed on host-c (Claude Code 2.1.310), and from the fleet's measured setup: every session on that host runs inside tmux over AWS SSM.
 
 **Primary period:** 2026
 **Source weighting:** Claude Code's mods docs and public type declarations as of 2.1.310 are primary; GitHub mods are secondary; nothing earlier than 2026 applies, because mods shipped in 2026.
@@ -175,7 +175,7 @@ The limits that shape the panel [VERIFIABLE][^1]:
 | `$.ui.invalidate('ui.render')` | at most 10 redraws a second, 30 in the terminal for the visible pane |
 | A `Client` call | "a second per call at most" [VERIFIABLE][^4] |
 
-Measured on sem-kg-ec2 (2026-10-24T00:27Z, design D-26): the pane's whole-store `bd list` returns 7.2 MB from the ai-harness store, above the 4 MiB file limit, and the board re-reads it every 10 s; open issues alone are 2.1 MB. A panel that paints from a snapshot of drawn fields and redraws only on change stays well inside these limits; a framework adds nothing the `Client` model does not already give, and the hooks module could not load most of them anyway [INFERENCE].
+Measured on host-c (2026-10-24T00:27Z, design D-26): the pane's whole-store `bd list` returns 7.2 MB from the ai-harness store, above the 4 MiB file limit, and the board re-reads it every 10 s; open issues alone are 2.1 MB. A panel that paints from a snapshot of drawn fields and redraws only on change stays well inside these limits; a framework adds nothing the `Client` model does not already give, and the hooks module could not load most of them anyway [INFERENCE].
 
 ## 7. "An entire browser in a mod"
 
@@ -275,6 +275,6 @@ citation.
 
 ## Run History
 
-- 2026-10-24, run `beads-ui-band-pane-panel-2026-10-24-aih-ec2-3`, written directly by the Opus coordinator (no research child: the host's contention reading held launches to one child, which was running the install fix). Pages read with WebFetch between 2026-10-23T23:48Z and 2026-10-24T00:45Z.
+- 2026-10-24, run `beads-ui-band-pane-panel-2026-10-24-ops-vm-3`, written directly by the Opus coordinator (no research child: the host's contention reading held launches to one child, which was running the install fix). Pages read with WebFetch between 2026-10-23T23:48Z and 2026-10-24T00:45Z.
 
 <!-- /doc:region name="run_history" -->

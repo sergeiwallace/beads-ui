@@ -113,8 +113,8 @@ canonicalize aliases (`_canonical_machine`, cli.py:725-740). [VERIFIABLE][^2][^6
 
 The context overlays, `[modules.overlay.claude]` (toml lines 72-80), compile into
 `CLAUDE.<machine>.md` files and do not feed `settings.json`. The settings fragments are
-`.claude/settings.<machine>.json` for `acn-mac`, `sem-kg-ec2`, `sem-kg-sagemaker` and
-`sem-kg-windows`. Each sets `env` keys only, plus `totalTokensReminder` on `sem-kg-ec2`.
+`.claude/settings.<machine>.json` for `host-a`, `host-c`, `host-d` and
+`host-e`. Each sets `env` keys only, plus `totalTokensReminder` on `host-c`.
 [VERIFIABLE][^5][^6]
 
 A fragment reaches the Python renderer only through `[[site.machine]] settings_fragment`
@@ -134,7 +134,7 @@ keys on one profile. It works through the same `scrub_env_keys` argument a task-
 It is declared at cli.py:743-752 and applied at 755-763:
 
 ```python
-_MOUSE_CAPTURE_MACHINES = frozenset({"sem-kg-sagemaker"})
+_MOUSE_CAPTURE_MACHINES = frozenset({"host-d"})
 _MOUSE_SUPPRESSOR_ENV_KEYS = (
     "CLAUDE_CODE_DISABLE_MOUSE",
     "CLAUDE_CODE_DISABLE_MOUSE_CLICKS",
@@ -377,7 +377,7 @@ machine that surface moves to beads-ui, so the templates need new wording.
 | Group | Paths and lines | Why it is unaffected |
 |---|---|---|
 | Session identity through `CLAUDE_CODE_TASK_LIST_ID` | `.claude/bin/bedrock_auth.py:769, 817-818`; `.claude/bin/resume-lib.sh:21, 79, 108`; `.claude/hooks/context-supervisor-{idle-prompt,postcompact,session-end,user-prompt}.sh`; `held-replay-session-start.sh:10, 45`; `launch-resume-{prompt-submit,session-end,session-start}.sh`; `precompact-safety.sh:24, 36`; `resume-inject.sh:52, 340`; `scripts/agent_worktree_preflight.py:153, 1033`; `scripts/claude_sessions.py:216`; `scripts/provenance_identity.py:193`; `scripts/wq_hooks.py:201`; `src/ai_harness/{context_supervisor.py:9303, 9408; goal_waker.py:1287; job_supervisor.py:1263; prompt_injection/targets.py:211, 315; reboot_resume.py:47, 70, 292; session_rekey.py:32; shadow_watcher_canary.py:52-53; submit_fifo.py:12, 32}`; `skills/{exit-goal,explain,format-decision,summary}/SKILL.md` | The variable names the session for resume keys, held-doc identity, FIFOs and injection targets; none reads the directory |
-| Docs naming the pinned namespace | `docs/procedures/bms-sagemaker-local-toolchain.md:42`; `kg2-throwaway-session-cutover-brief.md:138-139`; `sem-kg-ec2-reboot-resume.md:69` | Describe the pin as a session key |
+| Docs naming the pinned namespace | `docs/procedures/bms-sagemaker-local-toolchain.md:42`; `kg2-throwaway-session-cutover-brief.md:138-139`; `host-c-reboot-resume.md:69` | Describe the pin as a session key |
 | Tool-name lists | `src/ai_harness/context_supervisor.py:249-252`; `scripts/summary_nudge.py:21-24`; `projects-wide-session-config/hooks-manifest.json:978, 997`; `hooks-manifest.share.json:291` | An allow-list or matcher that names an absent tool never fires |
 | Anti-TaskCreate text from upstream Beads | `.claude/hooks/bd-prime.sh:19`; `scripts/bd_prime_filter.py:15, 42`; `scripts/bd_repo_setup.py:285`; `docs/procedures/beads-context-ownership.md:46, 604, 619` | They strip Beads' "Do NOT use TodoWrite, TaskCreate" advice; on a retired machine that advice becomes true |
 | One-off and notes | `scripts/ec2-migration/kg2-ec2-step22-pull-waves-1-and-2a.sh:31-64`; `docs/procedures/new-machine-bootstrap.md:266` | A migration script, and a doc row to update |
@@ -744,7 +744,7 @@ verified, as the blindspots state.
 [^2]: Wallace, S. (2026). [src/ai_harness/cli.py](https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/cli.py), lines 637-695, 725-863, 1255-1300, 1415-1530. sergeiwallace/ai-harness (private), GitHub. Read at commit 01d5ee82d4. Verified accessible (HTTP 200, GitHub API tree listing) 2026-10-15. (The settings step, the mouse precedent, plan and doctor.)
 [^3]: Wallace, S. (2026). [install.sh](https://github.com/sergeiwallace/ai-harness/blob/main/install.sh), lines 4053-4271. sergeiwallace/ai-harness (private), GitHub. Read at commit 01d5ee82d4. Verified accessible (HTTP 200, GitHub API tree listing) 2026-10-15. (Step 4 hand-off and the Step 4b machine fragment merge.)
 [^4]: Wallace, S. (2026). [src/ai_harness/defaults/settings.template.json](https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/defaults/settings.template.json), lines 1-42. sergeiwallace/ai-harness (private), GitHub. Read at commit 01d5ee82d4. Verified accessible (HTTP 200, GitHub API tree listing) 2026-10-15. (Byte-identical to `.claude/settings.template.json`, blob `7b825e1a10`.)
-[^5]: Wallace, S. (2026). [.claude/settings.acn-mac.json and the three other machine fragments](https://github.com/sergeiwallace/ai-harness/blob/main/.claude/settings.acn-mac.json). sergeiwallace/ai-harness (private), GitHub. Read at commit 01d5ee82d4. Verified accessible (HTTP 200, GitHub API tree listing) 2026-10-15. (Fragments exist for acn-mac, sem-kg-ec2, sem-kg-sagemaker and sem-kg-windows.)
+[^5]: Wallace, S. (2026). [.claude/settings.host-a.json and the three other machine fragments](https://github.com/sergeiwallace/ai-harness/blob/main/.claude/settings.host-a.json). sergeiwallace/ai-harness (private), GitHub. Read at commit 01d5ee82d4. Verified accessible (HTTP 200, GitHub API tree listing) 2026-10-15. (Fragments exist for host-a, host-c, host-d and host-e.)
 [^6]: Wallace, S. (2026). [projects-wide-session-config/ai-harness.toml](https://github.com/sergeiwallace/ai-harness/blob/main/projects-wide-session-config/ai-harness.toml), lines 1-135 and 1355-1618. sergeiwallace/ai-harness (private), GitHub. Read at commit 01d5ee82d4. Verified accessible (HTTP 200, GitHub API tree listing) 2026-10-15. (Overlays, the machine registry and its schema.)
 [^7]: Wallace, S. (2026). [src/ai_harness/machine_registry.py](https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/machine_registry.py), lines 1-389. sergeiwallace/ai-harness (private), GitHub. Read at commit 01d5ee82d4. Verified accessible (HTTP 200, GitHub API tree listing) 2026-10-15. (Schema-generic loader, required attributes, digest and export.)
 [^8]: Wallace, S. (2026). [src/ai_harness/config.py](https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/config.py), lines 64-96 and 198-264. sergeiwallace/ai-harness (private), GitHub. Read at commit 01d5ee82d4. Verified accessible (HTTP 200, GitHub API tree listing) 2026-10-15. (`[[site.machine]]` and its `settings_fragment` key.)
@@ -797,7 +797,7 @@ means the quote came from WebFetch's model and was not checked against raw bytes
 | Claim | Source URL | Verbatim quote | Verdict | Live? |
 |---|---|---|---|---|
 | S1 user file wins every leaf | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/settings_merge.py | "``existing`` wins at every leaf, a list included" | SUPPORTED | Yes, HTTP 200 (API); checked |
-| S2 mouse precedent; registry export | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/cli.py ; https://github.com/sergeiwallace/ai-harness/blob/main/projects-wide-session-config/ai-harness.toml | "_MOUSE_CAPTURE_MACHINES = frozenset({"sem-kg-sagemaker"})" / "exports them to ~/.config/ai-fleet/machines.json" | SUPPORTED | Yes, HTTP 200 (API); checked |
+| S2 mouse precedent; registry export | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/cli.py ; https://github.com/sergeiwallace/ai-harness/blob/main/projects-wide-session-config/ai-harness.toml | "_MOUSE_CAPTURE_MACHINES = frozenset({"host-d"})" / "exports them to ~/.config/ai-fleet/machines.json" | SUPPORTED | Yes, HTTP 200 (API); checked |
 | S3 Step 4b add-only merge | https://github.com/sergeiwallace/ai-harness/blob/main/install.sh | "adds new keys, never removes existing ones." | SUPPORTED | Yes, HTTP 200 (API); checked |
 | S4 plan and doctor lack settings output | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/cli.py ; https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/settings_merge.py | ""write committed manifest"," / "permissions.deny: added" | SUPPORTED | Yes, HTTP 200 (API); checked |
 | S5 inventory and identity key | https://github.com/sergeiwallace/ai-harness/tree/main | ""CLAUDE_CODE_ENABLE_TODO_TOOLS": "1"," / "TASK_LIST_ID_ENV = "CLAUDE_CODE_TASK_LIST_ID"" | SUPPORTED | Yes, HTTP 200 (API tree); checked |
@@ -808,7 +808,7 @@ means the quote came from WebFetch's model and was not checked against raw bytes
 | 1.1 env and deny composition sites | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/settings_merge.py ; https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/defaults/settings.template.json | "_scrub_env_keys(merged, scrub_env_keys)" / ""Agent(general-purpose)"," | SUPPORTED | Yes, HTTP 200 (API); checked |
 | 1.1 orders 3 and 7 | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/settings_merge.py | "Append missing, never remove one." | SUPPORTED | Yes, HTTP 200 (API); checked |
 | 1.2 registry, loader, alias-only read | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/machine_registry.py | "a missing attribute fails naming the machine and the attribute" | SUPPORTED | Yes, HTTP 200 (API); checked |
-| 1.2 overlays and fragments | https://github.com/sergeiwallace/ai-harness/blob/main/.claude/settings.acn-mac.json ; https://github.com/sergeiwallace/ai-harness/blob/main/projects-wide-session-config/ai-harness.toml | ""totalTokensReminder": "off"" / "[modules.overlay.claude]" | SUPPORTED | Yes, HTTP 200 (API); checked |
+| 1.2 overlays and fragments | https://github.com/sergeiwallace/ai-harness/blob/main/.claude/settings.host-a.json ; https://github.com/sergeiwallace/ai-harness/blob/main/projects-wide-session-config/ai-harness.toml | ""totalTokensReminder": "off"" / "[modules.overlay.claude]" | SUPPORTED | Yes, HTTP 200 (API); checked |
 | 1.2 fragment path idle; Step 4b drops lists | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/cli.py ; https://github.com/sergeiwallace/ai-harness/blob/main/install.sh | "the machine fragment (Step 4b) is still the shell's" / "adds new keys, never removes existing ones." | SUPPORTED | Yes, HTTP 200 (API); checked |
 | 1.3 scrub rationale and test | https://github.com/sergeiwallace/ai-harness/blob/main/src/ai_harness/cli.py | "pins the scope both ways" | SUPPORTED | Yes, HTTP 200 (API); checked |
 | 1.3 `billing_mode` declaration | https://github.com/sergeiwallace/ai-harness/blob/main/projects-wide-session-config/ai-harness.toml | "billing_mode       = ["subscription", "api"]" | SUPPORTED | Yes, HTTP 200 (API); checked |

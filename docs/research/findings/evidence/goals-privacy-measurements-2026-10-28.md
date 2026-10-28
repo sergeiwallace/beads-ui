@@ -46,9 +46,9 @@ The `aih-fleet-task-id` regex from ai-harness `.gitleaks.toml` line 112 was run 
 |---|---|
 | `SW-123` | True |
 | `SW-12.3` | True |
-| `SW-3fq9zk` | False |
+| `SW-a1b2c3` | False |
 | `SW-abcde` | False |
-| `SW-some-slug-title-3fq9zk` | False |
+| `SW-some-slug-title-a1b2c3` | False |
 | `SW-qq00zz` | False |
 | `AIH-qq00zz` | False |
 
@@ -75,7 +75,7 @@ The `aih-fleet-task-id` regex from ai-harness `.gitleaks.toml` line 112 was run 
 
 ## M-7. Machine governance values
 
-`projects-wide-session-config/ai-harness.toml` carries a `governance` key in every machine table. Values: `open` at lines 1711, 1738 and 1836 (the fw-lnx table spans 1826-1852); the employer-gated value at lines 1771, 1809, 1866, 1894 and 1926 (the employer host's table spans 1912-1949). Line 1689 declares the allowed set.
+`projects-wide-session-config/ai-harness.toml` carries a `governance` key in every machine table. Values: `open` at lines 1711, 1738 and 1836 (the host-b table spans 1826-1852); the employer-gated value at lines 1771, 1809, 1866, 1894 and 1926 (the employer host's table spans 1912-1949). Line 1689 declares the allowed set.
 
 ## Scratch
 

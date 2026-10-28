@@ -35,7 +35,7 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 | A001: "react or whatever framework is pretty and aesthetic and best practice" | Covered: [§5](#5-front-end-stack-recheck) |
 | A001: "best practice UI / UX interactions from jira / todoist / asana / linear"; kanban, sprint and backlog, rearrange, quick edits of priority, status and owner, view details | Covered: [§2](#2-board-backlog-and-sprint-the-2025-2026-delta), building on the prior beads-ui landscape research |
 | A001: "view the held doc blockers / decisions / open questions / details" | Covered: [§1](#1-review-and-triage-of-blockers-decisions-and-open-questions) |
-| A001: type and enter prompt responses per task for the owning session; the session "should get automatically notified via event-based system" built on aih-fw-1's event-driven wake | Covered: [§3](#3-per-task-prompts-and-event-based-dispatch) |
+| A001: type and enter prompt responses per task for the owning session; the session "should get automatically notified via event-based system" built on ops-lab-1's event-driven wake | Covered: [§3](#3-per-task-prompts-and-event-based-dispatch) |
 | A001: "it can work via either agent-mail or hook context injection (should be event-based) and/or prompt injection via shared prompt injection library or configurable combination of them with fallback options" | Covered: [§3](#3-per-task-prompts-and-event-based-dispatch). All three named routes stay in the design space; the section recommends how they combine |
 | A001: "i can change the owning cc session too and it should trigger the automatic /handoff" | Covered: [§4](#4-owner-change-handoff-and-start-goal) |
 | A001: "auto-triggers them to `/start-goal` if they're not in a current goal mode state" | Covered: [§4](#4-owner-change-handoff-and-start-goal) |
@@ -43,9 +43,9 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 | A001: "fit within the app-portal system ... as a modular web app" | Covered on the personal pair; pending on the work pair, which has no portal origin: [§8](#8-app-portal-fit) and Open Question 5 |
 | A001: "shared code ... for beads-ui claude code mod tui, claude desktop / claude.ai webapp UI MCP app ... (if its too limiting, then they can be separate builds)" | Covered: [§6](#6-shared-code-across-the-web-app-the-mcp-app-and-the-mod) |
 | A001: "built on our backend of beads tasks dolt db store etc and whatever else from ai-core"; open to changing backend or frontend | Covered: [§7](#7-backend-over-beads-and-ai-core) |
-| A001: local hosting for now; sem-kg-ec2 with acn-mac via SSM or SSH; fw-lnx with sw-mac via Tailscale; cloud hosting from infra-as-config templates later | Covered: [§9](#9-hosting-and-access-for-each-machine-pair) |
+| A001: local hosting for now; host-c with host-a via SSM or SSH; host-b with host-f via Tailscale; cloud hosting from infra-as-config templates later | Covered: [§9](#9-hosting-and-access-for-each-machine-pair) |
 | A001: goals system, goal views, goal research and the privacy guard | Out of this doc by split, covered in full by [the goals system research](goals-system.md) |
-| A001: the process clauses (orchestrate, research, wait for aih-fw-2's compile, merge, sync, reap, then design through /auto-flow, then Sergei's review) | Process, not content. Recorded in the Run History of this doc and the coordinator's report |
+| A001: the process clauses (orchestrate, research, wait for ops-lab-2's compile, merge, sync, reap, then design through /auto-flow, then Sergei's review) | Process, not content. Recorded in the Run History of this doc and the coordinator's report |
 
 **Status:** complete
 
@@ -101,7 +101,7 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 
 ## Context
 
-Sergei asked on 2026-10-27 for a web app version of the beads-ui task manager: the same purpose as the Claude Code mod, with Jira, Todoist, Asana and Linear quality interactions, and a way to steer the Claude Code session that owns each task from the browser. A prompt, a decision answer or an unblock entered on a task must reach that session by event, never by a scheduled wake, and start its work; changing the owner runs `/handoff`, and a session with no goal armed gets `/start-goal`. The app fits app-portal as a member app, shares code with the mod and the MCP App where that is sound, runs on the Beads Dolt stores, and is reachable from both machine pairs: sem-kg-ec2 with acn-mac, and fw-lnx with sw-mac.
+Sergei asked on 2026-10-27 for a web app version of the beads-ui task manager: the same purpose as the Claude Code mod, with Jira, Todoist, Asana and Linear quality interactions, and a way to steer the Claude Code session that owns each task from the browser. A prompt, a decision answer or an unblock entered on a task must reach that session by event, never by a scheduled wake, and start its work; changing the owner runs `/handoff`, and a session with no goal armed gets `/start-goal`. The app fits app-portal as a member app, shares code with the mod and the MCP App where that is sound, runs on the Beads Dolt stores, and is reachable from both machine pairs: host-c with host-a, and host-b with host-f.
 
 The beads-ui design doc already decides the web stack (D-10), the queue member-app role (D-11), the MCP topology (D-14) and the Phase 3 to 6 scope. This research covers what the 2026-10-27 ask adds on top of that, and rechecks the stack.
 
@@ -120,9 +120,9 @@ Product, library and platform claims weight 2026 first, then 2025, then 2024; ea
 
 1. The web app's new core is a keyboard-first triage queue for blockers, held decisions and open questions, sorted by priority and grouped by next action, with option cards whose number keys pick a decision's option. No product has a queue built for answering decisions; Linear Triage and Gmail's keyboard triage are the patterns to copy ([§1](#1-review-and-triage-of-blockers-decisions-and-open-questions)).
 2. A prompt typed on a task reaches its owning session by event: the server writes a durable dispatch record to the ai-core queue, then sends addressed Agent Mail that the target host's notifier admits as a wake. The shared prompt-injection library, the mod's `$.prompt.submit` and the queue's turn-end pull are fallbacks, all under one kill switch, and nothing costs tokens while nothing is pending ([§3](#3-per-task-prompts-and-event-based-dispatch)).
-3. The auto-trigger depends on fleet work not yet done: every automatic idle wake is off on sem-kg-ec2 until Phase 4 of the event-driven wake seeds its policy file, and web-app prompts need a signed dispatch envelope or receiving sessions treat them as unverified ([§3](#3-per-task-prompts-and-event-based-dispatch)).
+3. The auto-trigger depends on fleet work not yet done: every automatic idle wake is off on host-c until Phase 4 of the event-driven wake seeds its policy file, and web-app prompts need a signed dispatch envelope or receiving sessions treat them as unverified ([§3](#3-per-task-prompts-and-event-based-dispatch)).
 4. D-4, D-10 and D-11 hold. The server reads Beads through `bd --json` and the host refresher, detects change across every store with one Dolt heads query, uses the ai-core queue for sessions and prompts, and registers with app-portal as a Node upstream ([§5](#5-front-end-stack-recheck), [§7](#7-backend-over-beads-and-ai-core), [§8](#8-app-portal-fit)).
-5. Each pair reaches a loopback-bound server through its existing transport: a Session Manager port forward from acn-mac to the employer host, and `tailscale serve` on fw-lnx for sw-mac. The server adds its own Host, Origin and token checks, and a per-host repository allowlist keeps personal stores off the employer host ([§7](#7-backend-over-beads-and-ai-core), [§9](#9-hosting-and-access-for-each-machine-pair)).
+5. Each pair reaches a loopback-bound server through its existing transport: a Session Manager port forward from host-a to the employer host, and `tailscale serve` on host-b for host-f. The server adds its own Host, Origin and token checks, and a per-host repository allowlist keeps personal stores off the employer host ([§7](#7-backend-over-beads-and-ai-core), [§9](#9-hosting-and-access-for-each-machine-pair)).
 
 ## 1. Review and triage of blockers, decisions and open questions
 
@@ -134,7 +134,7 @@ The recommended Review view is a split list and detail queue, keyboard first, gr
 
 Single-letter shortcuts in the Gmail and Linear style must be possible to turn off or remap to meet WCAG 2.1.4 at Level A, and Gmail gives its users a setting to turn them on or off [VERIFIABLE][^4][^8]. No decided beads-ui decision covers this, so the web app design needs one.
 
-Answers and unblocks must reach the right host. `held_cli.py answer` writes an answer verbatim in the owning session's landing pad, which lives on that session's host, so a web app on sem-kg-ec2 cannot run it for an item held on acn-mac [VERIFIABLE][^2] (dispatch findings Q6). The dispatch leg's proposal: the dispatch carries the answer bytes, and the target host's receiver writes them to a file and runs the closed verb `held_cli.py answer <path> --text-file <file>` itself, so no session retypes the bytes, which the held README forbids [INFERENCE] (dispatch findings Q6). A bd blocker's write path is a bd comment in the form D-40's Review section reads, plus `bd-unblock`, which writes the stamped transition comment the hooks check [VERIFIABLE][^2]. The closed verb is an ai-harness change (Open Question 4).
+Answers and unblocks must reach the right host. `held_cli.py answer` writes an answer verbatim in the owning session's landing pad, which lives on that session's host, so a web app on host-c cannot run it for an item held on host-a [VERIFIABLE][^2] (dispatch findings Q6). The dispatch leg's proposal: the dispatch carries the answer bytes, and the target host's receiver writes them to a file and runs the closed verb `held_cli.py answer <path> --text-file <file>` itself, so no session retypes the bytes, which the held README forbids [INFERENCE] (dispatch findings Q6). A bd blocker's write path is a bd comment in the form D-40's Review section reads, plus `bd-unblock`, which writes the stamped transition comment the hooks check [VERIFIABLE][^2]. The closed verb is an ai-harness change (Open Question 4).
 
 ### When to use
 
@@ -150,7 +150,7 @@ Shareable view URLs are the one delta worth adopting: a filtered Review or Board
 
 The fleet already has an event-driven admission system for idle sessions, and the web app should enter it as one more typed event source rather than build a second wake path. The notifier daemon polls outside the model, classifies typed events, and an async `FileChanged` hook exits 2 to create a model turn only for an admitted event; direct mail and explicit pokes wake their recipient, and passive items ride the next `PreToolUse` or `UserPromptSubmit` [VERIFIABLE][^14][^26]. Phases 1 to 3 of that design are on ai-harness main; Phases 4 and 5 are not [VERIFIABLE][^2][^16].
 
-Every automatic idle wake is switched off on sem-kg-ec2 today. The live policy file `~/.config/ai-harness/idle-wake.json` does not exist, which the loader reads as `automatic_wakes = false`, and since Phase 3 the git-inbox prompt-injection wake checks the same switch [VERIFIABLE][^15][^16]. Until the switch is on, a dispatched prompt reaches a session only at its next natural turn boundary. Seeding the file belongs to Phase 4 of the event-driven wake, which the aih-fw-1 session owns; it is the dependency most likely to block the web app's auto-trigger [VERIFIABLE][^2] (§ Dependencies).
+Every automatic idle wake is switched off on host-c today. The live policy file `~/.config/ai-harness/idle-wake.json` does not exist, which the loader reads as `automatic_wakes = false`, and since Phase 3 the git-inbox prompt-injection wake checks the same switch [VERIFIABLE][^15][^16]. Until the switch is on, a dispatched prompt reaches a session only at its next natural turn boundary. Seeding the file belongs to Phase 4 of the event-driven wake, which the ops-lab-1 session owns; it is the dependency most likely to block the web app's auto-trigger [VERIFIABLE][^2] (§ Dependencies).
 
 The recommended dispatch path follows the transactional outbox pattern: write the dispatch durably, then publish an event, and make every consumer idempotent on the dispatch id because a relay may deliver twice [VERIFIABLE][^23]. The dispatch leg's ladder, with each rung honouring one call-time kill switch [INFERENCE]:
 
@@ -165,7 +165,7 @@ The recommended dispatch path follows the transactional outbox pattern: write th
 
 Dispatch content follows the privacy rule. A private task's prompt text stays in its private store; the queue record, the Agent Mail body and any git-inbox message carry only the dispatch id and a digest of the text. Git-inbox in particular carries a pointer only, because it commits its messages to refs of a shared harness repository [VERIFIABLE][^2] (dispatch findings, Gaps 2 and F-5).
 
-The prompt-injection library is built: it types a harness-authored line into a session's pane under a claim and records it [VERIFIABLE][^18]. This keeps all three routes the founding ask names. Agent Mail admitted by the notifier is the "hook context injection ... event-based" route through aih-fw-1's work, the shared prompt-injection library is rung 3, and git-inbox and Buzz carry Agent Mail's role across hosts [INFERENCE]. Claude Code's native channels and remote control stay out of the ladder: channels are a research preview with provider limits, and Remote Control requires a subscription login that excludes the Bedrock route this host uses [VERIFIABLE][^7][^27].
+The prompt-injection library is built: it types a harness-authored line into a session's pane under a claim and records it [VERIFIABLE][^18]. This keeps all three routes the founding ask names. Agent Mail admitted by the notifier is the "hook context injection ... event-based" route through ops-lab-1's work, the shared prompt-injection library is rung 3, and git-inbox and Buzz carry Agent Mail's role across hosts [INFERENCE]. Claude Code's native channels and remote control stay out of the ladder: channels are a research preview with provider limits, and Remote Control requires a subscription login that excludes the Bedrock route this host uses [VERIFIABLE][^7][^27].
 
 Every rung costs zero model tokens while nothing is pending, because the waiting runs in a daemon, a hook watcher or a mod timer. Each delivery costs one model turn over the session's cached context, measured at a median of 365,551 cache-read tokens per response window, so coalescing several dispatches to one session into one turn is the main cost lever during bulk review [VERIFIABLE][^14][^2].
 
@@ -237,9 +237,9 @@ Register the web app in `apps.yaml` on the personal pair, where the portal runs.
 
 ## 9. Hosting and access for each machine pair
 
-On the work pair, the server binds to loopback on the employer-provisioned host, and acn-mac reaches it through one more entry in the pair transport's `forwards` map: the supervised AWS Systems Manager Session Manager port forward the fleet already runs [VERIFIABLE][^31][^44]. An SSH `LocalForward` over the existing SSH-over-Session-Manager alias is the measured fallback (`ssh -L` returned exit 0 from acn-mac) [VERIFIABLE][^29][^44]. No inbound port opens on the host, which keeps its zero-inbound design [VERIFIABLE][^31].
+On the work pair, the server binds to loopback on the employer-provisioned host, and host-a reaches it through one more entry in the pair transport's `forwards` map: the supervised AWS Systems Manager Session Manager port forward the fleet already runs [VERIFIABLE][^31][^44]. An SSH `LocalForward` over the existing SSH-over-Session-Manager alias is the measured fallback (`ssh -L` returned exit 0 from host-a) [VERIFIABLE][^29][^44]. No inbound port opens on the host, which keeps its zero-inbound design [VERIFIABLE][^31].
 
-On the personal pair, the server binds to loopback on fw-lnx and is published with `tailscale serve --bg --set-path /beads` from `apps.yaml`. The app reads the `Tailscale-User-Login` header for identity, and can read an app capability granted in the tailnet policy (`--accept-app-caps`, Tailscale 1.92 or later) to decide who may dispatch prompts [VERIFIABLE][^32][^33][^34]. The fleet's pair configuration names the personal laptop's profile `mac`, not `sw-mac`, so any config naming the personal pair uses `mac` [VERIFIABLE][^44].
+On the personal pair, the server binds to loopback on host-b and is published with `tailscale serve --bg --set-path /beads` from `apps.yaml`. The app reads the `Tailscale-User-Login` header for identity, and can read an app capability granted in the tailnet policy (`--accept-app-caps`, Tailscale 1.92 or later) to decide who may dispatch prompts [VERIFIABLE][^32][^33][^34]. The fleet's pair configuration names the personal laptop's profile `mac`, not `host-f`, so any config naming the personal pair uses `mac` [VERIFIABLE][^44].
 
 Neither transport authenticates the browser request. Any web page or local process on the laptop can reach `localhost:<port>` through the forward, and a server that sends prompts to shell-capable agents is a target for cross-site requests. The server therefore needs its own layer: a Host allowlist, an Origin and `Sec-Fetch-Site` check on every write, and on the work pair a per-host session token in a cookie [VERIFIABLE][^35][^36] for the mechanisms; the combination is [INFERENCE].
 
@@ -248,12 +248,12 @@ For cloud hosting later, Phase 6's templates need one change. Fly.io's `fly.toml
 ```mermaid
 flowchart LR
   subgraph work["Work pair"]
-    L1["acn-mac browser"] -->|"Session Manager port forward (pair transport)"| S1["beads-ui server on loopback, employer host"]
+    L1["host-a browser"] -->|"Session Manager port forward (pair transport)"| S1["beads-ui server on loopback, employer host"]
     S1 -->|"bd --json, heads query"| B1["Work Beads stores"]
     S1 -->|"sessions, prompts"| Q1["ai-core queue (loopback)"]
   end
   subgraph personal["Personal pair"]
-    L2["sw-mac browser"] -->|"tailscale serve /beads, identity header"| S2["beads-ui server on loopback, fw-lnx"]
+    L2["host-f browser"] -->|"tailscale serve /beads, identity header"| S2["beads-ui server on loopback, host-b"]
     S2 -->|"bd --json, heads query"| B2["Personal and private Beads stores"]
   end
 ```
@@ -296,7 +296,7 @@ The source-vetting rule is met for every external pattern adopted here: Linear a
 4. (Design choice, plus an ai-harness change.) How is a control-chosen answer recorded given D-39's "exactly as typed", and does the receiving host's closed `answer` verb ship with the web app's first phase?
 5. (Design choice, cross-repository.) Does app-portal serve its shell on the employer host through its loopback router, and does its owner amend its D-5 for a Node member?
 6. (Design choice.) What format and key distribution should the signed dispatch envelope use so that a session on the paired machine can verify it?
-7. (Design choice.) Should the ai-core queue run on fw-lnx too, so the personal pair gets the same prompt store and receipts as the work pair?
+7. (Design choice.) Should the ai-core queue run on host-b too, so the personal pair gets the same prompt store and receipts as the work pair?
 
 ## Sources
 
@@ -437,9 +437,9 @@ claims (legs 2 and 3), cite the repo file and line read, with its commit.
    stores on one host, guarded writes, change feeds, performance; whether D-4 should change.
 2. Which ai-core services the web app should use, and how D-11 divides beads-ui from ai-core.
 3. app-portal fit: registration, routing, authentication, the shell, the bundle, tokens.
-4. Access for sem-kg-ec2 and acn-mac: Session Manager port forwarding, SSH over Session Manager,
+4. Access for host-c and host-a: Session Manager port forwarding, SSH over Session Manager,
    VS Code forwarding, the existing fleet helper; latency, reconnects, user authentication.
-5. Access for fw-lnx and sw-mac: Tailscale Serve and Funnel, ACLs, MagicDNS, certificates,
+5. Access for host-b and host-f: Tailscale Serve and Funnel, ACLs, MagicDNS, certificates,
    identity headers; one config shape for both pairs.
 6. Security: loopback binding, auth layers, CSRF and origin checks, the queue API's auth
    boundary, the signed dispatch envelope. [Wording redacted for this public file.]
@@ -508,6 +508,6 @@ Built by the fresh-context verifier from pages it fetched on 2026-10-28; copied 
 - Landed on beads-ui main through PRs #78 (cdcda0b), #79 (0d07e7b) and #80 (3cb5987); the verifier fixes land in the next PR.
 - Verification: one fresh-context pass by an Opus 5.5 `auditor` leaf (same family as the author, recorded as such): G1 to G6, a five-perspective critic pass, live checks of every public citation (all live), and a 38-row provenance ledger. Its 14 MUST-FIX items were applied in this doc except M14, the table of contents inside the stub's context region, which is left as the stub generator emits it.
 - Public-repository rule: a data-scope issue on the work host is named only as tracked privately; host ports, command lines, counts and private issue ids were removed from this doc and its findings files without rewriting history.
-- The goals research ([goals-system.md](goals-system.md)) waited for the prior-work compile from aih-fw-2, which arrived 2026-10-28 01:33 UTC; this doc does not depend on it.
+- The goals research ([goals-system.md](goals-system.md)) waited for the prior-work compile from ops-lab-2, which arrived 2026-10-28 01:33 UTC; this doc does not depend on it.
 
 <!-- /doc:region name="run_history" -->

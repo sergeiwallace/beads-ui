@@ -782,21 +782,21 @@ No finding in this run would reopen D-10, D-11, D-14, D-17, D-19, D-22, D-23 or 
 
 ## Files read
 
-- `/data/projects/beads-ui/.worktrees/aih-ec2-3-agents/bu-agent-research-web-vmfu/docs/designs/beads-ui-design.md`
-- `/data/projects/beads-ui/.worktrees/aih-ec2-3-agents/bu-agent-research-web-vmfu/docs/research/beads-ui-task-manager-landscape.md`
-- `/data/projects/beads-ui/.worktrees/aih-ec2-3-agents/bu-agent-research-web-vmfu/docs/research/findings/beads-ui-task-manager-ux.md`
-- `/data/projects/beads-ui/.worktrees/aih-ec2-3-agents/bu-agent-research-web-vmfu/docs/research/findings/beads-ui-mods-and-shared-core.md`
-- `/data/projects/ai-harness/.worktrees/aih-ec2-3-agents/bu-agent-research-web-vmfu/docs/held/README.md`
-- `/data/projects/ai-harness/.worktrees/aih-ec2-3-agents/bu-agent-research-web-vmfu/docs/prompts/held/decision/TEMPLATE.md`
-- `/data/projects/ai-harness/.worktrees/aih-ec2-3-agents/bu-agent-research-web-vmfu/docs/procedures/source-vetting-and-corroboration.md`
-- `/data/projects/ai-harness/.worktrees/aih-ec2-3-agents/bu-agent-research-web-vmfu/docs/procedures/ai-writing-anti-patterns.md`
-- `/data/projects/ai-harness/.worktrees/aih-ec2-3-agents/bu-agent-research-web-vmfu/docs/procedures/wsjf-scoring-rubric.md`
-- `/data/projects/ai-harness/.worktrees/aih-ec2-3-agents/bu-agent-research-web-vmfu/docs/research/TEMPLATE.md`
-- `/data/projects/ai-harness/.worktrees/aih-ec2-3-agents/bu-agent-research-web-vmfu/docs/designs/aih-p811n7-event-driven-idle-wake.md` (summary only)
-- `/data/projects/ai-harness/.worktrees/aih-ec2-3-agents/bu-agent-research-web-vmfu/scripts/format_decision_check.py`
-- `/data/projects/ai-harness/.worktrees/aih-ec2-3-agents/bu-agent-research-web-vmfu/src/ai_harness/format_decision.py`
-- `/data/projects/ai-harness/.worktrees/aih-ec2-3-agents/bu-agent-research-web-vmfu/scripts/held_cli.py` (verb and option search only)
-- `/data/projects/ai-harness/.worktrees/aih-ec2-3-agents/bu-agent-research-web-vmfu/scripts/bd_curation_metadata.py` (field names only)
+- `/data/projects/beads-ui/.worktrees/ops-vm-3-agents/bu-agent-research-web-vmfu/docs/designs/beads-ui-design.md`
+- `/data/projects/beads-ui/.worktrees/ops-vm-3-agents/bu-agent-research-web-vmfu/docs/research/beads-ui-task-manager-landscape.md`
+- `/data/projects/beads-ui/.worktrees/ops-vm-3-agents/bu-agent-research-web-vmfu/docs/research/findings/beads-ui-task-manager-ux.md`
+- `/data/projects/beads-ui/.worktrees/ops-vm-3-agents/bu-agent-research-web-vmfu/docs/research/findings/beads-ui-mods-and-shared-core.md`
+- `/data/projects/ai-harness/.worktrees/ops-vm-3-agents/bu-agent-research-web-vmfu/docs/held/README.md`
+- `/data/projects/ai-harness/.worktrees/ops-vm-3-agents/bu-agent-research-web-vmfu/docs/prompts/held/decision/TEMPLATE.md`
+- `/data/projects/ai-harness/.worktrees/ops-vm-3-agents/bu-agent-research-web-vmfu/docs/procedures/source-vetting-and-corroboration.md`
+- `/data/projects/ai-harness/.worktrees/ops-vm-3-agents/bu-agent-research-web-vmfu/docs/procedures/ai-writing-anti-patterns.md`
+- `/data/projects/ai-harness/.worktrees/ops-vm-3-agents/bu-agent-research-web-vmfu/docs/procedures/wsjf-scoring-rubric.md`
+- `/data/projects/ai-harness/.worktrees/ops-vm-3-agents/bu-agent-research-web-vmfu/docs/research/TEMPLATE.md`
+- `/data/projects/ai-harness/.worktrees/ops-vm-3-agents/bu-agent-research-web-vmfu/docs/designs/aih-p811n7-event-driven-idle-wake.md` (summary only)
+- `/data/projects/ai-harness/.worktrees/ops-vm-3-agents/bu-agent-research-web-vmfu/scripts/format_decision_check.py`
+- `/data/projects/ai-harness/.worktrees/ops-vm-3-agents/bu-agent-research-web-vmfu/src/ai_harness/format_decision.py`
+- `/data/projects/ai-harness/.worktrees/ops-vm-3-agents/bu-agent-research-web-vmfu/scripts/held_cli.py` (verb and option search only)
+- `/data/projects/ai-harness/.worktrees/ops-vm-3-agents/bu-agent-research-web-vmfu/scripts/bd_curation_metadata.py` (field names only)
 - `/data/projects/app-portal/package.json` (read-only, main tree)
 - `/data/projects/ai-core/web/src/components/Composer.tsx` (read-only, main tree)
 - `/data/projects/ai-core/web/src/views/Review.tsx` (read-only, main tree)
