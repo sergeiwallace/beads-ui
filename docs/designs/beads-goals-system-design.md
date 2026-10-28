@@ -89,7 +89,7 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 
 ## Executive Summary
 
-This design makes a goal a first-class Beads issue that sits above epics: an aspiration over dated objectives, each either an achievement or something to maintain, linked to any issue that serves it and to other goals. Progress is computed from the work linked to a goal, while health comes from short written check-ins, so a goal can show "60% done, at risk" honestly. The goal views (a linked graph, a Gantt and timeline with the critical path, and charts of where effort goes) live in the beads-ui web app, and an alignment score lifts the queue rank of work that serves Sergei's top goals, for his own work and for his agents'. Personal, private, sensitive and domain-specific goals live only in private stores on the personal machine pair, every link that touches them stays there, and client-side guards at every write, publish, push and message path refuse a marked record, and any goal record not marked shared, before it can reach a shared or public repository. Four calls are left for Sergei: whether the alignment score may reorder the fleet's agent queue ([D-8](#d-8)), where employer-domain goals live ([D-14](#d-14)), whether the first release leaves out the daily score he approved for the first system ([D-17](#d-17)), and whether client-side guards are strong enough for "never" or a server-side push gateway is needed ([D-20](#d-20)).
+This design makes a goal a first-class Beads issue that sits above epics: an aspiration over dated objectives, each either an achievement or something to maintain, linked to any issue that serves it and to other goals. Progress is computed from the work linked to a goal, while health comes from short written check-ins, so a goal can show "60% done, at risk" honestly. The goal views (a linked graph, a Gantt and timeline with the critical path, and charts of where effort goes) live in the beads-ui web app, and an alignment score lifts the queue rank of work that serves Sergei's top goals, for his own work and for his agents'. Personal, private, sensitive and domain-specific goals live only in private stores on the personal machine pair, every link that touches them stays there, and client-side guards at every write, publish, push and message path refuse a marked record, and any goal record not marked shared, before it can reach a shared or public repository. Five calls are left for Sergei: the guard's mechanism, which lands in ai-harness ([D-13](#d-13)); whether the alignment score may reorder the fleet's agent queue ([D-8](#d-8)); where employer-domain goals live ([D-14](#d-14)), whether the first release leaves out the daily score he approved for the first system ([D-17](#d-17)), and whether client-side guards are strong enough for "never" or a server-side push gateway is needed ([D-20](#d-20)).
 
 ## Summary for a wide audience
 
@@ -112,7 +112,7 @@ A goal is a Beads issue of a custom `goal` type, added to each store's `types.cu
 | Field | Values | Why |
 |---|---|---|
 | `level` | `aspiration` or `objective` | Two levels above epics fit the evidence: a superordinate "be ..." goal over dated, measurable objectives |
-| `kind` | `achieve` or `maintain` | An achieve goal closes when met; a maintain goal never closes and demands work only when its condition fails |
+| `kind` | `achieve` or `maintain` | An achieve goal closes as done when met; a maintain goal never reaches done, only paused or dropped, and demands work only when its condition fails |
 | `target` | `{metric, start, current, target, unit}`, or `done_definition` text | Specific, measurable goals outperform vague ones, so a `perform` objective asks for a target; a `learn` or exploratory objective may carry a written definition of done instead, since measurable targets did no better for creative work |
 | `starts_at`, `ends_at` | dates | The ask's start and end; Beads has only `due_at` and an actual `started_at` |
 | `date_resolution` | `day`, `month`, `quarter`, `half`, `year` | A goal "for Q2" is not a goal "for 30 June" |
@@ -122,7 +122,7 @@ A goal is a Beads issue of a custom `goal` type, added to each store's `types.cu
 | `conflicts_with` | list of goal ids, optional | Goals that compete for the same effort ([D-4](#d-4)); shown on the graph, not used as an edge |
 | `checkin_every_days` | integer, optional | The owner's check-in cadence; without it a goal never shows "update missing" ([D-6](#d-6)) |
 | `band` | `{metric, low, high}`, required on a `maintain` goal | The condition a maintain goal keeps; outside the band the goal is breached |
-| `target_share` | `{person?: 0 to 1, agents?: 0 to 1}`, optional | The share of each pool's effort the owner wants on this goal; feeds the allocation factor ([D-7](#d-7)) |
+| `target_share` | `{person?, agents?}`, each greater than 0 and at most 1, optional; omitted means no target | The share of each pool's effort the owner wants on this goal; feeds the allocation factor ([D-7](#d-7)) |
 | `order` | fractional index, optional | "Your order right now" among a person's active goals, carried over from the first system's unique rank and ordered like D-6's rank; priority stays the weight ([D-18](#d-18)) |
 | `contributions` | `{member_id: "make" or "help"}` | Contribution strength until Beads can write edge metadata ([D-3](#d-3)) |
 | `docs` | list of repository paths or URLs | Plans and research attached to the goal, carried over from the first system |
@@ -143,11 +143,11 @@ flowchart TB
   E -->|parent-child| T
 ```
 
-Legend: arrows point from the serving item to what it serves; `make` counts fully toward progress and alignment, `help` counts half.
+Legend: arrows point from the serving item to what it serves; `make` weighs 1.0 and `help` 0.5 in alignment, while progress counts every member once whatever its strength.
 
 ### Progress and health
 
-A goal with no members shows "no data", never 0% progress: the first goals system failed exactly there, when its links broke and every goal read zero. A goal's members are a set keyed by each issue's store and id, so an issue linked directly and also reached through a linked epic, or through two ancestors, counts once, at its strongest contribution. Progress is computed from members: by default from estimates (done plus a quarter of in-progress, over the total), falling back to counts when fewer than half the members carry estimates, from sub-goals for an aspiration, or from the target metric when one is set ([D-5](#d-5)). Health is separate: the owner's latest check-in sets `on track`, `at risk` or `off track`, and an overdue check-in shows "update missing" rather than a guess. Monitoring progress is itself effective, so check-ins are short, prompted and recorded; there are no streaks, points or achievements ([D-6](#d-6)).
+A goal whose progress comes from work and has no members shows "no data", never 0% progress: the first goals system failed exactly there, when its links broke and every goal read zero. A goal's members are a set keyed by each issue's store and id, so an issue linked directly and also reached through a linked epic, or through two ancestors, counts once, at its strongest contribution. Progress is computed from members: by default from estimates (done plus a quarter of in-progress, over the total), falling back to counts when fewer than half the members carry estimates, from sub-goals for an aspiration, or from the target metric when one is set ([D-5](#d-5)). The other sources: `work_count` is done members plus a quarter of in-progress members, over all members; `subgoal` is the mean of the child goals' progress weighted by each child's priority factor, skipping children with no data; `metric` is (current - start) / (target - start), clamped to 0 and 1, and "no data" when target equals start; `manual` is the progress value of the latest check-in. Each source shows "no data" when its inputs are absent. Health is separate: the owner's latest check-in sets `on track`, `at risk` or `off track`, and an overdue check-in shows "update missing" rather than a guess. Monitoring progress is itself effective, so check-ins are short, prompted and recorded; there are no streaks, points or achievements ([D-6](#d-6)).
 
 ### Alignment
 
@@ -161,7 +161,7 @@ $$
 w_{g,k} = \pi(p_g)\,\alpha_{g,k}\,\sigma_g, \qquad \pi(p) = \frac{5 - p}{5}, \qquad \alpha_{g,k} = \operatorname{clip}\Bigl(1 + \frac{\tau_{g,k} - a_{g,k}}{\tau_{g,k}},\; 0.5,\; 2\Bigr)
 $$
 
-The terms, adopted from the theory research: $c_{i,g}$ is the strongest contribution path from item $i$ to goal $g$ (`make` 1.0, `help` 0.5, each `parent-child` step 1). $p_g$ is the goal's Beads priority, so P0 weighs 1.0 and P4 0.2. $k(i)$ is the pool that may execute the item, the person or the agents, from its assignee or an `executor` label; an item open to both is scored in both. The allocation factor $\alpha_{g,k}$ compares the goal's `target_share` $\tau_{g,k}$ for that pool with its actual share $a_{g,k}$ of the pool's closed effort over a trailing window, and is 1 when no target is set. The state factor $\sigma_g$ is 1 for an active achieve goal or a breached maintain goal, 0.5 for a maintain goal inside its band, halved again when its check-in is overdue, and 0 for a paused, dropped or done goal. The goal's order breaks ties only and never changes a weight ([D-18](#d-18)).
+The terms, adopted from the theory research: $c_{i,g}$ is the strongest contribution path from item $i$ to goal $g$ (`make` 1.0, `help` 0.5, each `parent-child` step 1). $p_g$ is the goal's Beads priority, so P0 weighs 1.0 and P4 0.2. $k(i)$ is the pool that may execute the item, the person or the agents, from its assignee or an `executor` label; an item open to both is scored in both. The allocation factor $\alpha_{g,k}$ compares the goal's `target_share` $\tau_{g,k}$ for that pool with its actual share $a_{g,k} = \sum_{j} c_{j,g}\, m_j \,/\, \sum_{j} m_j$ over the pool's items $j$ closed within `window_days`, each item counted once, attributed to the pool of the session or person that closed it. $m_j$ is the item's `estimated_minutes`, or 1 for every item when fewer than half the window's items carry estimates. $\alpha$ is 1 when no target is set or the window holds no closed items for that pool. The state factor $\sigma_g$ is 1 for an active achieve goal or a breached maintain goal, 0.5 for a maintain goal inside its band, halved again when its check-in is overdue, and 0 for a paused, dropped or done goal. The goal's order breaks ties only and never changes a weight ([D-18](#d-18)).
 
 Every constant is call-time config in `beads-ui.toml`:
 
@@ -175,7 +175,9 @@ state_in_band = 0.5
 state_overdue_factor = 0.5
 ```
 
-Alignment also flows backwards along `blocks` edges, so a decision or blocker that holds up goal-serving work inherits that work's alignment times `blocks_discount` per edge, up to `blocks_depth` edges; the Review queue then ranks Sergei's own answers by the goals they unblock. Completion is read from `closed_at`, never `updated_at`. Unaligned work keeps its WSJF score and appears in an "unaligned work" list, never hidden, though aligned work can now overtake it in the queue. Agent-proposed links count only after Sergei reviews them, which closes the score's main gaming path. Where the score changes ordering is [D-8](#d-8), left for Sergei.
+Valid values: `beta` a finite number from 0 to 4; `blocks_discount`, `state_in_band` and `state_overdue_factor` finite numbers greater than 0 and at most 1; `blocks_depth` an integer from 0 to 5; `window_days` an integer from 1 to 365. Anything else is out of range.
+
+Alignment also flows backwards along `blocks` edges, so a decision or blocker that holds up goal-serving work inherits that work's alignment times `blocks_discount` per edge, up to `blocks_depth` edges, taking the largest value over all paths rather than a sum, visiting each item once so cycles end, and ignoring an agent-created `blocks` edge until Sergei accepts it; the Review queue then ranks Sergei's own answers by the goals they unblock. Completion is read from `closed_at`, never `updated_at`. Unaligned work keeps its WSJF score and appears in an "unaligned work" list, never hidden, though aligned work can now overtake it in the queue. Agent-proposed links count only after Sergei reviews them, which closes the score's main gaming path. Where the score changes ordering is [D-8](#d-8), left for Sergei.
 
 ### Goal views
 
@@ -192,7 +194,7 @@ The goal views live in the beads-ui web app ([the web app design](beads-ui-web-a
 
 ### Private goals over shared work
 
-A private goal can be served by work in a shared store. Its links live in the private store ([D-12](#d-12)), so the web app on the personal pair joins them with the shared work at read time: progress, cycle checks and the critical path run in core over the joined set, and a store that cannot be read shows "no data" for the goals that depend on it ([D-19](#d-19)). The join only reads shared stores. An edit made to shared work from the goal views goes through the web app's guarded write API, which runs the private term-list check before it writes.
+A private goal can be served by work in a shared store. Its links live in the private store ([D-12](#d-12)) as the goal's `external_members` record keyed by `{repository, issue id}`, because a Beads edge's first endpoint must be local and a shared issue cannot be the source of an edge in the private store; same-store members keep the native `relates-to` edge, so the web app on the personal pair joins them with the shared work at read time: progress, cycle checks and the critical path run in core over the joined set, and a store that cannot be read shows "no data" for the goals that depend on it ([D-19](#d-19)). The join only reads shared stores. Every web write to a shared-store issue on the personal pair, from any view, goes through the web app's one guarded write API, which runs the private term-list check before it writes.
 
 ### The private-goal guard
 
@@ -200,7 +202,7 @@ Private records live only in Beads stores of private-class repositories on the p
 
 | Guard point | What it refuses | Built on |
 |---|---|---|
-| `bd` create and update | A marked goal, a task under one, or a goal record not marked `shared`, written into a shared store | `bd-new` and the store registry |
+| Writes through `bd-new` and the web app's write API | A marked goal, a task whose own marking is restricted, or a goal record not marked `shared`, written into a shared store | `bd-new`, the web write API and the store registry; Beads has no write hook, so a raw `bd create` or `update` is caught at publication and pre-push |
 | Store publication | Publishing a shared store that holds such a record, through the publisher or the raw `bd dolt push` | the store publisher, and a wrapper that refuses the raw verb for shared stores |
 | Pre-commit and pre-push, full pushed range | Marked records, private-class ids and private-store references in any committed file, in every shared and public repository | the staged secret-scan gate with a private-id rule for hash and slug ids; the public-repo checker's external denylist; the `privacy_class` registry |
 | Carrier send | A marked body in git-inbox, Agent Mail or held items routed to a shared repository | the artifact routing table's refuse-by-default row |
@@ -233,10 +235,10 @@ Legend: nothing private flows into a shared repository; the solid edge is a read
 |---|---|
 | Web server responses for private-store records | `Cache-Control: no-store`; never written to a server-side cache |
 | The browser | no persistent client cache of private-store records: no IndexedDB or local storage of their titles or bodies |
-| Application logs | record ids and counts only for private-store records, never titles, bodies or goal names |
+| Application logs | record ids and counts only for private-store records, never titles, bodies or goal names; written only on the personal-pair host, kept 14 days, and excluded from every backup or export that leaves that pair |
 | Backups of private stores | stay on personal-pair hosts and are never copied to a shared remote or an employer host |
 
-Phase G3 tests each row.
+Phase G1 tests the backup row and Phase G3 the other rows.
 
 ### Prior work
 
@@ -262,11 +264,12 @@ Goal (Beads issue, issue_type = "goal")
     conflicts_with?: [ <goal-id> ],
     checkin_every_days?: integer,
     band?: { metric, low, high },               # required when kind = maintain
-    target_share?: { person?: 0..1, agents?: 0..1 },
+    target_share?: { person?: (0, 1], agents?: (0, 1] },   # omitted = no target; 0 is rejected
     order?: fractional-index string,             # optional "your order right now" (D-18)
     docs?: [ <repo path or URL> ],
     lifecycle?: "paused" | "dropped", lifecycle_reason?,
-    contributions: { <member-id>: "make" | "help" },   # a milestone is a member of Beads' milestone type
+    contributions: { <repo>:<issue-id>: "make" | "help" },   # keyed by canonical identity; a milestone is a member of Beads' milestone type
+    external_members?: { <repo>:<issue-id>: "make" | "help" },   # members in other stores (D-19): Beads edges cannot point from a shared issue to a private goal
     links_pending_review: [ <edge ref> ]       # agent-proposed links
   }
 Any issue (goal or task)
@@ -299,8 +302,10 @@ The guard ships before the goal type, so no marked record can exist before somet
 
 ### Phase G1: The private-goal guard (lands in ai-harness, installed on every profile)
 
+Phase G1 starts once Sergei has ruled [D-13](#d-13) and [D-20](#d-20); the criteria below are written for their recommended options.
+
 - **Scope:** the six guard points of [The private-goal guard](#the-private-goal-guard); the wrapper for the raw `bd dolt push`; the private-id scan rule extended to hash and slug ids; the shared-by-default repository rule and the `privacy_class` registry; the host-class rule; the periodic scan on a personal host.
-- **Deliverables (ai-harness):** `scripts/private_goal_guard.py`, a module with one entry point per guard point, and its tests `tests/test_private_goal_guard.py` (one red-arm and one green-arm case per entry point) and `tests/test_bd_dolt_push_wrapper.py`; hooks wired at `bd` create and update, at store publication and the raw `bd dolt push`, at pre-commit and pre-push over the full pushed range, at git-inbox, Agent Mail and held-item send, and at host startup; the private term list read from a personal-host-only path, never tracked; the periodic scan as a timer on a personal host; `docs/procedures/private-goal-guard.md`; tests for every guard point.
+- **Deliverables (ai-harness):** `scripts/private_goal_guard.py`, a module with one entry point per guard point, and its tests `tests/test_private_goal_guard.py` (one red-arm and one green-arm case per entry point) and `tests/test_bd_dolt_push_wrapper.py`; write-time checks in `bd-new` and the web app's write API (Beads has no write hook, so a raw `bd create` or `update` is caught by the publication and pre-push checks), hooks at store publication and the raw `bd dolt push`, at pre-commit, commit-msg and pre-push over the full pushed range, at git-inbox, Agent Mail and held-item send, and at host startup; the private term list read from a personal-host-only path, never tracked; the periodic scan as a timer on a personal host; `docs/procedures/private-goal-guard.md`; tests for every guard point.
 - **Tasks + acceptance criteria:**
   - **T-G1.1 Store writes**
     - [ ] `When a goal whose marking is personal, private, sensitive or domain is created or updated in a store of a shared-class repository, the system shall refuse the write.`
@@ -311,6 +316,8 @@ The guard ships before the goal type, so no marked record can exist before somet
     - [ ] `When a goal-type record whose marking is not shared, or is absent, is written to a store of a shared-class repository, the system shall refuse the write.`
     - [ ] `When the same records are written to a store of a private-class repository on a personal-pair host, the system shall allow them.`
     - [ ] `If the store's repository class cannot be read, then the system shall refuse the write as shared.`
+    - [ ] `When a raw bd create or update writes a record T-G1.1 refuses into a shared-class store, the publication check of T-G1.2 shall refuse that store before it leaves the host.`
+    - [ ] `When a shared task whose own marking is shared serves a private goal, the system shall allow it in the shared store and shall not change its marking.`
   - **T-G1.2 Publication**
     - [ ] `When a shared-class store is published through the store publisher and it holds a record T-G1.1 refuses, the system shall refuse the publication before any Dolt push.`
     - [ ] `When the publisher refuses, its message shall give the count of such records and no record text or id.`
@@ -323,10 +330,16 @@ The guard ships before the goal type, so no marked record can exist before somet
   - **T-G1.4 Carriers and held items**
     - [ ] `When git-inbox, Agent Mail or the held store would send or commit a body carrying a marked record to a shared-class repository, the system shall refuse it.`
     - [ ] `When a carrier refuses such a body, it shall permit a pointer-only message to the same recipient.`
+    - [ ] `When founding-ask capture would record an ask carrying a marked record into a shared-class repository, it shall refuse and record a pointer only.`
+    - [ ] `When a commit, push or carrier send runs on a personal-pair host, the guard shall also run the private term-list scan over the outgoing text, and shall refuse a match without echoing it.`
+    - [ ] `When a private store is backed up, the backup shall be written only to a personal-pair host path, and a test shall show the backup step refusing a shared remote as its destination.`
   - **T-G1.5 Host startup, the employer exception and the periodic scan**
     - [ ] `When a host of the employer class starts the web app or the store refresher and finds a private-class store present, the system shall refuse to open it and report the store count only.`
     - [ ] `While the private term list is absent on an employer-class host, the content scan shall report not-declared, and the structural rules of T-G1.1 to T-G1.4 shall still refuse.`
-    - [ ] `When the periodic scan runs on a personal-pair host and finds a marked record or private id in a shared-class repository's tip, the system shall file a report in a private store and never in a shared one.`
+    - [ ] `When the periodic scan runs on a personal-pair host, it shall scan every ref, every carrier ref and the shared stores' history added since its last watermark, not only the tip.`
+    - [ ] `When the periodic scan finds a marked record or private id, it shall file a report in a private store, never in a shared one, and the report shall name the commit and path without the matched text.`
+    - [ ] `When a leak is pushed and then removed before the next scan, the scan shall still find it in history.`
+    - [ ] `When a commit message on a personal-pair host matches the private term list, the commit-msg hook shall refuse the commit without echoing the match.`
     - [ ] `When a reader that copies text out of Beads stores (recall indexing, transcript harvesting, a delegate's brief) runs on a host, it shall read only the repositories that host's allowlist permits, and a red-arm test per reader shall show it skipping a private-class store.`
   - **T-G1.6 Installation**
     - [ ] `When install.sh apply runs on any machine profile, the system shall install every guard and the bd dolt push wrapper.`
@@ -339,20 +352,38 @@ The guard ships before the goal type, so no marked record can exist before somet
 - **Deliverables:** `plugins/beads-ui/core/src/goals/{model,links,join,progress,health,order}.ts`, exported from the core package's index; the store config change; `docs/procedures/goals.md`; tests `plugins/beads-ui/core/test/goals/*.test.ts`.
 - **Tasks + acceptance criteria:**
   - **T-G2.1 Model and links**
-    - [ ] `When a goal is created, the system shall default its marking to private and its level to objective, and shall require a title and a level.`
-    - [ ] `When an objective whose orientation is perform is created without a target, the system shall ask for one, and when its orientation is learn it shall accept a definition of done instead.`
-    - [ ] `When an issue is linked to a goal with a strength of make or help, the system shall write a relates-to edge from the issue to the goal and record the strength in the goal's contributions map.`
+    - [ ] `When a goal is created, the system shall default its marking to private.`
+    - [ ] `When a goal is created without a level, the system shall default it to objective.`
+    - [ ] `If a goal is created without a title, then the system shall refuse it and name the field.`
+    - [ ] `When an objective whose orientation is perform is created without a target, the system shall ask for one.`
+    - [ ] `When an objective whose orientation is learn is created with a definition of done and no target, the system shall accept it.`
+    - [ ] `If classifyEdge receives an edge where neither endpoint is a goal, then it shall return not-a-goal-edge and the goal views shall ignore the edge.`
+    - [ ] `When an issue in the goal's own store is linked to the goal with a strength of make or help, the system shall write a relates-to edge from the issue to the goal and record the strength in the goal's contributions map under the issue's canonical key.`
+    - [ ] `When an issue in another store is linked to a private goal, the system shall record it and its strength only in the goal's external_members, keyed by repository and issue id, and shall write nothing to the issue's store.`
+    - [ ] `When an external_members entry names an issue in a shared-class repository the host's allowlist permits, the system shall read it and count it as a member.`
+    - [ ] `If an external_members entry names a repository the host's allowlist does not permit, a repository of unknown class, or an issue that cannot be read, then the system shall show that member as unreadable and count it as no data.`
     - [ ] `If a goal link would create a cycle among goals, then the system shall refuse it and name the cycle.`
     - [ ] `If a parent-child edge would make an issue that is not a goal the parent of a goal, then the system shall refuse it.`
+    - [ ] `When a goal-to-goal parent-child edge is written, the system shall allow an objective under an aspiration or under another objective, and shall refuse an aspiration under any goal.`
     - [ ] `When the core reads a relates-to edge, the system shall treat it as membership only when its target is a goal and its source is not, and as a goal relation when both endpoints are goals.`
     - [ ] `When a private goal's links name work in a shared store, the core shall join them with that work at read time and run the cycle check over the joined edges.`
     - [ ] `When the core joins private links with shared work, it shall write nothing to the shared store.`
     - [ ] `If the goal model receives metadata.goal with an unknown level, kind or progress source, then it shall reject the record and name the field.`
     - [ ] `If a maintain goal has no band, then the system shall refuse to save it and name the band field.`
+    - [ ] `If a target_share value is 0, negative or above 1, then the system shall refuse to save it and name the field.`
   - **T-G2.2 Progress and health**
     - [ ] `When a goal's progress source is work_estimate and at least half its members carry estimates, the system shall compute progress as done points plus a quarter of in-progress points over total points, counting an epic's children through descendant inclusion.`
     - [ ] `If fewer than half the members carry estimates, then the system shall compute progress from counts and label the method.`
-    - [ ] `If a goal has no members, then the system shall show "no data" and shall not show 0% progress.`
+    - [ ] `When make and help members are otherwise equal, the progress computed for work_estimate and work_count shall be the same, since strength weights alignment only.`
+    - [ ] `When a goal's progress source is work_count, the system shall compute done members plus a quarter of in-progress members over all members.`
+    - [ ] `When a goal's progress source is subgoal, the system shall compute the mean of its child goals' progress weighted by each child's priority factor, skipping children with no data.`
+    - [ ] `If every child goal has no data, then a subgoal-sourced goal shall show "no data".`
+    - [ ] `When a goal's progress source is metric, the system shall compute (current - start) / (target - start), clamped to 0 and 1.`
+    - [ ] `If a metric-sourced goal's target equals its start or a metric value is missing, then the system shall show "no data" and name the field.`
+    - [ ] `When a goal's progress source is manual, the system shall show the progress value of its latest check-in.`
+    - [ ] `If a manual-sourced goal has no check-in with a progress value, then the system shall show "no data".`
+    - [ ] `If a goal whose progress source is work_estimate or work_count has no members, then the system shall show "no data" and shall not show 0% progress.`
+    - [ ] `When a goal whose progress source is subgoal, metric or manual has no work members, the system shall compute its progress from that source alone.`
     - [ ] `If a store holding a goal's members or links cannot be read, then the system shall show "no data" for that goal, name the store's repository class, and shall not show 0% progress.`
     - [ ] `When an issue is linked to a goal directly and is also reached through a linked epic or through two linked ancestors, the system shall count it once, at its strongest contribution.`
     - [ ] `If a contributions map entry names an issue with no membership edge, then the system shall ignore it, and if a membership edge has no map entry, then the system shall count it as help.`
@@ -364,8 +395,11 @@ The guard ships before the goal type, so no marked record can exist before somet
     - [ ] `If a check-in comment's first line does not parse, then the system shall keep the previous health and show the parse error on the comment.`
   - **T-G2.3 Lifecycle and order**
     - [ ] `When a goal is dropped, the system shall require a reason and shall offer to create or pick a replacement goal.`
+    - [ ] `If a maintain goal is set to done, then the system shall refuse and offer paused or dropped.`
     - [ ] `While a goal is paused, the system shall exclude it from alignment weights and from overdue warnings.`
     - [ ] `When a goal is reordered, the system shall write its order as a fractional index between its neighbours and shall not renumber other goals.`
+    - [ ] `If orderBetween receives two neighbours with equal keys, then it shall return a key after both and record the collision.`
+- **Public core functions and their failure-path criteria:** `parseGoal` (unknown level, kind or source; missing band), `classifyEdge` (an edge whose endpoints are neither goal nor member), `linkMember` (a goal cycle; a non-goal parent of a goal), `joinPrivateLinks` (an unreadable store), `computeProgress` (each source's missing-input case), `healthFromCheckins` (an unparseable first line), `orderBetween` (equal neighbours), each with the criterion named in T-G2.1 to T-G2.3; `criticalPath` (a cycle) in Phase G3; `goalWeight` and `alignment` (bad config, an empty window) in Phase G4.
 - **Exit gate:** beads-ui `npx tsc --noEmit && npx vitest run` green; a goal tree with members created in a test store, including a private goal served by shared work, and its progress verified by hand, recorded in the Approval Log.
 
 ### Phase G3: The goal views (web app, mod and MCP App)
@@ -373,7 +407,10 @@ The guard ships before the goal type, so no marked record can exist before somet
 - **Scope:** goal tree, goal health board, goal graph, timeline and Gantt with critical path, allocation charts, goal review in the Review queue; the web app's write API check; the mod's goal indicator and Goals view.
 - **Deliverables:** `plugins/beads-ui/core/src/goals/{critical-path,graph-model}.ts`; `packages/web-ui/src/goals/*`; `apps/web/server/write-guard.ts`; `plugins/beads-ui/` goal indicator and view; tests `plugins/beads-ui/core/test/goals/critical-path.test.ts`, `packages/web-ui/test/goals/*.test.tsx`, `apps/web/test/write-guard.test.ts`, `apps/web/e2e/goals.spec.ts`.
 - **Tasks + acceptance criteria:**
-  - [ ] `When the goal graph renders, the system shall draw each goal and its members with React Flow nodes laid out by ELK, and draw blocks edges as blocker lines.`
+  - [ ] `When the goal graph renders, the system shall draw each goal and its members as React Flow nodes laid out by ELK.`
+  - [ ] `When the goal graph renders, the system shall draw each blocks edge as a blocker line.`
+  - [ ] `When the goal graph renders, the system shall draw membership (make, help, external), refines (parent-child between goals), goal relates-to and conflicts_with as distinct line styles explained in a legend, each with an accessible description.`
+  - [ ] `When the user filters the goal graph by edge class, the system shall hide the other classes and keep the hierarchy direction from aspiration down to work.`
   - [ ] `When the goal graph renders, every node shall be reachable by keyboard and carry an accessible name.`
   - [ ] `When the goal health board renders, the system shall list goals in priority order with health, progress, pace, staleness and open blockers.`
   - [ ] `When the user moves a goal in the goal tree by drag or by the keyboard's move commands, the system shall re-parent or reorder it through T-G2.1's checks and T-G2.3's order write.`
@@ -382,12 +419,14 @@ The guard ships before the goal type, so no marked record can exist before somet
   - [ ] `If a member has no dates, then the timeline shall list it in an undated lane rather than placing it at today.`
   - [ ] `If the critical-path module receives a dependency cycle, then it shall return the cycle as an error and draw no path.`
   - [ ] `When the allocation view renders, the system shall show closed and in-progress effort by goal for the person and for agents separately, and list work with no goal.`
-  - [ ] `When an edit to a shared-store issue is made from a goal view on the personal pair, the write API shall run the private term-list check and refuse a matching edit without echoing the text.`
+  - [ ] `When any web route writes to a shared-store issue on the personal pair, it shall go through the one guarded write API, which runs the private term-list check and refuses a matching write without echoing the text.`
+  - [ ] `When a test enumerates the web server's mutating routes, each shall be shown to reach the guarded write API, with a red-arm case per route.`
   - [ ] `When a goal's check-in is overdue, a goal is paused with no replacement, or an agent-proposed link awaits review, the Review queue shall list the item under goal review, in goal priority order.`
   - [ ] `When an issue serves one or more goals, the mod's task row shall show a goal indicator naming the goal with the highest weight.`
   - [ ] `When the mod's Goals view opens, it shall list the store's goals in order with their progress and health.`
   - [ ] `When the MCP App renders a goal, it shall draw it from the same core goal view model the web app uses.`
-  - [ ] `When the web server returns a private-store record, it shall send Cache-Control: no-store, and the app shall keep no copy of its title or body in persistent browser storage.`
+  - [ ] `When the web server returns a private-store record, it shall send Cache-Control: no-store.`
+  - [ ] `When the app receives a private-store record, it shall keep no copy of its title or body in persistent browser storage.`
   - [ ] `When the web server logs a request touching a private-store record, the log line shall carry ids and counts only.`
 - **Exit gate:** beads-ui gate green; Playwright goals specs green at 390 px and 1280 px; the views used on a real store on the personal pair, recorded in the Approval Log.
 
@@ -399,11 +438,17 @@ The guard ships before the goal type, so no marked record can exist before somet
   - [ ] `When an item's goals and contribution strengths are known, the system shall compute its alignment as the noisy-OR of strength times goal weight, capped at 1.`
   - [ ] `When the system computes a goal's weight for a pool, it shall multiply the priority factor, the allocation factor and the state factor defined in Alignment, reading every constant from [goals.alignment] at call time.`
   - [ ] `When the alignment module is given the research's worked example as input, it shall reproduce that example's alignments and order exactly.`
+  - [ ] `When each [goals.alignment] key is given its lowest valid value, its highest valid value, a value just outside each bound, a non-number and an infinite number, the system shall accept the first two and treat the rest as out of range.`
   - [ ] `If [goals.alignment] is missing or holds a value out of range, then the system shall use the documented defaults, name the bad key, and shall not stop ordering the queue.`
   - [ ] `If a goal has a target_share for a pool but the window holds no closed work for that pool, then the allocation factor shall be 1.`
+  - [ ] `When the window's closed items carry estimates for at least half of them, the system shall weight each by its estimated_minutes, and otherwise shall weight every item 1.`
+  - [ ] `When an item closed in the window serves the goal, the system shall count it once, in the pool of whoever closed it, at its strongest contribution.`
   - [ ] `When an item's alignment is known, the system shall compute its score as the WSJF composite times one plus beta times alignment.`
   - [ ] `If an item has a priority override, then the system shall order it by the override as it does today.`
-  - [ ] `When an item blocks goal-serving work, the system shall give it that work's alignment times the configured blocks discount.`
+  - [ ] `When an item blocks goal-serving work, the system shall give it the largest of (blocks_discount times the blocked item's alignment) over the items it blocks, following blocks edges up to blocks_depth and counting each item once.`
+  - [ ] `If blocks edges form a cycle, then the propagation shall visit each item once and terminate.`
+  - [ ] `When an agent created a blocks edge, the system shall not propagate alignment along it until Sergei accepts it.`
+  - [ ] `When the alignment module is given chains of depth 0 to blocks_depth, a diamond and several blocked items, it shall produce the values the recurrence defines.`
   - [ ] `When the Review queue orders Sergei's own items, it shall rank each by the alignment it unblocks.`
   - [ ] `When an agent proposes a goal link, the system shall record it as pending review and shall not count it in alignment until Sergei accepts it.`
   - [ ] `When a shared-store item's alignment depends on a private goal, the system shall compute it on the private side and shall not write the score or the goal's id into the shared store.`
@@ -433,7 +478,7 @@ The guard ships before the goal type, so no marked record can exist before somet
 | 3 | Maintenance work with no goal sinks | Hygiene work starves | Unaligned work keeps its WSJF score and its own list, though aligned work can overtake it; $\beta$ is call-time config; a breached maintain goal gets full weight |
 | 4 | Check-ins become nagging | Goals are abandoned or ignored | Check-ins are prompted only for goals Sergei owns, at his chosen cadence, from the Review queue; no streaks |
 | 5 | A private goal's existence leaks through a public item's rank | Indirect disclosure | Alignment for shared items is computed on the private side and never written back to a shared store |
-| 6 | The first system's failure repeats: goals lose their link to tasks | Goals become decoration | Membership is a Beads edge in the same store as the task, read by every view; an empty link set shows "no data", never 0%; a test pins the roll-up |
+| 6 | The first system's failure repeats: goals lose their link to tasks | Goals become decoration | Same-store membership is a Beads edge, cross-store membership a keyed record in the private goal, both read by every view; an empty link set shows "no data", never 0%; a test pins the roll-up |
 | 7 | `relates-to` means two things: membership (member to goal) and a goal-to-goal relation | A view misreads a link | Core reads the meaning from the endpoint types only, in one function with a test per case; the upstream edge-kind request removes the overload when it lands |
 | 8 | A strict goal order feels like a ranking to defend | Negative affect and conflict, measured for strict prioritisation | The order is optional and labelled "your order right now"; priority remains the weight |
 | 9 | A raw `bd dolt push` publishes a shared store without the publisher's check | A private row reaches every machine and stays in Dolt history | A wrapper refuses the raw verb for shared stores; the build measures whether pre-push runs for a Dolt push and adds the store check there if it does (T-G1.2) |
@@ -445,14 +490,14 @@ The guard ships before the goal type, so no marked record can exist before somet
 1. **[RESOLVED]** Which edge kind should carry goal membership: an overloaded `relates-to`, a new custom kind, or membership held in the goal's metadata, given that `tracks` already means sprint membership under D-5 of the beads-ui design?
    - **Resolution:** framed as a choice and decided in [D-2](#d-2): `relates-to` from member to goal, read by endpoint type, with a `contributes-to` kind requested upstream.
 2. Does Sergei's ruling on the prior-work compile ("don't worry about commit history ... just focus on files") also cover the ai-harness store's Dolt history and git-inbox ref history, both of which keep old content once published? This is about cleaning up content already published by the first goals system; nothing in this design depends on the answer, because the guard is forward-looking and refuses new marked records at every write and publish path. It is his ruling to scope, so it stays open for him.
-3. **[RESOLVED]** Where do employer-domain goals live: in the employer workspace's own store on the work pair, or in a separate store?
-   - **Resolution:** framed as a choice in [D-14](#d-14) and left for Sergei, with a recommendation.
-4. **[RESOLVED]** Should the alignment boost change the fleet-wide WSJF rubric's derived priority, or stay a separate ordering?
-   - **Resolution:** framed as a choice in [D-8](#d-8) and left for Sergei, with a recommendation.
-5. **[RESOLVED]** What from the first goals system's scoring and narrative layers should return?
-   - **Resolution:** decided in [D-17](#d-17): none in the first release; each layer's intent is served by a named mechanism.
+3. Where do employer-domain goals live: in the employer workspace's own store on the work pair, or in a separate store?
+   - Framed as a choice in [D-14](#d-14) and pending Sergei's ruling, with a recommendation.
+4. Should the alignment boost change the fleet-wide WSJF rubric's derived priority, or stay a separate ordering?
+   - Framed as a choice in [D-8](#d-8) and pending Sergei's ruling, with a recommendation.
+5. What from the first goals system's scoring and narrative layers should return?
+   - Framed as a choice in [D-17](#d-17), recommended none in the first release, pending Sergei's ruling because it departs from a design he approved.
 6. **[RESOLVED]** Can a server-side guard back up the client-side guards on these repositories?
-   - **Resolution:** by probe, read-only (2026-10-28): the repository rulesets endpoint answers for ai-harness, which has no rulesets, and the token does not expose the account's plan. Whether a push ruleset can be created is not proven without a write. Push rulesets match paths, extensions and sizes only, so they could not recognise a marked record anyway. [D-13](#d-13)'s client-side guards stand on their own; a path ruleset for private store directories is a possible later addition and is not required by any phase.
+   - **Resolution:** by probe, read-only (2026-10-28): the repository rulesets endpoint answers for ai-harness, which has no rulesets, and the token does not expose the account's plan. Whether a push ruleset can be created is not proven without a write. Push rulesets match paths, extensions and sizes only, so they could not recognise a marked record anyway. So no native GitHub feature can serve as a server-side content guard here. Whether a self-hosted push gateway is needed in its place is a separate choice, [D-20](#d-20), pending Sergei; a path ruleset for private store directories is a possible later addition and is not required by any phase.
 
 > **Feedback Round 1:** Your thoughts on the open questions:
 > 1. <!-- Response to question 2 -->
@@ -479,11 +524,11 @@ This design doc hosts the `/auto-flow` Run Ledger for the goals system's design 
 | research route | claude / opus, four `researcher` leaves (the fourth folding in aih-fw-2's prior-work compile) and one `auditor` verifier; synthesis by the Opus coordinator under the orchestrator authorship override |
 | doc route | claude / opus / n/a: the Opus coordinator authors this doc under `/doc --kind design --mode automated` through `flow_dispatch_doc.py --phase prepare` and `--phase complete`. Prepare pinned the integration snapshot at `4a3a17c` (lineage root `docs/research/goals-system.md`, lineage receipt `complete`, no protected decisions); `--phase complete` passed on 2026-10-28 against the same snapshot |
 | doc-audit route | codex / audit / high, cross-family: read-only review rounds through `cx audit`, each writing one evidence file, with the fixes made by the Opus coordinator. The audit loop's fix stage would have Codex write doc text, which this host's rule that Codex only reviews rules out |
-| decider | the Opus coordinator (`us.anthropic.claude-opus-5-5`) through `/decision-framework`; four decisions left for Sergei ([D-8](#d-8), [D-14](#d-14), [D-17](#d-17), [D-20](#d-20)) and one open question about the scope of his own ruling |
+| decider | the Opus coordinator (`us.anthropic.claude-opus-5-5`) through `/decision-framework`; five decisions left for Sergei ([D-8](#d-8), [D-13](#d-13), [D-14](#d-14), [D-17](#d-17), [D-20](#d-20)) and one open question about the scope of his own ruling |
 | max-agents | 3 concurrent children (launcher's cap); one at a time under the host's load holds of 2026-10-28 |
 | target commit (beads-ui) | `4a3a17c` when the design stage began |
 | worktree + branch | `/data/projects/beads-ui/.worktrees/aih-ec2-3-agents/bu-goals-webapp-coordinator` on `wt/aih-ec2-3/bu-goals-webapp-coordinator` |
-| stage cursor | `doc-audit`, round 2 next, after `doc done` (`flow_dispatch_doc.py --phase complete` passed against `4a3a17c`) and round 1 applied; the run stops when the audit converges, for Sergei's review |
+| stage cursor | `doc-audit` stopped after round 4, after `doc done` (`flow_dispatch_doc.py --phase complete` passed against `4a3a17c`) with rounds 1 to 4 applied. Round sizes were 11, 8, 6 and 9 MUST-FIX; each round's earlier fixes held except two defects round 3's fixes introduced, fixed in round 4. The launcher stopped the rounds here because both docs go to Sergei's review next, with the open items in round 4's row; round 4's fixes are unaudited |
 | last completed integration boundary | research landed on main at `4a3a17c` (PRs #78, #79, #80, #81) |
 
 ### Transition verdicts
@@ -498,6 +543,9 @@ This design doc hosts the `/auto-flow` Run Ledger for the goals system's design 
 | Round | Reviewer | Bytes audited | Evidence | Findings | Disposition |
 |---:|---|---|---|---|---|
 | 1 | codex / audit / high (cross-family) | working tree at sha256 `c47802cc55861b6796a203ab6dd1bf74a37301a70462b0c6035d88fe3546859e`, committed as the next commit after `69073cc` | [round 1 findings](../research/findings/evidence/beads-goals-system-design-audit-r1-2026-10-28.md) | 11 MUST-FIX, 2 WORTH-CONSIDERING | Fixed: the guarantee is stated to its mechanism and its strength goes to Sergei as D-20 (M1); a task's marking is its own and is not inherited (M2); one `metadata.privacy.marking` field for every record with defaults and criteria (M3); D-17 returned to Sergei under Gate B (M4); D-3's two writes made safe without atomicity (M5); `conflicts_with`, `checkin_every_days`, `band` and `target_share` added (M6); the full alignment formula and its config (M7); D-2's record names (a) only (M8); members are a set with one count per issue (M9); compound criteria split, failure paths and G1's file paths added (M10); a caches, logs and backups table (W2); this digest column (W1). Not changed (M11): the `task_id` in the canonical root is `BU-epic-goals-system-usmm`, this public repository's own store id, and the line must stay byte-identical for the fidelity check |
+| 2 | codex / audit / high (cross-family), leaf BU-ylx.11.2.2 | committed bytes at `2be7911` | [round 2 findings](../research/findings/evidence/beads-goals-system-design-audit-r2-2026-10-28.md) | 8 MUST-FIX; round 1 closure: 7 PASS, 4 PARTIAL, 1 FAIL | Fixed: shared members of a private goal are an `external_members` record keyed by repository and issue, since a Beads edge cannot start in another store (M1); every progress source has a formula and a no-data rule (M2); `target_share` excludes zero (M3); pending decisions labelled pending and all four in the feedback block (M4); founding-ask capture, personal-host term scanning and backups added to the guard (M5); the write boundary is `bd-new` and the web write API, with raw writes caught at publication, compound criteria split and the public functions listed (M6); the guard table's task rule corrected (M7); the blocks recurrence, its cap, cycles and agent-edge review (M8) |
+| 3 | codex / audit / high (cross-family), leaf BU-ylx.11.2.3 | working tree at sha256 `90bf84ee82d1be58bbe1dc17c5d13b91ddcc3c7e55ef1936b2171ab423930398` | [round 3 findings](../research/findings/evidence/beads-goals-system-design-audit-r3-2026-10-28.md) | 6 MUST-FIX, 1 WORTH-CONSIDERING | Fixed: same-store and cross-store link criteria split, cross-store writing only `external_members` (M1); the memberless no-data rule limited to work-based sources (M2); the allocation equation, weights and attribution (M3); commit-msg and watermark history scans (M4); compound criteria split and the two missing failure criteria added (M5); D-13 returned to Sergei, with Phase G1 gated on D-13 and D-20 (M6). The successor brief is the build issue BU-ylx.11.3, blocked by BU-ylx.11.2; its description has sha256 `2c669683a58856df171dea1a4a90421c83321fc94c1c80b436308d634e3e43f5` (10,146 bytes), read on 2026-10-28 (W1) |
+| 4 | codex / audit / high (cross-family), leaf BU-ylx.11.2.4 | working tree at sha256 `a62184435afd10e87d83d4a301af4da95d0e2dc9015dc6f06df966522e6e564d` | [round 4 findings](../research/findings/evidence/beads-goals-system-design-audit-r4-2026-10-28.md) | 9 MUST-FIX, 2 WORTH-CONSIDERING | Fixed: the allowed cross-store case (M1, a defect round 3's fix introduced); every web write route scanned (M3); every graph edge class drawn (M4); strengths weight alignment only (M5); config ranges (M6); maintain goals never done (M7); level pairs (M9); log sinks (W2). Open for Sergei's review, not fixed: M2, D-14's option (a) needs a domain repository class allowed on the work host, which is part of ruling D-14; M8, how private-derived alignment could reach the agents' queue without leaking, which is part of ruling D-8; W1, the build brief's body is recorded by digest only |
 
 <!-- /doc:region name="overview" -->
 
@@ -505,7 +553,7 @@ This design doc hosts the `/auto-flow` Run Ledger for the goals system's design 
 
 ## Design Decisions
 
-Every decision below was taken through the decision framework (`ai-harness/docs/procedures/decision-framework.md`): Gate 0 first, then the Authority test, then the five criteria, and each chosen option's Cons carry a mitigation. `✅ Resolved by Opus orchestrator` decisions are final for this run and go to Sergei's review with the rest of the doc, as he asked; D-8, D-14, D-17 and D-20 are left `⏳ PENDING (human)` because a gate fires on each.
+Every decision below was taken through the decision framework (`ai-harness/docs/procedures/decision-framework.md`): Gate 0 first, then the Authority test, then the five criteria, and each chosen option's Cons carry a mitigation. `✅ Resolved by Opus orchestrator` decisions are final for this run and go to Sergei's review with the rest of the doc, as he asked; D-8, D-13, D-14, D-17 and D-20 are left `⏳ PENDING (human)` because a gate fires on each.
 
 ### Decision Summary
 
@@ -523,7 +571,7 @@ Every decision below was taken through the decision framework (`ai-harness/docs/
 | D-10 | Critical path | (a) computed in core from dependency edges and dates; (b) none | (a) | | | The ask names dependency and blocker views on a Gantt | `✅ Resolved by Opus orchestrator` |
 | D-11 | Marking and default | (a) a marking field plus the store's class, new goals default to private; (b) the store alone; (c) a label | (a) | | | The guard must detect a record in the wrong store | `✅ Resolved by Opus orchestrator` |
 | D-12 | What a shared store may know of a private goal | (a) nothing; (b) an opaque id; (c) a digest | (a) | | | "Never make their way into" admits no trace | `✅ Resolved by Opus orchestrator` |
-| D-13 | The enforcement core | (a) structure first, scanning as backstop, six client-side guard points and a wrapper for the raw Dolt push; (b) scanning only; (c) encryption in the shared repositories | (a) | | | Leak paths include stores and free text; no server-side guard can see this content | `✅ Resolved by Opus orchestrator` |
+| D-13 | The enforcement core | (a) structure first, scanning as backstop, six client-side guard points and a wrapper for the raw Dolt push; (b) scanning only; (c) encryption in the shared repositories | (a) | | | Leak paths include stores and free text; no server-side guard can see this content | `⏳ PENDING (human)` |
 | D-14 | Where employer-domain goals live | (a) the employer workspace store on the work pair, marked domain; (b) a private store on the personal pair; (c) not supported | (a) | | | An employer-data boundary, Sergei's call | `⏳ PENDING (human)` |
 | D-15 | Where the private term list lives | (a) a personal-host-only file, never tracked; (b) tracked and encrypted | (a) | | | The employer host should hold no private content, the list included | `✅ Resolved by Opus orchestrator` |
 | D-16 | Reuse of the first goals system | (a) map selected concepts onto Beads, scoring optional and derived; (b) design from scratch; (c) adapt the archived services | (a) | | | The compile's own recommendation; Beads stays authoritative | `✅ Resolved by Opus orchestrator` |
@@ -1004,7 +1052,7 @@ Mitigation: the web app on the personal pair joins private and shared stores at 
 
 <a id="d-13"></a>
 
-#### D-13: The enforcement core — `✅ Resolved by Opus orchestrator`
+#### D-13: The enforcement core — `⏳ PENDING (human)`
 
 **Context.** The ask requires "an enforcement / validation etc system", not a convention. The research found the Beads store's publication path is the main leak route and that some writers bypass pre-commit. "Goal" already names the fleet's session-goal feature in hundreds of tracked paths, and no server-side guard is available on these repositories.
 
@@ -1034,11 +1082,11 @@ Mitigation: the web app on the personal pair joins private and shared stores at 
 
 ##### Recommendation
 
-> **Decision:** `✅ Resolved by Opus orchestrator` — (a) Structure first, scanning as a backstop, six client-side guard points.
-<!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5; ai-effort=high; ai-profile=architect -->
+> **Decision:** `PENDING` — recommended (a) Structure first, scanning as a backstop, six client-side guard points.
+<!-- decision-record: chosen-option=PENDING; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
 <!-- decision-lineage: decision-id=BU-ylx.11.2/D-13; decision-topic=how the private-goal rule is enforced; governs=privacy:guard; normalized-proposition=enforcement is structural at six client-side guard points with content scanning as a backstop; applicability=phase:G1; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
-The design has three limits. The store publisher is not the only publication path: Beads ships a raw `bd dolt push`, so G1 wraps it for shared stores and measures whether git pre-push sees a Dolt push (T-G1.2). The content scan cannot run on the employer host, where the term list never exists, so it reports `not-declared` there while the structural rules still refuse (T-G1.5). And unmarked private text, typed by hand or derived by an agent from a private goal, is seen only by the term-list scan on personal hosts and in the web app's write API. Mitigation for skipped guards: doctor reports each guard point per machine, the installer deploys them on every profile, and the periodic scan from a personal host catches a regression that slipped past a machine without them (T-G1.5, T-G1.6). Confidence: high on the structural rules, medium on the free-text backstop.
+The ask's enforcement requirement stands whatever is chosen; what Sergei rules is the mechanism, because every option installs guard and installer contracts in ai-harness and on every machine profile, which crosses repositories (audit round 3). The design has three limits. The store publisher is not the only publication path: Beads ships a raw `bd dolt push`, so G1 wraps it for shared stores and measures whether git pre-push sees a Dolt push (T-G1.2). The content scan cannot run on the employer host, where the term list never exists, so it reports `not-declared` there while the structural rules still refuse (T-G1.5). And unmarked private text, typed by hand or derived by an agent from a private goal, is seen only by the term-list scan on personal hosts and in the web app's write API. Mitigation for skipped guards: doctor reports each guard point per machine, the installer deploys them on every profile, and the periodic scan from a personal host catches a regression that slipped past a machine without them (T-G1.5, T-G1.6). Confidence: high on the structural rules, medium on the free-text backstop.
 
 ---
 
@@ -1239,7 +1287,7 @@ Mitigation: the goal tree shows priority as the weight and the order as position
 
 **Context.** [D-12](#d-12) keeps every link that touches a private goal in the private store, so a private goal served by work in a shared store has its links on one side and its work on the other. The research's verifier showed that this recreates the cross-store join the first goals system failed on, where a broken join read as 0% progress. The ask lets any task be assigned to any goal.
 
-##### (a) The personal-pair web server joins the private links with the shared work at read time; cycle checks, progress and the critical path run in core over the union; an unreadable store shows "no data"
+##### (a) The private goal records its shared members in `external_members` keyed by `{repository, issue id}`; the personal-pair web server joins them with the shared work at read time; cycle checks, progress and the critical path run in core over the union; an unreadable store shows "no data"
 
 **Pros:**
 - Any task can serve a private goal, as the ask allows, and the shared store learns nothing.
@@ -1317,7 +1365,10 @@ The recommendation rests on where the leak routes are: every route the research 
 
 > **Feedback Round 1:** Your approval/feedback on each decision:
 > 1. D-8: <approval or feedback>
-> 2. D-14: <approval or feedback>
+> 2. D-13: <approval or feedback>
+> 3. D-14: <approval or feedback>
+> 4. D-17: <approval or feedback>
+> 5. D-20: <approval or feedback>
 > - <enter feedback here>
 
 <!-- /doc:region name="decisions" -->
