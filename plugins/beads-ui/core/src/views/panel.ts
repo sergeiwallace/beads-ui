@@ -155,7 +155,7 @@ export interface TaskListOptions {
 }
 
 /** How many of `tasks` the rule draws before the rest collapse. */
-function drawnCount(tasks: readonly TaskRowView[], settings: PanelSettings): number {
+function drawnCount(tasks: readonly { group: TaskGroup }[], settings: PanelSettings): number {
   if (settings.collapse === "none") return tasks.length;
   if (settings.collapse === "open") {
     const pinned = tasks.filter((task) => task.group !== "open").length;
@@ -186,21 +186,11 @@ export function rowWindow(
 }
 
 export function taskListView(issues: readonly Issue[], options: TaskListOptions): TaskListView {
-  const tasks = panelTasks(issues, options.statuses).map((issue): TaskRowView => {
-    const group = taskGroupOf(issue, options.statuses) ?? "open";
-    const glyph = TASK_GLYPHS[group];
-    return {
-      id: issue.id,
-      group,
-      glyph,
-      priorityToken: priorityToken(issue.priority),
-      label: truncate(
-        `${glyph} P${issue.priority} ${issue.displayId ?? issue.id} ${issue.title}`,
-        options.width,
-      ),
-      gutter: options.gutter?.(issue) ?? [],
-    };
-  });
+  const tasks = panelTasks(issues, options.statuses).map((issue) => ({
+    issue,
+    id: issue.id,
+    group: taskGroupOf(issue, options.statuses) ?? "open",
+  }));
   const counts = { in_progress: 0, blocked: 0, open: 0 };
   for (const task of tasks) counts[task.group]++;
   const drawn = drawnCount(tasks, options.settings);
@@ -215,8 +205,23 @@ export function taskListView(issues: readonly Issue[], options: TaskListOptions)
   );
   const above = start;
   const below = visible.length - end;
+  // Only the window's rows get a label and a gutter: the list redraws on every focus step, and
+  // a long one draws a small part of its rows.
   return {
-    rows: visible.slice(start, end),
+    rows: visible.slice(start, end).map(({ issue, group }): TaskRowView => {
+      const glyph = TASK_GLYPHS[group];
+      return {
+        id: issue.id,
+        group,
+        glyph,
+        priorityToken: priorityToken(issue.priority),
+        label: truncate(
+          `${glyph} P${issue.priority} ${issue.displayId ?? issue.id} ${issue.title}`,
+          options.width,
+        ),
+        gutter: options.gutter?.(issue) ?? [],
+      };
+    }),
     total: tasks.length,
     counts,
     hidden,
