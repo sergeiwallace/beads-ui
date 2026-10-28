@@ -352,7 +352,7 @@ export type ReviewListEntry =
   | { kind: "item"; row: ReviewRow };
 
 export interface ReviewListView {
-  /** `Review: 3 of 12 items, the pair's (acn-mac, sem-kg-ec2)`. */
+  /** `Review: 3 of 12 items, the pair's (host-a, host-c)`. */
   heading: string;
   /** What the scope control says, and what its key switches to; undefined without a toggle. */
   scope?: { label: string; next: string };

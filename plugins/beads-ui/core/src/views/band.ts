@@ -59,7 +59,7 @@ export function parseStoreInventory(text: string): Result<BandStore[], string> {
   return { ok: true, value: stores };
 }
 
-/** A firstmate session's name ends `-firstmate-<N>`, as `aih-ec2-firstmate-1` does. */
+/** A firstmate session's name ends `-firstmate-<N>`, as `ops-vm-firstmate-1` does. */
 export const isFirstmate = (session: string): boolean => /-firstmate-\d+$/.test(session);
 
 /**
