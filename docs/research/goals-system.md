@@ -81,6 +81,75 @@ Sergei asked on 2026-10-27 for a goals system as a fundamental part of the Beads
 
 Product, library and practice claims weight 2026 first, then 2025, then 2024. Goal science has no cutoff: its foundational theory and meta-analyses predate 2024 and are cited with their publication dates. Fleet claims (Beads 1.3.x, the beads-ui design, the fleet's repo classes and guards, the prior goals work) are read at the commits each findings file names, measured on 2026-10-27 and 2026-10-28 UTC. Each research leg's full evidence, with its footnoted sources, is in its findings file under [findings/](findings/); this doc synthesizes them and cites the findings file for detail.
 
+<!-- exec-summary-slot -->
+
+## 1. Goal and OKR products
+
+Atlassian Goals is "just okay" for a documented reason: it does not compute a goal's progress from the work linked to it. Its own help says that when several work items link to one goal, "progress won't be automatically calculated across all of them", and it caps linked Jira work items at 100 per goal [VERIFIABLE][^2][^3]. Plane and ClickUp count completed work, and Asana names its progress sources most precisely: a goal's progress is `manual`, `subgoal_progress`, `project_task_completion`, `project_milestone_completion`, `task_completion` or `external`, and each supporting link carries a `contribution_weight` from 0 to 1 [VERIFIABLE][^4][^5].
+
+The better products keep health and progress as two separate signals. Linear derives a project's health from its most recent written update, flags "Update Missing" when an update is overdue, and computes progress from estimate points as completed plus a quarter of in-progress over the total [VERIFIABLE][^6][^7]. Health answers "is this on track, in the owner's judgment", progress answers "how much of the work is done", and a goal view needs both.
+
+Products have started exposing goals to AI agents. Perdoo ships an MCP server whose tools list OKRs and log progress updates, Tability sells to "both human and Agent teams" with agent check-ins, and Linear lets a user filter and segment work by the agent it was delegated to [VERIFIABLE][^8][^9][^10]. None shows whether agent effort is going to the highest-priority goals, so that view is new design work (see [§5](#5-goal-alignment-for-a-persons-and-their-agents-work)).
+
+The full product survey, with a comparison table across licence tiers, is in the products leg's findings [VERIFIABLE][^1]. Its gaps: no web-search tool reached the leg, so user sentiment and four vendors' goal pages are unverified there [NO SOURCE].
+
+### When to use
+
+Copy Asana's typed progress sources and weighted links, and Linear's split of health from progress. Avoid Atlassian's manual-only progress.
+
+## 2. How goals link to work
+
+Goal-to-work is many-to-many in every product that models it well, and goal-to-goal is a tree with an optional second parent. Linear joins projects to initiatives through a separate `InitiativeToProject` record, so a project can sit under several initiatives; Asana returns "all of the parent goals of a goal"; GitHub sub-issues keep one parent [VERIFIABLE][^7][^4][^11]. The founding ask's "assign all beads tasks to one or more goals (or no goals)" is exactly this many-to-many shape, and its "relates to and dependencies and blocks" between goals matches Linear's initiative relations and Beads' own `relates-to` and `blocks` edges [INFERENCE][^1].
+
+Privacy boundaries break links in the products that have them. Atlassian restricts a goal only at creation, applies the restriction to its whole hierarchy, and forbids links between restricted and open goals [VERIFIABLE][^12]. Where a private goal lives in a different repository from the public work it serves, the link records must live on the private side, or the public store leaks the private goal's id (see [§8](#8-privacy-and-access-control-for-personal-goals)) [INFERENCE][^1].
+
+### When to use
+
+Model goal membership as a link from the goal to each member, many-to-many, with descendant inclusion: linking an epic counts its children, as Plane does [INFERENCE][^1].
+
+<!-- sections-3-5-slot -->
+
+## 6. Visualisation patterns and libraries
+
+For the hierarchical linked goal graph, React Flow (`@xyflow/react` 12.12.0, MIT, about 38,800 GitHub stars) with ELK's layered layout running in a Web Worker fits D-10's React stack best [VERIFIABLE][^13][^14]. React Flow draws DOM nodes with keyboard focus, ARIA labels and a live region, which no canvas or WebGL graph library in the survey offers [VERIFIABLE][^13]. Two costs come with it: its expand-and-collapse and auto-layout examples are paid "Pro" examples, and ELK is EPL-2.0 with the largest bundle of the layout engines React Flow compares, so dagre serves pure-tree layouts when ELK is not loaded [VERIFIABLE][^13].
+
+No permissive open-source Gantt library offers a critical path. SVAR React Gantt and DHTMLX Gantt both reserve auto-scheduling and critical path for paid PRO editions, and Frappe Gantt draws dependency arrows but has no hierarchy [VERIFIABLE][^15][^16][^17]. (Frappe Gantt released 1.2.2 on 2026-02-25 per the npm registry; the products leg's "no release since February 2025" is superseded by the web app UX leg's registry read [VERIFIABLE][^18].) The cheapest route to the founding ask's Gantt, timeline and dependency lines is a custom SVG timeline on visx, shared with the beads-ui Phase 3 Roadmap, with critical path computed in the DOM-free core [INFERENCE][^1].
+
+Recharts, already in D-10, ships `Sankey`, `Treemap`, `SunburstChart` and `RadialBarChart`, which covers effort-allocation and progress-ring views with no new chart library [VERIFIABLE][^19].
+
+| View | Pick | Why |
+|---|---|---|
+| Goal graph (hierarchy, links, blockers) | React Flow with ELK (dagre for trees) | Accessible DOM nodes, D-10 fit |
+| Gantt, timeline, roadmap | Custom SVG on visx, critical path in core | No permissive library has a critical path |
+| Effort allocation, progress rings | Recharts (already chosen) | No new dependency |
+| Goal tree editing | TanStack Table expanding rows with Pragmatic drag and drop | One drag library in the app |
+
+### When to use
+
+The graph view answers "what serves this goal and what blocks it". The timeline answers "when, and what is on the critical path". The allocation charts answer "where is the effort actually going".
+
+<!-- sections-7-9-slot -->
+
+## 10. Fit with Beads
+
+Beads 1.3.2 can hold goals without a schema change, though not cleanly [VERIFIABLE][^20]. A custom `goal` type is allowed through `types.custom` per store; priority, `due_at` and dependency edges already exist; and `bd dep cycles` checks for cycles. Beads has no planned start date, no progress or target-value field, `--parent` allows one parent only, and no CLI flag writes the `metadata` column on a dependency edge, so contribution weights have no writable home today [VERIFIABLE][^20].
+
+| Need | Beads 1.3.2 today | Gap |
+|---|---|---|
+| A goal type | Custom types via `types.custom` | No built-in `goal` type |
+| Goal above epic | `parent-child`, one parent | A goal can parent an epic, but the epic then has only that goal |
+| Many-to-many membership | `blocks`, `tracks`, `related`, `relates-to` and other edge kinds | No "contributes to" kind; `tracks` is already D-5's sprint edge; `blocks` hides the member from `bd ready` |
+| Contribution weight | `dependencies.metadata` column | No CLI flag writes it |
+| Dates | `due_at`; `started_at` records the actual start | No planned start; D-5 already stores `sprint.starts_at` in metadata |
+| Progress, metric, health | Issue `metadata` JSON; `bd epic status` | No fields |
+| Cross-store goals | `bd repo` hydration, `external:<project>:<capability>` edges, `bd migrate-personal` | Which store holds a cross-store link is a privacy rule (§8) |
+
+The goal-membership edge kind is the one data-model call this research cannot settle. `tracks` is the natural kind but already means sprint membership under D-5, and the default `blocks` would remove every member from `bd ready` [VERIFIABLE][^20]. The design must choose between overloading `relates-to`, adding a custom edge kind, or holding membership in the goal's metadata [INFERENCE][^1].
+
+### When to use
+
+Represent a goal as a custom-type issue with `metadata.goal` holding its planned start, date resolution, progress source, target metric and visibility, and keep weights in the goal's metadata keyed by member until Beads can write edge metadata [INFERENCE][^1].
+
 <!-- /doc:region name="body" -->
 
 <!-- doc:region name="ambiguous_items" kind="replaceable" -->
