@@ -276,7 +276,7 @@ running", so headless resume is no route into a live pane. [VERIFIABLE][^29]
 | (c) Passive hook context | 0 | No | n/a | No | Built |
 | (d) Injection library pointer | 0 | Yes | No | Yes | Built; switch off for git-inbox |
 | (e) Mod `$.prompt.submit` | 0 | Yes | No | No (unverified) | Built for D-33/D-39 only |
-| (f) Queue Lane A / Lane B | 0 | Lane B only | API reachable over tunnel | Lane B types `/wq next` | Lane A wired; Lane B not running |
+| (f) Queue Lane A / Lane B | 0 | Lane B only | Queue host only today; joins disabled | Lane B types `/wq next` | Lane A wired; Lane B not running |
 | (g) Native socket | 0 | Yes | Personal pair only via Remote Control | No | Line format undocumented |
 | (g) Channels | 0 | Yes | Local server only | No | Unavailable on Bedrock |
 
@@ -310,9 +310,12 @@ hook, library or mod delivers it; the web app never types into a remote pane. Ra
 sidecar's rule "Each host runs its own sidecar and serves only the sessions on that host".
 [VERIFIABLE][^7]
 
-The queue API also reaches across hosts: a `wq_tunnel.py` process runs on sem-kg-ec2 with
-`--idle-when-unneeded`. I did not read its source, so its direction and auth are unverified.
-Its process line is in the evidence file. [NO SOURCE]
+The queue API reaches the work pair's other machine only by a forward that machine opens itself.
+`scripts/wq_tunnel.py` keeps a joining machine's cloud session-manager port forwards alive, "client
+to instance, one direction", because the queue host has zero inbound rules. On the host it is inert.
+Its docstring says "every committed `[machines]` row is `disabled`" and the live joining wiring "is
+unverified". So acn-mac sessions cannot reach the queue today. Rationale: module docstring; the
+process seen on sem-kg-ec2 is the host's inert copy. [VERIFIABLE][^2][^32]
 
 ## Q4. Owner change and the automatic /handoff
 
@@ -710,7 +713,7 @@ Rationale: the measured cache-read cost in Summary item 5. [INFERENCE]
 | AIH-p811n7 Phase 4 and a seeded `idle-wake.json` | Any automatic idle wake (rungs 1, 3, 4) | In progress; file absent here | Deliver at the next turn end (rung 5); show "waiting: automatic wakes off" |
 | AIH-p811n7 typed source for dispatch | Clear counters and reasons | Not built; unknown addressed actions already wake with reason `unknown-source-action` | Ride ordinary addressed mail |
 | AIH-59eza library and the `inbox-nudge` pattern | Rung 3 | Built; use case on | Skip rung 3 |
-| AIH-swgb4 queue API | Dispatch record, receipts, SSE | Live on sem-kg-ec2; Lane B not running; dashboard open | bd-comment-only record; poll the record |
+| AIH-swgb4 queue API | Dispatch record, receipts, SSE | Live on sem-kg-ec2; Lane B not running; no joining machine enabled; dashboard open | bd-comment-only record; poll the record |
 | AIH-swgb4.8 dashboard | Scope boundary with this web app | Open | Decide ownership before building (F-1) |
 | AIH-iz7t3 wake sidecar | Launch of a non-running owner | Built, enabled on four pair hosts | Leave pending and show "owner not running" |
 | held store `review`/`answer` verbs | Held answers | Built (beads-ui D-37, D-39) | Answer from the pane only |
@@ -803,7 +806,7 @@ ai-harness at `23ece1e92b6`: `docs/designs/aih-p811n7-event-driven-idle-wake.md`
 (lines 63-180), `docs/held/README.md` (lines 351-395), `skills/handoff/SKILL.md`, `skills/start-goal/SKILL.md`
 (lines 1-135), `src/ai_harness/idle_wake.py`, `src/ai_harness/agent_mail_notifier.py` (poke and CLI),
 `src/ai_harness/git_inbox_delivery.py` (lines 195-235), `src/ai_harness/goal_waker.py` (paused handling),
-`scripts/queue_waker.py` (docstring), `config/message-transports.json`, `config/machine-host-aliases.toml`,
+`scripts/queue_waker.py` and `scripts/wq_tunnel.py` (docstrings), `config/message-transports.json`, `config/machine-host-aliases.toml`,
 `projects-wide-session-config/ai-harness.toml` (git-inbox and wake-sidecar tables),
 `projects-wide-session-config/hooks-manifest.json` (wq hooks), `docs/procedures/ai-writing-anti-patterns.md`
 (pre-ship pass), `docs/research/prompts/TEMPLATE.md`. Not read in full: `aih-utmaxs-cross-pair-work-handoff.md`,
@@ -845,3 +848,4 @@ beads-ui at `c5f6e57`: `docs/designs/beads-ui-design.md` (D-17, D-25, D-26, D-33
 [^29]: Anthropic. (2026). [Run Claude Code programmatically](https://code.claude.com/docs/en/headless.md). Claude Code Docs. Verified accessible (HTTP 200) 2026-10-27. (`--continue` and a still-running session.)
 [^30]: Richardson, C. (2026). [Pattern: Transactional outbox](https://microservices.io/patterns/data/transactional-outbox.html). microservices.io. Verified accessible (HTTP 200) 2026-10-27; no last-updated date shown. (Idempotent consumers.)
 [^31]: Amazon Web Services. (2026). [Transactional outbox pattern](https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html). AWS Prescriptive Guidance. Verified accessible (HTTP 200) 2026-10-27. (Duplicate messages, idempotent consumers.)
+[^32]: Fleet (ai-harness). (2026). `scripts/wq_tunnel.py` (module docstring, lines 1-40). Internal file read at `23ece1e92b6`, 2026-10-28. [no online source located] private repository.
