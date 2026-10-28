@@ -79,7 +79,7 @@ MD004: false
 # for visual structure in decision sections (## Appendix → #### Decision N → ##### Options)
 MD001: false
 
-# Standardize emphasis on asterisk (AIH-160; markdownlint v0.23 default flags inconsistent _/* usage)
+# Standardize emphasis on asterisk (markdownlint v0.23 default flags inconsistent _/* usage)
 MD049:
   style: asterisk
 MD050:

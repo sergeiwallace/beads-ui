@@ -1,5 +1,5 @@
 ---
-# Pre-commit framework config (SW-796 — adopted Option 1c Round 1, 2026-04-23).
+# Pre-commit framework config (adopted Option 1c Round 1, 2026-04-23).
 # Runs on every `git commit` (pre-commit stage) and `git push` (pre-push stage).
 #
 # Install: `pre-commit install --install-hooks --hook-type pre-commit --hook-type commit-msg --hook-type pre-push`
@@ -11,7 +11,7 @@
 # Skip a specific hook for one commit: `SKIP=hook-id git commit`
 # (the test gate's own SKIP_TESTS=1 bypass is FORBIDDEN by fleet rules outside
 # repo bootstrap — see hooks/test-gate.sh's header comment for that caveat;
-# it is not a general pre-commit-framework env var, AIH-469).
+# it is not a general pre-commit-framework env var).
 
 default_stages: [pre-commit]
 
@@ -19,7 +19,7 @@ default_stages: [pre-commit]
 # JSONL exports + audit log. They must NOT be processed by the file-formatting
 # hooks (check-json/check-yaml/end-of-file-fixer/trailing-whitespace): bd's output
 # doesn't satisfy them, and the pre-push stash/auto-fix/restore dance conflicts on
-# the churning store files (SW-841 #73). Global-exclude the whole dir. Committed
+# the churning store files. Global-exclude the whole dir. Committed
 # .beads/issues.jsonl, in a repo that still tracks that mirror, is version-controlled but not linted.
 exclude: ^\.beads/
 
@@ -41,8 +41,8 @@ repos:
       - id: trailing-whitespace
         exclude: ^docs/asks/
       - id: check-added-large-files
-        # uv.lock is an expected, deterministic large generated artifact (AIH-v6kf9
-        # T-2.2 requires tracking it fleet-wide) -- exempt it rather than raising the
+        # uv.lock is an expected, deterministic large generated artifact
+        # (T-2.2 requires tracking it fleet-wide) -- exempt it rather than raising the
         # ceiling for every other file type.
         args: [--maxkb=500]
         exclude: (^|/)uv\.lock$
@@ -77,7 +77,7 @@ repos:
         args: [--severity=warning]
 
   # ── Local: hook-reference + test gates ───────────────────────────────────
-  # test-gate and validate-claude-settings are Tier-B shared hooks (AIH-393):
+  # test-gate and validate-claude-settings are Tier-B shared hooks:
   # the body lives once in ai-harness/hooks/, ai-harness's install.sh publishes
   # a real executable wrapper to ~/.claude/bin/ (added to PATH), and every
   # consumer repo's config just names the entrypoint — zero per-repo vendored
@@ -156,10 +156,10 @@ repos:
         stages: [pre-push]
         pass_filenames: false
         always_run: true
-      # docs-index-check REMOVED (CORE-55). The generated docs/README.md index had
+      # docs-index-check REMOVED. The generated docs/README.md index had
       # no reader -- nothing in the fleet consumed it -- yet the gate blocked every
       # docs commit until it was regenerated. It also could not be regenerated
-      # correctly from a linked worktree (AIH-396), so the only in-worktree remedy
+      # correctly from a linked worktree, so the only in-worktree remedy
       # was its own forbidden SKIP=docs-index-check bypass. Removed deliberately,
       # gate-first: docs/README.md content is untouched by this change.
       - id: test-gate
@@ -169,13 +169,13 @@ repos:
         stages: [pre-push]
         pass_filenames: false
         always_run: true
-      # D-10 Layer 2 (bypass-proof dual-ID backstop, AIH-387): reject a commit
+      # D-10 Layer 2 (bypass-proof dual-ID backstop): reject a commit
       # whose staged .beads/issues.jsonl has an entry missing external_ref, or
       # a duplicate (id-prefix, external_ref) pair. Replaces roadmap-guard
-      # (below, retired SW-1025): that hook grepped docs/roadmap/master-roadmap.md
+      # (below, retired): that hook grepped docs/roadmap/master-roadmap.md
       # for duplicate PREFIX-N entries, and has silently checked nothing in every
       # repo since T-12 moved every roadmap to docs/roadmap/archive/ (Beads is
-      # now the sole task system of record, SW-841). This is a strictly
+      # now the sole task system of record). This is a strictly
       # stronger replacement for the same underlying invariant — commit-time,
       # not push-time, and it reads the live store's dual-ID data instead of a
       # retired roadmap. The checker (scripts/bd_precommit_validate.py) lives
