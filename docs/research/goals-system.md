@@ -81,7 +81,13 @@ Sergei asked on 2026-10-27 for a goals system as a fundamental part of the Beads
 
 Product, library and practice claims weight 2026 first, then 2025, then 2024. Goal science has no cutoff: its foundational theory and meta-analyses predate 2024 and are cited with their publication dates. Fleet claims (Beads 1.3.x, the beads-ui design, the fleet's repo classes and guards, the prior goals work) are read at the commits each findings file names, measured on 2026-10-27 and 2026-10-28 UTC. Each research leg's full evidence, with its footnoted sources, is in its findings file under [findings/](findings/); this doc synthesizes them and cites the findings file for detail.
 
-<!-- exec-summary-slot -->
+## Executive Summary
+
+1. A goal is a custom Beads issue type at two levels, an aspiration over dated objectives, and of two kinds, achieve and maintain. Any issue joins zero, one or many goals through a `contributes-to` link with a strength, goals link to each other with `refines`, `blocks` and `relates-to`, and Beads 1.3.2 holds all of it today except edge weights, planned start dates and a conflict edge ([§2](#2-how-goals-link-to-work), [§4](#4-goal-ontology), [§10](#10-fit-with-beads)).
+2. Progress is computed from linked work and kept separate from health, which comes from written check-ins. Copying Asana's typed progress sources and Linear's split is what Atlassian Goals lacks, since it does not compute progress from linked work at all ([§1](#1-goal-and-okr-products)).
+3. Goal science sets the record's fields: a measurable target, a date and feedback, with recorded progress monitoring, explicit pause and drop states, and no streaks or points ([§3](#3-the-science-of-goals)).
+4. A noisy-OR alignment score multiplies the fleet's existing WSJF composite, so the person's and the agents' queues both favour work that serves the top goals without hiding unaligned work, and agent-proposed links count only after review ([§5](#5-goal-alignment-for-a-persons-and-their-agents-work)).
+5. The views are a React Flow goal graph with ELK layout, a custom SVG Gantt and timeline with critical path computed in core, and Recharts allocation charts. Private goals live only in private stores on the personal pair, every link that touches them stays there, and client-side guards at every writer refuse a marked record before it reaches a shared repository ([§6](#6-visualisation-patterns-and-libraries), [§8](#8-privacy-and-access-control-for-personal-goals)).
 
 ## 1. Goal and OKR products
 
@@ -282,7 +288,30 @@ The goal-membership edge kind is the one data-model call this research cannot se
 
 Represent a goal as a custom-type issue with `metadata.goal` holding its planned start, date resolution, progress source, target metric and visibility, and keep weights in the goal's metadata keyed by member until Beads can write edge metadata [INFERENCE][^1].
 
-<!-- later-sections-slot -->
+## Comparison
+
+How the surveyed products and the recommended design handle the requirements the founding ask names [INFERENCE][^1][^44]:
+
+| # | Criterion | Atlassian Goals | Linear initiatives | Asana goals | Recommended Beads design |
+|---|---|---|---|---|---|
+| 1 | Goal above epics, many-to-many | Goals link to any work type; no second parent stated | Projects join initiatives through a join record | Multiple parent goals; weighted supporting links | Custom `goal` type; `contributes-to` many-to-many with strength |
+| 2 | Progress from linked work | Not computed across linked items; 100-item cap | Estimate-point formula | Typed progress sources with weights | Computed from members, count fallback, health kept separate |
+| 3 | Goal links (relates, blocks, depends) | Limited | Initiative relations | Goal relationships | `refines`, `blocks`, `relates-to`; conflict edge is a gap |
+| 4 | Dates and Gantt | Target dates | Timeline view | Timeline | `due_at` plus planned start in metadata; custom SVG Gantt with critical path |
+| 5 | Agent work aligned to goals | None | Filter by delegated agent | None | Alignment score in both queues; reviewed agent links |
+| 6 | Private goals | Restriction at creation, no cross-boundary links | Private teams | Private goals | Private stores on the personal pair only, enforced by guards |
+
+## Recommendation
+
+Build goals as a first-class Beads type with the ontology in §4, the progress and health split in §1, the alignment score in §5, the views in §6 and the privacy design in §8, and decide two data-model gaps in the design: where contribution strength lives until Beads can write edge metadata, and which edge kind carries membership, since `tracks` is already D-5's sprint edge. Every external pattern adopted here is documented by its vendor or published research and in production use; the library picks carry the maintenance signals in the products leg's evidence file [VERIFIABLE][^1][^14].
+
+## Open Questions
+
+1. Which edge kind should carry goal membership: an overloaded `relates-to`, a new custom kind, or membership held in the goal's metadata, given that `tracks` already means sprint membership under D-5?
+2. Does the owner's ruling on commit history also cover the ai-harness store's Dolt history, which keeps any row once published?
+3. Where do employer-domain goals live: in the employer workspace's own store on the work pair, or in a separate store, given that they are neither personal nor shared-harness content?
+4. Should the alignment boost change the fleet-wide WSJF rubric's derived priority, or stay a separate ordering inside the goals views until it is checked against outcomes?
+5. What from the first goals system's scoring and narrative layers, if anything, should return, given the evidence against streaks and points (§3)? (Answered in part by [§9](#9-prior-work-from-the-first-goals-system).)
 
 ## Sources
 
