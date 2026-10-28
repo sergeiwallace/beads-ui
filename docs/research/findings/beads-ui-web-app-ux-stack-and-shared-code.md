@@ -224,12 +224,19 @@ Which event moves Queued to Delivered belongs to the event-dispatch leg and ai-h
 idle-wake design (`docs/designs/aih-p811n7-event-driven-idle-wake.md`, draft). This leg only fixes
 the states the UI needs from it. [INFERENCE]
 
+The ask also wants a prompted session started in `/start-goal` when it is not already in goal mode,
+automatically. So the liveness indicator carries a fourth fact, whether the session is in a goal,
+and the composer says before Send that the dispatch will start one. Starting it is the dispatch
+leg's job, with no extra action from the user. [INFERENCE]
+
 ### 2.3 Changing the owner
 
 Linear separates the human owner from the agent delegate. [VERIFIABLE][^18] D-17 already does the
 same on Beads: `assignee` is the session and `metadata.owner` is the person. [VERIFIABLE][^53] So "change the owning session" in the ask is an `assignee`
-change, written with `--if-assignee` as every guarded write is, and the handoff follows from it.
-[INFERENCE]
+change, written with `--if-assignee` as every guarded write is. The ask wants that change to start
+the `/handoff` to the new session automatically, so the write emits an event the dispatch leg turns
+into the handoff, and the UI shows the handoff's progress with the same three indicators as a
+prompt. [INFERENCE]
 
 None of the surveyed products documents a confirmation step for reassigning an agent's work.
 [NO SOURCE] An owner change starts work in another session and may interrupt the first, which makes
@@ -248,8 +255,9 @@ items from a `queue.review.resolved` event and classifies an accept outcome as n
 dependency-open or refused. [VERIFIABLE][^61]
 
 D-11 makes the beads-ui web app that dashboard's Phase 2 member app. [VERIFIABLE][^53] Porting the composer keeps a Sergei-approved interaction and
-its tests, and avoids a second composer that drifts from the first. [INFERENCE] The ask's "auto
-trigger `/start-goal`" fits as a `/skill` token the typeahead already completes. [INFERENCE]
+its tests, and avoids a second composer that drifts from the first. [INFERENCE] The user can also
+type `/start-goal` as a `/skill` token the typeahead already completes; the automatic start in
+section 2.2 does not depend on it. [INFERENCE]
 
 ## 3. Rendering held-doc content in a task detail
 
@@ -327,6 +335,26 @@ or missed then:
   this run. [NO SOURCE]
 - Todoist: the What's New page reached covers 2023 only. Todoist: no significant post-2024 board
   developments found. [VERIFIABLE][^34] [NO SOURCE]
+
+### 4.1 Quick edits, the queue view and unblocking
+
+Quick edits of priority, status and owner are already a requirement (R-7) and a core command each.
+[VERIFIABLE][^53] Linear's inbox detail lets the user take inbox actions and edit the issue in the
+same pane, which is the shape for editing from the Review queue too. [VERIFIABLE][^2] Linear's
+per-property single-key bindings could not be read, because its shortcuts page returned 404 in the
+prior run and this run found no other primary page for them. [NO SOURCE] A property key opens a menu filtered by typing, and the write is the guarded
+`bd update` the Board already uses. [HEURISTIC] [INFERENCE]
+
+The ask's work-queue view is the backlog in the queue's priority order with a `status:blocked`
+filter, plus epic and every other D-40 filter key. Under D-11 the order comes from the work queue's
+read models when `queue.url` is set, and from Beads priority alone when it is not. [VERIFIABLE][^53]
+[INFERENCE]
+
+Unblocking from the web app has to write what the fleet's own unblock tool writes. D-40 ends a held
+item's wait on a later `[unblocked ...]` transition comment, so a web "Unblock" that only changes
+status would leave the Review section still showing the wait. [VERIFIABLE][^53] [INFERENCE] The
+backend leg should route the web app's unblock through that tool or the same comment format.
+[INFERENCE]
 
 Two of these change beads-ui's plan. Shareable view URLs are cheap in a web app and fit D-40's filter
 grammar, so the Board and Review filters should live in the URL. [INFERENCE] Grouping agent activity
@@ -464,6 +492,29 @@ Speech-input users trigger single letters by accident, which is the criterion's 
 A web app that copies Linear's `J`, `K`, `H` and `1`, `2`, `3` needs a setting to turn single-key
 shortcuts off, and needs them scoped to the queue list when it has focus. [INFERENCE] TanStack
 Hotkeys' default of ignoring single keys in text fields covers the composer. [VERIFIABLE][^44]
+
+## 8. Founding-ask coverage for this leg
+
+Each requirement in the ask that this leg's topic covers, and where these findings keep it. None is
+dropped or narrowed; the dispatch, backend, privacy and goals legs own the parts marked as touch
+points.
+
+| Requirement in the ask | Where it is kept |
+|---|---|
+| Kanban, sprint and backlog views; rearrange | Phase 3 as planned; the delta in section 4 |
+| Quick edits of priority, status, owner and other fields | Section 4.1 |
+| View details | Phase 3's detail drawer; section 3 for held content |
+| View held-doc blockers, decisions, open questions and details | Sections 1 and 3; R1, R2 |
+| Type a prompt per task for the owning session | Section 2; R4, R5 |
+| Change the owning session, triggering `/handoff` | Section 2.3; R6; the handoff event is a dispatch-leg touch point |
+| Event-based notification, never polling | Section 2.2's states; the mechanism is the dispatch leg's |
+| Auto-start the session's work, and `/start-goal` when not in a goal | Section 2.2 |
+| The work queue in priority order, filtered to blocked, by epic and other filters | Section 4.1 |
+| Review blockers and decisions fast by priority, impact, type and size | Sections 1.3 and 1.4; R1, R3 |
+| Unblock them all and prompt next steps | Sections 1.4 and 4.1; R1's bulk selection |
+| Pretty, aesthetic, best practice | Sections 5.2 and 7; R9 |
+| Shared code with the TUI mod and the Claude Desktop and claude.ai MCP App | Section 6 |
+| Privacy for personal goals and tasks | Privacy leg; section "Contrarian evidence" notes who may prompt a session |
 
 ## Recommendations for the design
 
