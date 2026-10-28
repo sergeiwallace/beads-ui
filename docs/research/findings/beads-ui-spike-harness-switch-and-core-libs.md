@@ -344,7 +344,7 @@ their input, and the remaining breaks are instruction text. The resolver raises 
 | `docs/procedures/development-workflow.md` | 27 | A `TaskList` reconciliation after every ship event |
 | `docs/procedures/goal-exit-robustness.md` | 235 | `TaskList` per session before arming a goal |
 | `docs/procedures/chief-of-staff-vp-coordination.md` | 426 | Reads the same namespace count |
-| `src/ai_harness/defaults/goal-waker-nudge.md` and `goal-waker-nudge.sem-kg.md` | 2 | The injected nudge says to re-read in-progress Beads issues and CC tasks with `TaskList` |
+| `src/ai_harness/defaults/goal-waker-nudge.md` and its per-profile variant | 2 | The injected nudge says to re-read in-progress Beads issues and CC tasks with `TaskList` |
 | `src/ai_harness/defaults/injection-repair-limit-escalation.md` | 11 | Asks for a mirror row "so it shows on the task panel, which is the surface Sergei" watches |
 | `src/ai_harness/defaults/injection-self-heal-bug-fix.md` | 12 | Same request for a repair round |
 | `.claude/hooks/install-harness-remediation-pickup.sh` | 3, 33 | Tells the session to create one `TaskCreate` mirror for a remediation |

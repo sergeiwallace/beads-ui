@@ -544,7 +544,7 @@ The research doc's seven open questions are each answered by a decision here: th
 
 ## Run Ledger
 
-This design doc hosts the `/auto-flow` Run Ledger for the web app's design stage. Written by the Opus coordinator for ops-vm-3. The run's authority record is in [the beads-ui design's Run Ledger](beads-ui-design.md#run-ledger), run id `beads-ui-webapp-goals-2026-10-28-aih-ec2-3`.
+This design doc hosts the `/auto-flow` Run Ledger for the web app's design stage. Written by the Opus coordinator for ops-vm-3. The run's authority record is in [the beads-ui design's Run Ledger](beads-ui-design.md#run-ledger), run id `beads-ui-webapp-goals-2026-10-28`.
 
 `ledger-version`: `1`
 
