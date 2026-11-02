@@ -644,7 +644,8 @@ Every decision below was taken through the decision framework (`ai-harness/docs/
 ##### (b) One card at a time, focus mode
 
 **Pros:**
-- Least distraction; works on a phone.
+- Least distraction.
+- Works on a phone.
 
 **Cons:**
 - Hides the queue's size and order, so Sergei cannot pick by priority or impact at a glance.
@@ -823,8 +824,10 @@ Mitigation: below 600 px the three draw as one segmented chip with each segment 
 ##### (a) Agent Mail admitted by the notifier first, then the prompt-injection pointer, then the mod's submit, then the turn-end pull, all under one kill switch
 
 **Pros:**
-- Rung 1 is the fleet's single admission point, which the event-driven wake design chose so busy and idle delivery share one classifier and one kill switch; it reaches the paired host.
-- Zero model tokens while nothing is pending; each rung waits outside the model.
+- Rung 1 is the fleet's single admission point, which the event-driven wake design chose so busy and idle delivery share one classifier and one kill switch.
+- It reaches the paired host.
+- Zero model tokens while nothing is pending.
+- Each rung waits outside the model.
 - Every named route is used: hook context injection is how rung 1 lands, the library is rung 3, Agent Mail carries rung 1.
 
 **Cons:**
@@ -842,7 +845,8 @@ Mitigation: below 600 px the three draw as one segmented chip with each segment 
 ##### (c) Turn-end pull only
 
 **Pros:**
-- Simplest; already built.
+- Simplest.
+- Already built.
 
 **Cons:**
 - Never wakes an idle session, so the ask's auto-trigger fails.
@@ -866,7 +870,8 @@ Criterion 2 (a cross-boundary foundation) favours the one admission point the fl
 ##### (a) Agent Mail, then Buzz, then git-inbox carrying a pointer only
 
 **Pros:**
-- The fleet's ladder order; git-inbox never carries a body.
+- The fleet's ladder order.
+- Git-inbox never carries a body.
 
 **Cons:**
 - Three carriers to configure.
@@ -939,7 +944,8 @@ Criterion 1 (a one-way door once sessions act on web prompts) favours the robust
 ##### (a) The fleet's receiver-first handoff, end to end: a handoff request to a live owner, a git-inbox action to the receiver when the owner is proved gone, nothing when liveness is unknown
 
 **Pros:**
-- Follows the fleet's handoff contract; no claim is stolen.
+- Follows the fleet's handoff contract.
+- No claim is stolen.
 
 **Cons:**
 - The new owner is not set until the receiver takes it.
@@ -972,7 +978,8 @@ The full protocol is in T-W2.2: the selected receiver is checked against the fle
 
 **Pros:**
 - The decision is made where the state is known, and the goal tracks the work from its first step.
-- Every dispatch still triggers work without the user acting again; only its timing waits on a limit.
+- Every dispatch still triggers work without the user acting again.
+- Only its timing waits on a limit.
 
 **Cons:**
 - Depends on the receiver's instructions handling the flag and reporting the pause window.
@@ -1044,7 +1051,8 @@ This applies an approved decision and changes nothing it decided, so the Authori
 ##### (a) On by default, with a setting to turn them off or remap them
 
 **Pros:**
-- Speed from the first use, which the ask asks for; meets 2.1.4.
+- Speed from the first use, which the ask asks for.
+- Meets 2.1.4.
 
 **Cons:**
 - A screen-reader user must find the setting once.
@@ -1076,7 +1084,8 @@ WCAG 2.1.4 requires the off or remap mechanism, not an off default. Mitigation: 
 ##### (a) Poll every allowed store's head in one query, re-read only the stores that moved, push SSE
 
 **Pros:**
-- Sees changes that arrived by sync; one cheap query.
+- Sees changes that arrived by sync.
+- One cheap query.
 
 **Cons:**
 - Polling, at a configured interval.
@@ -1116,7 +1125,8 @@ The poll is on the server, outside any model, so it costs no tokens; the interva
 ##### (a) The queue's prompt store where `queue.url` is set, a local append-only store otherwise
 
 **Pros:**
-- Reuses what runs on each pair; one record shape for both.
+- Reuses what runs on each pair.
+- One record shape for both.
 
 **Cons:**
 - Two storage back ends to test.
@@ -1156,7 +1166,8 @@ Mitigation: one `DispatchStore` interface in core with both implementations run 
 ##### (a) beads-ui's own Node server as a `kind: portal` upstream, performing the member duties itself
 
 **Pros:**
-- D-10 already chose a Node server; the public project runs without the portal.
+- D-10 already chose a Node server.
+- The public project runs without the portal.
 
 **Cons:**
 - Amends app-portal's member contract to admit a Node member.
@@ -1197,7 +1208,8 @@ Every option keeps the ask's portal fit, so Gate 0 holds whichever is chosen. Re
 ##### (a) One more `forwards` entry on the work pair; `tailscale serve` on the personal pair
 
 **Pros:**
-- Each pair's existing, supervised transport; no inbound port opens anywhere.
+- Each pair's existing, supervised transport.
+- No inbound port opens anywhere.
 
 **Cons:**
 - Two access shapes to document.
@@ -1208,7 +1220,8 @@ Every option keeps the ask's portal fit, so Gate 0 holds whichever is chosen. Re
 - One shape.
 
 **Cons:**
-- Unsupervised; the personal pair already has a better route.
+- Unsupervised.
+- The personal pair already has a better route.
 
 ##### (c) A public origin behind an OAuth proxy
 
@@ -1216,7 +1229,8 @@ Every option keeps the ask's portal fit, so Gate 0 holds whichever is chosen. Re
 - Reachable from any device.
 
 **Cons:**
-- Opens an internet path to a server that can make agents act; not "local hosted for now".
+- Opens an internet path to a server that can make agents act.
+- Not "local hosted for now".
 
 ##### Recommendation
 
@@ -1312,9 +1326,7 @@ Gate 0 keeps the privacy requirement whole. Mitigation for the invisible-new-rep
 
 <a id="d-19"></a>
 
-#### D-19: Phase 6 Railway template — withdrawn
-
-Withdrawn in audit round 1. The Railway template is a deliverable of Phase 6 of the beads-ui design, outside this doc's scope, and changing it would amend an approved phase. The finding behind it, that Railway stops reading `railway.json` on 2026-12-01 in favour of `.railway/railway.ts`, is filed as beads-ui issue BU-isu against that phase, to be decided when Phase 6 is built.
+**D-19, Phase 6 Railway template, was withdrawn in audit round 1.** The Railway template is a deliverable of Phase 6 of the beads-ui design, outside this doc's scope, and changing it would amend an approved phase. The finding behind it, that Railway stops reading `railway.json` on 2026-12-01 in favour of `.railway/railway.ts`, is filed as beads-ui issue BU-isu against that phase, to be decided when Phase 6 is built.
 
 ---
 
@@ -1348,7 +1360,8 @@ Withdrawn in audit round 1. The Railway template is a deliverable of Phase 6 of 
 - Reuses keys the hosts already hold.
 
 **Cons:**
-- The hosts' SSH keys are login credentials with other uses, so signing with them couples prompt authority to login access; and the signature tool is a subprocess per verification.
+- The hosts' SSH keys are login credentials with other uses, so signing with them couples prompt authority to login access.
+- The signature tool is a subprocess per verification.
 
 ##### Recommendation
 
