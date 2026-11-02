@@ -95,7 +95,7 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 
 ## Executive Summary
 
-This design turns the beads-ui web app, already planned as Phase 3 of the beads-ui design, into the place where Sergei steers his Claude Code sessions. It adds a keyboard-first Review queue that lists every blocked task, held decision and open question in priority order and lets him answer each with one key or a short reply, and a per-task composer that sends a prompt to the session owning the task. That prompt reaches the session by event: the server records it in the ai-core work queue and sends addressed Agent Mail, which the fleet's event-driven wake turns into a model turn only when there is something to do, with the shared prompt-injection library, the mod and the queue's turn-end pull as fallbacks under one kill switch. Changing a task's owner sends a receiver-first handoff, and a dispatch can ask the receiving session to arm `/start-goal`. Each machine pair reaches a loopback-bound server through the transport it already runs, with the server's own authentication in front, and a per-host repository allowlist keeps personal stores off the work host. The two most consequential calls are the dispatch ladder ([D-6](#d-6)) and the signed dispatch envelope ([D-8](#d-8)); three decisions are left for Sergei: whether app-portal's member contract takes a Node server ([D-15](#d-15)), whether the web app turns manual rank on by default ([D-21](#d-21)), and the ai-harness changes the build needs ([D-22](#d-22)).
+This design turns the beads-ui web app, already planned as Phase 3 of the beads-ui design, into the place where Sergei steers his Claude Code sessions. It adds a keyboard-first Review queue that lists every blocked task, held decision and open question in priority order and lets him answer each with one key or a short reply, and a per-task composer that sends a prompt to the session owning the task. That prompt reaches the session by event: the server records it in the ai-core work queue and sends addressed Agent Mail, which the fleet's event-driven wake turns into a model turn only when there is something to do, with the shared prompt-injection library, the mod and the queue's turn-end pull as fallbacks under one kill switch. Changing a task's owner sends a receiver-first handoff, and a dispatch can ask the receiving session to arm `/start-goal`. Each machine pair reaches a loopback-bound server through the transport it already runs, with the server's own authentication in front, and a per-host repository allowlist keeps personal stores off the work host. The two most consequential calls are the dispatch ladder ([D-6](#d-6)) and the signed dispatch envelope ([D-8](#d-8)); two decisions are left for Sergei: whether app-portal's member contract takes a Node server ([D-15](#d-15)) and whether the web app turns manual rank on by default ([D-21](#d-21)). His 2026-11-01 ask settled the third, the ai-harness changes the build needs ([D-22](#d-22)), in favour of building them.
 
 ## Summary for a wide audience
 
@@ -296,7 +296,7 @@ Nothing that can make a session act ships before this phase: every later phase d
 - **Scope:** request authentication and write authorization; the per-host repository allowlist; the receiver API and the receiving-side client; the signed envelope and its verification; the dispatch store with its queue-backed and local implementations.
 - **Deliverables:**
   - Files created: `apps/web/server/auth.ts`, `apps/web/server/allowlist.ts`, `apps/web/server/receiver-api.ts`, `apps/web/server/envelope.ts`; `plugins/beads-ui/core/src/dispatch-store.ts` (the `DispatchStore` interface, exported from the core package's index), `apps/web/server/dispatch-store/queue.ts`, `apps/web/server/dispatch-store/local.ts`.
-  - Files created (ai-harness, subject to [D-22](#d-22)): the receiving-side client that fetches a dispatch through the receiver API at each natural boundary and verifies its envelope, key id and body digest, with the shared golden vectors; the installer step that writes each receiver's trusted-keys map.
+  - Files created (ai-harness, per [D-22](#d-22)): the receiving-side client that fetches a dispatch through the receiver API at each natural boundary and verifies its envelope, key id and body digest, with the shared golden vectors; the installer step that writes each receiver's trusted-keys map.
   - Tests added: `apps/web/test/auth.test.ts`, `apps/web/test/allowlist.test.ts`, `apps/web/test/receiver-api.test.ts`, `apps/web/test/envelope.test.ts`, `apps/web/test/dispatch-store.contract.test.ts`, `apps/web/e2e/auth.spec.ts`; ai-harness tests for the receiver client and the verifier.
 - **Tasks + acceptance criteria:**
   - **T-W0.1 Authentication**
@@ -427,7 +427,7 @@ Nothing that can make a session act ships before this phase: every later phase d
 - **Scope:** the dispatch ladder with its kill switch, coalescing and rate cap; owner change as a handoff request; goal arming. The receiver API and envelope are Phase W0's.
 - **Deliverables:**
   - Files created: `apps/web/server/dispatch-ladder.ts`; `plugins/beads-ui/core/src/dispatch-policy.ts`, exported from the core package's index.
-  - Files created (ai-harness): a dispatch typed source in the notifier's admission (so web dispatches are counted and reasoned as their own kind), and the receiver instructions that act on `arm_goal` (subject to [D-22](#d-22)).
+  - Files created (ai-harness): a dispatch typed source in the notifier's admission (so web dispatches are counted and reasoned as their own kind), and the receiver instructions that act on `arm_goal` (per [D-22](#d-22)).
   - Tests added: `apps/web/test/dispatch-ladder.test.ts`, `plugins/beads-ui/core/test/dispatch-policy.test.ts`; ai-harness tests for the typed source.
 - **Tasks + acceptance criteria:**
   - **T-W2.1 Ladder**
@@ -466,7 +466,7 @@ Nothing that can make a session act ships before this phase: every later phase d
 - **Scope:** the heads-query change feed and SSE shared across tabs; the work pair's forward entry and SSH fallback; Tailscale Serve and, subject to [D-15](#d-15), app-portal registration on the personal pair. Authentication and the allowlist are Phase W0's.
 - **Deliverables:**
   - Files created: `apps/web/server/heads-feed.ts`, `apps/web/server/portal.ts` (the app-portal member duties); `apps/web/src/live/shared-feed.ts` (one SSE connection per browser, shared by its tabs); `docs/procedures/web-access.md`.
-  - Files modified (ai-harness, subject to [D-22](#d-22)): the pair transport's `forwards` map gains the web port entry for the work pair.
+  - Files modified (ai-harness, per [D-22](#d-22)): the pair transport's `forwards` map gains the web port entry for the work pair.
   - Files modified (app-portal, once D-15 is ruled): `apps.yaml` gains the `beads` member on the personal pair.
   - Tests added: `apps/web/test/heads-feed.test.ts`, `apps/web/test/portal.test.ts`, `apps/web/e2e/tabs.spec.ts`.
 - **Tasks + acceptance criteria:**
@@ -563,7 +563,7 @@ This design doc hosts the `/auto-flow` Run Ledger for the web app's design stage
 | research route | claude / opus, three `researcher` leaves and one `auditor` verifier; synthesis by the Opus coordinator under the orchestrator authorship override |
 | doc route | claude / opus / n/a: the Opus coordinator authors this doc under `/doc --kind design --mode automated` through `flow_dispatch_doc.py --phase prepare` and `--phase complete`. Prepare pinned the integration snapshot at `4a3a17c` (lineage root `docs/research/beads-ui-web-app.md`, lineage receipt `complete`, no protected decisions); `--phase complete` passed on 2026-10-28 against the same snapshot (verdict `complete`) |
 | doc-audit route | codex / audit / high, cross-family: read-only review rounds through `cx audit`, each writing one evidence file, with the fixes made by the Opus coordinator. The audit loop's fix stage would have Codex write doc text, which this host's rule that Codex only reviews rules out |
-| decider | the Opus coordinator (`us.anthropic.claude-opus-5-5`) through `/decision-framework`; three decisions left for Sergei ([D-15](#d-15), [D-21](#d-21), [D-22](#d-22)) |
+| decider | the Opus coordinator (`us.anthropic.claude-opus-5-5`) through `/decision-framework`; two decisions left for Sergei ([D-15](#d-15), [D-21](#d-21)); [D-22](#d-22) settled by his 2026-11-01 ask |
 | max-agents | 3 concurrent children (launcher's cap); one at a time under the host's load holds of 2026-10-28 |
 | target commit (beads-ui) | `4a3a17c` at the design-stage prepare |
 | worktree + branch | `/data/projects/beads-ui/.worktrees/ops-vm-3-agents/bu-goals-webapp-coordinator` on `wt/ops-vm-3/bu-goals-webapp-coordinator` |
@@ -594,7 +594,7 @@ This design doc hosts the `/auto-flow` Run Ledger for the web app's design stage
 
 ## Design Decisions
 
-Every decision below was taken through the decision framework (`ai-harness/docs/procedures/decision-framework.md`): Gate 0 first, then the Authority test, then the five criteria, and each chosen option's Cons carry a mitigation. A decision marked `✅ Resolved by Opus orchestrator` is final for this run and goes to Sergei's review with the rest of the doc, as he asked; three are left `⏳ PENDING (human)`: D-15 and D-22 because they change another repository's contracts (app-portal's and ai-harness's), and D-21 because it changes a default of the parent design Sergei approved.
+Every decision below was taken through the decision framework (`ai-harness/docs/procedures/decision-framework.md`): Gate 0 first, then the Authority test, then the five criteria, and each chosen option's Cons carry a mitigation. A decision marked `✅ Resolved by Opus orchestrator` is final for this run and goes to Sergei's review with the rest of the doc, as he asked; two are left `⏳ PENDING (human)`: D-15 because it changes app-portal's contracts, and D-21 because it changes a default of the parent design Sergei approved. D-22, which changes ai-harness's contracts, was settled by Sergei's 2026-11-01 ask and is marked `✅ Resolved by Sergei`.
 
 ### Decision Summary
 
@@ -621,7 +621,7 @@ Every decision below was taken through the decision framework (`ai-harness/docs/
 | D-19 | Phase 6 Railway template | withdrawn: outside this doc, filed as BU-isu | | | | Changes a deliverable of the parent design's Phase 6 | withdrawn |
 | D-20 | The dispatch envelope's signature | (a) Ed25519, signing key on the serving host only; (b) HMAC with a shared per-pair key; (c) SSH signatures | (a) | | | Receivers verify but cannot forge; both runtimes support it natively; the ai-harness part is contingent on D-22 | `✅ Resolved by Opus orchestrator` |
 | D-21 | Manual rank in the web app | (a) on by default with the parent design's D-6 keys; (b) off by default | (a) | | | The ask names rearranging; the parent design was approved as a whole | `⏳ PENDING (human)` |
-| D-22 | The ai-harness changes this design needs | (a) build them, one ai-harness PR each; (b) beads-ui only, with what ai-harness ships | (a) | | | (b) drops ask requirements; (a) changes another repository's contracts | `⏳ PENDING (human)` |
+| D-22 | The ai-harness changes this design needs | (a) build them, one ai-harness PR each; (b) beads-ui only, with what ai-harness ships | (a) | | | (b) drops ask requirements; Sergei's 2026-11-01 ask settles (a) | `✅ Resolved by Sergei` |
 
 ### Decision Details
 
@@ -1408,9 +1408,11 @@ Gate 0 favours (a): the ask names rearranging, and (b) would ship without it. Bu
 
 <a id="d-22"></a>
 
-#### D-22: The ai-harness changes this design needs — `⏳ PENDING (human)`
+#### D-22: The ai-harness changes this design needs — ✅ Resolved by Sergei: (a) Build the ai-harness changes, one pull request each
 
 **Context.** Several resolved decisions here are buildable only with changes in ai-harness: the held store's structured-options command ([D-2](#d-2)), a dispatch typed source in the notifier's admission ([D-6](#d-6)), the receiving-side client and envelope verifier ([D-8](#d-8), [D-20](#d-20)), the receiver's answer and unblock handlers (T-W1.2, T-W1.6), the receiver instructions that act on `arm_goal` ([D-10](#d-10)), the pair transport's `forwards` entry ([D-16](#d-16)), and the installer step that distributes the trusted dispatch keys ([D-20](#d-20)). Each design choice is contained, but together they change ai-harness's contracts, which audit round 4 found is a cross-repository change the decision framework returns to Sergei. D-16 adds one more: a `forwards` entry in ai-harness's pair transport. Until Sergei rules this decision, the cross-repository part of each of D-2, D-6, D-8, D-10, D-16 and D-20 is contingent on it; only their beads-ui parts are resolved.
+
+**Resolution (2026-11-01).** Sergei's ask of 2026-11-01 settles this in favour of (a). It asks for review and input surfaces "wired directly into claude sessions", for prompt injection and "hooks / context injection etc" so that a session acts on his input, and for the platform to "support optional dependencies between other repos / systems as appropriate". Each of those needs the ai-harness parts listed above, so the cross-repository parts of D-2, D-6, D-8, D-10, D-16 and D-20 are no longer contingent. He can reverse this by answering the decision.
 
 ##### (a) Build the ai-harness changes as part of this build, each as its own ai-harness pull request with its tests
 
@@ -1430,11 +1432,11 @@ Gate 0 favours (a): the ask names rearranging, and (b) would ship without it. Bu
 
 ##### Recommendation
 
-> **Decision:** `PENDING` — recommended (a) Build the ai-harness changes, one pull request each.
-<!-- decision-record: chosen-option=PENDING; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
-<!-- decision-lineage: decision-id=BU-mg2.5.3/D-22; decision-topic=the ai-harness changes the web app needs; governs=repo:ai-harness,dispatch:receiver; normalized-proposition=the web app build lands the held options command, the dispatch typed source, the receiver client and verifier, the answer and unblock handlers and the arming instructions in ai-harness; applicability=phase:W0,phase:W1,phase:W2; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+> **Decision:** (a) Build the ai-harness changes, one pull request each.
+<!-- decision-record: chosen-option=(a); ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
+<!-- decision-lineage: decision-id=BU-mg2.5.3/D-22; decision-topic=the ai-harness changes the web app needs; governs=repo:ai-harness,dispatch:receiver; normalized-proposition=the web app build lands the held options command, the dispatch typed source, the receiver client and verifier, the answer and unblock handlers and the arming instructions in ai-harness; applicability=phase:W0,phase:W1,phase:W2; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=Sergei; approval-date=2026-11-01; approval-commit= -->
 
-Option (b) drops ask requirements, so Gate 0 leaves (a) as the only way to keep them; the ruling Sergei gives is about the cross-repository work, not whether the requirements stand. Mitigation for (a)'s Con: each change is additive, lands as a separate ai-harness pull request with red-arm tests, and nothing in beads-ui's phases ships its acting path until that pull request is merged and installed.
+Option (b) drops ask requirements, so Gate 0 leaves (a) as the only way to keep them; Sergei's ruling was about the cross-repository work, not whether the requirements stand. Mitigation for (a)'s Con: each change is additive, lands as a separate ai-harness pull request with red-arm tests, and nothing in beads-ui's phases ships its acting path until that pull request is merged and installed.
 
 ---
 
