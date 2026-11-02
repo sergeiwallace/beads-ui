@@ -95,7 +95,7 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 
 ## Executive Summary
 
-This design turns the beads-ui web app, already planned as Phase 3 of the beads-ui design, into the place where Sergei steers his Claude Code sessions. It adds a keyboard-first Review queue that lists every blocked task, held decision and open question in priority order and lets him answer each with one key or a short reply, and a per-task composer that sends a prompt to the session owning the task. That prompt reaches the session by event: the server records it in the ai-core work queue and sends addressed Agent Mail, which the fleet's event-driven wake turns into a model turn only when there is something to do, with the shared prompt-injection library, the mod and the queue's turn-end pull as fallbacks under one kill switch. Changing a task's owner sends a receiver-first handoff, and a dispatch can ask the receiving session to arm `/start-goal`. Each machine pair reaches a loopback-bound server through the transport it already runs, with the server's own authentication in front, and a per-host repository allowlist keeps personal stores off the work host. The two most consequential calls are the dispatch ladder ([D-6](#d-6)) and the signed dispatch envelope ([D-8](#d-8)); three decisions are left for Sergei: whether app-portal's member contract takes a Node server ([D-15](#d-15)), whether the web app turns manual rank on by default ([D-21](#d-21)), and the ai-harness changes the build needs ([D-22](#d-22)).
+This design turns the beads-ui web app, already planned as Phase 3 of the beads-ui design, into the place where Sergei steers his Claude Code sessions. It adds a keyboard-first Review queue that lists every blocked task, held decision and open question in priority order and lets him answer each with one key or a short reply, and a per-task composer that sends a prompt to the session owning the task. That prompt reaches the session by event: the server records it in the ai-core work queue and sends addressed Agent Mail, which the fleet's event-driven wake turns into a model turn only when there is something to do, with the shared prompt-injection library, the mod and the queue's turn-end pull as fallbacks under one kill switch. Changing a task's owner sends a receiver-first handoff, and a dispatch can ask the receiving session to arm `/start-goal`. Each machine pair reaches a loopback-bound server through the transport it already runs, with the server's own authentication in front, and a per-host repository allowlist keeps personal stores off the work host. The two most consequential calls are the dispatch ladder ([D-6](#d-6)) and the signed dispatch envelope ([D-8](#d-8)); two decisions are left for Sergei: whether app-portal's member contract takes a Node server ([D-15](#d-15)) and whether the web app turns manual rank on by default ([D-21](#d-21)). His 2026-11-01 ask settled the third, the ai-harness changes the build needs ([D-22](#d-22)), in favour of building them.
 
 ## Summary for a wide audience
 
@@ -296,7 +296,7 @@ Nothing that can make a session act ships before this phase: every later phase d
 - **Scope:** request authentication and write authorization; the per-host repository allowlist; the receiver API and the receiving-side client; the signed envelope and its verification; the dispatch store with its queue-backed and local implementations.
 - **Deliverables:**
   - Files created: `apps/web/server/auth.ts`, `apps/web/server/allowlist.ts`, `apps/web/server/receiver-api.ts`, `apps/web/server/envelope.ts`; `plugins/beads-ui/core/src/dispatch-store.ts` (the `DispatchStore` interface, exported from the core package's index), `apps/web/server/dispatch-store/queue.ts`, `apps/web/server/dispatch-store/local.ts`.
-  - Files created (ai-harness, subject to [D-22](#d-22)): the receiving-side client that fetches a dispatch through the receiver API at each natural boundary and verifies its envelope, key id and body digest, with the shared golden vectors; the installer step that writes each receiver's trusted-keys map.
+  - Files created (ai-harness, per [D-22](#d-22)): the receiving-side client that fetches a dispatch through the receiver API at each natural boundary and verifies its envelope, key id and body digest, with the shared golden vectors; the installer step that writes each receiver's trusted-keys map.
   - Tests added: `apps/web/test/auth.test.ts`, `apps/web/test/allowlist.test.ts`, `apps/web/test/receiver-api.test.ts`, `apps/web/test/envelope.test.ts`, `apps/web/test/dispatch-store.contract.test.ts`, `apps/web/e2e/auth.spec.ts`; ai-harness tests for the receiver client and the verifier.
 - **Tasks + acceptance criteria:**
   - **T-W0.1 Authentication**
@@ -427,7 +427,7 @@ Nothing that can make a session act ships before this phase: every later phase d
 - **Scope:** the dispatch ladder with its kill switch, coalescing and rate cap; owner change as a handoff request; goal arming. The receiver API and envelope are Phase W0's.
 - **Deliverables:**
   - Files created: `apps/web/server/dispatch-ladder.ts`; `plugins/beads-ui/core/src/dispatch-policy.ts`, exported from the core package's index.
-  - Files created (ai-harness): a dispatch typed source in the notifier's admission (so web dispatches are counted and reasoned as their own kind), and the receiver instructions that act on `arm_goal` (subject to [D-22](#d-22)).
+  - Files created (ai-harness): a dispatch typed source in the notifier's admission (so web dispatches are counted and reasoned as their own kind), and the receiver instructions that act on `arm_goal` (per [D-22](#d-22)).
   - Tests added: `apps/web/test/dispatch-ladder.test.ts`, `plugins/beads-ui/core/test/dispatch-policy.test.ts`; ai-harness tests for the typed source.
 - **Tasks + acceptance criteria:**
   - **T-W2.1 Ladder**
@@ -466,7 +466,7 @@ Nothing that can make a session act ships before this phase: every later phase d
 - **Scope:** the heads-query change feed and SSE shared across tabs; the work pair's forward entry and SSH fallback; Tailscale Serve and, subject to [D-15](#d-15), app-portal registration on the personal pair. Authentication and the allowlist are Phase W0's.
 - **Deliverables:**
   - Files created: `apps/web/server/heads-feed.ts`, `apps/web/server/portal.ts` (the app-portal member duties); `apps/web/src/live/shared-feed.ts` (one SSE connection per browser, shared by its tabs); `docs/procedures/web-access.md`.
-  - Files modified (ai-harness, subject to [D-22](#d-22)): the pair transport's `forwards` map gains the web port entry for the work pair.
+  - Files modified (ai-harness, per [D-22](#d-22)): the pair transport's `forwards` map gains the web port entry for the work pair.
   - Files modified (app-portal, once D-15 is ruled): `apps.yaml` gains the `beads` member on the personal pair.
   - Tests added: `apps/web/test/heads-feed.test.ts`, `apps/web/test/portal.test.ts`, `apps/web/e2e/tabs.spec.ts`.
 - **Tasks + acceptance criteria:**
@@ -563,7 +563,7 @@ This design doc hosts the `/auto-flow` Run Ledger for the web app's design stage
 | research route | claude / opus, three `researcher` leaves and one `auditor` verifier; synthesis by the Opus coordinator under the orchestrator authorship override |
 | doc route | claude / opus / n/a: the Opus coordinator authors this doc under `/doc --kind design --mode automated` through `flow_dispatch_doc.py --phase prepare` and `--phase complete`. Prepare pinned the integration snapshot at `4a3a17c` (lineage root `docs/research/beads-ui-web-app.md`, lineage receipt `complete`, no protected decisions); `--phase complete` passed on 2026-10-28 against the same snapshot (verdict `complete`) |
 | doc-audit route | codex / audit / high, cross-family: read-only review rounds through `cx audit`, each writing one evidence file, with the fixes made by the Opus coordinator. The audit loop's fix stage would have Codex write doc text, which this host's rule that Codex only reviews rules out |
-| decider | the Opus coordinator (`us.anthropic.claude-opus-5-5`) through `/decision-framework`; three decisions left for Sergei ([D-15](#d-15), [D-21](#d-21), [D-22](#d-22)) |
+| decider | the Opus coordinator (`us.anthropic.claude-opus-5-5`) through `/decision-framework`; two decisions left for Sergei ([D-15](#d-15), [D-21](#d-21)); [D-22](#d-22) settled by his 2026-11-01 ask |
 | max-agents | 3 concurrent children (launcher's cap); one at a time under the host's load holds of 2026-10-28 |
 | target commit (beads-ui) | `4a3a17c` at the design-stage prepare |
 | worktree + branch | `/data/projects/beads-ui/.worktrees/ops-vm-3-agents/bu-goals-webapp-coordinator` on `wt/ops-vm-3/bu-goals-webapp-coordinator` |
@@ -594,7 +594,7 @@ This design doc hosts the `/auto-flow` Run Ledger for the web app's design stage
 
 ## Design Decisions
 
-Every decision below was taken through the decision framework (`ai-harness/docs/procedures/decision-framework.md`): Gate 0 first, then the Authority test, then the five criteria, and each chosen option's Cons carry a mitigation. A decision marked `✅ Resolved by Opus orchestrator` is final for this run and goes to Sergei's review with the rest of the doc, as he asked; three are left `⏳ PENDING (human)`: D-15 and D-22 because they change another repository's contracts (app-portal's and ai-harness's), and D-21 because it changes a default of the parent design Sergei approved.
+Every decision below was taken through the decision framework (`ai-harness/docs/procedures/decision-framework.md`): Gate 0 first, then the Authority test, then the five criteria, and each chosen option's Cons carry a mitigation. A decision marked `✅ Resolved by Opus orchestrator` is final for this run and goes to Sergei's review with the rest of the doc, as he asked; two are left `⏳ PENDING (human)`: D-15 because it changes app-portal's contracts, and D-21 because it changes a default of the parent design Sergei approved. D-22, which changes ai-harness's contracts, was settled by Sergei's 2026-11-01 ask and is marked `✅ Resolved by Sergei`.
 
 ### Decision Summary
 
@@ -621,7 +621,7 @@ Every decision below was taken through the decision framework (`ai-harness/docs/
 | D-19 | Phase 6 Railway template | withdrawn: outside this doc, filed as BU-isu | | | | Changes a deliverable of the parent design's Phase 6 | withdrawn |
 | D-20 | The dispatch envelope's signature | (a) Ed25519, signing key on the serving host only; (b) HMAC with a shared per-pair key; (c) SSH signatures | (a) | | | Receivers verify but cannot forge; both runtimes support it natively; the ai-harness part is contingent on D-22 | `✅ Resolved by Opus orchestrator` |
 | D-21 | Manual rank in the web app | (a) on by default with the parent design's D-6 keys; (b) off by default | (a) | | | The ask names rearranging; the parent design was approved as a whole | `⏳ PENDING (human)` |
-| D-22 | The ai-harness changes this design needs | (a) build them, one ai-harness PR each; (b) beads-ui only, with what ai-harness ships | (a) | | | (b) drops ask requirements; (a) changes another repository's contracts | `⏳ PENDING (human)` |
+| D-22 | The ai-harness changes this design needs | (a) build them, one ai-harness PR each; (b) beads-ui only, with what ai-harness ships | (a) | | | (b) drops ask requirements; Sergei's 2026-11-01 ask settles (a) | `✅ Resolved by Sergei` |
 
 ### Decision Details
 
@@ -644,7 +644,8 @@ Every decision below was taken through the decision framework (`ai-harness/docs/
 ##### (b) One card at a time, focus mode
 
 **Pros:**
-- Least distraction; works on a phone.
+- Least distraction.
+- Works on a phone.
 
 **Cons:**
 - Hides the queue's size and order, so Sergei cannot pick by priority or impact at a glance.
@@ -823,8 +824,10 @@ Mitigation: below 600 px the three draw as one segmented chip with each segment 
 ##### (a) Agent Mail admitted by the notifier first, then the prompt-injection pointer, then the mod's submit, then the turn-end pull, all under one kill switch
 
 **Pros:**
-- Rung 1 is the fleet's single admission point, which the event-driven wake design chose so busy and idle delivery share one classifier and one kill switch; it reaches the paired host.
-- Zero model tokens while nothing is pending; each rung waits outside the model.
+- Rung 1 is the fleet's single admission point, which the event-driven wake design chose so busy and idle delivery share one classifier and one kill switch.
+- It reaches the paired host.
+- Zero model tokens while nothing is pending.
+- Each rung waits outside the model.
 - Every named route is used: hook context injection is how rung 1 lands, the library is rung 3, Agent Mail carries rung 1.
 
 **Cons:**
@@ -842,7 +845,8 @@ Mitigation: below 600 px the three draw as one segmented chip with each segment 
 ##### (c) Turn-end pull only
 
 **Pros:**
-- Simplest; already built.
+- Simplest.
+- Already built.
 
 **Cons:**
 - Never wakes an idle session, so the ask's auto-trigger fails.
@@ -866,7 +870,8 @@ Criterion 2 (a cross-boundary foundation) favours the one admission point the fl
 ##### (a) Agent Mail, then Buzz, then git-inbox carrying a pointer only
 
 **Pros:**
-- The fleet's ladder order; git-inbox never carries a body.
+- The fleet's ladder order.
+- Git-inbox never carries a body.
 
 **Cons:**
 - Three carriers to configure.
@@ -939,7 +944,8 @@ Criterion 1 (a one-way door once sessions act on web prompts) favours the robust
 ##### (a) The fleet's receiver-first handoff, end to end: a handoff request to a live owner, a git-inbox action to the receiver when the owner is proved gone, nothing when liveness is unknown
 
 **Pros:**
-- Follows the fleet's handoff contract; no claim is stolen.
+- Follows the fleet's handoff contract.
+- No claim is stolen.
 
 **Cons:**
 - The new owner is not set until the receiver takes it.
@@ -972,7 +978,8 @@ The full protocol is in T-W2.2: the selected receiver is checked against the fle
 
 **Pros:**
 - The decision is made where the state is known, and the goal tracks the work from its first step.
-- Every dispatch still triggers work without the user acting again; only its timing waits on a limit.
+- Every dispatch still triggers work without the user acting again.
+- Only its timing waits on a limit.
 
 **Cons:**
 - Depends on the receiver's instructions handling the flag and reporting the pause window.
@@ -1044,7 +1051,8 @@ This applies an approved decision and changes nothing it decided, so the Authori
 ##### (a) On by default, with a setting to turn them off or remap them
 
 **Pros:**
-- Speed from the first use, which the ask asks for; meets 2.1.4.
+- Speed from the first use, which the ask asks for.
+- Meets 2.1.4.
 
 **Cons:**
 - A screen-reader user must find the setting once.
@@ -1076,7 +1084,8 @@ WCAG 2.1.4 requires the off or remap mechanism, not an off default. Mitigation: 
 ##### (a) Poll every allowed store's head in one query, re-read only the stores that moved, push SSE
 
 **Pros:**
-- Sees changes that arrived by sync; one cheap query.
+- Sees changes that arrived by sync.
+- One cheap query.
 
 **Cons:**
 - Polling, at a configured interval.
@@ -1116,7 +1125,8 @@ The poll is on the server, outside any model, so it costs no tokens; the interva
 ##### (a) The queue's prompt store where `queue.url` is set, a local append-only store otherwise
 
 **Pros:**
-- Reuses what runs on each pair; one record shape for both.
+- Reuses what runs on each pair.
+- One record shape for both.
 
 **Cons:**
 - Two storage back ends to test.
@@ -1156,7 +1166,8 @@ Mitigation: one `DispatchStore` interface in core with both implementations run 
 ##### (a) beads-ui's own Node server as a `kind: portal` upstream, performing the member duties itself
 
 **Pros:**
-- D-10 already chose a Node server; the public project runs without the portal.
+- D-10 already chose a Node server.
+- The public project runs without the portal.
 
 **Cons:**
 - Amends app-portal's member contract to admit a Node member.
@@ -1197,7 +1208,8 @@ Every option keeps the ask's portal fit, so Gate 0 holds whichever is chosen. Re
 ##### (a) One more `forwards` entry on the work pair; `tailscale serve` on the personal pair
 
 **Pros:**
-- Each pair's existing, supervised transport; no inbound port opens anywhere.
+- Each pair's existing, supervised transport.
+- No inbound port opens anywhere.
 
 **Cons:**
 - Two access shapes to document.
@@ -1208,7 +1220,8 @@ Every option keeps the ask's portal fit, so Gate 0 holds whichever is chosen. Re
 - One shape.
 
 **Cons:**
-- Unsupervised; the personal pair already has a better route.
+- Unsupervised.
+- The personal pair already has a better route.
 
 ##### (c) A public origin behind an OAuth proxy
 
@@ -1216,7 +1229,8 @@ Every option keeps the ask's portal fit, so Gate 0 holds whichever is chosen. Re
 - Reachable from any device.
 
 **Cons:**
-- Opens an internet path to a server that can make agents act; not "local hosted for now".
+- Opens an internet path to a server that can make agents act.
+- Not "local hosted for now".
 
 ##### Recommendation
 
@@ -1312,9 +1326,7 @@ Gate 0 keeps the privacy requirement whole. Mitigation for the invisible-new-rep
 
 <a id="d-19"></a>
 
-#### D-19: Phase 6 Railway template — withdrawn
-
-Withdrawn in audit round 1. The Railway template is a deliverable of Phase 6 of the beads-ui design, outside this doc's scope, and changing it would amend an approved phase. The finding behind it, that Railway stops reading `railway.json` on 2026-12-01 in favour of `.railway/railway.ts`, is filed as beads-ui issue BU-isu against that phase, to be decided when Phase 6 is built.
+**D-19, Phase 6 Railway template, was withdrawn in audit round 1.** The Railway template is a deliverable of Phase 6 of the beads-ui design, outside this doc's scope, and changing it would amend an approved phase. The finding behind it, that Railway stops reading `railway.json` on 2026-12-01 in favour of `.railway/railway.ts`, is filed as beads-ui issue BU-isu against that phase, to be decided when Phase 6 is built.
 
 ---
 
@@ -1348,7 +1360,8 @@ Withdrawn in audit round 1. The Railway template is a deliverable of Phase 6 of 
 - Reuses keys the hosts already hold.
 
 **Cons:**
-- The hosts' SSH keys are login credentials with other uses, so signing with them couples prompt authority to login access; and the signature tool is a subprocess per verification.
+- The hosts' SSH keys are login credentials with other uses, so signing with them couples prompt authority to login access.
+- The signature tool is a subprocess per verification.
 
 ##### Recommendation
 
@@ -1395,9 +1408,11 @@ Gate 0 favours (a): the ask names rearranging, and (b) would ship without it. Bu
 
 <a id="d-22"></a>
 
-#### D-22: The ai-harness changes this design needs — `⏳ PENDING (human)`
+#### D-22: The ai-harness changes this design needs — ✅ Resolved by Sergei: (a) Build the ai-harness changes, one pull request each
 
 **Context.** Several resolved decisions here are buildable only with changes in ai-harness: the held store's structured-options command ([D-2](#d-2)), a dispatch typed source in the notifier's admission ([D-6](#d-6)), the receiving-side client and envelope verifier ([D-8](#d-8), [D-20](#d-20)), the receiver's answer and unblock handlers (T-W1.2, T-W1.6), the receiver instructions that act on `arm_goal` ([D-10](#d-10)), the pair transport's `forwards` entry ([D-16](#d-16)), and the installer step that distributes the trusted dispatch keys ([D-20](#d-20)). Each design choice is contained, but together they change ai-harness's contracts, which audit round 4 found is a cross-repository change the decision framework returns to Sergei. D-16 adds one more: a `forwards` entry in ai-harness's pair transport. Until Sergei rules this decision, the cross-repository part of each of D-2, D-6, D-8, D-10, D-16 and D-20 is contingent on it; only their beads-ui parts are resolved.
+
+**Resolution (2026-11-01).** Sergei's ask of 2026-11-01 settles this in favour of (a). It asks for review and input surfaces "wired directly into claude sessions", for prompt injection and "hooks / context injection etc" so that a session acts on his input, and for the platform to "support optional dependencies between other repos / systems as appropriate". Each of those needs the ai-harness parts listed above, so the cross-repository parts of D-2, D-6, D-8, D-10, D-16 and D-20 are no longer contingent. He can reverse this by answering the decision.
 
 ##### (a) Build the ai-harness changes as part of this build, each as its own ai-harness pull request with its tests
 
@@ -1417,11 +1432,11 @@ Gate 0 favours (a): the ask names rearranging, and (b) would ship without it. Bu
 
 ##### Recommendation
 
-> **Decision:** `PENDING` — recommended (a) Build the ai-harness changes, one pull request each.
-<!-- decision-record: chosen-option=PENDING; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
-<!-- decision-lineage: decision-id=BU-mg2.5.3/D-22; decision-topic=the ai-harness changes the web app needs; governs=repo:ai-harness,dispatch:receiver; normalized-proposition=the web app build lands the held options command, the dispatch typed source, the receiver client and verifier, the answer and unblock handlers and the arming instructions in ai-harness; applicability=phase:W0,phase:W1,phase:W2; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+> **Decision:** (a) Build the ai-harness changes, one pull request each.
+<!-- decision-record: chosen-option=(a); ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
+<!-- decision-lineage: decision-id=BU-mg2.5.3/D-22; decision-topic=the ai-harness changes the web app needs; governs=repo:ai-harness,dispatch:receiver; normalized-proposition=the web app build lands the held options command, the dispatch typed source, the receiver client and verifier, the answer and unblock handlers and the arming instructions in ai-harness; applicability=phase:W0,phase:W1,phase:W2; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=Sergei; approval-date=2026-11-01; approval-commit= -->
 
-Option (b) drops ask requirements, so Gate 0 leaves (a) as the only way to keep them; the ruling Sergei gives is about the cross-repository work, not whether the requirements stand. Mitigation for (a)'s Con: each change is additive, lands as a separate ai-harness pull request with red-arm tests, and nothing in beads-ui's phases ships its acting path until that pull request is merged and installed.
+Option (b) drops ask requirements, so Gate 0 leaves (a) as the only way to keep them; Sergei's ruling was about the cross-repository work, not whether the requirements stand. Mitigation for (a)'s Con: each change is additive, lands as a separate ai-harness pull request with red-arm tests, and nothing in beads-ui's phases ships its acting path until that pull request is merged and installed.
 
 ---
 
