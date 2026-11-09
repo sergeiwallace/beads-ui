@@ -652,7 +652,7 @@ The build stage's ledger, written by the Opus coordinator for ops-vm-3 under run
 | integration | parent: each leaf's branch is read by content and merged into the coordinator's consolidated branch, which lands at each phase boundary |
 | scope | Phase 3 of the beads-ui design is built first in this run. Every phase here extends it ("which they assume built first or alongside", Implementation Phases), the ask names kanban and backlog views, and none of it existed when the build started: beads-ui `origin/main` `bebf2b7` had no `apps/` directory and `packages/` held only `bd-node`. Phase W4 needs the MCP server of the beads-ui design's Phase 4, so that server is built with W4. Both phases are approved parts of the parent design, so building them adds no new design |
 | interface contracts | the [Envelope wire format](#envelope-wire-format) and the [Receiver API](#receiver-api), fixed by the coordinator on 2026-11-09 before the first legs, as contained interface calls inside D-8, D-17, D-20 and T-W0.3 |
-| stage cursor | `implement`: the Phase 3 foundation, the D-2 options command and the envelope verifier legs launched; see Build legs below |
+| stage cursor | `implement`: Phase 3 and W0's server side are on main (PRs #88 to #90); W1's UI and W3's server legs are running; see Build legs below |
 
 Build legs. Each is one Opus `engineer` leaf in its own worktree; beads-ui legs merge into the coordinator's consolidated branch, and each ai-harness or app-portal leg lands as its own pull request.
 
@@ -663,13 +663,16 @@ Build legs. Each is one Opus `engineer` leaf in its own worktree; beads-ui legs 
 | D1 | W0 authentication and the per-host allowlist (T-W0.1, T-W0.2) | beads-ui | merged; Vitest 694 passed, e2e 36 passed; 18 behaviours each broken once and caught |
 | D2 | W0 envelope signer and dispatch stores (T-W0.4 signing side, T-W0.5) | beads-ui | merged; Vitest 689 passed; the golden vectors match byte for byte |
 | D3 | W0 receiver API (T-W0.3) | beads-ui | merged; 185 passed in `apps/web`, 14 mutants caught |
-| K | Store registry over every allowlisted store, and four review findings | beads-ui | running |
-| F | Phase 3's Roadmap, Analytics, Sessions with the queue adapter, Docker Compose | beads-ui | running |
-| B | The held store's structured-options command (D-2) | ai-harness | pull request open, in the host's merge lane |
+| K | Store registry over every allowlisted store, and four review findings | beads-ui | merged; on main in PR #88 |
+| F | Phase 3's Roadmap, Analytics, Sessions with the queue adapter, Docker Compose | beads-ui | merged; on main in PR #90 |
+| G2a | W1 Review queue, option cards, one-key answers, composer, unblock, dispatch routes, signing key generated at first start (T-W1.1 to T-W1.4, T-W1.6) | beads-ui | running |
+| G2b | W1 Sprint view, inline edits, owner picker, Queue view, detail views, Markdown contract and CSP (T-W1.0, T-W1.5, T-W1.7) | beads-ui | running |
+| I1 | W3 heads feed, shared SSE, the member duties with a public `/healthz`, the access procedure and a supervised user service (T-W3.1, T-W3.2) | beads-ui | running |
+| B | The held store's structured-options command (D-2) | ai-harness | merged |
 | C | The envelope verifier and golden vectors (T-W0.4, D-20) | ai-harness | merged |
 | E | The receiving-side client and the trusted-keys install step (T-W0.3, T-W0.4) | ai-harness | built, waiting for its push slot |
-| I2 | The work pair's forward entry for the web port (D-16, T-W3.2) | ai-harness | pull request open, in the host's merge lane |
-| I3 | app-portal admits the Node member and registers `/beads` (D-15) | app-portal | running |
+| I2 | The work pair's forward entry for the web port (D-16, T-W3.2) | ai-harness | merged |
+| I3 | app-portal admits the Node member and registers `/beads` (D-15) | app-portal | merged |
 
 Build decisions, each a contained call inside an approved decision, made by the Opus coordinator unless a leg is named:
 
