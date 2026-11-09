@@ -12,6 +12,8 @@ export interface FakeSession {
   id: string;
   machine: string;
   state: string;
+  /** The repository the session was launched for; the allowlist filters sessions by it. */
+  repo?: string | null;
   last_heartbeat_at?: string | null;
 }
 
@@ -50,7 +52,7 @@ function sessionOut(session: FakeSession) {
     machine: session.machine,
     name: session.id.split("/", 2)[1] ?? session.id,
     harness: "claude-code",
-    repo: null,
+    repo: session.repo ?? null,
     worktree: null,
     tmux_target: null,
     transcript_path: null,

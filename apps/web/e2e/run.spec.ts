@@ -2,9 +2,10 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createStore } from "../test/store.ts";
-import { expect, serve, test } from "./fixtures.ts";
+import { expect, loginLink, serve, test } from "./fixtures.ts";
 
-// T-3.5: the documented single command, run in a repository with a .beads store.
+// T-3.5: the documented single command, run in a repository with a .beads store, then the
+// documented sign-in (web app design T-W0.1): the Board opens from the link login-link prints.
 test("should serve the web app on a local port and show the Board within 10 seconds", async ({
   page,
   isMobile,
@@ -17,7 +18,7 @@ test("should serve the web app on a local port and show the Board within 10 seco
   const served = await serve(store.dir, configHome);
   try {
     expect(served.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
-    await page.goto(served.url);
+    await page.goto(await loginLink(served));
     await expect(page.locator(`li.bu-card[data-card-id="${id}"]`)).toBeVisible();
     const elapsed = Date.now() - started;
     test.info().annotations.push({ type: "time to Board", description: `${elapsed} ms` });

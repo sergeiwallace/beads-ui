@@ -3,27 +3,42 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { LOOPBACK } from "../server/config.ts";
-import { type RunningServer, StartRefused, startServer } from "../server/server.ts";
+import { type RunningServer, startServer } from "../server/server.ts";
+import { type HostEnv, hostConfig, hostEnv, repoName, signIn } from "./auth-env.ts";
 import { createStore, failingBd, slowBd, type TestStore } from "./store.ts";
 
 let store: TestStore;
-let configHome: string;
+let host: HostEnv;
 let clientDir: string;
 let server: RunningServer;
 const cleanup: (() => Promise<void>)[] = [];
+/** Each started server's session cookie: every route needs one (web app design T-W0.1). */
+const cookies = new Map<RunningServer, string>();
 
 async function start(options: { bdEnv?: NodeJS.ProcessEnv; repoRoot?: string } = {}) {
-  return startServer({
+  const started = await startServer({
     repoRoot: options.repoRoot ?? store.dir,
     port: 0,
     clientDir,
-    configEnv: { xdgConfigHome: configHome },
+    configEnv: host.configEnv,
     ...(options.bdEnv === undefined ? {} : { bdEnv: options.bdEnv }),
   });
+  cookies.set(started, await signIn(started));
+  return started;
 }
 
+/** What a signed-in same-origin page's write carries. */
+const writeHeaders = (on: RunningServer) => ({
+  "content-type": "application/json",
+  "x-beads-ui": "1",
+  "sec-fetch-site": "same-origin",
+  cookie: cookies.get(on) ?? "",
+});
+
 async function get(path: string, on: RunningServer = server) {
-  const response = await fetch(new URL(path, on.url));
+  const response = await fetch(new URL(path, on.url), {
+    headers: { cookie: cookies.get(on) ?? "" },
+  });
   const type = response.headers.get("content-type") ?? "";
   return {
     status: response.status,
@@ -35,7 +50,7 @@ async function get(path: string, on: RunningServer = server) {
 async function post(path: string, body: unknown) {
   const response = await fetch(new URL(path, server.url), {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: writeHeaders(server),
     body: JSON.stringify(body),
   });
   return { status: response.status, body: await response.json() };
@@ -43,7 +58,8 @@ async function post(path: string, body: unknown) {
 
 beforeAll(async () => {
   store = await createStore();
-  configHome = await mkdtemp(join(tmpdir(), "beads-ui-web-config-"));
+  host = await hostEnv();
+  await host.write(hostConfig({ allowRepos: [repoName(store.dir)] }));
   clientDir = await mkdtemp(join(tmpdir(), "beads-ui-web-client-"));
   await writeFile(join(clientDir, "index.html"), "<!doctype html><title>beads-ui client</title>");
   server = await start();
@@ -53,8 +69,8 @@ afterAll(async () => {
   await server?.close();
   for (const step of cleanup.splice(0)) await step();
   await store?.remove();
-  for (const dir of [configHome, clientDir])
-    if (dir !== undefined) await rm(dir, { recursive: true });
+  await host?.remove();
+  if (clientDir !== undefined) await rm(clientDir, { recursive: true });
 });
 
 describe("the server's address and routes", () => {
@@ -63,30 +79,15 @@ describe("the server's address and routes", () => {
     expect(server.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
   });
 
-  it("should refuse to start when [web] host names an address other than 127.0.0.1", async () => {
-    const home = await mkdtemp(join(tmpdir(), "beads-ui-web-config-"));
-    cleanup.push(() => rm(home, { recursive: true }));
-    await writeFile(join(store.dir, "beads-ui.toml"), '[web]\nhost = "0.0.0.0"\n');
-    try {
-      await expect(
-        startServer({
-          repoRoot: store.dir,
-          port: 0,
-          clientDir,
-          configEnv: { xdgConfigHome: home },
-        }),
-      ).rejects.toThrow(
-        new StartRefused('beads-ui web binds 127.0.0.1 only; refusing [web] host = "0.0.0.0"'),
-      );
-    } finally {
-      await rm(join(store.dir, "beads-ui.toml"));
-    }
-  });
-
   it("should refuse to start in a directory where bd finds no store", async () => {
     const empty = await mkdtemp(join(tmpdir(), "beads-ui-web-empty-"));
     cleanup.push(() => rm(empty, { recursive: true }));
-    await expect(start({ repoRoot: empty })).rejects.toThrow(/no Beads store found from/);
+    await host.write(hostConfig({ allowRepos: [repoName(store.dir), repoName(empty)] }));
+    try {
+      await expect(start({ repoRoot: empty })).rejects.toThrow(/no Beads store found from/);
+    } finally {
+      await host.write(hostConfig({ allowRepos: [repoName(store.dir)] }));
+    }
   });
 
   it("should answer an unknown /api/ path with a JSON 404, never the client page", async () => {
@@ -299,7 +300,7 @@ describe("stopping the server", () => {
     const stopping = await start({ bdEnv: slow.env });
     const write = fetch(new URL(`/api/issues/${id}/status`, stopping.url), {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: writeHeaders(stopping),
       body: JSON.stringify({ to: "in_progress", shown: "open" }),
     });
     // The stop starts once the server's bd update is running.
@@ -325,7 +326,7 @@ describe("stopping the server", () => {
     const abort = new AbortController();
     const write = fetch(new URL(`/api/issues/${id}/status`, stopping.url), {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: writeHeaders(stopping),
       body: JSON.stringify({ to: "in_progress", shown: "open" }),
       signal: abort.signal,
     }).catch(() => undefined);

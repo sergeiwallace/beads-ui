@@ -33,6 +33,8 @@ export interface BoardPayload {
   refreshSeconds: number;
   asOf: string;
   problems: string[];
+  /** Counts of rows the host's allowlist hid, never naming their repositories. */
+  health: string[];
 }
 
 export interface IssuePayload {
@@ -71,12 +73,16 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
+// Every write carries X-Beads-UI, which a cross-site form cannot send (web app design D-17).
+const WRITE_HEADERS = { "content-type": "application/json", "x-beads-ui": "1" };
+
 const post = <T>(path: string, body: unknown): Promise<T> =>
-  call<T>(path, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  call<T>(path, { method: "POST", headers: WRITE_HEADERS, body: JSON.stringify(body) });
+
+/** Ends this browser's session on the server; the server clears its cookie. */
+export async function signOut(): Promise<void> {
+  await fetch(`${base}api/auth/v1/logout`, { method: "POST", headers: WRITE_HEADERS, body: "{}" });
+}
 
 const issuePath = (id: string) => `issues/${encodeURIComponent(id)}`;
 

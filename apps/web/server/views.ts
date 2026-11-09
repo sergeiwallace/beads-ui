@@ -31,6 +31,7 @@ import {
   storeName,
 } from "@beads-ui/core";
 import type { BdClient, BdResult } from "@sergeiwallace/beads-ui-bd-node";
+import { filterAllowed, repositoryOf } from "./allowlist.ts";
 import type { WebConfig } from "./config.ts";
 import { claimTimes, leasedTasks, QueueClient, type QueueFailure } from "./queue.ts";
 import { type ApiContext, type ApiReply, type ApiRequest, bdFailure, failure } from "./routes.ts";
@@ -180,7 +181,7 @@ const sprintOrder = (a: SprintInfo, b: SprintInfo) =>
   Number(b.open) - Number(a.open) || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
 
 export async function analyticsRoute(request: ApiRequest, context: ApiContext): Promise<ApiReply> {
-  const weeks = parseWeeks(request.query?.weeks);
+  const weeks = parseWeeks(request.query.get("weeks") ?? undefined);
   if (typeof weeks !== "number") return weeks;
   const config = await context.config();
   const now = nowOf(context);
@@ -204,7 +205,7 @@ export async function analyticsRoute(request: ApiRequest, context: ApiContext): 
   const issues = dedupe([...open.value, ...closed]);
 
   const sprints = sprintsOf(issues, statuses.value).sort(sprintOrder);
-  const asked = request.query?.sprint;
+  const asked = request.query.get("sprint") ?? undefined;
   const sprint =
     asked === undefined || asked === ""
       ? currentSprint(sprints, now)
@@ -253,8 +254,15 @@ export async function analyticsRoute(request: ApiRequest, context: ApiContext): 
 
 // ── Sessions and the queue adapter (T-3.4) ───────────────────────────────────
 
-const queueRepo = (config: WebConfig, context: ApiContext): string =>
-  config.queueRepo ?? storeName(context.repoRoot);
+/**
+ * This store's name in the work queue: `[queue] repo`, else the name the allowlist knows the
+ * repository by, its main working tree's directory, so a linked worktree names its repository.
+ */
+const queueRepo = async (config: WebConfig, context: ApiContext): Promise<string> =>
+  config.queueRepo ?? (await repositoryOf(context.repoRoot));
+
+/** The allowlist's health line counts each kind of queue row it hides under this name. */
+const QUEUE_SOURCE = "the work queue";
 
 export async function sessionsRoute(_request: ApiRequest, context: ApiContext): Promise<ApiReply> {
   const config = await context.config();
@@ -278,17 +286,33 @@ export async function sessionsRoute(_request: ApiRequest, context: ApiContext): 
     ) as QueueFailure;
     return { status: 200, body: { ...base, view: fromBeads(), queueError } };
   }
-  const live = new Set(sessions.value.filter((s) => s.state !== "gone").map((s) => s.id));
+  // Every queue row passes the host's allowlist before it is shown (web app design D-18).
+  const allowlist = await context.allowlist();
+  const shownSessions = filterAllowed(
+    sessions.value,
+    (session) => session.repo,
+    allowlist,
+    context.health,
+    `${QUEUE_SOURCE} sessions`,
+  );
+  const shownTasks = filterAllowed(
+    tasks.value,
+    (task) => task.repo,
+    allowlist,
+    context.health,
+    `${QUEUE_SOURCE} tasks`,
+  );
+  const live = new Set(shownSessions.filter((s) => s.state !== "gone").map((s) => s.id));
   const claims = await claimTimes(
     queue,
-    tasks.value.filter((task) => task.ownerSession !== undefined && live.has(task.ownerSession)),
+    shownTasks.filter((task) => task.ownerSession !== undefined && live.has(task.ownerSession)),
   );
   const view = queueSessionsView({
-    sessions: sessions.value,
-    tasks: tasks.value,
+    sessions: shownSessions,
+    tasks: shownTasks,
     claims,
     issues: issues.value,
-    store: queueRepo(config, context),
+    store: await queueRepo(config, context),
     statuses: statuses.value,
     now,
   });
@@ -323,7 +347,7 @@ export async function queueStatusWrite(
   const config = await context.config();
   if (config.queueUrl === undefined) return {};
   const queue = new QueueClient(config.queueUrl);
-  const repo = queueRepo(config, context);
+  const repo = await queueRepo(config, context);
   const task = await queue.task(repo, id);
   if (!task.ok) {
     if (task.failure.kind === "not-found") return {};

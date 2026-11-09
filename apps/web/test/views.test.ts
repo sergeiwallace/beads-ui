@@ -5,6 +5,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { type RunningServer, startServer } from "../server/server.ts";
+import {
+  type HostEnv,
+  hostConfig,
+  hostEnv,
+  repoName,
+  SAME_ORIGIN_WRITE,
+  signIn,
+} from "./auth-env.ts";
 import { type FakeQueue, startFakeQueue } from "./queue-fake.ts";
 import { createStore, failingBd, type TestStore } from "./store.ts";
 
@@ -14,11 +22,15 @@ import { createStore, failingBd, type TestStore } from "./store.ts";
 // (queue-fake.ts); set BEADS_UI_LIVE_QUEUE_URL to also read a live queue on loopback.
 
 let store: TestStore;
-let configHome: string;
+let host: HostEnv;
 let clientDir: string;
 let server: RunningServer;
 let queue: FakeQueue;
 const cleanup: (() => Promise<void>)[] = [];
+/** Each started server's session cookie: every route needs one (web app design T-W0.1). */
+const cookies = new Map<RunningServer, string>();
+/** The work queue's repository the tests' leased tasks belong to, on the host's allowlist. */
+const QUEUE_REPO = "demo";
 
 const DAY = 86_400_000;
 const day = (offset: number) => new Date(Date.now() + offset * DAY).toISOString().slice(0, 10);
@@ -35,38 +47,53 @@ async function closedUrl(): Promise<string> {
 }
 
 async function start(bdEnv?: NodeJS.ProcessEnv) {
-  return startServer({
+  const started = await startServer({
     repoRoot: store.dir,
     port: 0,
     clientDir,
-    configEnv: { xdgConfigHome: configHome },
+    configEnv: host.configEnv,
     ...(bdEnv === undefined ? {} : { bdEnv }),
   });
+  cookies.set(started, await signIn(started));
+  return started;
 }
 
 async function get(path: string, on: RunningServer = server) {
-  const response = await fetch(new URL(path, on.url));
+  const response = await fetch(new URL(path, on.url), {
+    headers: { cookie: cookies.get(on) ?? "" },
+  });
   return { status: response.status, body: await response.json() };
 }
 
 async function post(path: string, body: unknown) {
   const response = await fetch(new URL(path, server.url), {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { ...SAME_ORIGIN_WRITE, cookie: cookies.get(server) ?? "" },
     body: JSON.stringify(body),
   });
   return { status: response.status, body: await response.json() };
 }
 
-/** Writes the store's beads-ui.toml, read again on the next request. */
-const configure = (toml: string) => writeFile(join(store.dir, "beads-ui.toml"), toml);
+/**
+ * Writes the host's own beads-ui.toml, read again on the next request: the allowlist with the
+ * store's repository and the queue's, the `[auth]` table, and `extra` (`[queue]` is read from
+ * this file alone, never the repository's).
+ */
+const configure = (extra?: string) =>
+  host.write(
+    hostConfig({
+      allowRepos: [repoName(store.dir), QUEUE_REPO],
+      ...(extra === undefined ? {} : { extra }),
+    }),
+  );
 
 const created = async (...args: string[]) =>
   (JSON.parse(await store.bd("create", ...args, "--json")) as { id: string }).id;
 
 beforeAll(async () => {
   store = await createStore("views");
-  configHome = await mkdtemp(join(tmpdir(), "beads-ui-web-config-"));
+  host = await hostEnv();
+  await configure();
   clientDir = await mkdtemp(join(tmpdir(), "beads-ui-web-client-"));
   await writeFile(join(clientDir, "index.html"), "<!doctype html><title>beads-ui client</title>");
   queue = await startFakeQueue();
@@ -75,6 +102,7 @@ beforeAll(async () => {
 
 afterEach(async () => {
   await rm(join(store.dir, "beads-ui.toml"), { force: true });
+  await configure();
   queue.sessions = [];
   queue.tasks = [];
   queue.requests.splice(0);
@@ -85,8 +113,8 @@ afterAll(async () => {
   await queue?.close();
   for (const step of cleanup.splice(0)) await step();
   await store?.remove();
-  for (const dir of [configHome, clientDir])
-    if (dir !== undefined) await rm(dir, { recursive: true });
+  await host?.remove();
+  if (clientDir !== undefined) await rm(clientDir, { recursive: true });
 });
 
 describe("GET /api/roadmap (T-3.2)", () => {
@@ -313,9 +341,21 @@ describe("GET /api/sessions (T-3.4)", () => {
     const heartbeat = new Date(Date.now() - 90_000).toISOString();
     const claimed = new Date(Date.now() - 2 * 3_600_000).toISOString();
     queue.sessions = [
-      { id: "host-a/session-1", machine: "host-a", state: "busy", last_heartbeat_at: heartbeat },
-      { id: "host-b/session-2", machine: "host-b", state: "idle", last_heartbeat_at: heartbeat },
-      { id: "host-b/old", machine: "host-b", state: "gone" },
+      {
+        id: "host-a/session-1",
+        machine: "host-a",
+        repo: QUEUE_REPO,
+        state: "busy",
+        last_heartbeat_at: heartbeat,
+      },
+      {
+        id: "host-b/session-2",
+        machine: "host-b",
+        repo: QUEUE_REPO,
+        state: "idle",
+        last_heartbeat_at: heartbeat,
+      },
+      { id: "host-b/old", machine: "host-b", repo: QUEUE_REPO, state: "gone" },
     ];
     queue.tasks = [
       {
@@ -353,6 +393,44 @@ describe("GET /api/sessions (T-3.4)", () => {
     expect(view.rows[2]).toMatchObject({ state: "gone" });
   });
 
+  it("should drop every queue session and task from a repository off the host's allowlist and count it", async () => {
+    queue.sessions = [
+      { id: "host-a/shown", machine: "host-a", repo: QUEUE_REPO, state: "busy" },
+      { id: "host-a/hidden", machine: "host-a", repo: "private-repo", state: "busy" },
+      { id: "host-a/no-repo", machine: "host-a", repo: null, state: "busy" },
+    ];
+    queue.tasks = [
+      {
+        repo: "private-repo",
+        task_id: "p-1",
+        title: "Private",
+        queue_state: "assigned",
+        owner_session: "host-a/shown",
+      },
+    ];
+    await configure(`[queue]\nurl = "${queue.url}"\n`);
+
+    const reply = await get("/api/sessions");
+
+    expect(reply.body.view.rows.map((row: { id: string }) => row.id)).toEqual(["host-a/shown"]);
+    expect(reply.body.view.rows[0].currentTask).toBeUndefined();
+    expect(JSON.stringify(reply.body)).not.toContain("private-repo");
+    const health = await get("/api/health");
+    expect(health.body.hidden).toBe(3);
+    expect(health.body.lines).toEqual([
+      "3 rows from repositories not on this host's allowlist are hidden",
+    ]);
+  });
+
+  it("should read [queue] from the host's own file, never the repository's", async () => {
+    queue.sessions = [{ id: "host-a/s", machine: "host-a", repo: QUEUE_REPO, state: "busy" }];
+    await writeFile(join(store.dir, "beads-ui.toml"), `[queue]\nurl = "${queue.url}"\n`);
+
+    const reply = await get("/api/sessions");
+
+    expect(reply.body.view.source).toBe("beads");
+  });
+
   it("should show the store's assignees and name the failed queue read when the queue does not answer", async () => {
     await configure(`[queue]\nurl = "${await closedUrl()}"\n`);
 
@@ -370,14 +448,22 @@ describe("GET /api/sessions (T-3.4)", () => {
     "should read a live work queue's registry when one answers on loopback",
     async () => {
       const live = process.env.BEADS_UI_LIVE_QUEUE_URL ?? "";
-      const registry = (await (await fetch(`${live}/api/queue/sessions`)).json()) as unknown[];
-      await configure(`[queue]\nurl = "${live}"\n`);
+      const registry = (await (await fetch(`${live}/api/queue/sessions`)).json()) as {
+        repo: string | null;
+      }[];
+      const repos = [...new Set(registry.flatMap((row) => (row.repo === null ? [] : [row.repo])))];
+      await host.write(
+        hostConfig({
+          allowRepos: [repoName(store.dir), ...repos],
+          extra: `[queue]\nurl = "${live}"\n`,
+        }),
+      );
 
       const reply = await get("/api/sessions");
 
       expect(reply.body.queueError).toBeUndefined();
       expect(reply.body.view.source).toBe("queue");
-      expect(reply.body.view.rows).toHaveLength(registry.length);
+      expect(reply.body.view.rows).toHaveLength(registry.filter((row) => row.repo !== null).length);
       for (const row of reply.body.view.rows) expect(typeof row.state).toBe("string");
     },
   );

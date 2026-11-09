@@ -8,15 +8,25 @@ import {
   storeName,
 } from "@beads-ui/core";
 import type { BdClient, BdResult } from "@sergeiwallace/beads-ui-bd-node";
+import type { Allowlist, AllowlistHealth } from "./allowlist.ts";
+import type { Caller } from "./auth.ts";
 import type { WebConfig } from "./config.ts";
 import { analyticsRoute, queueStatusWrite, roadmapRoute, sessionsRoute } from "./views.ts";
 
 /** What every route reads through: the store's bd client and the call-time settings. */
 export interface ApiContext {
   repoRoot: string;
+  /** Runs no bd command while the store's repository is off the host's allowlist (D-18). */
   bd: BdClient;
   /** Read again on every call, so an edit to `beads-ui.toml` applies to the next request. */
   config(): Promise<WebConfig>;
+  /**
+   * This host's repository allowlist, or with `host` that host's published copy, read again on
+   * every call. Every queue or store row passes filterAllowed before it is returned.
+   */
+  allowlist(host?: string): Promise<Allowlist>;
+  /** What filterAllowed dropped, counted for the health line without naming a repository. */
+  health: AllowlistHealth;
   random: RandomSource;
   /** An ISO stamp for "as of". */
   now(): string;
@@ -24,9 +34,10 @@ export interface ApiContext {
 
 export interface ApiRequest {
   params: Readonly<Record<string, string>>;
+  query: URLSearchParams;
   body: unknown;
-  /** The URL's query parameters, last value of each name. */
-  query?: Readonly<Record<string, string>>;
+  /** Who the authentication layer admitted: a browser session, a receiving host, or the MCP server. */
+  caller: Caller;
 }
 
 export interface ApiReply {
@@ -42,7 +53,10 @@ export type ApiErrorKind =
   | "invalid"
   | "malformed-rank"
   | "rank-off"
-  | "unknown-route";
+  | "unknown-route"
+  | "unauthenticated"
+  | "forbidden"
+  | "store-closed";
 
 /** Every error body is `{ error: ApiError }`; `source` names what failed (`bd list`, a field). */
 export interface ApiError {
@@ -52,10 +66,20 @@ export interface ApiError {
   exitCode?: number | null;
 }
 
+/**
+ * One API route. Its path's prefix decides the one credential it takes (auth.ts routeClass):
+ * `/api/receiver/` the receiver token, `/api/mcp/` the MCP token, any other the browser session.
+ */
 export interface Route {
   method: "GET" | "POST";
   /** Under `/api/`; a `:name` segment is a parameter. */
   path: string;
+  /**
+   * A route that makes a session act: behind Tailscale Serve it also needs the request's
+   * identity on `[auth] dispatch_identities`, on top of the session.
+   */
+  dispatch?: boolean;
+  /** A string body is sent as text/plain; any other as JSON. */
   handle(request: ApiRequest, context: ApiContext): Promise<ApiReply>;
 }
 
@@ -68,6 +92,9 @@ const STATUS_BY_KIND: Readonly<Record<ApiErrorKind, number>> = {
   "malformed-rank": 422,
   failed: 502,
   timeout: 504,
+  unauthenticated: 401,
+  forbidden: 403,
+  "store-closed": 503,
 };
 
 export function failure(error: ApiError): ApiReply {
@@ -152,6 +179,30 @@ async function boardRoute(_request: ApiRequest, context: ApiContext): Promise<Ap
       refreshSeconds: config.refreshSeconds,
       asOf: context.now(),
       problems: config.problems,
+      health: healthLines(context),
+    },
+  };
+}
+
+const healthLines = (context: ApiContext): string[] => {
+  const line = context.health.line();
+  return line === undefined ? [] : [line];
+};
+
+/**
+ * The host's health: whether the allowlist reads and the served store is open, and how many
+ * rows the allowlist hid, never which repositories they came from.
+ */
+async function healthRoute(_request: ApiRequest, context: ApiContext): Promise<ApiReply> {
+  const allowlist = await context.allowlist();
+  return {
+    status: 200,
+    body: {
+      allowlist: allowlist.ok
+        ? { readable: true, source: allowlist.source }
+        : { readable: false, reason: allowlist.reason },
+      hidden: context.health.hidden,
+      lines: healthLines(context),
     },
   };
 }
@@ -307,6 +358,7 @@ async function rankRoute(request: ApiRequest, context: ApiContext): Promise<ApiR
 /** Every API route, in one table, so a later layer can stand in front of all of them. */
 export const ROUTES: readonly Route[] = [
   { method: "GET", path: "/api/board", handle: boardRoute },
+  { method: "GET", path: "/api/health", handle: healthRoute },
   { method: "GET", path: "/api/issues/:id", handle: issueRoute },
   { method: "POST", path: "/api/issues/:id/status", handle: statusRoute },
   { method: "POST", path: "/api/issues/:id/priority", handle: priorityRoute },
