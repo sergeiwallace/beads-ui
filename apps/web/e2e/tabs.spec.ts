@@ -134,7 +134,8 @@ test.describe("the app as an app-portal member", () => {
     } finally {
       await served.stop();
       await store.remove();
-      await rm(configHome, { recursive: true });
+      // bd may still be writing its event log under the private HOME (fixtures.ts, configHome).
+      await rm(configHome, { recursive: true, maxRetries: 10, retryDelay: 200 });
     }
   });
 });

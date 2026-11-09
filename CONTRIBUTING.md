@@ -34,6 +34,10 @@ npm test            # Vitest, the web app's Playwright specs, then claude plugin
 npx tsc --noEmit    # type check of the whole repository
 ```
 
+`BEADS_UI_TEST_JOBS` (default 1, at most 2) bounds how many test processes `npm test` and the
+test hooks start; a commit that stages only `docs/**` or `*.md` paths skips the test hooks. The
+setting and how its bounds multiply: [web-run.md, Test it](docs/procedures/web-run.md#test-it).
+
 The mod's gates need Claude Code (`claude`) on your `PATH`: `npm test` runs `claude plugin test`,
 and the pre-commit hooks run `claude plugin validate` on the repository root and on
 `plugins/beads-ui`. When you add a hook or a `$` call to the mod, add it to

@@ -147,7 +147,9 @@ export const test = base.extend<{
   configHome: async ({}, use) => {
     const dir = await mkdtemp(join(tmpdir(), "beads-ui-e2e-config-"));
     await use(dir);
-    await rm(dir, { recursive: true });
+    // bd writes its event log under the private HOME (`.beads/eventsData`) for a moment after the
+    // served command has exited, so a one-shot removal can meet a directory still filling.
+    await rm(dir, { recursive: true, maxRetries: 10, retryDelay: 200 });
   },
   served: async ({ configHome }, use) => {
     const store = await createStore("e2e");
