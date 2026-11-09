@@ -11,6 +11,8 @@ import type { BdClient, BdResult } from "@sergeiwallace/beads-ui-bd-node";
 import type { Allowlist, AllowlistHealth } from "./allowlist.ts";
 import type { Caller } from "./auth.ts";
 import type { WebConfig } from "./config.ts";
+import type { DispatchService } from "./dispatch-service.ts";
+import { RECEIVER_ROUTES } from "./receiver-api.ts";
 
 /** What every route reads through: the store's bd client and the call-time settings. */
 export interface ApiContext {
@@ -26,6 +28,8 @@ export interface ApiContext {
   allowlist(host?: string): Promise<Allowlist>;
   /** What filterAllowed dropped, counted for the health line without naming a repository. */
   health: AllowlistHealth;
+  /** The dispatch store the receiver API serves, with the signer and the expiry sweep. */
+  dispatches: DispatchService;
   random: RandomSource;
   /** An ISO stamp for "as of". */
   now(): string;
@@ -78,7 +82,7 @@ export interface Route {
    * identity on `[auth] dispatch_identities`, on top of the session.
    */
   dispatch?: boolean;
-  /** A string body is sent as text/plain; any other as JSON. */
+  /** A string or byte body is sent as text/plain; any other as JSON. */
   handle(request: ApiRequest, context: ApiContext): Promise<ApiReply>;
 }
 
@@ -353,6 +357,8 @@ export const ROUTES: readonly Route[] = [
   { method: "POST", path: "/api/issues/:id/status", handle: statusRoute },
   { method: "POST", path: "/api/issues/:id/priority", handle: priorityRoute },
   { method: "POST", path: "/api/issues/:id/rank", handle: rankRoute },
+  // The receiver API (receiver-api.ts), authorised by a receiving host's token.
+  ...RECEIVER_ROUTES,
 ];
 
 export interface RouteMatch {
