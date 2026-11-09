@@ -115,6 +115,9 @@ export async function main(argv: readonly string[]): Promise<number> {
     if (running.storeClosed !== undefined) {
       process.stderr.write(`beads-ui web: ${running.storeClosed}\n`);
     }
+    for (const notice of running.dispatchNotices) {
+      process.stderr.write(`beads-ui web: ${notice}\n`);
+    }
     for (const problem of running.dispatchProblems) {
       process.stderr.write(`beads-ui web: ${problem}\n`);
     }

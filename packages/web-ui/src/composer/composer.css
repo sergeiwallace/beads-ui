@@ -1,0 +1,65 @@
+/*
+ * The composer's layout: the editor and its action stay visible above a phone's keyboard.
+ *
+ * In a stylesheet rather than inline styles because `env(safe-area-inset-bottom)`
+ * and `dvh` are not parseable by jsdom -- set inline, jsdom silently dropped the
+ * padding and mangled the rest of the declaration. The assertion that this
+ * actually keeps the Send control on screen is the Playwright row at 390x844,
+ * which is the only place a dynamic viewport exists.
+ */
+
+.composer-region {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  /* `dvh`, not `vh`: on iOS `vh` is the *largest* viewport and does not shrink
+     when the keyboard opens, which is exactly the failure this AC describes. */
+  max-height: 40dvh;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: inherit;
+}
+
+.composer-input {
+  flex: 1 1 auto;
+  min-height: 4rem;
+  max-height: 30dvh;
+  overflow-y: auto;
+  outline: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* The token decoration the AC's "mark it valid ... and invalid otherwise" names.
+   A colour alone would not be readable to everyone, so the invalid token also
+   carries an underline. */
+.skill-token {
+  border-radius: 0.2rem;
+  padding: 0 0.1rem;
+}
+
+.skill-token--valid {
+  color: #0b5f3a;
+  background: #d8f3e5;
+}
+
+.skill-token--invalid {
+  color: #8a1c1c;
+  background: #fbe3e3;
+  text-decoration: underline wavy currentColor;
+}
+
+/* No catalog yet, so no verdict: deliberately indistinguishable from ordinary
+   text rather than styled as a third thing the reader has to learn. */
+.skill-token--unknown {
+  color: inherit;
+  background: none;
+  text-decoration: none;
+}
+
+.composer-note {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: #6b6b6b;
+}

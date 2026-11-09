@@ -5,6 +5,7 @@ import { AllowlistHealth, readAllowlist } from "./allowlist.ts";
 import { type App, createApp } from "./app.ts";
 import { AuthLayer, AuthRefused, type AuthSettings, loadAuth } from "./auth.ts";
 import { type ConfigEnv, isLoopback, LOOPBACK, readWebConfig } from "./config.ts";
+import { releaseFollowUps } from "./dispatch.ts";
 import {
   DispatchRefused,
   DispatchService,
@@ -14,7 +15,7 @@ import {
 } from "./dispatch-service.ts";
 import { HeadsFeed } from "./heads-feed.ts";
 import { createStoreRegistry } from "./registry.ts";
-import { type Route, readStoreBoard, type StoreBoard } from "./routes.ts";
+import { type ApiContext, type Route, readStoreBoard, type StoreBoard } from "./routes.ts";
 
 export interface StartOptions {
   /**
@@ -55,6 +56,8 @@ export interface RunningServer {
   dispatches: DispatchService;
   /** What the dispatch service could not do at start, such as sign; the server runs on. */
   dispatchProblems: string[];
+  /** What the dispatch service did at start, such as generate its signing key; one line each. */
+  dispatchNotices: string[];
   /** The change feed: every store's Dolt head, polled, and an event when one moves. */
   feed: HeadsFeed<StoreBoard>;
   close(): Promise<void>;
@@ -128,6 +131,8 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     if (!(error instanceof DispatchRefused || error instanceof DispatchStoreError)) throw error;
     throw new StartRefused(`the dispatch store cannot open: ${error.message}`);
   }
+  const generated = await dispatches.ensureSigningKey();
+  const dispatchNotices = generated === undefined ? [] : [generated];
   const dispatchProblems = await dispatches.publish();
 
   let app: App | undefined;
@@ -158,23 +163,24 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
       (await readWebConfig(options.repoRoot, options.configEnv)).refreshSeconds * 1000,
     clock,
   });
+  const context: ApiContext = {
+    repoRoot: options.repoRoot,
+    stores,
+    config: () => readWebConfig(options.repoRoot, options.configEnv),
+    allowlist,
+    health,
+    dispatches,
+    feed,
+    random: Math.random,
+    now: () => new Date(clock()).toISOString(),
+  };
   const started = createApp({
     clientDir: options.clientDir,
     auth,
     ...(options.routes === undefined ? {} : { routes: options.routes }),
     ...(options.heartbeatMs === undefined ? {} : { heartbeatMs: options.heartbeatMs }),
     ...(config.basePath === undefined ? {} : { basePath: config.basePath }),
-    context: {
-      repoRoot: options.repoRoot,
-      stores,
-      config: () => readWebConfig(options.repoRoot, options.configEnv),
-      allowlist,
-      health,
-      dispatches,
-      feed,
-      random: Math.random,
-      now: () => new Date(clock()).toISOString(),
-    },
+    context,
   });
   app = started;
   feed.start();
@@ -182,7 +188,10 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
   // signature; one pass at a time, and a failed pass waits for the next.
   let sweeping: Promise<unknown> = Promise.resolve();
   const sweep = setInterval(() => {
-    sweeping = sweeping.then(() => dispatches.sweep()).catch(() => undefined);
+    sweeping = sweeping
+      .then(() => dispatches.sweep())
+      .then(() => releaseFollowUps(context))
+      .catch(() => undefined);
   }, options.sweepMs ?? SWEEP_MS);
   sweep.unref();
   return {
@@ -194,6 +203,7 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     storeClosed: reading.closed,
     dispatches,
     dispatchProblems,
+    dispatchNotices,
     feed,
     // Requests in flight finish, with the bd calls they run, so a stop never leaves a bd writing
     // to the store after the server has gone: event streams end first, idle connections close at

@@ -3,11 +3,18 @@ import type {
   Comment,
   Issue,
   Priority,
+  ReviewItem,
   RoadmapView,
   SessionsView,
   Status,
 } from "@beads-ui/core";
-import type { CostSection } from "@sergeiwallace/beads-ui-web-ui";
+import type {
+  CostSection,
+  DispatchStatus,
+  DispatchSummary,
+  Skill,
+  UnblockResult,
+} from "@sergeiwallace/beads-ui-web-ui";
 import { base } from "./base.ts";
 
 /** The server's error body (server/routes.ts ApiError). */
@@ -184,4 +191,53 @@ export const api = {
       })}`,
     ),
   sessions: (store?: string) => call<SessionsPayload>(`sessions${storeQuery(store)}`),
+};
+
+// The Review queue's and the composer's routes (server/dispatch.ts), in their own block.
+
+/** A held read that did not succeed, named with its exit code. */
+export interface HeldReadFailure {
+  source: string;
+  exitCode: number | null;
+  detail?: string;
+}
+
+export interface ReviewPayload {
+  asOf: string;
+  held:
+    | { state: "unset"; message: string }
+    | { state: "failed"; failure: HeldReadFailure }
+    | {
+        state: "ok";
+        rows: { item: ReviewItem; repository: string; joined?: { repo: string; issue: Issue } }[];
+      };
+  options:
+    | { state: "unset" }
+    | { state: "ok"; stdout: string }
+    | { state: "failed"; failure: HeldReadFailure };
+  tasks: { repo: string; issue: Issue }[];
+  /** Every goal issue's id, for the goal filter. */
+  goals: string[];
+  failures: HeldReadFailure[];
+  problems: string[];
+  health: string[];
+}
+
+interface Written {
+  dispatch: DispatchSummary;
+}
+
+export const dispatchApi = {
+  review: () => call<ReviewPayload>("review"),
+  heldBody: (path: string) =>
+    call<{ path: string; body: string }>(`review/body?path=${encodeURIComponent(path)}`),
+  prompt: (body: { repo: string; task: string; text: string } | { item: string; text: string }) =>
+    post<Written>("dispatch/prompt", body),
+  answer: (
+    body: { item: string } & ({ choices: { decision: string; key: string }[] } | { text: string }),
+  ) => post<Written & { answer: string }>("dispatch/answer", body),
+  unblock: (body: { repo: string; task: string; resolution: string; followUp?: string }) =>
+    post<UnblockResult>("dispatch/unblock", body),
+  status: (id: string) => call<DispatchStatus>(`dispatch/${encodeURIComponent(id)}`),
+  skills: () => call<{ skills: Skill[] }>("dispatch/skills"),
 };

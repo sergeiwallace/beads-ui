@@ -55,17 +55,21 @@ A `state:` value names a file in the server's state directory,
 the browser secret, the MCP token and an empty receiver token map there, each mode 0600; nothing
 is written into a repository.
 
-The dispatch signing key is the one credential the server never generates. Make it once, as an
-Ed25519 PKCS #8 PEM of mode 0600, in the state directory:
+The dispatch signing key is generated too. When the `state:` file `signing_key` names does not
+exist at server start, the server writes a new Ed25519 PKCS #8 PEM there, created with mode
+0600, publishes its public key under `signing_key_id`, and prints one line naming the key id
+(never the key). To bring your own key instead, put it there before the first start:
 
 ```sh
 openssl genpkey -algorithm ed25519 -out ~/.local/state/beads-ui/web/dispatch-signing-key
 chmod 600 ~/.local/state/beads-ui/web/dispatch-signing-key
 ```
 
-The server reads it on every signature. Until it can, the server still starts and serves, prints
-`dispatches cannot be signed` with the reason, and refuses every new dispatch. It reads the key
-only from a `state:` reference; a `secret-store:` reference is reported that way too.
+The server reads the key on every signature. A key file that exists is never overwritten: one
+that cannot be read, has a mode wider than 0600 or does not parse leaves the server starting and
+serving, printing `dispatches cannot be signed` with the reason, and refusing every new dispatch.
+It reads the key only from a `state:` reference; a `secret-store:` reference is reported that way
+too, and nothing is generated for it.
 
 ## Run it
 
@@ -219,6 +223,25 @@ fallback while its stream is down.
 - Sessions lists every session with its state, current task, last heartbeat and claim age when
   `[queue] url` names the work queue. Without it the view lists the store's assignees and says
   liveness is unavailable, since only the queue's registry knows whether a session is alive.
+- Review lists every held item, blocked task and in-progress task in three sections, Answer,
+  Unblock and Prompt, each by priority, then impact, then age. The filters above the list (epic,
+  goal, type, size, owner and repository) are in the URL, so a filtered queue can be shared or
+  reloaded. J and K move through the list; on a phone one item shows at a time, and Back to the
+  list, or U, returns to it.
+- A held decision is an option card with the recommended option chosen. Enter takes it, or a
+  number key takes that option, and a five-second window follows in which Escape or Undo takes
+  it back; then the answer goes to the session holding the item. Without option cards the item's
+  body shows with a box for a typed answer. Tick several decisions and pick Approve
+  recommendations to answer each with its recommendation, after a confirm that lists them.
+- A blocked task takes a resolution and, optionally, a next-step prompt for the same session.
+- Every Review item and every task's detail has a composer: Write a prompt opens it, `/` offers
+  the work queue's skills, Enter is a new line and Queue prompt sends. Text that looks like a
+  credential is refused, naming the kind of credential, never the text. A sent prompt shows its
+  session's liveness, its delivery state and the session's response, each with where it comes
+  from.
+- Single-key shortcuts are on. Turn them off in the command palette or under Keyboard shortcuts
+  on the Review page, where each command's key can be changed too; Ctrl and Cmd shortcuts keep
+  working with them off.
 
 Analytics reads `bd history --events` for each issue that is open or was closed in the window
 and has been updated inside it, four at a time, and keeps each issue's events until its
@@ -340,6 +363,40 @@ issued, another host's token, another session, an unknown id, a malformed receip
 server cannot reach, such as a work queue that is down, is an empty 503, which the receiving
 client retries at its next boundary instead of dropping its receipt.
 
+## The Review queue's settings
+
+The Review view reads the held store through the same `[review] command` the mod reads (the
+held tool's `review`, `options` and `show` verbs, each run with no shell and a 20-second
+timeout), and reaches a task's owning session through its assignee. Both come from your own
+`beads-ui.toml`, read on every request:
+
+```toml
+[review]
+command = ["held_cli.py"]               # the held store's tool; unset, the view lists tasks only
+
+[dispatch]
+host = "host-b"                         # this host's name as receivers know it, for an owner named with no host
+unblock_command = ["bd-unblock"]        # what the server runs to unblock a task no session owns
+```
+
+A task's dispatch goes to its assignee: at the host the assignee names (`worker@host-b`), else
+the host the work queue's session registry has it on, else `[dispatch] host`; with none of them
+the write is refused and says so. A held item's dispatch goes to the session that holds it, at
+the machine the item names. A one-key answer is recorded as each decision's option letter and
+label, then the line `Chosen with a control in the beads-ui Review queue, not typed: the option
+letter above is the answer.`; a typed answer is recorded exactly as typed. The answer
+dispatch's body is JSON, `{"version": 1, "item": {"store", "relpath", "path"}, "answer"}`, and
+an unblock's is `{"version": 1, "resolution", "to": "in_progress"}`; a prompt's body is its text.
+Every dispatch is mirrored as a bd comment on its task naming the dispatch id, and in this phase
+it is delivered when the receiving session next lists its dispatches through the receiver API.
+
+An unblock's next-step prompt waits in `dispatch-follow-ups.json` in the state directory and is
+sent to the same session once the unblock is acted on; when the unblock fails or expires it is
+dropped with the reason, and its text is deleted either way. A task with no assignee is unblocked
+by the server itself: it writes the resolution as a bd comment, then runs
+`<unblock_command> <id> --to in_progress --why <resolution>` in the task's store, and a refusal
+is shown with its exit code.
+
 ## The API
 
 Every route but `/healthz` is under `/api/` and answers JSON. With `[web] base_path` set, every
@@ -385,6 +442,13 @@ with a 400, and a request naming a store that is not open with a 404.
 | `GET /api/roadmap?store=` | The Roadmap's bars, dependency lines and undated epics and milestones |
 | `GET /api/analytics?weeks=&sprint=&store=` | The charts' data for `weeks` (1 to 52, default 12) and the named sprint, else the current one; `histories.failed` names each failed `bd history` read and `histories.skipped` counts the issues untouched since before the window; `cost` is the cost section |
 | `GET /api/sessions?store=` | The Sessions view, from the work queue or the store's assignees; `queueError` names a failed queue read |
+| `GET /api/review` | The Review queue: `held` (the open, current held items the allowlist permits, each with its joined issue, or the failed read with its exit code, or why none are read), `options` (the options command's output for those items), and every open store's blocked and in-progress `tasks` |
+| `GET /api/review/body?path=` | A held item's Markdown body through the held tool's `show`; only for an item the Review queue holds |
+| `POST /api/dispatch/prompt` | `{ "repo", "task", "text" }` or `{ "item", "text" }`: a prompt to the task's owner or the item's holder; 201 with the dispatch |
+| `POST /api/dispatch/answer` | `{ "item", "choices": [{ "decision", "key" }] }` or `{ "item", "text" }`: an answer to the item's holder; 201 with the dispatch and the exact answer text |
+| `POST /api/dispatch/unblock` | `{ "repo", "task", "resolution", "followUp" }`: an unblock dispatch to the task's owner (201), or the server's own unblock for a task with no owner (200, `"via": "server"`) |
+| `GET /api/dispatch/:id` | The dispatch's three indicators, `liveness`, `delivery` and `response`, each with its `source`, and an unblock's `followUp` |
+| `GET /api/dispatch/skills` | The work queue's skill catalog, for the composer's typeahead |
 
 ## Docker Compose
 

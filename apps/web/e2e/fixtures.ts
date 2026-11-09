@@ -29,10 +29,12 @@ export interface Served {
 export interface ServeOptions {
   /** `[hosts] allow_repos`; the served store's repository alone unless given. */
   allowRepos?: string[];
-  /** More of the host's `beads-ui.toml`, such as a `[web]` table. */
-  extra?: string;
   /** Added to the command's environment, such as a HOME holding a store inventory. */
   env?: NodeJS.ProcessEnv;
+  /** More of the user's `beads-ui.toml`, after `[hosts]` and `[auth]`. */
+  extra?: string;
+  /** `[auth]` keys to set in place of the defaults. */
+  auth?: Record<string, string | string[] | undefined>;
 }
 
 /**
@@ -50,6 +52,7 @@ async function hostSettings(
     hostConfig({
       allowRepos: options.allowRepos ?? [basename(dir)],
       ...(options.extra === undefined ? {} : { extra: options.extra }),
+      ...(options.auth === undefined ? {} : { auth: options.auth }),
     }),
   );
   // A private HOME too: the server reads the host's store inventory under HOME, and a spec
