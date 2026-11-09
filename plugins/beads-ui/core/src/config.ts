@@ -345,6 +345,78 @@ export function resolveConfig(text: string | undefined, storePath: string): Reso
   return { config, problems };
 }
 
+/**
+ * `views.rank`'s default per surface (D-6, web app D-21): on in the web app, so cards can be
+ * rearranged as shipped; the mod keeps sort-only views. The key turns it off for one store.
+ */
+export const WEB_RANK_DEFAULT = true;
+
+export interface ResolvedRank {
+  rank: boolean;
+  problems: string[];
+}
+
+/**
+ * `[views] rank`, read at call time, else the surface's default. A value that is not true or
+ * false keeps the default with one line saying so; a file that does not parse is resolveConfig's
+ * to report.
+ */
+export function resolveRank(text: string | undefined, surfaceDefault: boolean): ResolvedRank {
+  const fallback = { rank: surfaceDefault, problems: [] };
+  if (text === undefined) return fallback;
+  const parsed = parseToml(text);
+  if (!parsed.ok) return fallback;
+  const views = parsed.value.views;
+  const value = isTable(views) ? views.rank : undefined;
+  if (value === undefined) return fallback;
+  if (typeof value === "boolean") return { rank: value, problems: [] };
+  return {
+    rank: surfaceDefault,
+    problems: [
+      `views.rank must be true or false, not ${JSON.stringify(value)}; using ${surfaceDefault}`,
+    ],
+  };
+}
+
+/** The `beads-ui.toml` table of the web server's own settings. */
+export const WEB_TABLE = "web";
+
+export interface ResolvedWeb {
+  /** As written: the server, not the parser, decides which address it accepts. */
+  host?: string;
+  port?: number;
+  problems: string[];
+}
+
+/** `[web] host` and `[web] port`, read when the server starts. A wrong value is left unset. */
+export function resolveWeb(text: string | undefined): ResolvedWeb {
+  const resolved: ResolvedWeb = { problems: [] };
+  if (text === undefined) return resolved;
+  const parsed = parseToml(text);
+  if (!parsed.ok) return resolved;
+  const table = parsed.value[WEB_TABLE];
+  if (table === undefined) return resolved;
+  if (!isTable(table)) {
+    resolved.problems.push(`${WEB_TABLE} must be a table; using the defaults`);
+    return resolved;
+  }
+  if (table.host !== undefined) {
+    if (typeof table.host === "string") resolved.host = table.host;
+    else resolved.problems.push(`web.host must be a string, not ${JSON.stringify(table.host)}`);
+  }
+  if (table.port !== undefined) {
+    const port = table.port;
+    if (typeof port === "number" && Number.isInteger(port) && port >= 0 && port <= 65_535) {
+      resolved.port = port;
+    } else {
+      resolved.problems.push(
+        `web.port must be a whole number from 0 to 65535, not ${JSON.stringify(port)}`,
+      );
+    }
+  }
+  return resolved;
+}
+
 /** The `beads-ui.toml` table of the band's settings (T-1B.5, T-1B.11). */
 export const BAND_TABLE = "band";
 

@@ -1,4 +1,5 @@
 import { type Issue, type Result, STATUS_CATEGORIES, type Status } from "./model.ts";
+import { orderByRank } from "./rank.ts";
 import { DEFAULT_SORT, type SortSpec, sortIssues } from "./sort.ts";
 
 export interface Column {
@@ -20,6 +21,8 @@ export interface ColumnsResult {
 export interface ColumnOptions {
   softWipLimit?: Readonly<Record<string, number>>;
   sort?: SortSpec;
+  /** `views.rank` (D-6, D-21): each column in rank order, the sort settling unranked cards. */
+  rank?: boolean;
 }
 
 /**
@@ -42,7 +45,8 @@ export function buildColumns(
 
   const sorted = sortIssues(issues, options.sort ?? DEFAULT_SORT);
   const columns = ordered.map((status): Column => {
-    const members = sorted.filter((issue) => issue.status === status.name);
+    const inStatus = sorted.filter((issue) => issue.status === status.name);
+    const members = options.rank === true ? orderByRank(inStatus) : inStatus;
     const column: Column = {
       status,
       issues: members,

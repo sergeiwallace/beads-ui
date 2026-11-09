@@ -1,7 +1,14 @@
 // Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
 // claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
-import { configCandidates, DEFAULT_CONFIG, parseToml, resolveConfig } from "../src/index.ts";
+import {
+  configCandidates,
+  DEFAULT_CONFIG,
+  parseToml,
+  resolveConfig,
+  resolveRank,
+  resolveWeb,
+} from "../src/index.ts";
 
 // The example from the design's Configuration section, verbatim.
 const DESIGN_EXAMPLE = `[stores.default]
@@ -121,5 +128,28 @@ describe("configCandidates", () => {
       "/cfg/beads-ui/beads-ui.toml",
     ]);
     expect(configCandidates("/work", {})).toEqual(["/work/beads-ui.toml"]);
+  });
+});
+
+describe("resolveWeb", () => {
+  test("should read the web server's host and port when the file sets them", () => {
+    expect(resolveWeb('[web]\nhost = "127.0.0.1"\nport = 4900\n')).toEqual({
+      host: "127.0.0.1",
+      port: 4900,
+      problems: [],
+    });
+    expect(resolveWeb(undefined)).toEqual({ problems: [] });
+  });
+
+  test("should leave a port outside 0 to 65535 unset and name it", () => {
+    expect(resolveWeb("[web]\nport = 70000\n")).toEqual({
+      problems: ["web.port must be a whole number from 0 to 65535, not 70000"],
+    });
+  });
+});
+
+describe("resolveRank on the design's example", () => {
+  test("should read the example's views.rank = false as off whatever the surface's default", () => {
+    expect(resolveRank(DESIGN_EXAMPLE, true).rank).toBe(false);
   });
 });
