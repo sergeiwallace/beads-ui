@@ -83,9 +83,20 @@ const historyCaches = new WeakMap<BdClient, Map<string, CachedHistory>>();
 interface HistoryRead {
   flows: IssueFlow[];
   failed: { id: string; message: string }[];
+  /** Issues untouched since before the window, whose own dates stood in for their events. */
+  skipped: number;
 }
 
-async function flowsOf(bd: BdClient, issues: readonly Issue[]): Promise<HistoryRead> {
+/**
+ * Each issue with its status changes. An issue whose `updated_at` is before `since` has had no
+ * event since, so its status through the window is its current one: its own dates carry it and
+ * no `bd history` is read, which keeps a large store's first read to the issues that moved.
+ */
+async function flowsOf(
+  bd: BdClient,
+  issues: readonly Issue[],
+  since: number,
+): Promise<HistoryRead> {
   let cache = historyCaches.get(bd);
   if (cache === undefined) {
     cache = new Map();
@@ -94,7 +105,16 @@ async function flowsOf(bd: BdClient, issues: readonly Issue[]): Promise<HistoryR
   const store = cache;
   const flows = new Map<string, IssueFlow>();
   const failed: HistoryRead["failed"] = [];
-  const queued = [...issues];
+  let skipped = 0;
+  const queued: Issue[] = [];
+  for (const issue of issues) {
+    if (Date.parse(issue.updatedAt) < since) {
+      flows.set(issue.id, { issue, changes: statusChanges(issue, []) });
+      skipped++;
+    } else {
+      queued.push(issue);
+    }
+  }
   const worker = async () => {
     for (let issue = queued.shift(); issue !== undefined; issue = queued.shift()) {
       const cached = store.get(issue.id);
@@ -116,7 +136,7 @@ async function flowsOf(bd: BdClient, issues: readonly Issue[]): Promise<HistoryR
   };
   await Promise.all(Array.from({ length: HISTORY_CONCURRENCY }, worker));
   // In the issues' own order, whichever worker read each.
-  return { flows: issues.flatMap((issue) => flows.get(issue.id) ?? []), failed };
+  return { flows: issues.flatMap((issue) => flows.get(issue.id) ?? []), failed, skipped };
 }
 
 const dedupe = (issues: readonly Issue[]): Issue[] => [
@@ -227,7 +247,7 @@ export async function analyticsRoute(request: ApiRequest, context: ApiContext): 
     members = read.value;
   }
 
-  const read = await flowsOf(context.bd, dedupe([...issues, ...members]));
+  const read = await flowsOf(context.bd, dedupe([...issues, ...members]), windowStart);
   const byId = new Map(read.flows.map((flow) => [flow.issue.id, flow]));
   const pick = (list: readonly Issue[]) => list.flatMap((issue) => byId.get(issue.id) ?? []);
   const options = {
@@ -246,7 +266,11 @@ export async function analyticsRoute(request: ApiRequest, context: ApiContext): 
       view: analyticsView(pick(issues), options),
       sprints: sprints.map((s) => s.name),
       ...(sprint === undefined ? {} : { sprint: sprint.name }),
-      histories: { read: read.flows.length - read.failed.length, failed: read.failed },
+      histories: {
+        read: read.flows.length - read.failed.length - read.skipped,
+        skipped: read.skipped,
+        failed: read.failed,
+      },
       cost: await costSection(config, closed),
     },
   };

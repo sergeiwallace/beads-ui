@@ -66,8 +66,10 @@ export function statusChanges(issue: Issue, events: readonly HistoryEvent[]): St
   const firstMove = ordered.find((entry) => entry.event.type === "status_changed");
   const initial = statusOfJson(firstMove?.event.oldValue) ?? "open";
   for (const { event, at } of ordered) {
-    if (event.type === "created") changes.push({ at, status: initial });
-    else if (event.type === "status_changed") {
+    // bd import keeps created_at but stamps the created event at import time.
+    if (event.type === "created") {
+      changes.push({ at: Math.min(at, time(issue.createdAt) ?? at), status: initial });
+    } else if (event.type === "status_changed") {
       const status = statusOfJson(event.newValue);
       if (status !== undefined) changes.push({ at, status });
     } else if (event.type === "closed") changes.push({ at, status: "closed" });

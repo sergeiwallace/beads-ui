@@ -63,10 +63,15 @@ function history(id: string, steps: [string, ...Step][]): string {
   return JSON.stringify(rows.reverse());
 }
 
-const flow = (fields: Issue, steps: [string, ...Step][]): IssueFlow => ({
-  issue: fields,
-  changes: statusChanges(fields, unwrap(parseBdHistoryEvents(history(fields.id, steps)))),
-});
+/** An issue and its events, its created_at the time its `created` step says, as bd keeps them. */
+function flow(fields: Issue, steps: [string, ...Step][]): IssueFlow {
+  const created = steps.find(([, type]) => type === "created")?.[0];
+  const issue = created === undefined ? fields : { ...fields, createdAt: created };
+  return {
+    issue,
+    changes: statusChanges(issue, unwrap(parseBdHistoryEvents(history(issue.id, steps)))),
+  };
+}
 
 const NOW = Date.parse("2026-11-09T12:00:00Z");
 
@@ -143,6 +148,22 @@ describe("an issue's status changes from bd history --events", () => {
       ),
     );
     expect(statusChanges(fields, raced).at(-1)?.status).toBe("closed");
+  });
+
+  test("should date the creation by the issue's own created_at when bd stamped the event later, as an import does", () => {
+    const fields = issue("BU-4", {
+      status: "in_progress",
+      createdAt: "2026-01-05T09:00:00Z",
+      updatedAt: "2026-01-06T09:00:00Z",
+    });
+    const events = unwrap(
+      parseBdHistoryEvents(history("BU-4", [["2026-11-09T09:00:58Z", "created"]])),
+    );
+
+    expect(statusChanges(fields, events)).toEqual([
+      { at: Date.parse("2026-01-05T09:00:00Z"), status: "open" },
+      { at: Date.parse("2026-01-06T09:00:00Z"), status: "in_progress" },
+    ]);
   });
 
   test("should fall back to the issue's own dates when bd returns no event that moves it", () => {

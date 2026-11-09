@@ -233,6 +233,43 @@ describe("GET /api/analytics (T-3.3)", () => {
     expect(reply.body.view.cumulativeFlow.at(-1).counts.active).toBeGreaterThanOrEqual(1);
   });
 
+  it("should read no bd history for an issue untouched since before the window, dating it by its own fields", async () => {
+    // Imported with its own January dates: bd keeps them, and stamps its one `created` event now.
+    const old = "views-stale1";
+    const dir = await mkdtemp(join(tmpdir(), "beads-ui-import-"));
+    cleanup.push(() => rm(dir, { recursive: true }));
+    await writeFile(
+      join(dir, "old.jsonl"),
+      `${JSON.stringify({
+        id: old,
+        title: "Untouched since January",
+        status: "in_progress",
+        priority: 2,
+        issue_type: "task",
+        created_at: "2026-01-05T09:00:00Z",
+        updated_at: "2026-01-06T09:00:00Z",
+        started_at: "2026-01-06T09:00:00Z",
+      })}\n`,
+    );
+    await store.bd("import", join(dir, "old.jsonl"));
+    const failing = await failingBd(["history"]);
+    cleanup.push(failing.remove);
+    const broken = await start(failing.env);
+    cleanup.push(broken.close);
+
+    const reply = await get("/api/analytics?weeks=1", broken);
+
+    expect(reply.status).toBe(200);
+    const failed = reply.body.histories.failed.map((f: { id: string }) => f.id);
+    expect(failed).not.toContain(old);
+    expect(reply.body.histories.skipped).toBeGreaterThanOrEqual(1);
+    const aging = reply.body.view.aging.find((item: { id: string }) => item.id === old);
+    expect(aging.days).toBeGreaterThan(200);
+    // In progress on every day of the window, never "created" on the day it was imported.
+    const first = reply.body.view.cumulativeFlow[0].counts;
+    expect(first.wip).toBeGreaterThanOrEqual(1);
+  });
+
   describe("where a Claude Code cost export is configured", () => {
     let exportDir: string;
     beforeAll(async () => {
