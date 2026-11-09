@@ -87,6 +87,41 @@ export {
   withSurfacesTable,
 } from "./config.ts";
 export type {
+  DecisionOptionsOutput,
+  ItemOptions,
+  OptionCard,
+  OptionChoice,
+  OptionsError,
+  OptionsItemKind,
+} from "./decision-options.ts";
+export {
+  MAX_NUMBER_KEYS,
+  OPTIONS_ERROR_FIELDS,
+  OPTIONS_ITEM_KINDS,
+  OPTIONS_VERSION,
+  optionCardMode,
+  optionForKey,
+  optionsForItem,
+  parseDecisionOptions,
+} from "./decision-options.ts";
+export type {
+  AppliedTransition,
+  DeliveryMachine,
+  DeliveryState,
+  DeliveryTransition,
+  RejectedTransition,
+} from "./delivery-state.ts";
+export {
+  allowsTransition,
+  DELIVERY_STATES,
+  DELIVERY_TRANSITIONS,
+  deliveryLabel,
+  deliveryMachine,
+  isDeliveryState,
+  isFinalDelivery,
+  reduceDelivery,
+} from "./delivery-state.ts";
+export type {
   Filter,
   FilterError,
   FilterKey,
@@ -135,6 +170,24 @@ export {
   legendText,
   NARROW_GUTTER_COLUMNS,
 } from "./indicators.ts";
+export type {
+  Keymap,
+  KeymapBinding,
+  KeymapError,
+  KeymapSettings,
+  KeyPress,
+  Shortcut,
+} from "./keymap.ts";
+export {
+  buildKeymap,
+  chordOf,
+  commandForPress,
+  DEFAULT_KEYMAP_SETTINGS,
+  DEFAULT_SHORTCUTS,
+  parseChord,
+  remapKey,
+  setSingleKeys,
+} from "./keymap.ts";
 export type { Labels, Tier } from "./layout.ts";
 export {
   buttonWidth,
@@ -259,6 +312,38 @@ export {
   storeForTask,
 } from "./review.ts";
 export type {
+  QueueFilterKey,
+  QueueFilters,
+  QueueIssue,
+  QueueReadFailure,
+  ReviewAction,
+  ReviewQueueEntry,
+  ReviewQueueEvent,
+  ReviewQueueSection,
+  ReviewQueueState,
+  ReviewQueueView,
+} from "./review-queue.ts";
+export {
+  CURATION_SCALE,
+  compareQueueEntries,
+  curationOf,
+  decodeQueueFilters,
+  encodeQueueFilters,
+  goalsOf,
+  heldEntry,
+  INITIAL_REVIEW_QUEUE,
+  matchesQueueFilters,
+  NOTHING_TO_REVIEW,
+  normalizeQueueFilters,
+  QUEUE_FILTER_KEYS,
+  REVIEW_ACTIONS,
+  reduceReviewQueue,
+  reviewQueueView,
+  sortQueueEntries,
+  taskEntry,
+  withQueueFilters,
+} from "./review-queue.ts";
+export type {
   ReviewFilter,
   ReviewFilterError,
   ReviewFilterKey,
@@ -355,6 +440,24 @@ export {
   sortIssues,
   sortLabel,
 } from "./sort.ts";
+export type {
+  SprintInfo,
+  SprintPickerEntry,
+  SprintSelection,
+  SprintView,
+  SprintViewOptions,
+} from "./sprint-view.ts";
+export {
+  BACKLOG_LABEL,
+  milestoneSprintOf,
+  parseSprintSelection,
+  SPRINT_LABEL_PREFIX,
+  selectedIssues,
+  sprintLabelsOf,
+  sprintSelectionText,
+  sprintsOf,
+  sprintView,
+} from "./sprint-view.ts";
 export type {
   Finished,
   PendingSubmit,
