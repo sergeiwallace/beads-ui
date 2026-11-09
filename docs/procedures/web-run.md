@@ -55,17 +55,21 @@ A `state:` value names a file in the server's state directory,
 the browser secret, the MCP token and an empty receiver token map there, each mode 0600; nothing
 is written into a repository.
 
-The dispatch signing key is the one credential the server never generates. Make it once, as an
-Ed25519 PKCS #8 PEM of mode 0600, in the state directory:
+The dispatch signing key is generated too. When the `state:` file `signing_key` names does not
+exist at server start, the server writes a new Ed25519 PKCS #8 PEM there, created with mode
+0600, publishes its public key under `signing_key_id`, and prints one line naming the key id
+(never the key). To bring your own key instead, put it there before the first start:
 
 ```sh
 openssl genpkey -algorithm ed25519 -out ~/.local/state/beads-ui/web/dispatch-signing-key
 chmod 600 ~/.local/state/beads-ui/web/dispatch-signing-key
 ```
 
-The server reads it on every signature. Until it can, the server still starts and serves, prints
-`dispatches cannot be signed` with the reason, and refuses every new dispatch. It reads the key
-only from a `state:` reference; a `secret-store:` reference is reported that way too.
+The server reads the key on every signature. A key file that exists is never overwritten: one
+that cannot be read, has a mode wider than 0600 or does not parse leaves the server starting and
+serving, printing `dispatches cannot be signed` with the reason, and refusing every new dispatch.
+It reads the key only from a `state:` reference; a `secret-store:` reference is reported that way
+too, and nothing is generated for it.
 
 ## Run it
 

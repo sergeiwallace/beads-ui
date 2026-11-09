@@ -52,6 +52,8 @@ export interface RunningServer {
   dispatches: DispatchService;
   /** What the dispatch service could not do at start, such as sign; the server runs on. */
   dispatchProblems: string[];
+  /** What the dispatch service did at start, such as generate its signing key; one line each. */
+  dispatchNotices: string[];
   close(): Promise<void>;
 }
 
@@ -123,6 +125,8 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     if (!(error instanceof DispatchRefused || error instanceof DispatchStoreError)) throw error;
     throw new StartRefused(`the dispatch store cannot open: ${error.message}`);
   }
+  const generated = await dispatches.ensureSigningKey();
+  const dispatchNotices = generated === undefined ? [] : [generated];
   const dispatchProblems = await dispatches.publish();
 
   let app: App | undefined;
@@ -176,6 +180,7 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     storeClosed: reading.closed,
     dispatches,
     dispatchProblems,
+    dispatchNotices,
     // Requests in flight finish, with the bd calls they run, so a stop never leaves a bd writing
     // to the store after the server has gone: event streams end first, idle connections close at
     // once, whatever is still open at the deadline is cut, and then every handler settles, one
