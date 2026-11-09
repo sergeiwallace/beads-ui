@@ -298,6 +298,31 @@ async function neighbourKey(
   return { key: rank.key };
 }
 
+/**
+ * The reorder's guard on its neighbours: each is read again just before the write, and one that
+ * moved, changed status or changed key since the key was chosen makes the reorder stale, so the
+ * written key always lies between the neighbours as they stand.
+ */
+async function neighboursHeld(
+  context: ApiContext,
+  neighbours: readonly { id: string | undefined; key: string | undefined }[],
+  shown: string,
+): Promise<ApiReply | undefined> {
+  for (const neighbour of neighbours) {
+    if (neighbour.id === undefined) continue;
+    const now = await neighbourKey(context, neighbour.id, shown);
+    if ("status" in now) return now;
+    if (now.key !== neighbour.key) {
+      return failure({
+        kind: "stale",
+        source: "bd show",
+        message: `${neighbour.id} was reordered elsewhere while this reorder was written; nothing was written`,
+      });
+    }
+  }
+  return undefined;
+}
+
 async function rankRoute(request: ApiRequest, context: ApiContext): Promise<ApiReply> {
   const id = request.params.id ?? "";
   const shown = text(request.body, "shown");
@@ -334,6 +359,15 @@ async function rankRoute(request: ApiRequest, context: ApiContext): Promise<ApiR
           message: key.error.message,
         });
   }
+  const moved = await neighboursHeld(
+    context,
+    [
+      { id: above, key: low.key },
+      { id: below, key: high.key },
+    ],
+    shown,
+  );
+  if (moved !== undefined) return moved;
   const result = await guardedWrite(() =>
     context.bd.update(id, { metadata: { [RANK_KEY]: key.value } }, { ifStatus: shown }),
   );
