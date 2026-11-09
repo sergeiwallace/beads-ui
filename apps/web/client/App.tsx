@@ -37,6 +37,7 @@ import {
   type StoreRead,
   signOut,
 } from "./api.ts";
+import { ReviewPage, shortcutCommand, TaskComposer, useKeymap } from "./review.tsx";
 
 /** The views with a page of their own, in the order the nav lists them. */
 const VIEWS = [
@@ -45,6 +46,8 @@ const VIEWS = [
   { view: "roadmap", label: "Roadmap", path: "roadmap" },
   { view: "analytics", label: "Analytics", path: "analytics" },
   { view: "sessions", label: "Sessions", path: "sessions" },
+  // The Review queue (client/review.tsx).
+  { view: "review", label: "Review", path: "review" },
 ] as const;
 
 type ViewName = (typeof VIEWS)[number]["view"];
@@ -427,6 +430,7 @@ export function App() {
   const listStore = route.view === "issue" ? undefined : route.store;
   const { state, meta, reads, writing, refOf, move, reorder, setPriority } = useBoard(listStore);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const keymap = useKeymap();
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const rank = meta?.rank ?? false;
   const detail = useIssue(
@@ -531,8 +535,10 @@ export function App() {
         run: () => navigate({ view: entry.view, store: listStore }),
       });
     }
+    // The single-key shortcut setting (D-12), which the palette carries.
+    list.push(shortcutCommand(keymap));
     return list;
-  }, [selected, statusNames, navigate, move, openIssue, listStore]);
+  }, [selected, statusNames, navigate, move, openIssue, listStore, keymap]);
 
   const pending = useMemo(
     () => new Set([...Object.keys(state.pending), ...Object.keys(state.ranking ?? {}), ...writing]),
@@ -728,6 +734,11 @@ export function App() {
               hrefOf({ view: "issue", id, store: detail?.payload?.repository ?? route.store })
             }
           />
+        )}
+        {/* The Review queue, and the composer on a task's detail (client/review.tsx). */}
+        {route.view === "review" && <ReviewPage />}
+        {route.view === "issue" && detail?.payload !== undefined && (
+          <TaskComposer id={detail.payload.issue.id} repository={detail.payload.repository} />
         )}
       </main>
       <CommandPalette
