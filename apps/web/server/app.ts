@@ -174,6 +174,9 @@ export function createApp(options: AppOptions): App {
   const basePath = options.basePath ?? "/";
   const handling = new Set<Promise<void>>();
   const streams = new Set<() => void>();
+  // Set once the server stops: a browser's EventSource reconnects the moment its stream ends, and
+  // a stream opened then would hold the stop open until its connection is cut.
+  let closing = false;
   const serve = async (request: IncomingMessage, response: ServerResponse) => {
     setMemberHeaders(response);
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
@@ -191,6 +194,11 @@ export function createApp(options: AppOptions): App {
       return;
     }
     if (url.pathname === EVENTS_PATH && request.method === "GET") {
+      if (closing) {
+        response.writeHead(503, { connection: "close", "content-length": 0 });
+        response.end();
+        return;
+      }
       const sessionId = options.auth.sessionIdOf(caller);
       if (sessionId === undefined) {
         sendJson(response, 401, { error: { kind: "unauthenticated", message: "not signed in" } });
@@ -233,6 +241,7 @@ export function createApp(options: AppOptions): App {
       while (handling.size > 0) await Promise.allSettled([...handling]);
     },
     closeStreams() {
+      closing = true;
       for (const end of [...streams]) end();
     },
   };

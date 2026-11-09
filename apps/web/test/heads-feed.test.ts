@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { type RunningServer, startServer } from "../server/server.ts";
+import { CLOSE_GRACE_MS, type RunningServer, startServer } from "../server/server.ts";
 import { type HostEnv, hostConfig, hostEnv, signIn } from "./auth-env.ts";
 import { type RepoStore, repoStore, type ScriptedBd, scriptedBd, shQuote } from "./host-stores.ts";
 
@@ -89,11 +89,15 @@ async function openStream(server: RunningServer, cookie: string): Promise<Stream
   };
 }
 
-/** A bd that logs every call, `<dir> <args>`, to `log`, then fails `vc` and `sql` while `fail` exists. */
+/**
+ * A bd that logs every call, `<dir> <args>`, to `log`, then fails `vc` and `sql` while `fail`
+ * exists, and takes 4 seconds over them while `<fail>.slow` exists.
+ */
 async function loggingBd(log: string, fail: string): Promise<ScriptedBd> {
   return scriptedBd(
     [
       `printf '%s %s\\n' "$DIR" "$*" >> ${shQuote(log)}`,
+      `if [ -e ${shQuote(`${fail}.slow`)} ]; then case "$1" in vc|sql) sleep 4 ;; esac; fi`,
       `if [ -e ${shQuote(fail)} ]; then case "$1" in vc|sql) echo 'dolt: connection refused' >&2; exit 1 ;; esac; fi`,
     ].join("\n"),
   );
@@ -214,7 +218,8 @@ async function twoStores(server?: number): Promise<Host> {
       return (await readFile(log, "utf8")).split("\n").filter(Boolean).slice(from);
     },
     async remove() {
-      await running.close();
+      // A case that stopped the server itself has closed it already.
+      await running.close().catch(() => undefined);
       await bd.remove();
       await env.remove();
       await rm(root, { recursive: true });
@@ -403,5 +408,39 @@ describe("the change feed on embedded stores", () => {
     } finally {
       stream.close();
     }
+  }, 120_000);
+});
+
+describe("stopping the server while a page holds a stream", () => {
+  let host: Host;
+
+  beforeAll(async () => {
+    host = await twoStores();
+  }, 180_000);
+
+  afterAll(async () => {
+    await host?.remove();
+  });
+
+  it("should refuse the stream a browser reopens as the stop begins, so the stop does not wait out its connection", async () => {
+    const stream = await openStream(host.server, host.cookie);
+    await settled(host, stream);
+    // Hold a poll in flight, as a loaded host does: the stop waits for it before it stops listening.
+    await writeFile(`${host.fail}.slow`, "");
+    const from = await logged(host);
+    while (!(await host.calls(from)).some((line) => / vc /.test(line))) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    const started = Date.now();
+    // A browser's EventSource reconnects the moment its stream ends, and the stop ends it first.
+    const stopping = host.server.close();
+    const reopened = await fetch(new URL("/api/events", host.server.url), {
+      headers: { cookie: host.cookie },
+    });
+    expect(reopened.status).toBe(503);
+    await reopened.arrayBuffer();
+    await stopping;
+    expect(Date.now() - started).toBeLessThan(CLOSE_GRACE_MS);
+    stream.close();
   }, 120_000);
 });
