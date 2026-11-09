@@ -317,4 +317,32 @@ describe("stopping the server", () => {
     expect((await write).status).toBe(200);
     expect((await store.show(id)).status).toBe("in_progress");
   });
+  it("should not resolve its stop while a request whose client went away still runs its bd call", async () => {
+    const id = await store.create("Abandoned during the stop");
+    const slow = await slowBd(["update"], 2);
+    cleanup.push(slow.remove);
+    const stopping = await start({ bdEnv: slow.env });
+    const abort = new AbortController();
+    const write = fetch(new URL(`/api/issues/${id}/status`, stopping.url), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ to: "in_progress", shown: "open" }),
+      signal: abort.signal,
+    }).catch(() => undefined);
+    await expect
+      .poll(() =>
+        access(slow.marker).then(
+          () => true,
+          () => false,
+        ),
+      )
+      .toBe(true);
+    abort.abort();
+    await write;
+
+    await stopping.close();
+
+    // Read straight after the stop: the abandoned handler's bd update has already written.
+    expect((await store.show(id)).status).toBe("in_progress");
+  });
 });

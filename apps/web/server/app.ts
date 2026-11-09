@@ -80,25 +80,45 @@ async function handleApi(
   sendJson(response, reply.status, reply.body);
 }
 
+export interface App {
+  /** The server's one request handler. */
+  handle: RequestListener;
+  /**
+   * Resolves once no request is being handled. A handler runs on, its bd call with it, after
+   * its client has gone, so a stop waits for this as well as for the connections to close.
+   */
+  settled(): Promise<void>;
+}
+
 /**
  * The server's one request handler: every `/api/` path goes to the route table and nothing else,
  * every other GET to the built client. A later layer (authentication, a Host allowlist, a base
  * path) wraps this handler and so stands in front of every route.
  */
-export function createApp(options: AppOptions): RequestListener {
-  return (request, response) => {
+export function createApp(options: AppOptions): App {
+  const handling = new Set<Promise<void>>();
+  const handle: RequestListener = (request, response) => {
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
     const isApi = url.pathname === "/api" || url.pathname.startsWith("/api/");
     const work = isApi
       ? handleApi(request, response, url.pathname, options)
       : serveClient(request, response, url.pathname, options.clientDir);
-    work.catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : String(error);
-      if (response.headersSent) {
-        response.destroy();
-        return;
-      }
-      sendJson(response, 500, { error: { kind: "failed", source: "server", message } });
-    });
+    const done: Promise<void> = work
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        if (response.headersSent) {
+          response.destroy();
+          return;
+        }
+        sendJson(response, 500, { error: { kind: "failed", source: "server", message } });
+      })
+      .finally(() => handling.delete(done));
+    handling.add(done);
+  };
+  return {
+    handle,
+    async settled() {
+      while (handling.size > 0) await Promise.allSettled([...handling]);
+    },
   };
 }

@@ -53,18 +53,17 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     );
   }
 
-  const server = createServer(
-    createApp({
-      clientDir: options.clientDir,
-      context: {
-        repoRoot: options.repoRoot,
-        bd,
-        config: () => readWebConfig(options.repoRoot, options.configEnv),
-        random: Math.random,
-        now: () => new Date().toISOString(),
-      },
-    }),
-  );
+  const app = createApp({
+    clientDir: options.clientDir,
+    context: {
+      repoRoot: options.repoRoot,
+      bd,
+      config: () => readWebConfig(options.repoRoot, options.configEnv),
+      random: Math.random,
+      now: () => new Date().toISOString(),
+    },
+  });
+  const server = createServer(app.handle);
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);
     server.listen(options.port, LOOPBACK, () => {
@@ -78,10 +77,11 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     port,
     server,
     // Requests in flight finish, with the bd calls they run, so a stop never leaves a bd writing
-    // to the store after the server has gone; idle connections close at once, and whatever is
-    // still open at the deadline is cut.
-    close: () =>
-      new Promise((resolve, reject) => {
+    // to the store after the server has gone: idle connections close at once, whatever is still
+    // open at the deadline is cut, and then every handler settles, one whose client went away
+    // included (each bd call ends within bd-node's timeout).
+    close: async () => {
+      await new Promise<void>((resolve, reject) => {
         const deadline = setTimeout(() => server.closeAllConnections(), CLOSE_GRACE_MS);
         server.close((error) => {
           clearTimeout(deadline);
@@ -89,6 +89,8 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
           else resolve();
         });
         server.closeIdleConnections();
-      }),
+      });
+      await app.settled();
+    },
   };
 }
