@@ -440,6 +440,24 @@ export {
   sortLabel,
 } from "./sort.ts";
 export type {
+  SprintInfo,
+  SprintPickerEntry,
+  SprintSelection,
+  SprintView,
+  SprintViewOptions,
+} from "./sprint-view.ts";
+export {
+  BACKLOG_LABEL,
+  milestoneSprintOf,
+  parseSprintSelection,
+  SPRINT_LABEL_PREFIX,
+  selectedIssues,
+  sprintLabelsOf,
+  sprintSelectionText,
+  sprintsOf,
+  sprintView,
+} from "./sprint-view.ts";
+export type {
   Finished,
   PendingSubmit,
   SubmitAnswer,
