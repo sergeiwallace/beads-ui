@@ -1,0 +1,766 @@
+{
+  "version": 1,
+  "seed_hex": "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+  "key_id": "test-20261109",
+  "public_key": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+  "now": "2026-11-09T05:00:00.000Z",
+  "receiver": {
+    "session": "test-session",
+    "host": "test-host"
+  },
+  "trusted_keys": {
+    "version": 1,
+    "keys": [
+      {
+        "key_id": "test-20261109",
+        "public_key": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+        "not_before": "2026-11-09T00:00:00.000Z",
+        "not_after": null,
+        "revoked": false
+      },
+      {
+        "key_id": "test-rotating",
+        "public_key": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+        "not_before": "2026-11-09T05:00:00.000Z",
+        "not_after": "2026-11-10T00:00:00.000Z",
+        "revoked": false
+      },
+      {
+        "key_id": "test-revoked",
+        "public_key": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+        "not_before": "2026-11-01T00:00:00.000Z",
+        "not_after": null,
+        "revoked": true
+      },
+      {
+        "key_id": "test-future",
+        "public_key": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+        "not_before": "2026-11-10T00:00:00.000Z",
+        "not_after": null,
+        "revoked": false
+      },
+      {
+        "key_id": "test-retired",
+        "public_key": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+        "not_before": "2026-10-01T00:00:00.000Z",
+        "not_after": "2026-11-09T05:00:00.000Z",
+        "revoked": false
+      }
+    ]
+  },
+  "valid": [
+    {
+      "name": "plain-prompt",
+      "record": {
+        "id": "01JC9000000000000000000001",
+        "task": {
+          "repo": "demo-repo",
+          "id": "demo-1"
+        },
+        "target": {
+          "session": "test-session",
+          "host": "test-host"
+        },
+        "kind": "prompt",
+        "body_ref": "prompt-store:01JC9000000000000000000001",
+        "body_digest": "sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e",
+        "arm_goal": false,
+        "created_by": "sergei",
+        "created_at": "2026-11-09T04:38:32.636Z",
+        "expires_at": "2026-11-09T06:38:32.636Z",
+        "signing_key_id": "test-20261109",
+        "state": "queued",
+        "envelope": {
+          "version": 1,
+          "signing_key_id": "test-20261109",
+          "signature": "5MblQuOzu9O4XjNe_pmKY5IfSioCETkgBPqVD53BIcz38HK3s7roYvvPQB4qPcvbH_SxNs1c0Mr19TVQq_2MAg"
+        }
+      },
+      "body_utf8": "Please pick up the next ready task and report back.\n",
+      "canonical_utf8": "{\"arm_goal\":false,\"body_digest\":\"sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e\",\"body_ref\":\"prompt-store:01JC9000000000000000000001\",\"created_at\":\"2026-11-09T04:38:32.636Z\",\"created_by\":\"sergei\",\"expires_at\":\"2026-11-09T06:38:32.636Z\",\"id\":\"01JC9000000000000000000001\",\"kind\":\"prompt\",\"signing_key_id\":\"test-20261109\",\"target\":{\"host\":\"test-host\",\"session\":\"test-session\"},\"task\":{\"id\":\"demo-1\",\"repo\":\"demo-repo\"}}"
+    },
+    {
+      "name": "unicode-and-controls",
+      "record": {
+        "id": "01JC9000000000000000000002",
+        "task": {
+          "repo": "d\u00e9mo-repo",
+          "id": "demo-2"
+        },
+        "target": {
+          "session": "test-session",
+          "host": "test-host"
+        },
+        "kind": "prompt",
+        "body_ref": "prompt-store:caf\u00e9 \ud83d\ude80 \u2028 \"q\" \\ \u0000\u0007\b\f\n\r\t\u001f\u007f end",
+        "body_digest": "sha256:e1019ddccfb99141a7aeb1ad41e475d6832f4de5f7f34b41f847bd447328bacd",
+        "arm_goal": false,
+        "created_by": "sergei",
+        "created_at": "2026-11-09T04:38:32.636Z",
+        "expires_at": "2026-11-09T06:38:32.636Z",
+        "signing_key_id": "test-20261109",
+        "state": "queued",
+        "envelope": {
+          "version": 1,
+          "signing_key_id": "test-20261109",
+          "signature": "8_QWhtmG6gKY5zH3DCPU8zAUwFkyCoM2-KSFJ9bM6fIJN4GPEePSp3Phf4al0M-R3Wus5ulBESNvtCRRURjGDQ"
+        }
+      },
+      "body_utf8": "R\u00e9sum\u00e9 the plan \ud83d\ude80 then report.\n",
+      "canonical_utf8": "{\"arm_goal\":false,\"body_digest\":\"sha256:e1019ddccfb99141a7aeb1ad41e475d6832f4de5f7f34b41f847bd447328bacd\",\"body_ref\":\"prompt-store:caf\u00e9 \ud83d\ude80 \u2028 \\\"q\\\" \\\\ \\u0000\\u0007\\b\\f\\n\\r\\t\\u001f\u007f end\",\"created_at\":\"2026-11-09T04:38:32.636Z\",\"created_by\":\"sergei\",\"expires_at\":\"2026-11-09T06:38:32.636Z\",\"id\":\"01JC9000000000000000000002\",\"kind\":\"prompt\",\"signing_key_id\":\"test-20261109\",\"target\":{\"host\":\"test-host\",\"session\":\"test-session\"},\"task\":{\"id\":\"demo-2\",\"repo\":\"d\u00e9mo-repo\"}}"
+    },
+    {
+      "name": "answer-arm-goal-key-at-not-before",
+      "record": {
+        "id": "01JC9000000000000000000003",
+        "task": {
+          "repo": "demo-repo",
+          "id": "demo-3"
+        },
+        "target": {
+          "session": "test-session",
+          "host": "test-host"
+        },
+        "kind": "answer",
+        "body_ref": "prompt-store:01JC9000000000000000000003",
+        "body_digest": "sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e",
+        "arm_goal": true,
+        "created_by": "sergei",
+        "created_at": "2026-11-09T04:38:32.636Z",
+        "expires_at": "2026-11-09T06:38:32.636Z",
+        "signing_key_id": "test-rotating",
+        "state": "queued",
+        "envelope": {
+          "version": 1,
+          "signing_key_id": "test-rotating",
+          "signature": "sO4FU1QBWL5YeNyLk0YEjAjpDjacjOpLJF_2J0H5fRj89LoDbTXpKBrbxa0dIOp4txVjC3pjnAnEXOZ6_14ZDg"
+        }
+      },
+      "body_utf8": "Please pick up the next ready task and report back.\n",
+      "canonical_utf8": "{\"arm_goal\":true,\"body_digest\":\"sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e\",\"body_ref\":\"prompt-store:01JC9000000000000000000003\",\"created_at\":\"2026-11-09T04:38:32.636Z\",\"created_by\":\"sergei\",\"expires_at\":\"2026-11-09T06:38:32.636Z\",\"id\":\"01JC9000000000000000000003\",\"kind\":\"answer\",\"signing_key_id\":\"test-rotating\",\"target\":{\"host\":\"test-host\",\"session\":\"test-session\"},\"task\":{\"id\":\"demo-3\",\"repo\":\"demo-repo\"}}"
+    },
+    {
+      "name": "unsigned-state-changed-after-signing",
+      "record": {
+        "id": "01JC9000000000000000000004",
+        "task": {
+          "repo": "demo-repo",
+          "id": "demo-4"
+        },
+        "target": {
+          "session": "test-session",
+          "host": "test-host"
+        },
+        "kind": "prompt",
+        "body_ref": "prompt-store:01JC9000000000000000000004",
+        "body_digest": "sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e",
+        "arm_goal": false,
+        "created_by": "sergei",
+        "created_at": "2026-11-09T04:38:32.636Z",
+        "expires_at": "2026-11-09T06:38:32.636Z",
+        "signing_key_id": "test-20261109",
+        "state": "taken",
+        "envelope": {
+          "version": 1,
+          "signing_key_id": "test-20261109",
+          "signature": "qy-daIMp8_ra3uhCCQP5ODSxW4FR4htDBZZQbxGOg9uURJMMwIf9fcFt4q_0URWum-LMSSOppQriqgsiFS_oDg"
+        }
+      },
+      "body_utf8": "Please pick up the next ready task and report back.\n",
+      "canonical_utf8": "{\"arm_goal\":false,\"body_digest\":\"sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e\",\"body_ref\":\"prompt-store:01JC9000000000000000000004\",\"created_at\":\"2026-11-09T04:38:32.636Z\",\"created_by\":\"sergei\",\"expires_at\":\"2026-11-09T06:38:32.636Z\",\"id\":\"01JC9000000000000000000004\",\"kind\":\"prompt\",\"signing_key_id\":\"test-20261109\",\"target\":{\"host\":\"test-host\",\"session\":\"test-session\"},\"task\":{\"id\":\"demo-4\",\"repo\":\"demo-repo\"}}"
+    }
+  ],
+  "invalid": [
+    {
+      "name": "malformed-missing-body-ref",
+      "record": {
+        "id": "01JC9000000000000000000010",
+        "task": {
+          "repo": "demo-repo",
+          "id": "demo-10"
+        },
+        "target": {
+          "session": "test-session",
+          "host": "test-host"
+        },
+        "kind": "prompt",
+        "body_digest": "sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e",
+        "arm_goal": false,
+        "created_by": "sergei",
+        "created_at": "2026-11-09T04:38:32.636Z",
+        "expires_at": "2026-11-09T06:38:32.636Z",
+        "signing_key_id": "test-20261109",
+        "state": "queued",
+        "envelope": {
+          "version": 1,
+          "signing_key_id": "test-20261109",
+          "signature": "gULZEnmbNYdele_ufrsTFSKbjrL8d9h8ElA6i3afAS3xyC8vmQX8uYrKE5DMEETLCp2z8_0Qs8DnxPjMuQBRBQ"
+        }
+      },
+      "body_utf8": "Please pick up the next ready task and report back.\n",
+      "consumed_ids": [],
+      "expect_reason": "malformed"
+    },
+    {
+      "name": "malformed-timestamp-without-milliseconds",
+      "record": {
+        "id": "01JC9000000000000000000011",
+        "task": {
+          "repo": "demo-repo",
+          "id": "demo-11"
+        },
+        "target": {
+          "session": "test-session",
+          "host": "test-host"
+        },
+        "kind": "prompt",
+        "body_ref": "prompt-store:01JC9000000000000000000011",
+        "body_digest": "sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e",
+        "arm_goal": false,
+        "created_by": "sergei",
+        "created_at": "2026-11-09T04:38:32Z",
+        "expires_at": "2026-11-09T06:38:32.636Z",
+        "signing_key_id": "test-20261109",
+        "state": "queued",
+        "envelope": {
+          "version": 1,
+          "signing_key_id": "test-20261109",
+          "signature": "7DtWJGrXgAQIDGUd2kpDKeUcpPfF7Dy0axKs74fNAgGV2ukX8vP_00EN5C_90YxvW28YOYP2v-uf_zRCs7AFBg"
+        }
+      },
+      "body_utf8": "Please pick up the next ready task and report back.\n",
+      "consumed_ids": [],
+      "expect_reason": "malformed"
+    },
+    {
+      "name": "malformed-task-extra-key",
+      "record": {
+        "id": "01JC9000000000000000000012",
+        "task": {
+          "repo": "demo-repo",
+          "id": "demo-12",
+          "x": "y"
+        },
+        "target": {
+          "session": "test-session",
+          "host": "test-host"
+        },
+        "kind": "prompt",
+        "body_ref": "prompt-store:01JC9000000000000000000012",
+        "body_digest": "sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e",
+        "arm_goal": false,
+        "created_by": "sergei",
+        "created_at": "2026-11-09T04:38:32.636Z",
+        "expires_at": "2026-11-09T06:38:32.636Z",
+        "signing_key_id": "test-20261109",
+        "state": "queued",
+        "envelope": {
+          "version": 1,
+          "signing_key_id": "test-20261109",
+          "signature": "qTz6P_qgybIzg0JiZDvF0jLZHor06UuuuuXksJD5oc9HTxtPZRwomyr53e5f-BZT5jxezsG1pOtGSkMLb0EDAw"
+        }
+      },
+      "body_utf8": "Please pick up the next ready task and report back.\n",
+      "consumed_ids": [],
+      "expect_reason": "malformed"
+    },
+    {
+      "name": "malformed-envelope-version-2",
+      "record": {
+        "id": "01JC9000000000000000000013",
+        "task": {
+          "repo": "demo-repo",
+          "id": "demo-13"
+        },
+        "target": {
+          "session": "test-session",
+          "host": "test-host"
+        },
+        "kind": "prompt",
+        "body_ref": "prompt-store:01JC9000000000000000000013",
+        "body_digest": "sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e",
+        "arm_goal": false,
+        "created_by": "sergei",
+        "created_at": "2026-11-09T04:38:32.636Z",
+        "expires_at": "2026-11-09T06:38:32.636Z",
+        "signing_key_id": "test-20261109",
+        "state": "queued",
+        "envelope": {
+          "version": 2,
+          "signing_key_id": "test-20261109",
+          "signature": "clNsg2svPg5PXEm2H4MjVWagBZlpVp3MTr-XHsePIAZx6ntikQJXq9E1667gsyPVfjNmjeps0OjpbvefozLNAA"
+        }
+      },
+      "body_utf8": "Please pick up the next ready task and report back.\n",
+      "consumed_ids": [],
+      "expect_reason": "malformed"
+    },
+    {
+      "name": "malformed-signature-padded",
+      "record": {
+        "id": "01JC9000000000000000000014",
+        "task": {
+          "repo": "demo-repo",
+          "id": "demo-14"
+        },
+        "target": {
+          "session": "test-session",
+          "host": "test-host"
+        },
+        "kind": "prompt",
+        "body_ref": "prompt-store:01JC9000000000000000000014",
+        "body_digest": "sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e",
+        "arm_goal": false,
+        "created_by": "sergei",
+        "created_at": "2026-11-09T04:38:32.636Z",
+        "expires_at": "2026-11-09T06:38:32.636Z",
+        "signing_key_id": "test-20261109",
+        "state": "queued",
+        "envelope": {
+          "version": 1,
+          "signing_key_id": "test-20261109",
+          "signature": "ykCQhPJq6g0psSNLxCzPwl5gNqTcd5DhF2Epd5ABfnPEUFKwTAOFHQBw1xapKpUYnLgYBIlh_gW7UWJLr8_6BQ=="
+        }
+      },
+      "body_utf8": "Please pick up the next ready task and report back.\n",
+      "consumed_ids": [],
+      "expect_reason": "malformed"
+    },
+    {
+      "name": "malformed-unknown-kind",
+      "record": {
+        "id": "01JC9000000000000000000015",
+        "task": {
+          "repo": "demo-repo",
+          "id": "demo-15"
+        },
+        "target": {
+          "session": "test-session",
+          "host": "test-host"
+        },
+        "kind": "shell",
+        "body_ref": "prompt-store:01JC9000000000000000000015",
+        "body_digest": "sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e",
+        "arm_goal": false,
+        "created_by": "sergei",
+        "created_at": "2026-11-09T04:38:32.636Z",
+        "expires_at": "2026-11-09T06:38:32.636Z",
+        "signing_key_id": "test-20261109",
+        "state": "queued",
+        "envelope": {
+          "version": 1,
+          "signing_key_id": "test-20261109",
+          "signature": "pHq833fNdFvoGND7DoJPFeUf_c7h8xf1C8v6teTAMacugoy-Fcu8p6AvSWgN5pVfDMaIlP6hDAPm6dIv8YcRAA"
+        }
+      },
+      "body_utf8": "Please pick up the next ready task and report back.\n",
+      "consumed_ids": [],
+      "expect_reason": "malformed"
+    },
+    {
+      "name": "unknown-key-test-unknown",
+      "record": {
+        "id": "01JC9000000000000000000020",
+        "task": {
+          "repo": "demo-repo",
+          "id": "demo-20"
+        },
+        "target": {
+          "session": "test-session",
+          "host": "test-host"
+        },
+        "kind": "prompt",
+        "body_ref": "prompt-store:01JC9000000000000000000020",
+        "body_digest": "sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e",
+        "arm_goal": false,
+        "created_by": "sergei",
+        "created_at": "2026-11-09T04:38:32.636Z",
+        "expires_at": "2026-11-09T06:38:32.636Z",
+        "signing_key_id": "test-unknown",
+        "state": "queued",
+        "envelope": {
+          "version": 1,
+          "signing_key_id": "test-unknown",
+          "signature": "JD5Bu2GSH1yg_H5rzhAMn1X4zJzB_MPDeaVrTg8q_aj2haTmPWo1D84Fb73AgbCkiYUR-PB9VKWWrunMhxMACw"
+        }
+      },
+      "body_utf8": "Please pick up the next ready task and report back.\n",
+      "consumed_ids": [],
+      "expect_reason": "unknown-key"
+    },
+    {
+      "name": "key-revoked-test-revoked",
+      "record": {
+        "id": "01JC9000000000000000000021",
+        "task": {
+          "repo": "demo-repo",
+          "id": "demo-21"
+        },
+        "target": {
+          "session": "test-session",
+          "host": "test-host"
+        },
+        "kind": "prompt",
+        "body_ref": "prompt-store:01JC9000000000000000000021",
+        "body_digest": "sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e",
+        "arm_goal": false,
+        "created_by": "sergei",
+        "created_at": "2026-11-09T04:38:32.636Z",
+        "expires_at": "2026-11-09T06:38:32.636Z",
+        "signing_key_id": "test-revoked",
+        "state": "queued",
+        "envelope": {
+          "version": 1,
+          "signing_key_id": "test-revoked",
+          "signature": "9RKbDdWZUpMJhRAK9FbTPBhaHUjBhJdTXVf9WKuefnzWf4iOyxHNkwcTqwrrjZdrtkd7FV9uzuQmuh1z9qtwDw"
+        }
+      },
+      "body_utf8": "Please pick up the next ready task and report back.\n",
+      "consumed_ids": [],
+      "expect_reason": "key-revoked"
+    },
+    {
+      "name": "key-not-yet-valid-test-future",
+      "record": {
+        "id": "01JC9000000000000000000022",
+        "task": {
+          "repo": "demo-repo",
+          "id": "demo-22"
+        },
+        "target": {
+          "session": "test-session",
+          "host": "test-host"
+        },
+        "kind": "prompt",
+        "body_ref": "prompt-store:01JC9000000000000000000022",
+        "body_digest": "sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e",
+        "arm_goal": false,
+        "created_by": "sergei",
+        "created_at": "2026-11-09T04:38:32.636Z",
+        "expires_at": "2026-11-09T06:38:32.636Z",
+        "signing_key_id": "test-future",
+        "state": "queued",
+        "envelope": {
+          "version": 1,
+          "signing_key_id": "test-future",
+          "signature": "zSfShnv5oXXAibVNzjcWy-saJsG3f-H0HQ2T1y6CWMHMVPe2DFlpK-6yCRMVzQkQjW8bIWglpKgrFzU7aw2rDA"
+        }
+      },
+      "body_utf8": "Please pick up the next ready task and report back.\n",
+      "consumed_ids": [],
+      "expect_reason": "key-not-yet-valid"
+    },
+    {
+      "name": "key-expired-test-retired",
+      "record": {
+        "id": "01JC9000000000000000000023",
+        "task": {
+          "repo": "demo-repo",
+          "id": "demo-23"
+        },
+        "target": {
+          "session": "test-session",
+          "host": "test-host"
+        },
+        "kind": "prompt",
+        "body_ref": "prompt-store:01JC9000000000000000000023",
+        "body_digest": "sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e",
+        "arm_goal": false,
+        "created_by": "sergei",
+        "created_at": "2026-11-09T04:38:32.636Z",
+        "expires_at": "2026-11-09T06:38:32.636Z",
+        "signing_key_id": "test-retired",
+        "state": "queued",
+        "envelope": {
+          "version": 1,
+          "signing_key_id": "test-retired",
+          "signature": "NMjymvPG99cXU4T92Rg0LwIHaLZVU37BFRHexjnWZnKsJ303FO0o-lMGL98133XjU13oXCQ7tUUf3JCpWCEJCA"
+        }
+      },
+      "body_utf8": "Please pick up the next ready task and report back.\n",
+      "consumed_ids": [],
+      "expect_reason": "key-expired"
+    },
+    {
+      "name": "bad-signature-signed-field-tampered",
+      "record": {
+        "id": "01JC9000000000000000000030",
+        "task": {
+          "repo": "demo-repo",
+          "id": "demo-30"
+        },
+        "target": {
+          "session": "test-session",
+          "host": "test-host"
+        },
+        "kind": "prompt",
+        "body_ref": "prompt-store:elsewhere",
+        "body_digest": "sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e",
+        "arm_goal": false,
+        "created_by": "sergei",
+        "created_at": "2026-11-09T04:38:32.636Z",
+        "expires_at": "2026-11-09T06:38:32.636Z",
+        "signing_key_id": "test-20261109",
+        "state": "queued",
+        "envelope": {
+          "version": 1,
+          "signing_key_id": "test-20261109",
+          "signature": "eFmykfaAs84wO0d2JAy4RkPUStnnZzzSzYmyn8ZyGNw_mMzHnzAeYcq7m_RR2KjT_N5yL6D7MNVRN-kroS1YBQ"
+        }
+      },
+      "body_utf8": "Please pick up the next ready task and report back.\n",
+      "consumed_ids": [],
+      "expect_reason": "bad-signature"
+    },
+    {
+      "name": "bad-signature-unicode-not-normalized",
+      "record": {
+        "id": "01JC9000000000000000000031",
+        "task": {
+          "repo": "demo-repo",
+          "id": "demo-31"
+        },
+        "target": {
+          "session": "test-session",
+          "host": "test-host"
+        },
+        "kind": "prompt",
+        "body_ref": "prompt-store:cafe\u0301",
+        "body_digest": "sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e",
+        "arm_goal": false,
+        "created_by": "sergei",
+        "created_at": "2026-11-09T04:38:32.636Z",
+        "expires_at": "2026-11-09T06:38:32.636Z",
+        "signing_key_id": "test-20261109",
+        "state": "queued",
+        "envelope": {
+          "version": 1,
+          "signing_key_id": "test-20261109",
+          "signature": "4xdMPl-XxZHEynzlDoxzkt-gza9Xkgdtm6nYvV9mOBF6sUkjtm0RZSCNHWLhHNkHOfWvYS2qPkwogScvq0AeBw"
+        }
+      },
+      "body_utf8": "Please pick up the next ready task and report back.\n",
+      "consumed_ids": [],
+      "expect_reason": "bad-signature"
+    },
+    {
+      "name": "bad-signature-wrong-signer",
+      "record": {
+        "id": "01JC9000000000000000000032",
+        "task": {
+          "repo": "demo-repo",
+          "id": "demo-32"
+        },
+        "target": {
+          "session": "test-session",
+          "host": "test-host"
+        },
+        "kind": "prompt",
+        "body_ref": "prompt-store:01JC9000000000000000000032",
+        "body_digest": "sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e",
+        "arm_goal": false,
+        "created_by": "sergei",
+        "created_at": "2026-11-09T04:38:32.636Z",
+        "expires_at": "2026-11-09T06:38:32.636Z",
+        "signing_key_id": "test-20261109",
+        "state": "queued",
+        "envelope": {
+          "version": 1,
+          "signing_key_id": "test-20261109",
+          "signature": "TosB_OJfEf5wYTm3_CpaDG-YkOZQ-NCs7nwDp0A6D1I0KcNpD9uapXu-_s2TRJCnvCjXJHzimKe59we0hPVvDw"
+        }
+      },
+      "body_utf8": "Please pick up the next ready task and report back.\n",
+      "consumed_ids": [],
+      "expect_reason": "bad-signature"
+    },
+    {
+      "name": "field-mismatch-signed-key-id-differs-from-envelope",
+      "record": {
+        "id": "01JC9000000000000000000033",
+        "task": {
+          "repo": "demo-repo",
+          "id": "demo-33"
+        },
+        "target": {
+          "session": "test-session",
+          "host": "test-host"
+        },
+        "kind": "prompt",
+        "body_ref": "prompt-store:01JC9000000000000000000033",
+        "body_digest": "sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e",
+        "arm_goal": false,
+        "created_by": "sergei",
+        "created_at": "2026-11-09T04:38:32.636Z",
+        "expires_at": "2026-11-09T06:38:32.636Z",
+        "signing_key_id": "test-rotating",
+        "state": "queued",
+        "envelope": {
+          "version": 1,
+          "signing_key_id": "test-20261109",
+          "signature": "mBDIKgvQfhKEjT0wopVO_YA8iecnVemKX1YcxfTeHI4mjtGJc2V_nztpABjV0m2VyzOK9QSTmAZ4F-Psq2cqAQ"
+        }
+      },
+      "body_utf8": "Please pick up the next ready task and report back.\n",
+      "consumed_ids": [],
+      "expect_reason": "field-mismatch"
+    },
+    {
+      "name": "body-digest-mismatch",
+      "record": {
+        "id": "01JC9000000000000000000040",
+        "task": {
+          "repo": "demo-repo",
+          "id": "demo-40"
+        },
+        "target": {
+          "session": "test-session",
+          "host": "test-host"
+        },
+        "kind": "prompt",
+        "body_ref": "prompt-store:01JC9000000000000000000040",
+        "body_digest": "sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e",
+        "arm_goal": false,
+        "created_by": "sergei",
+        "created_at": "2026-11-09T04:38:32.636Z",
+        "expires_at": "2026-11-09T06:38:32.636Z",
+        "signing_key_id": "test-20261109",
+        "state": "queued",
+        "envelope": {
+          "version": 1,
+          "signing_key_id": "test-20261109",
+          "signature": "0sTrWBvetKLGQwgezb6PoepTVubKD5-Ug_o6QVKn7QHPMoldzi10XRTDBrphNi6Vyt2Pv-Xh2-8nQnYUeTriBw"
+        }
+      },
+      "body_utf8": "Please pick up the next ready task and report back.\n ",
+      "consumed_ids": [],
+      "expect_reason": "body-digest-mismatch"
+    },
+    {
+      "name": "expired-at-expires-at",
+      "record": {
+        "id": "01JC9000000000000000000041",
+        "task": {
+          "repo": "demo-repo",
+          "id": "demo-41"
+        },
+        "target": {
+          "session": "test-session",
+          "host": "test-host"
+        },
+        "kind": "prompt",
+        "body_ref": "prompt-store:01JC9000000000000000000041",
+        "body_digest": "sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e",
+        "arm_goal": false,
+        "created_by": "sergei",
+        "created_at": "2026-11-09T04:38:32.636Z",
+        "expires_at": "2026-11-09T05:00:00.000Z",
+        "signing_key_id": "test-20261109",
+        "state": "queued",
+        "envelope": {
+          "version": 1,
+          "signing_key_id": "test-20261109",
+          "signature": "-jXAOAy36gC3awb8zNeTMOOJsRj6cWBi4EctA3iprRcQOSmBp9cv2WeVuK6xKYh53I_xiqUoPfUdbtb8d_WjDw"
+        }
+      },
+      "body_utf8": "Please pick up the next ready task and report back.\n",
+      "consumed_ids": [],
+      "expect_reason": "expired"
+    },
+    {
+      "name": "wrong-target-session",
+      "record": {
+        "id": "01JC9000000000000000000042",
+        "task": {
+          "repo": "demo-repo",
+          "id": "demo-42"
+        },
+        "target": {
+          "session": "other-session",
+          "host": "test-host"
+        },
+        "kind": "prompt",
+        "body_ref": "prompt-store:01JC9000000000000000000042",
+        "body_digest": "sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e",
+        "arm_goal": false,
+        "created_by": "sergei",
+        "created_at": "2026-11-09T04:38:32.636Z",
+        "expires_at": "2026-11-09T06:38:32.636Z",
+        "signing_key_id": "test-20261109",
+        "state": "queued",
+        "envelope": {
+          "version": 1,
+          "signing_key_id": "test-20261109",
+          "signature": "nl4onMhlGtFq4YiF3DUGuY18Zd73440L-8E5OE0BJKG5y0waQx8CfXBZwsRZiDN8eH97vvoWVeERNEpVKzECBA"
+        }
+      },
+      "body_utf8": "Please pick up the next ready task and report back.\n",
+      "consumed_ids": [],
+      "expect_reason": "wrong-target"
+    },
+    {
+      "name": "wrong-target-host",
+      "record": {
+        "id": "01JC9000000000000000000043",
+        "task": {
+          "repo": "demo-repo",
+          "id": "demo-43"
+        },
+        "target": {
+          "session": "test-session",
+          "host": "other-host"
+        },
+        "kind": "prompt",
+        "body_ref": "prompt-store:01JC9000000000000000000043",
+        "body_digest": "sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e",
+        "arm_goal": false,
+        "created_by": "sergei",
+        "created_at": "2026-11-09T04:38:32.636Z",
+        "expires_at": "2026-11-09T06:38:32.636Z",
+        "signing_key_id": "test-20261109",
+        "state": "queued",
+        "envelope": {
+          "version": 1,
+          "signing_key_id": "test-20261109",
+          "signature": "qLhUmkG0B7RrFb8DCKTiqvjMg7pljG9eyEglDqbwHHS5Nu7nlL42ssF_VlKXuFfxpgsIMTxCjLHY7SYRc-I-DA"
+        }
+      },
+      "body_utf8": "Please pick up the next ready task and report back.\n",
+      "consumed_ids": [],
+      "expect_reason": "wrong-target"
+    },
+    {
+      "name": "replayed",
+      "record": {
+        "id": "01JC9000000000000000000044",
+        "task": {
+          "repo": "demo-repo",
+          "id": "demo-44"
+        },
+        "target": {
+          "session": "test-session",
+          "host": "test-host"
+        },
+        "kind": "prompt",
+        "body_ref": "prompt-store:01JC9000000000000000000044",
+        "body_digest": "sha256:30b3b83cdc31cc66379d0860e4ac35fdd3c83b2b031cac9cb5011017bbc2a37e",
+        "arm_goal": false,
+        "created_by": "sergei",
+        "created_at": "2026-11-09T04:38:32.636Z",
+        "expires_at": "2026-11-09T06:38:32.636Z",
+        "signing_key_id": "test-20261109",
+        "state": "queued",
+        "envelope": {
+          "version": 1,
+          "signing_key_id": "test-20261109",
+          "signature": "JJRuLUETAhGujcrEir_zj6ZGbRuVPyoiqRgU5DZ0E9sKTA5mJbaWD0Q_p2nDlFNmoFaynvkYqQbk5EwftPqmCg"
+        }
+      },
+      "body_utf8": "Please pick up the next ready task and report back.\n",
+      "consumed_ids": [
+        "01JC9000000000000000000044"
+      ],
+      "expect_reason": "replayed"
+    }
+  ]
+}
