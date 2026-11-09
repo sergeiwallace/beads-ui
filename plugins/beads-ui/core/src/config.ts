@@ -417,6 +417,81 @@ export function resolveWeb(text: string | undefined): ResolvedWeb {
   return resolved;
 }
 
+/** The `beads-ui.toml` table of the work-queue adapter (D-11, T-3.4). */
+export const QUEUE_TABLE = "queue";
+
+export interface ResolvedQueue {
+  /** The queue's base URL, without a trailing slash; unset turns the adapter off. */
+  url?: string;
+  /** The repository name the queue keys this store by; the store's directory name when unset. */
+  repo?: string;
+  problems: string[];
+}
+
+const HTTP_URL = /^https?:\/\/[^\s/?#]+(\/[^\s?#]*)?$/;
+
+/**
+ * `[queue] url` and `[queue] repo`, read at call time. An empty url, the default, turns the
+ * adapter off; one that is not an http or https URL also leaves it off and says so.
+ */
+export function resolveQueue(text: string | undefined): ResolvedQueue {
+  const resolved: ResolvedQueue = { problems: [] };
+  if (text === undefined) return resolved;
+  const parsed = parseToml(text);
+  if (!parsed.ok) return resolved;
+  const table = parsed.value[QUEUE_TABLE];
+  if (table === undefined) return resolved;
+  if (!isTable(table)) {
+    resolved.problems.push(`${QUEUE_TABLE} must be a table; the queue adapter is off`);
+    return resolved;
+  }
+  const { url, repo } = table;
+  if (url !== undefined && url !== "") {
+    if (typeof url === "string" && HTTP_URL.test(url)) resolved.url = url.replace(/\/+$/, "");
+    else
+      resolved.problems.push(
+        `queue.url must be an http or https URL, not ${JSON.stringify(url)}; the queue adapter is off`,
+      );
+  }
+  if (repo !== undefined) {
+    if (typeof repo === "string" && repo !== "") resolved.repo = repo;
+    else
+      resolved.problems.push(`queue.repo must be a repository name, not ${JSON.stringify(repo)}`);
+  }
+  return resolved;
+}
+
+/** The `beads-ui.toml` table of Analytics' settings (T-3.3). */
+export const ANALYTICS_TABLE = "analytics";
+
+export interface ResolvedAnalytics {
+  /** The Claude Code cost export to read, an OTLP JSON Lines file; unset shows no cost. */
+  costExport?: string;
+  problems: string[];
+}
+
+/** `[analytics] cost_export`, read at call time. */
+export function resolveAnalytics(text: string | undefined): ResolvedAnalytics {
+  const resolved: ResolvedAnalytics = { problems: [] };
+  if (text === undefined) return resolved;
+  const parsed = parseToml(text);
+  if (!parsed.ok) return resolved;
+  const table = parsed.value[ANALYTICS_TABLE];
+  if (table === undefined) return resolved;
+  if (!isTable(table)) {
+    resolved.problems.push(`${ANALYTICS_TABLE} must be a table; no cost export is read`);
+    return resolved;
+  }
+  const path = table.cost_export;
+  if (path === undefined || path === "") return resolved;
+  if (typeof path === "string") resolved.costExport = path;
+  else
+    resolved.problems.push(
+      `analytics.cost_export must be a file path, not ${JSON.stringify(path)}; no cost export is read`,
+    );
+  return resolved;
+}
+
 /** The `beads-ui.toml` table of the band's settings (T-1B.5, T-1B.11). */
 export const BAND_TABLE = "band";
 

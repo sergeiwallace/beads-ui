@@ -49,6 +49,8 @@ export interface Issue {
   updatedAt: string;
   startedAt?: string;
   closedAt?: string;
+  /** The Claude Code session id `bd close --session` recorded (`closed_by_session`). */
+  closedBySession?: string;
   leaseExpiresAt?: string;
   heartbeatAt?: string;
   metadata: Record<string, unknown>;

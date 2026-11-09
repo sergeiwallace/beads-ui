@@ -1,4 +1,6 @@
-/* The components' own styles, all on theme.css's tokens. */
+/* The components' own styles, all on theme.css's tokens. Frappe Gantt's own for the Roadmap. */
+@import "frappe-gantt/frappe-gantt.css";
+
 .bu-visually-hidden {
   position: absolute;
   width: 1px;
@@ -423,4 +425,145 @@
   border-radius: var(--bu-radius);
   border: 1px solid var(--bu-error);
   color: var(--bu-error);
+}
+
+/* Roadmap, Analytics and Sessions */
+.bu-roadmap,
+.bu-analytics,
+.bu-sessions {
+  padding: 0.75rem;
+}
+
+.bu-view-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+}
+
+.bu-view-subtitle {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.bu-roadmap-chart {
+  overflow-x: auto;
+  border: 1px solid var(--bu-border);
+  border-radius: var(--bu-radius);
+  background: var(--bu-surface-card);
+}
+
+.bu-roadmap-chart .bar-wrapper .bar {
+  fill: var(--bu-status-active);
+}
+
+.bu-roadmap-chart .bu-roadmap-wip .bar {
+  fill: var(--bu-status-wip);
+}
+
+.bu-roadmap-chart .bu-roadmap-frozen .bar {
+  fill: var(--bu-status-frozen);
+}
+
+.bu-roadmap-chart .bu-roadmap-done .bar {
+  fill: var(--bu-status-done);
+}
+
+.bu-roadmap-chart path[data-kind="parent-child"] {
+  stroke-dasharray: 5 4;
+}
+
+.bu-roadmap-links,
+.bu-chart-data {
+  margin: 0.5rem 0;
+}
+
+.bu-roadmap-undated {
+  padding-left: 1.2rem;
+}
+
+.bu-analytics-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin: 0 0 0.75rem;
+}
+
+.bu-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 30rem), 1fr));
+  gap: 1rem;
+}
+
+.bu-chart {
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--bu-border);
+  border-radius: var(--bu-radius);
+  background: var(--bu-surface-card);
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.bu-chart-plot {
+  block-size: 14rem;
+}
+
+.bu-aging {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bu-aging li {
+  position: relative;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.85rem;
+}
+
+.bu-aging-bar {
+  position: absolute;
+  inset-block: 0.15rem;
+  inset-inline-start: 0;
+  border-radius: 3px;
+  opacity: 0.3;
+}
+
+.bu-sessions-note[data-liveness="unavailable"] {
+  color: var(--bu-warning);
+}
+
+.bu-session-state[data-state="gone"] {
+  color: var(--bu-text-dim);
+}
+
+.bu-session-state[data-state="busy"] {
+  color: var(--bu-status-wip);
+}
+
+/* A table whose rows stack as cards on a narrow screen, each cell under its column's name. */
+@media (max-width: 640px) {
+  .bu-stack thead {
+    position: absolute;
+    clip-path: inset(50%);
+  }
+
+  .bu-stack tr {
+    display: block;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--bu-border);
+  }
+
+  .bu-stack th,
+  .bu-stack td {
+    display: flex;
+    gap: 0.5rem;
+    border: 0;
+    padding: 0.15rem 0.5rem;
+  }
+
+  .bu-stack td::before {
+    content: attr(data-label);
+    min-inline-size: 7.5rem;
+    color: var(--bu-text-dim);
+  }
 }

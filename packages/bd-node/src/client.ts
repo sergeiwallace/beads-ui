@@ -6,11 +6,15 @@ import {
   closeArgv,
   commentsArgv,
   createArgv,
+  type HistoryEvent,
+  historyArgv,
   type Issue,
   listArgv,
   type ParseResult,
   parseBdComments,
+  parseBdCount,
   parseBdCreatedId,
+  parseBdHistoryEvents,
   parseBdList,
   parseBdReady,
   parseBdShow,
@@ -60,6 +64,12 @@ export interface BdClient {
   show(id: string, options?: CallOptions): Promise<BdResult<Issue>>;
   statuses(options?: CallOptions): Promise<BdResult<Status[]>>;
   ready(options?: CallOptions): Promise<BdResult<Issue[]>>;
+  /** An issue's audit events (`bd history <id> --events`), newest first as bd lists them. */
+  history(id: string, options?: CallOptions): Promise<BdResult<HistoryEvent[]>>;
+  /** A `bd list` read core built (timelineReadArgvs, analyticsReadArgvs, labelledArgv). */
+  listBy(argv: BdArgv, options?: CallOptions): Promise<BdResult<Issue[]>>;
+  /** A `bd count --by-status` read core built, by status. */
+  count(argv: BdArgv, options?: CallOptions): Promise<BdResult<Record<string, number>>>;
   /** One bd call; a stale guard returns `stale` and is never retried. */
   update(id: string, fields: UpdateFields, options?: UpdateOptions): Promise<BdResult<void>>;
   /** Returns the new issue's hash id; display-id minting is a later step over it (D-9). */
@@ -217,6 +227,21 @@ export function createBdClient(options: BdClientOptions): BdClient {
     ready(callOptions) {
       const argv = readyArgv();
       return call(argv, callOptions, (out) => parsed(argv, out, parseBdReady));
+    },
+    history(id, callOptions) {
+      const argv = historyArgv(id);
+      // bd 1.3.4 prints `null`, exit 0, for an id with no events, an unknown one included.
+      return call(argv, callOptions, (out) =>
+        out.exitCode === 0 && out.stdout.trim() === "null"
+          ? { kind: "ok", value: [] }
+          : (notFound(id, out) ?? parsed(argv, out, parseBdHistoryEvents)),
+      );
+    },
+    listBy(argv, callOptions) {
+      return call(argv, callOptions, (out) => parsed(argv, out, parseBdList));
+    },
+    count(argv, callOptions) {
+      return call(argv, callOptions, (out) => parsed(argv, out, parseBdCount));
     },
     update(id, fields, updateOptions = {}) {
       const guarded =

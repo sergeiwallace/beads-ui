@@ -14,6 +14,7 @@ import type { WebConfig } from "./config.ts";
 import type { DispatchService } from "./dispatch-service.ts";
 import { RECEIVER_ROUTES } from "./receiver-api.ts";
 import type { OpenStore, StoreRegistry } from "./registry.ts";
+import { analyticsRoute, queueStatusWrite, roadmapRoute, sessionsRoute } from "./views.ts";
 
 /** What every route reads through: the host's open stores and the call-time settings. */
 export interface ApiContext {
@@ -112,7 +113,10 @@ export function failure(error: ApiError): ApiReply {
 const firstLine = (text: string): string => text.trim().split("\n")[0] ?? "";
 
 /** The reply for a bd call that did not succeed, naming the call as its source. */
-function bdFailure<T>(source: string, result: Exclude<BdResult<T>, { kind: "ok" }>): ApiReply {
+export function bdFailure<T>(
+  source: string,
+  result: Exclude<BdResult<T>, { kind: "ok" }>,
+): ApiReply {
   switch (result.kind) {
     case "stale":
       return failure({
@@ -173,7 +177,7 @@ export const STORE_PARAM = "store";
  * The open store a request addresses: the one `?store=` names, or with none named the only open
  * store. A store that is not open, or no name while several are, is refused.
  */
-async function storeOf(
+export async function storeOf(
   request: ApiRequest,
   context: ApiContext,
   name: string | null = request.query.get(STORE_PARAM),
@@ -194,7 +198,7 @@ async function storeOf(
   return invalid(`${open.length} stores are open: name one with ?${STORE_PARAM}=<repository>`);
 }
 
-const isStore = (value: OpenStore | ApiReply): value is OpenStore => "bd" in value;
+export const isStore = (value: OpenStore | ApiReply): value is OpenStore => "bd" in value;
 
 /** The stores read at once by the all-stores view; each store still runs one bd at a time. */
 const CONCURRENT_STORES = 4;
@@ -353,10 +357,16 @@ async function statusRoute(request: ApiRequest, context: ApiContext): Promise<Ap
   }
   const store = await storeOf(request, context);
   if (!isStore(store)) return store;
+  // A task the work queue holds a lease on moves through the queue (T-3.4).
+  const queued = await queueStatusWrite(context, store.repository, id, to, shown);
+  if ("reply" in queued) return queued.reply;
   const result = await guardedWrite(() => store.bd.update(id, { status: to }, { ifStatus: shown }));
   if (isReply(result)) return result;
   if (result.kind !== "ok") return bdFailure("bd update", result);
-  return { status: 200, body: { id, status: to } };
+  return {
+    status: 200,
+    body: { id, status: to, ...(queued.notice === undefined ? {} : { notice: queued.notice }) },
+  };
 }
 
 const isPriority = (value: unknown): value is Priority =>
@@ -520,6 +530,10 @@ export const ROUTES: readonly Route[] = [
   { method: "POST", path: "/api/issues/:id/status", handle: statusRoute },
   { method: "POST", path: "/api/issues/:id/priority", handle: priorityRoute },
   { method: "POST", path: "/api/issues/:id/rank", handle: rankRoute },
+  // Phase 3's remaining views: Roadmap, Analytics and Sessions (server/views.ts).
+  { method: "GET", path: "/api/roadmap", handle: roadmapRoute },
+  { method: "GET", path: "/api/analytics", handle: analyticsRoute },
+  { method: "GET", path: "/api/sessions", handle: sessionsRoute },
   // The receiver API (receiver-api.ts), authorised by a receiving host's token.
   ...RECEIVER_ROUTES,
 ];
