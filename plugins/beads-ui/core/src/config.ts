@@ -385,10 +385,28 @@ export interface ResolvedWeb {
   /** As written: the server, not the parser, decides which address it accepts. */
   host?: string;
   port?: number;
+  /**
+   * The path the app is mounted under, such as `/beads/` behind app-portal: always with a leading
+   * and a trailing slash. Unset is `/`.
+   */
+  basePath?: string;
   problems: string[];
 }
 
-/** `[web] host` and `[web] port`, read when the server starts. A wrong value is left unset. */
+const BASE_SEGMENT = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
+/** A base path as `/a/b/`, or undefined when it is not one: segments of letters, digits, `.`, `_`, `-`. */
+export function normalizeBasePath(value: string): string | undefined {
+  if (!value.startsWith("/")) return undefined;
+  const segments = value.split("/").filter((segment) => segment !== "");
+  if (!segments.every((segment) => BASE_SEGMENT.test(segment))) return undefined;
+  return segments.length === 0 ? "/" : `/${segments.join("/")}/`;
+}
+
+/**
+ * `[web] host`, `[web] port` and `[web] base_path`, read when the server starts. A wrong value is
+ * left unset.
+ */
 export function resolveWeb(text: string | undefined): ResolvedWeb {
   const resolved: ResolvedWeb = { problems: [] };
   if (text === undefined) return resolved;
@@ -411,6 +429,16 @@ export function resolveWeb(text: string | undefined): ResolvedWeb {
     } else {
       resolved.problems.push(
         `web.port must be a whole number from 0 to 65535, not ${JSON.stringify(port)}`,
+      );
+    }
+  }
+  if (table.base_path !== undefined) {
+    const base =
+      typeof table.base_path === "string" ? normalizeBasePath(table.base_path) : undefined;
+    if (base !== undefined) resolved.basePath = base;
+    else {
+      resolved.problems.push(
+        `web.base_path must be a path such as "/beads", not ${JSON.stringify(table.base_path)}`,
       );
     }
   }

@@ -146,6 +146,24 @@ describe("resolveWeb", () => {
       problems: ["web.port must be a whole number from 0 to 65535, not 70000"],
     });
   });
+
+  test("should read base_path with a leading and a trailing slash when the file sets one", () => {
+    expect(resolveWeb('[web]\nbase_path = "/beads"\n')).toEqual({
+      basePath: "/beads/",
+      problems: [],
+    });
+    expect(resolveWeb('[web]\nbase_path = "/"\n')).toEqual({ basePath: "/", problems: [] });
+  });
+
+  test("should leave a base_path that is not a plain path unset and name it", () => {
+    for (const value of ['"beads"', '"/a/../b"', '"/a b"', "3"]) {
+      const resolved = resolveWeb(`[web]\nbase_path = ${value}\n`);
+      expect(resolved.basePath).toBeUndefined();
+      expect(resolved.problems).toEqual([
+        `web.base_path must be a path such as "/beads", not ${value}`,
+      ]);
+    }
+  });
 });
 
 describe("resolveRank on the design's example", () => {

@@ -21,6 +21,8 @@ export interface WebConfig extends BeadsUiConfig {
   host?: string;
   /** `[web] port`, when the file sets one. */
   port?: number;
+  /** `[web] base_path` as `/beads/`, when the file sets one; the app is mounted at `/` otherwise. */
+  basePath?: string;
   /** `[views] rank`, on unless the file turns it off (D-21). */
   rank: boolean;
   /** `[queue] url`: the work queue the Sessions view and leased status writes go through. */
@@ -108,6 +110,7 @@ export async function readWebConfig(repoRoot: string, env: ConfigEnv): Promise<W
   };
   if (web.host !== undefined) config.host = web.host;
   if (web.port !== undefined) config.port = web.port;
+  if (web.basePath !== undefined) config.basePath = web.basePath;
   if (queue.url !== undefined) config.queueUrl = queue.url;
   if (queue.repo !== undefined) config.queueRepo = queue.repo;
   if (analytics.costExport !== undefined) config.costExport = analytics.costExport;

@@ -94,6 +94,7 @@ export {
   DEFAULT_CONFIG,
   INDICATORS_TABLE,
   MIN_REFRESH_SECONDS,
+  normalizeBasePath,
   PANEL_TABLE,
   parseToml,
   QUEUE_TABLE,
