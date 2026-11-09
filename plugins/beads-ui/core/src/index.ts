@@ -87,6 +87,23 @@ export {
   withSurfacesTable,
 } from "./config.ts";
 export type {
+  DecisionOptionsOutput,
+  ItemOptions,
+  OptionCard,
+  OptionChoice,
+  OptionsError,
+  OptionsItemKind,
+} from "./decision-options.ts";
+export {
+  MAX_NUMBER_KEYS,
+  OPTIONS_ITEM_KINDS,
+  OPTIONS_VERSION,
+  optionCardMode,
+  optionForKey,
+  optionsForItem,
+  parseDecisionOptions,
+} from "./decision-options.ts";
+export type {
   Filter,
   FilterError,
   FilterKey,
