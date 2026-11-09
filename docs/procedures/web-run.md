@@ -365,3 +365,19 @@ several such stores from a private home's store inventory. The work-queue cases 
 in-process queue that answers the queue service's routes with its shapes
 (`apps/web/test/queue-fake.ts`); to also read a live queue, run the server suite with
 `BEADS_UI_LIVE_QUEUE_URL` set to its URL.
+
+One setting bounds how many test processes a run starts: `BEADS_UI_TEST_JOBS`, a whole number
+from 1 to 2, default 1 when unset. It sets turbo's `--concurrency` (package test tasks at once),
+each Vitest config's `maxWorkers`, Playwright's `workers` and how many mod test files
+`scripts/plugin-test.mjs` runs at once (one by one at 1). The bounds multiply: turbo runs up to
+`BEADS_UI_TEST_JOBS` package tasks and each runs up to `BEADS_UI_TEST_JOBS` workers, so one run
+starts at most `BEADS_UI_TEST_JOBS` squared test processes, 1 by default and 4 at the maximum of 2.
+A value outside 1 to 2 fails the run before any test starts.
+
+```sh
+BEADS_UI_TEST_JOBS=2 npm test     # a faster run on a quiet host, at most 4 test processes
+```
+
+The pre-commit test hooks skip a commit whose staged paths are all under `docs/` or end in `.md`,
+and run the suite for any other staged path, a deleted or renamed one included. The pre-push test
+gate still runs the Vitest suites, the ones that read documentation included.
