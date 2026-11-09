@@ -38,10 +38,15 @@ test.describe("the Roadmap", () => {
     }
     await expect(chart.locator(".bar-wrapper")).toHaveCount(3);
     // Placed by due date: the earliest due on the top row, the latest furthest right.
+    // Read from the SVG, not the viewport: Frappe scrolls its chart after drawing, so two
+    // viewport boxes taken one after the other can straddle that scroll.
     const box = async (id: string) => {
-      const found = await chart.locator(`.bar-wrapper[data-issue-id="${id}"] .bar`).boundingBox();
-      if (found === null) throw new Error(`the bar of ${id} has no box`);
-      return found;
+      const bar = chart.locator(`.bar-wrapper[data-issue-id="${id}"] .bar`);
+      const [x, y, width] = await Promise.all(
+        ["x", "y", "width"].map(async (name) => Number(await bar.getAttribute(name))),
+      );
+      if (![x, y, width].every(Number.isFinite)) throw new Error(`the bar of ${id} has no place`);
+      return { x: x ?? 0, y: y ?? 0, width: width ?? 0 };
     };
     const [first, second, third] = [await box(epic), await box(sub), await box(launch)];
     expect(first.y).toBeLessThan(second.y);
