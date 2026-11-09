@@ -104,6 +104,23 @@ export {
   parseDecisionOptions,
 } from "./decision-options.ts";
 export type {
+  AppliedTransition,
+  DeliveryMachine,
+  DeliveryState,
+  DeliveryTransition,
+  RejectedTransition,
+} from "./delivery-state.ts";
+export {
+  allowsTransition,
+  DELIVERY_STATES,
+  DELIVERY_TRANSITIONS,
+  deliveryLabel,
+  deliveryMachine,
+  isDeliveryState,
+  isFinalDelivery,
+  reduceDelivery,
+} from "./delivery-state.ts";
+export type {
   Filter,
   FilterError,
   FilterKey,
