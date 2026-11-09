@@ -311,6 +311,38 @@ export {
   storeForTask,
 } from "./review.ts";
 export type {
+  QueueFilterKey,
+  QueueFilters,
+  QueueIssue,
+  QueueReadFailure,
+  ReviewAction,
+  ReviewQueueEntry,
+  ReviewQueueEvent,
+  ReviewQueueSection,
+  ReviewQueueState,
+  ReviewQueueView,
+} from "./review-queue.ts";
+export {
+  CURATION_SCALE,
+  compareQueueEntries,
+  curationOf,
+  decodeQueueFilters,
+  encodeQueueFilters,
+  goalsOf,
+  heldEntry,
+  INITIAL_REVIEW_QUEUE,
+  matchesQueueFilters,
+  NOTHING_TO_REVIEW,
+  normalizeQueueFilters,
+  QUEUE_FILTER_KEYS,
+  REVIEW_ACTIONS,
+  reduceReviewQueue,
+  reviewQueueView,
+  sortQueueEntries,
+  taskEntry,
+  withQueueFilters,
+} from "./review-queue.ts";
+export type {
   ReviewFilter,
   ReviewFilterError,
   ReviewFilterKey,
