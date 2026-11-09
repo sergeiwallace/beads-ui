@@ -197,7 +197,8 @@ it was written), the server deletes the body and appends a tombstone, keeping th
 receipts. Expiry runs at every receiver request and every 30 seconds.
 
 A dispatch is written only for a task whose repository is on the target host's published
-allowlist, `[hosts.<host>] allow_repos` in your `beads-ui.toml`, read at call time.
+allowlist, `[hosts.<host>] allow_repos` in your `beads-ui.toml`, read at call time, and is one of
+this server's open stores, named as the board names it; any other is refused with nothing stored.
 
 The server publishes two files in its state directory, brought up to date at start and every 30
 seconds:

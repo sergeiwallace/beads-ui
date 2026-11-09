@@ -116,6 +116,7 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
       stateDir: settings.stateDir,
       store: await openStore(await readStoreChoice(options.configEnv), settings.stateDir),
       allowlist,
+      stores,
       clock,
     });
   } catch (error) {

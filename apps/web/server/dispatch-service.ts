@@ -32,6 +32,7 @@ import {
   signDispatch,
   signingKeySource,
 } from "./envelope.ts";
+import type { StoreRegistry } from "./registry.ts";
 
 /** This host's public signing keys, in the receivers' trusted-keys map shape (Envelope wire format). */
 export const PUBLISHED_KEYS_FILE = "published-dispatch-keys.json";
@@ -258,6 +259,8 @@ export interface DispatchServiceOptions {
   store: DispatchStore;
   /** This host's allowlist, or with `host` that host's published copy, read at call time. */
   allowlist(host?: string): Promise<Allowlist>;
+  /** This host's open stores: a dispatch's task is addressed by repository and id in one of them. */
+  stores: Pick<StoreRegistry, "read">;
   /** Milliseconds since the epoch. */
   clock: () => number;
 }
@@ -267,6 +270,7 @@ export class DispatchService {
   readonly stateDir: string;
   readonly #env: ConfigEnv;
   readonly #allowlist: (host?: string) => Promise<Allowlist>;
+  readonly #stores: Pick<StoreRegistry, "read">;
   readonly #clock: () => number;
   readonly #publishing = new Serial();
 
@@ -275,6 +279,7 @@ export class DispatchService {
     this.stateDir = options.stateDir;
     this.#env = options.env;
     this.#allowlist = options.allowlist;
+    this.#stores = options.stores;
     this.#clock = options.clock;
   }
 
@@ -361,7 +366,8 @@ export class DispatchService {
 
   /**
    * Signs and stores one dispatch. Refused, with nothing stored, when the task's repository is not
-   * on the target host's published allowlist (T-W0.2) or the signing key cannot be read.
+   * on the target host's published allowlist (T-W0.2), when it is not one of this host's open
+   * stores (the store registry, D-18), or when the signing key cannot be read.
    */
   async create(input: NewDispatch): Promise<CreateResult> {
     const { task, target } = input;
@@ -371,6 +377,10 @@ export class DispatchService {
     }
     if (!isAllowed(allowlist, task.repo)) {
       throw new DispatchRefused(`${task.repo} is not on ${target.host}'s published allowlist`);
+    }
+    const { open } = await this.#stores.read();
+    if (!open.some((store) => store.repository === task.repo)) {
+      throw new DispatchRefused(`${task.repo} is not an open store on this host`);
     }
     const { key, user } = await this.publishKey();
     const body = typeof input.body === "string" ? new TextEncoder().encode(input.body) : input.body;
