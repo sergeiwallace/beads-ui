@@ -5,6 +5,7 @@ import { AllowlistHealth, readAllowlist } from "./allowlist.ts";
 import { type App, createApp } from "./app.ts";
 import { AuthLayer, AuthRefused, type AuthSettings, loadAuth } from "./auth.ts";
 import { type ConfigEnv, isLoopback, LOOPBACK, readWebConfig } from "./config.ts";
+import { applyContentSecurityPolicy } from "./csp.ts";
 import {
   DispatchRefused,
   DispatchService,
@@ -127,6 +128,8 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
 
   let app: App | undefined;
   const server = createServer((request, response) => {
+    // The Content Security Policy, on every response before any handler writes (T-W1.7).
+    applyContentSecurityPolicy(response);
     if (app !== undefined) app.handle(request, response);
     else response.writeHead(503).end();
   });
