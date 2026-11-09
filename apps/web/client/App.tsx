@@ -27,6 +27,7 @@ import {
   usePaletteChord,
 } from "@sergeiwallace/beads-ui-web-ui";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { pageFeed } from "../src/live/shared-feed.ts";
 import {
   ApiFailure,
   api,
@@ -163,6 +164,22 @@ function useBoard(store: string | undefined) {
       });
     }
   }, [send, store]);
+
+  // The change feed (T-W3.1) reads the board again the moment a store's head moves; the timer
+  // below stays as the fallback for a page whose stream is down.
+  const [feedStale, setFeedStale] = useState<string | undefined>(undefined);
+  useEffect(
+    () =>
+      pageFeed(base).subscribe((message) => {
+        if (message.type === "stale") {
+          setFeedStale(message.data.since);
+          return;
+        }
+        setFeedStale(undefined);
+        void load();
+      }),
+    [load],
+  );
 
   const refreshSeconds = Math.max(10, meta?.refreshSeconds ?? 10);
   useEffect(() => {
@@ -301,7 +318,7 @@ function useBoard(store: string | undefined) {
       });
   };
 
-  return { state, meta, reads, writing, refOf, move, reorder, setPriority };
+  return { state, meta, reads, writing, refOf, move, reorder, setPriority, feedStale };
 }
 
 interface DetailRead {
@@ -425,7 +442,8 @@ export function App() {
   // The detail reads its issue in the issue's own store; the board, picker and nav cover the
   // store the list views are narrowed to, which on the detail is every store.
   const listStore = route.view === "issue" ? undefined : route.store;
-  const { state, meta, reads, writing, refOf, move, reorder, setPriority } = useBoard(listStore);
+  const { state, meta, reads, writing, refOf, move, reorder, setPriority, feedStale } =
+    useBoard(listStore);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const rank = meta?.rank ?? false;
@@ -583,6 +601,11 @@ export function App() {
           ))}
         </nav>
         <span className="app-stamp">{board.asOf ?? ""}</span>
+        {feedStale === undefined ? null : (
+          <span className="app-stale" role="status">
+            {`Live updates stale since ${clockStamp(Date.parse(feedStale), new Date().getTimezoneOffset())}; retrying`}
+          </span>
+        )}
         <button
           type="button"
           className="bu-button app-palette"

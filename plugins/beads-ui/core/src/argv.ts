@@ -145,6 +145,24 @@ export function headArgv(): BdArgv {
   return ["bd", "vc", "status", "--json"];
 }
 
+/** A Dolt database name a heads query may name: letters, digits, `_` and `-`. */
+const DATABASE_NAME = /^[A-Za-z0-9_][A-Za-z0-9_-]*$/;
+
+/**
+ * Every named database's Dolt head in one query on the server the store bd runs in uses
+ * (`@@<db>_head`, D-13 of the web app design), column `h<i>` for `databases[i]`.
+ */
+export function headsArgv(databases: readonly string[]): BdArgv {
+  if (databases.length === 0) throw new RangeError("a heads query names at least one database");
+  const columns = databases.map((name, i) => {
+    if (!DATABASE_NAME.test(name)) {
+      throw new RangeError(`invalid database name for a heads query: ${JSON.stringify(name)}`);
+    }
+    return `@@\`${name}_head\` AS h${i}`;
+  });
+  return ["bd", "sql", `SELECT ${columns.join(", ")}`, "--json"];
+}
+
 /** The store bd finds from the directory it runs in, or `no_beads_directory`. */
 export function whereArgv(): BdArgv {
   return ["bd", "where", "--json"];

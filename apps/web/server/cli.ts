@@ -14,6 +14,7 @@ export const CLIENT_DIR = join(APP_DIR, "dist", "client");
 /** What the client bundle is built from; a newer file than the bundle rebuilds it at start. */
 const CLIENT_SOURCES = [
   join(APP_DIR, "client"),
+  join(APP_DIR, "src"),
   join(APP_DIR, "vite.config.ts"),
   join(REPO_DIR, "packages", "web-ui", "src"),
   join(REPO_DIR, "plugins", "beads-ui", "core", "src"),

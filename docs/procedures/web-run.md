@@ -129,6 +129,28 @@ When the directory it started in is listed but bd finds no store there, it refus
 list and the inventory are read again on every request, so adding a repository opens its store
 without a restart.
 
+## Live updates
+
+While at least one page has its event stream open, the server polls every open store's Dolt
+head, every `refresh_seconds` (read before each poll), and reads again only the stores whose head
+moved; then it pushes one `change` event naming them
+on `/api/events`, and the open page reads its view again. Stores on one Dolt sql-server answer in
+one query (`bd sql "SELECT @@<db>_head, ..."`), so a host whose stores share a server costs one
+`bd` process per poll; an embedded store answers alone, with `bd vc status`. A store's board read
+is kept until its head moves, and any write through the server drops every kept read. With no
+stream open the server runs no `bd` for the feed and keeps no read.
+
+When the heads cannot be read, the server keeps what it last read, pushes a `stale` event with the
+time it first failed, and tries again after twice the interval, then four times, up to a minute
+(or the interval, when that is longer); the page says `Live updates stale since <time>; retrying`
+until a poll reads every head.
+
+All the app's tabs in one browser share one event stream: the tab holding a Web Lock opens it and
+passes each event to the others over a BroadcastChannel. When that tab closes, the browser grants
+the lock to another open tab, which opens the stream at once. A browser without either API gives
+each tab its own stream. The page also re-reads on focus and every `refresh_seconds`, as a
+fallback while its stream is down.
+
 ## Use it
 
 - With no store chosen, the Board and the Backlog show every open store's issues, and each card
@@ -219,7 +241,7 @@ rank = true            # the web app's default; false keeps columns sorted
 soft_wip_limit = { in_progress = 5 }
 
 [stores.default]
-refresh_seconds = 10   # how often an open page re-reads the board and Sessions
+refresh_seconds = 10   # how often the server polls the stores' heads, and the fallback re-read
 
 [queue]                # in your own file only
 url = ""               # empty: no work queue; else its base URL, such as http://127.0.0.1:<port>
@@ -315,7 +337,7 @@ with a 400, and a request naming a store that is not open with a 404.
 |---|---|
 | `GET /api/board[?store=]` | Every open store's statuses and issues, or one store's, each issue with its `repository`; `reads` gives each store's issue count or its error, and the call-time settings follow. Only when every store failed is the reply itself the failure |
 | `GET /api/health` | Whether the allowlist reads, which stores are open, and how many stores and rows it hid, never naming them |
-| `GET /api/events` | The browser's Server-Sent Events stream, on the session cookie |
+| `GET /api/events` | The browser's Server-Sent Events stream, on the session cookie: `change` (`{ "stores", "asOf" }`, the stores whose head moved) and `stale` (`{ "since", "message", "retryInMs" }`) |
 | `GET /api/auth/v1/exchange?code=` | Trades a one-time code for the session cookie, then redirects to the Board |
 | `POST /api/auth/v1/logout` | Ends the session on the server and clears its cookie |
 | `GET /api/issues/:id?store=` | One issue, its comments and its `repository` |
@@ -361,7 +383,10 @@ The Playwright specs under `apps/web/e2e/` run the Board, Backlog, Issue detail,
 Roadmap, Analytics and Sessions specs at 1280 px with a mouse and at 390 px on a touch screen; the
 pointer drags run at 1280 px and the touch Move to menu at 390 px. Each spec gets its own server
 and a temporary store made with `bd init`; the store registry's spec (`stores.spec.ts`) serves
-several such stores from a private home's store inventory. The work-queue cases run against an
+several such stores from a private home's store inventory. The change feed's suite
+(`apps/web/test/heads-feed.test.ts`) also starts its own Dolt sql-server on a free loopback port,
+when `dolt` is on `PATH`, to read two stores' heads in one query; without `dolt` that case is
+skipped and the embedded-store cases still run. The work-queue cases run against an
 in-process queue that answers the queue service's routes with its shapes
 (`apps/web/test/queue-fake.ts`); to also read a live queue, run the server suite with
 `BEADS_UI_LIVE_QUEUE_URL` set to its URL.

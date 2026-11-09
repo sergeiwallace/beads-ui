@@ -8,6 +8,7 @@
   "include": [
     "client/**/*.ts",
     "client/**/*.tsx",
+    "src/**/*.ts",
     "server/**/*.ts",
     "test/**/*.ts",
     "e2e/**/*.ts",

@@ -111,6 +111,8 @@ async function handleApi(
       return;
     }
   }
+  // A write moves its store's head before the next poll sees it, so no kept read survives it.
+  if (match.route.method === "POST") options.context.feed?.forget();
   let reply: Awaited<ReturnType<Route["handle"]>>;
   try {
     reply = await match.route.handle(
@@ -125,6 +127,8 @@ async function handleApi(
       message: error.message,
     });
   }
+  // And after it: a board read that ran beside the write may have kept the state before it.
+  if (match.route.method === "POST") options.context.feed?.forget();
   if (caller.kind === "receiver" && reply.status >= 400) {
     sendEmpty(response, reply.status >= 500 ? reply.status : 404);
     return;
@@ -181,6 +185,7 @@ export function createApp(options: AppOptions): App {
         sessionId,
         heartbeatMs: options.heartbeatMs ?? HEARTBEAT_MS,
         open: streams,
+        ...(options.context.feed === undefined ? {} : { feed: options.context.feed }),
       });
       return;
     }

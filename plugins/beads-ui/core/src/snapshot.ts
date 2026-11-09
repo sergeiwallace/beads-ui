@@ -377,6 +377,28 @@ export function boardRow(row: unknown): Record<string, unknown> | undefined {
   return kept;
 }
 
+/**
+ * The heads a headsArgv query returned, one per database in its order, or undefined when the
+ * answer is not one row naming a commit for each.
+ */
+export function parseHeads(text: string, count: number): string[] | undefined {
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+  const row = Array.isArray(json) && json.length === 1 ? json[0] : undefined;
+  if (!isRecord(row)) return undefined;
+  const heads: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const head = row[`h${i}`];
+    if (typeof head !== "string" || head === "") return undefined;
+    heads.push(head);
+  }
+  return heads;
+}
+
 /** The commit `bd vc status --json` names: the store's Dolt head. */
 export function parseHead(text: string): string | undefined {
   try {

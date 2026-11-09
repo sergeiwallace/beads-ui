@@ -12,6 +12,7 @@ import type { Allowlist, AllowlistHealth } from "./allowlist.ts";
 import type { Caller } from "./auth.ts";
 import type { WebConfig } from "./config.ts";
 import type { DispatchService } from "./dispatch-service.ts";
+import type { HeadsFeed } from "./heads-feed.ts";
 import { RECEIVER_ROUTES } from "./receiver-api.ts";
 import type { OpenStore, StoreRegistry } from "./registry.ts";
 import { analyticsRoute, queueStatusWrite, roadmapRoute, sessionsRoute } from "./views.ts";
@@ -36,6 +37,8 @@ export interface ApiContext {
   health: AllowlistHealth;
   /** The dispatch store the receiver API serves, with the signer and the expiry sweep. */
   dispatches: DispatchService;
+  /** The change feed: a store's board read is kept until its Dolt head moves (D-13). */
+  feed?: HeadsFeed<StoreBoard>;
   random: RandomSource;
   /** An ISO stamp for "as of". */
   now(): string;
@@ -217,11 +220,11 @@ async function inTurn<T>(tasks: readonly (() => Promise<T>)[], limit: number): P
   return results;
 }
 
-type StoreBoard =
+export type StoreBoard =
   | { repository: string; ok: true; statuses: Status[]; issues: Issue[] }
   | { repository: string; ok: false; reply: ApiReply };
 
-async function readStoreBoard(store: OpenStore): Promise<StoreBoard> {
+export async function readStoreBoard(store: OpenStore): Promise<StoreBoard> {
   // One bd process at a time: an embedded store takes one writer, and reads queue behind it.
   const statuses = await store.bd.statuses();
   if (statuses.kind !== "ok") {
@@ -252,7 +255,7 @@ async function boardRoute(request: ApiRequest, context: ApiContext): Promise<Api
     stores = [chosen];
   }
   const boards = await inTurn(
-    stores.map((store) => () => readStoreBoard(store)),
+    stores.map((store) => () => context.feed?.read(store) ?? readStoreBoard(store)),
     CONCURRENT_STORES,
   );
   const reads = boards.map((board) =>
