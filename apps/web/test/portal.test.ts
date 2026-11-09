@@ -162,6 +162,24 @@ describe("the shell's headers", () => {
       expect(reply.headers["x-content-type-options"]).toBe("nosniff");
     }
   });
+
+  it("should send the member header set and the Content Security Policy together on /healthz, the shell and the SPA fallback", async () => {
+    const replies = {
+      healthz: await send(server, "/healthz"),
+      shell: await get("/beads/"),
+      fallback: await get("/beads/issues/portal-1"),
+    };
+    for (const [name, reply] of Object.entries(replies)) {
+      expect(reply.headers["referrer-policy"], name).toBe("strict-origin-when-cross-origin");
+      expect(reply.headers["x-content-type-options"], name).toBe("nosniff");
+      const policy = String(reply.headers["content-security-policy"] ?? "");
+      expect(policy, name).toContain("script-src 'self'");
+      expect(policy, name).toContain("require-trusted-types-for 'script'");
+      // The shell's <base href="/beads/"> holds only where the policy lets a same-origin base in.
+      expect(policy, name).toContain("base-uri 'self'");
+    }
+    expect(replies.shell.text).toContain('<base href="/beads/" />');
+  });
 });
 
 describe("the client build", () => {

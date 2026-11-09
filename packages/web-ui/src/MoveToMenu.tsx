@@ -1,5 +1,11 @@
 import { Menu } from "@base-ui/react/menu";
 
+/** A sprint or the backlog a card can move to: `backlog` or `sprint:<name>`, and its label. */
+export interface SprintTarget {
+  to: string;
+  label: string;
+}
+
 export interface MoveToMenuProps {
   /** How the card reads to a screen reader, such as its display id. */
   cardLabel: string;
@@ -8,14 +14,25 @@ export interface MoveToMenuProps {
   onMove(to: string): void;
   /** Present under views.rank: a reorder without a drag, one place up or down. */
   onStep?: (delta: -1 | 1) => void;
+  /** The backlog and every open sprint the card is not in (D-5 of the beads-ui design). */
+  sprintTargets?: readonly SprintTarget[] | undefined;
+  onSprint?: ((to: string) => void) | undefined;
   disabled?: boolean;
 }
 
 /**
  * The single-pointer path to every drag (WCAG 2.2, 2.5.7): one button on every card opens a menu
- * of the other statuses and, under rank, one place up or down.
+ * of the other statuses, the sprints and the backlog, and, under rank, one place up or down.
  */
-export function MoveToMenu({ cardLabel, targets, onMove, onStep, disabled }: MoveToMenuProps) {
+export function MoveToMenu({
+  cardLabel,
+  targets,
+  onMove,
+  onStep,
+  sprintTargets,
+  onSprint,
+  disabled,
+}: MoveToMenuProps) {
   return (
     <Menu.Root>
       <Menu.Trigger
@@ -33,6 +50,20 @@ export function MoveToMenu({ cardLabel, targets, onMove, onStep, disabled }: Mov
                 {status}
               </Menu.Item>
             ))}
+            {onSprint !== undefined && sprintTargets !== undefined && sprintTargets.length > 0 && (
+              <>
+                <Menu.Separator className="bu-menu-separator" />
+                {sprintTargets.map((target) => (
+                  <Menu.Item
+                    key={target.to}
+                    className="bu-menu-item"
+                    onClick={() => onSprint(target.to)}
+                  >
+                    {target.label}
+                  </Menu.Item>
+                ))}
+              </>
+            )}
             {onStep !== undefined && (
               <>
                 <Menu.Separator className="bu-menu-separator" />

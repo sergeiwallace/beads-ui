@@ -1,6 +1,7 @@
 import type { IncomingMessage, RequestListener, ServerResponse } from "node:http";
 import { StoreClosed } from "./allowlist.ts";
 import { type AuthLayer, type Caller, routeClass } from "./auth.ts";
+import { applyContentSecurityPolicy } from "./csp.ts";
 import { EVENTS_PATH, HEARTBEAT_MS, openEvents } from "./events.ts";
 import { healthy, mountedPath, sendHealth, setMemberHeaders } from "./portal.ts";
 import { type ApiContext, failure, matchRoute, ROUTES, type Route } from "./routes.ts";
@@ -178,7 +179,10 @@ export function createApp(options: AppOptions): App {
   // a stream opened then would hold the stop open until its connection is cut.
   let closing = false;
   const serve = async (request: IncomingMessage, response: ServerResponse) => {
+    // app-portal's member header set and the Content Security Policy (T-W1.7), on every response
+    // before any handler writes: /healthz, the API, the shell and every refusal alike.
     setMemberHeaders(response);
+    applyContentSecurityPolicy(response);
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
     url.pathname = mountedPath(url.pathname, basePath);
     const caller = await options.auth.admit(request, response, url);

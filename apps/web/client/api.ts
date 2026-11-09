@@ -2,6 +2,7 @@ import type {
   AnalyticsView,
   Comment,
   Issue,
+  ItemOptions,
   Priority,
   ReviewItem,
   RoadmapView,
@@ -12,6 +13,12 @@ import type {
   CostSection,
   DispatchStatus,
   DispatchSummary,
+  // A held item's detail read failure (server/held-detail.ts); the Review read's own failure
+  // shape, from server/dispatch.ts, is HeldReadFailure below.
+  HeldReadFailure as HeldDetailFailure,
+  HeldItemSummary,
+  QueueOrderView,
+  QueueRowView,
   Skill,
   UnblockResult,
 } from "@sergeiwallace/beads-ui-web-ui";
@@ -191,6 +198,24 @@ export const api = {
       })}`,
     ),
   sessions: (store?: string) => call<SessionsPayload>(`sessions${storeQuery(store)}`),
+  // Phase W1: sprint moves, the owner picker, list reorder, the Queue view and held-item detail.
+  sprint: (ref: IssueRef, to: string, from: string, shown: string) =>
+    post<{ id: string; sprint: string }>(issuePath(ref, "/sprint"), { to, from, shown }),
+  owner: (ref: IssueRef, to: string, shown: string, status: string) =>
+    post<{ id: string; assignee: string }>(issuePath(ref, "/owner"), { to, shown, status }),
+  listRank: (ref: IssueRef, shown: string, priority: number, above?: IssueRef, below?: IssueRef) =>
+    post<{ id: string; rank: string }>(issuePath(ref, "/list-rank"), {
+      shown,
+      priority,
+      above: above?.id,
+      below: below?.id,
+      aboveStore: above?.repository,
+      belowStore: below?.repository,
+    }),
+  owners: (store?: string) => call<OwnersPayload>(`owners${storeQuery(store)}`),
+  queueView: (blocked: boolean) =>
+    call<QueueViewPayload>(`queue-view${blocked ? "?blocked=1" : ""}`),
+  heldItem: (path: string) => call<HeldItemPayload>(`held/item?path=${encodeURIComponent(path)}`),
 };
 
 // The Review queue's and the composer's routes (server/dispatch.ts), in their own block.
@@ -241,3 +266,30 @@ export const dispatchApi = {
   status: (id: string) => call<DispatchStatus>(`dispatch/${encodeURIComponent(id)}`),
   skills: () => call<{ skills: Skill[] }>("dispatch/skills"),
 };
+/** The owner picker's candidates for a store (server/edits.ts OwnerCandidates). */
+export interface OwnersPayload {
+  store: string;
+  candidates: { name: string; state?: string; machine?: string }[];
+  source: string;
+  rule?: string[];
+  queueError?: { source: string; message: string };
+}
+
+/** The Queue view's read (server/queue-view.ts). */
+export interface QueueViewPayload {
+  asOf: string;
+  blocked: boolean;
+  order: QueueOrderView;
+  reads: StoreRead[];
+  rows: QueueRowView[];
+}
+
+/** A held item's detail (server/held-detail.ts). */
+export interface HeldItemPayload {
+  item: HeldItemSummary & { store: string };
+  store: string;
+  body?: string;
+  bodyError?: HeldDetailFailure;
+  options?: ItemOptions;
+  optionsError?: HeldDetailFailure;
+}

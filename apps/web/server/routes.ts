@@ -13,7 +13,10 @@ import type { Caller } from "./auth.ts";
 import type { WebConfig } from "./config.ts";
 import { DISPATCH_ROUTES } from "./dispatch.ts";
 import type { DispatchService } from "./dispatch-service.ts";
+import { listRankRoute, ownerRoute, ownersRoute, sprintRoute } from "./edits.ts";
 import type { HeadsFeed } from "./heads-feed.ts";
+import { heldItemRoute } from "./held-detail.ts";
+import { queueViewRoute } from "./queue-view.ts";
 import { RECEIVER_ROUTES } from "./receiver-api.ts";
 import type { OpenStore, StoreRegistry } from "./registry.ts";
 import { analyticsRoute, queueStatusWrite, roadmapRoute, sessionsRoute } from "./views.ts";
@@ -69,7 +72,9 @@ export type ApiErrorKind =
   | "unknown-route"
   | "unauthenticated"
   | "forbidden"
-  | "store-closed";
+  | "store-closed"
+  // An owner change on a claimed task, which goes through the holder's handoff (edits.ts).
+  | "handoff-required";
 
 /** Every error body is `{ error: ApiError }`; `source` names what failed (`bd list`, a field). */
 export interface ApiError {
@@ -108,6 +113,7 @@ const STATUS_BY_KIND: Readonly<Record<ApiErrorKind, number>> = {
   unauthenticated: 401,
   forbidden: 403,
   "store-closed": 503,
+  "handoff-required": 409,
 };
 
 export function failure(error: ApiError): ApiReply {
@@ -147,21 +153,21 @@ export function bdFailure<T>(
   }
 }
 
-const isObject = (value: unknown): value is Record<string, unknown> =>
+export const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-function text(body: unknown, key: string): string | undefined {
+export function text(body: unknown, key: string): string | undefined {
   if (!isObject(body)) return undefined;
   const value = body[key];
   return typeof value === "string" && value !== "" ? value : undefined;
 }
 
-function invalid(message: string): ApiReply {
+export function invalid(message: string): ApiReply {
   return failure({ kind: "invalid", message });
 }
 
 // bd's argument checks (no blank, no leading "-") throw RangeError; that is the caller's input.
-async function guardedWrite(
+export async function guardedWrite(
   write: () => Promise<BdResult<void>>,
 ): Promise<BdResult<void> | ApiReply> {
   try {
@@ -172,7 +178,7 @@ async function guardedWrite(
   }
 }
 
-const isReply = (value: BdResult<void> | ApiReply): value is ApiReply => "status" in value;
+export const isReply = (value: BdResult<void> | ApiReply): value is ApiReply => "status" in value;
 
 /** The `store` query parameter: the repository, as the board names it, a request addresses. */
 export const STORE_PARAM = "store";
@@ -538,6 +544,14 @@ export const ROUTES: readonly Route[] = [
   { method: "GET", path: "/api/roadmap", handle: roadmapRoute },
   { method: "GET", path: "/api/analytics", handle: analyticsRoute },
   { method: "GET", path: "/api/sessions", handle: sessionsRoute },
+  // Phase W1's Sprint moves, owner picker, list reorder, Queue view and held-item detail
+  // (edits.ts, queue-view.ts, held-detail.ts).
+  { method: "POST", path: "/api/issues/:id/sprint", handle: sprintRoute },
+  { method: "POST", path: "/api/issues/:id/owner", handle: ownerRoute },
+  { method: "POST", path: "/api/issues/:id/list-rank", handle: listRankRoute },
+  { method: "GET", path: "/api/owners", handle: ownersRoute },
+  { method: "GET", path: "/api/queue-view", handle: queueViewRoute },
+  { method: "GET", path: "/api/held/item", handle: heldItemRoute },
   // The receiver API (receiver-api.ts), authorised by a receiving host's token.
   ...RECEIVER_ROUTES,
   // The Review queue and the composer's dispatches (dispatch.ts).

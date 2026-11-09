@@ -5,24 +5,46 @@ import {
   boardView,
   clockStamp,
   commandById,
+  decodeQueueFilters,
   EMPTY_FILTER_STATE,
   INITIAL_BOARD_STATE,
   type Issue,
+  orderByPriorityRank,
   type Priority,
+  parseSprintSelection,
   planMove,
   planRank,
+  type QueueFilters,
   reduceBoard,
+  type SprintSelection,
+  sprintLabelsOf,
+  sprintSelectionText,
+  sprintView,
+  withQueueFilters,
 } from "@beads-ui/core";
 import {
   Analytics,
   Backlog,
   Board,
   CommandPalette,
+  dropIndex,
+  HeldDetail,
   IssueDetail,
+  listView,
+  type OwnerChoices,
+  OwnerPicker,
   type PaletteCommand,
+  PriorityEdit,
+  planListRank,
+  QueueView,
   type ReadFailure,
+  type Refusal,
   Roadmap,
   Sessions,
+  type SprintMode,
+  SprintView,
+  stepIndex,
+  useFieldEdits,
   useNotify,
   usePaletteChord,
 } from "@sergeiwallace/beads-ui-web-ui";
@@ -50,43 +72,106 @@ const VIEWS = [
   { view: "sessions", label: "Sessions", path: "sessions" },
   // The Review queue (client/review.tsx).
   { view: "review", label: "Review", path: "review" },
+  // Phase W1's Sprint and Queue views (web app design T-W1.0, T-W1.5).
+  { view: "sprints", label: "Sprints", path: "sprints" },
+  { view: "queue", label: "Queue", path: "queue" },
 ] as const;
 
 type ViewName = (typeof VIEWS)[number]["view"];
-/** A view, and the store it is narrowed to: none is every open store. */
+/**
+ * A view, and the store it is narrowed to: none is every open store. `query` is the rest of the
+ * URL's query, as written: the Queue view's filters and the Sprint view's sprint live there.
+ */
 type Route =
-  | { view: ViewName; store?: string | undefined }
-  | { view: "issue"; id: string; store?: string | undefined };
+  | { view: ViewName; store?: string | undefined; query?: string | undefined }
+  | { view: "issue"; id: string; store?: string | undefined }
+  | { view: "held"; path: string };
 
 // Wide enough that core's terminal truncation never cuts a title in the browser.
 const NO_TRUNCATION = 10_000;
 const STORE_PARAM = "store";
+/** The Queue view's blocked filter and the Sprint view's selection, in the URL's query. */
+const BLOCKED_PARAM = "blocked";
+const SPRINT_PARAM = "sprint";
+
+/** The query without its `store=` pair, kept as written so the filters' encoding survives. */
+function restOf(search: string): string {
+  const body = search.startsWith("?") ? search.slice(1) : search;
+  return body
+    .split("&")
+    .filter((pair) => pair !== "" && !pair.startsWith(`${STORE_PARAM}=`))
+    .join("&");
+}
 
 function routeOf(location: Location): Route {
   const { pathname } = location;
   const path = pathname.startsWith(base) ? pathname.slice(base.length) : pathname;
-  const store = new URLSearchParams(location.search).get(STORE_PARAM) || undefined;
+  const params = new URLSearchParams(location.search);
+  const store = params.get(STORE_PARAM) || undefined;
   const issue = /^issues\/(.+)$/.exec(path);
   if (issue?.[1] !== undefined) return { view: "issue", id: decodeURIComponent(issue[1]), store };
+  if (path === "held") return { view: "held", path: params.get("path") ?? "" };
   const view = VIEWS.find((entry) => entry.path !== "" && entry.path === path);
-  return { view: view?.view ?? "board", store };
+  const query = restOf(location.search);
+  return { view: view?.view ?? "board", store, ...(query === "" ? {} : { query }) };
 }
 
-const withStore = (path: string, store: string | undefined) =>
-  store === undefined ? path : `${path}?${STORE_PARAM}=${encodeURIComponent(store)}`;
+const withStore = (path: string, store: string | undefined, query?: string) => {
+  const parts = [
+    ...(store === undefined ? [] : [`${STORE_PARAM}=${encodeURIComponent(store)}`]),
+    ...(query === undefined || query === "" ? [] : [query]),
+  ];
+  return parts.length === 0 ? path : `${path}?${parts.join("&")}`;
+};
 
 const hrefOf = (route: Route): string =>
   route.view === "issue"
     ? withStore(`${base}issues/${encodeURIComponent(route.id)}`, route.store)
-    : withStore(
-        `${base}${VIEWS.find((entry) => entry.view === route.view)?.path ?? ""}`,
-        route.store,
-      );
+    : route.view === "held"
+      ? `${base}held?path=${encodeURIComponent(route.path)}`
+      : withStore(
+          `${base}${VIEWS.find((entry) => entry.view === route.view)?.path ?? ""}`,
+          route.store,
+          route.query,
+        );
+
+/** One parameter of a raw query, decoded; undefined when absent. */
+function queryParam(query: string | undefined, name: string): string | undefined {
+  for (const pair of (query ?? "").split("&")) {
+    const at = pair.indexOf("=");
+    if (at < 0 || pair.slice(0, at) !== name) continue;
+    try {
+      return decodeURIComponent(pair.slice(at + 1));
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
+}
+
+/** `query` with parameter `name` set to `value`, or dropped for undefined; others kept as written. */
+function withParam(query: string | undefined, name: string, value: string | undefined): string {
+  const kept = (query ?? "")
+    .split("&")
+    .filter((pair) => pair !== "" && pair.split("=", 1)[0] !== name);
+  if (value !== undefined) kept.push(`${name}=${encodeURIComponent(value)}`);
+  return kept.join("&");
+}
 
 const stamp = () => clockStamp(Date.now(), new Date().getTimezoneOffset());
 
 const failedStale = (event: BoardEvent): boolean =>
   (event.type === "move-failed" || event.type === "rank-failed") && event.exitCode === 13;
+
+/** What a refused inline edit says (T-W1.0): a conflict, or why else it was refused. */
+const describeRefusal = (error: unknown): Refusal => {
+  const failure = error instanceof ApiFailure ? error : undefined;
+  return {
+    conflict: failure?.exitCode === 13,
+    message: failure?.message ?? String(error),
+    ...(failure?.error.kind === "handoff-required" ? { kind: "info" as const } : {}),
+  };
+};
 
 function useRoute(): [Route, (route: Route) => void] {
   const [route, setRoute] = useState(() => routeOf(window.location));
@@ -123,11 +208,16 @@ function keyed(payload: { issues: StoredIssue[]; reads: StoreRead[] }): {
   return { issues, refs };
 }
 
+/** The sprint `issue` sits in, as a sprint move's `from`: its first sprint, or the backlog. */
+const sprintOf = (issue: Issue): string => {
+  const [name] = sprintLabelsOf(issue);
+  return name === undefined ? "backlog" : sprintSelectionText({ kind: "sprint", name });
+};
+
 function useBoard(store: string | undefined) {
   const [state, dispatch] = useReducer(reduceBoard, INITIAL_BOARD_STATE);
   const [meta, setMeta] = useState<Meta | undefined>(undefined);
   const [reads, setReads] = useState<StoreRead[]>([]);
-  const [writing, setWriting] = useState<ReadonlySet<string>>(new Set());
   const notify = useNotify();
   const latest = useRef<BoardState>(state);
   latest.current = state;
@@ -183,6 +273,8 @@ function useBoard(store: string | undefined) {
       }),
     [load],
   );
+  // Inline edits of priority and owner: the new value shows at once and a conflict rolls back.
+  const edits = useFieldEdits(describeRefusal, load);
 
   const refreshSeconds = Math.max(10, meta?.refreshSeconds ?? 10);
   useEffect(() => {
@@ -255,7 +347,7 @@ function useBoard(store: string | undefined) {
           fromQueue
             ? "The work queue refused the move"
             : failure?.exitCode === 13
-              ? "Changed elsewhere"
+              ? "Status not written: changed elsewhere"
               : "Move failed",
           fromQueue ? failure?.message : undefined,
         );
@@ -263,8 +355,22 @@ function useBoard(store: string | undefined) {
     );
   };
 
-  const reorder = (id: string, index: number) => {
-    const plan = planRank(latest.current, id, index, Math.random);
+  const rankFailed = (id: string, error: unknown) => {
+    const failure = error instanceof ApiFailure ? error : undefined;
+    const failed: BoardEvent = {
+      type: "rank-failed",
+      id,
+      exitCode: failure?.exitCode ?? null,
+      message: failure?.message ?? String(error),
+    };
+    refused(failed, failure?.exitCode === 13 ? "Changed elsewhere" : "Reorder failed");
+  };
+
+  /** A reorder inside a Board column; `scope` is the issues the board draws, when not all. */
+  const reorder = (id: string, index: number, scope?: readonly Issue[]) => {
+    const planned =
+      scope === undefined ? latest.current : { ...latest.current, issues: [...scope] };
+    const plan = planRank(planned, id, index, Math.random);
     if (!plan.ok) {
       if (plan.error.kind !== "same-place") notify("error", "Not reordered", plan.error.message);
       return;
@@ -280,48 +386,102 @@ function useBoard(store: string | undefined) {
       )
       .then(
         ({ rank }) => send({ type: "rank-succeeded", id, key: rank }),
-        (error: unknown) => {
-          const failure = error instanceof ApiFailure ? error : undefined;
-          const failed: BoardEvent = {
-            type: "rank-failed",
-            id,
-            exitCode: failure?.exitCode ?? null,
-            message: failure?.message ?? String(error),
-          };
-          refused(failed, failure?.exitCode === 13 ? "Changed elsewhere" : "Reorder failed");
-        },
+        (error: unknown) => rankFailed(id, error),
       );
   };
 
-  const setPriority = (id: string, priority: Priority) => {
-    const shown = latest.current.issues.find((issue) => issue.id === id)?.status;
-    if (shown === undefined) return;
-    setWriting((current) => new Set(current).add(id));
+  /** A backlog or sprint list's reorder: slot `index` among the rows of the row's priority. */
+  const reorderList = (rows: readonly Issue[], id: string, index: number) => {
+    const plan = planListRank(rows, id, index, Math.random);
+    if (!plan.ok) {
+      if (plan.error.kind !== "same-place") notify("error", "Not reordered", plan.error.message);
+      return;
+    }
+    const { key, shown, priority, above, below } = plan.value;
+    send({ type: "rank-requested", id, key });
     api
-      .priority(refOf(id), priority, shown)
-      .catch((error: unknown) => {
-        const failure = error instanceof ApiFailure ? error : undefined;
-        if (failure?.exitCode === 13) {
-          notify(
-            "conflict",
-            "Changed elsewhere",
-            `${refOf(id).id} changed before the priority was written; re-read`,
-          );
-        } else {
-          notify("error", "Priority not written", failure?.message ?? String(error));
-        }
-      })
-      .finally(() => {
-        setWriting((current) => {
-          const next = new Set(current);
-          next.delete(id);
-          return next;
-        });
-        void load();
-      });
+      .listRank(
+        refOf(id),
+        shown,
+        priority,
+        above === undefined ? undefined : refOf(above),
+        below === undefined ? undefined : refOf(below),
+      )
+      .then(
+        ({ rank }) => send({ type: "rank-succeeded", id, key: rank }),
+        (error: unknown) => rankFailed(id, error),
+      );
   };
 
-  return { state, meta, reads, writing, refOf, move, reorder, setPriority, feedStale };
+  const stepList = (rows: readonly Issue[], id: string, delta: -1 | 1) => {
+    const index = stepIndex(rows, id, delta);
+    if (index !== undefined) reorderList(rows, id, index);
+  };
+
+  const dropList = (rows: readonly Issue[], id: string, target: string, below: boolean) => {
+    const slot = dropIndex(rows, id, target, below);
+    if (!slot.ok) {
+      notify("error", "Not reordered", slot.error.message);
+      return;
+    }
+    reorderList(rows, id, slot.index);
+  };
+
+  /** Moves an issue between the backlog and a sprint (T-W1.0, D-5 of the beads-ui design). */
+  const moveToSprint = (id: string, to: string) => {
+    const issue = latest.current.issues.find((candidate) => candidate.id === id);
+    if (issue === undefined) return;
+    const from = sprintOf(issue);
+    if (from === to) return;
+    api.sprint(refOf(id), to, from, issue.status).then(
+      () => void load(),
+      (error: unknown) => {
+        const failure = error instanceof ApiFailure ? error : undefined;
+        notify(
+          failure?.exitCode === 13 ? "conflict" : "error",
+          failure?.exitCode === 13 ? "Sprint not written: changed elsewhere" : "Sprint not written",
+          failure?.message ?? String(error),
+        );
+        void load();
+      },
+    );
+  };
+
+  const setPriority = (id: string, priority: Priority) => {
+    const issue = latest.current.issues.find((candidate) => candidate.id === id);
+    if (issue === undefined) return;
+    edits.edit(id, issue.displayId ?? id, "priority", priority, () =>
+      api.priority(refOf(id), priority, issue.status),
+    );
+  };
+
+  /**
+   * The owner picker's choice. An unclaimed task takes a guarded assignee write; a claimed one's
+   * change goes to the server's handoff path, which T-W2.2's handoff request replaces.
+   */
+  const setOwner = (id: string, to: string) => {
+    const issue = latest.current.issues.find((candidate) => candidate.id === id);
+    if (issue === undefined) return;
+    edits.edit(id, issue.displayId ?? id, "owner", to, () =>
+      api.owner(refOf(id), to, issue.assignee ?? "", issue.status),
+    );
+  };
+
+  return {
+    state,
+    meta,
+    reads,
+    edits,
+    refOf,
+    move,
+    reorder,
+    stepList,
+    dropList,
+    moveToSprint,
+    setPriority,
+    setOwner,
+    feedStale,
+  };
 }
 
 interface DetailRead {
@@ -330,34 +490,52 @@ interface DetailRead {
   error?: ReadFailure;
 }
 
-function useIssue(ref: IssueRef | undefined): DetailRead | undefined {
+function useIssue(ref: IssueRef | undefined): [DetailRead | undefined, () => Promise<void>] {
   const [read, setRead] = useState<DetailRead | undefined>(undefined);
+  const [version, setVersion] = useState(0);
+  const settled = useRef<(() => void)[]>([]);
   const id = ref?.id;
   const repository = ref?.repository;
   const key = id === undefined ? undefined : `${repository ?? ""}:${id}`;
   useEffect(() => {
     if (id === undefined || key === undefined) return;
     let live = true;
-    setRead({ key });
+    if (version === 0) setRead({ key });
+    const done = () => {
+      for (const resolve of settled.current.splice(0)) resolve();
+    };
     api.issue({ id, repository }).then(
-      (payload) => live && setRead({ key, payload }),
+      (payload) => {
+        if (live) setRead({ key, payload });
+        done();
+      },
       (error: unknown) => {
-        if (!live) return;
-        const failure = error instanceof ApiFailure ? error.error : undefined;
-        setRead({
-          key,
-          error: {
-            source: failure?.source ?? "bd show",
-            message: failure?.message ?? String(error),
-          },
-        });
+        if (live) {
+          const failure = error instanceof ApiFailure ? error.error : undefined;
+          setRead({
+            key,
+            error: {
+              source: failure?.source ?? "bd show",
+              message: failure?.message ?? String(error),
+            },
+          });
+        }
+        done();
       },
     );
     return () => {
       live = false;
     };
-  }, [id, repository, key]);
-  return read?.key === key ? read : undefined;
+  }, [id, repository, key, version]);
+  const reload = useCallback(
+    () =>
+      new Promise<void>((resolve) => {
+        settled.current.push(resolve);
+        setVersion((current) => current + 1);
+      }),
+    [],
+  );
+  return [read?.key === key ? read : undefined, reload];
 }
 
 interface ViewRead<T> {
@@ -413,6 +591,44 @@ function useViewRead<T>(
   return state;
 }
 
+/** The owner picker's sessions, read per store each time a picker opens. */
+function useOwnerChoices() {
+  const [byStore, setByStore] = useState<
+    Readonly<Record<string, { choices?: OwnerChoices; error?: string }>>
+  >({});
+  const load = useCallback((store: string | undefined) => {
+    const key = store ?? "";
+    api.owners(store).then(
+      (payload) =>
+        setByStore((current) => ({
+          ...current,
+          [key]: {
+            choices: {
+              candidates: payload.candidates,
+              source: payload.source,
+              note:
+                payload.queueError === undefined
+                  ? undefined
+                  : `${payload.queueError.source} failed: ${payload.queueError.message}`,
+            },
+          },
+        })),
+      (error: unknown) =>
+        setByStore((current) => ({
+          ...current,
+          [key]: {
+            error:
+              error instanceof ApiFailure
+                ? `${error.error.source ?? "the owner list"} failed: ${error.message}`
+                : String(error),
+          },
+        })),
+    );
+  }, []);
+  const of = useCallback((store: string | undefined) => byStore[store ?? ""], [byStore]);
+  return { of, load };
+}
+
 /** What Roadmap, Analytics and Sessions say while several stores are open and none is chosen. */
 function PickStore({ needed }: { needed: boolean }) {
   if (!needed) return null;
@@ -444,14 +660,29 @@ export function App() {
   const [route, navigate] = useRoute();
   // The detail reads its issue in the issue's own store; the board, picker and nav cover the
   // store the list views are narrowed to, which on the detail is every store.
-  const listStore = route.view === "issue" ? undefined : route.store;
-  const { state, meta, reads, writing, refOf, move, reorder, setPriority, feedStale } =
-    useBoard(listStore);
+  const listStore = route.view === "issue" || route.view === "held" ? undefined : route.store;
+  const listQuery = route.view === "issue" || route.view === "held" ? undefined : route.query;
+  const {
+    state,
+    meta,
+    reads,
+    edits,
+    refOf,
+    move,
+    reorder,
+    stepList,
+    dropList,
+    moveToSprint,
+    setPriority,
+    setOwner,
+    feedStale,
+  } = useBoard(listStore);
+  const owners = useOwnerChoices();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const keymap = useKeymap();
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const rank = meta?.rank ?? false;
-  const detail = useIssue(
+  const [detail, reloadDetail] = useIssue(
     route.view === "issue" ? { id: route.id, repository: route.store } : undefined,
   );
   // Roadmap, Analytics and Sessions read one store: the one chosen, or the only one open. With
@@ -476,6 +707,18 @@ export function App() {
     () => api.sessions(viewStore ?? undefined),
     Math.max(10, meta?.refreshSeconds ?? 10),
   );
+  // Phase W1: the Queue view's blocked filter and the held item a detail reads.
+  const queueBlocked = queryParam(listQuery, BLOCKED_PARAM) === "1";
+  const queueFilters = useMemo(() => decodeQueueFilters(listQuery ?? ""), [listQuery]);
+  const queue = useViewRead(
+    route.view === "queue",
+    `queue ${queueBlocked}`,
+    () => api.queueView(queueBlocked),
+    Math.max(10, meta?.refreshSeconds ?? 10),
+  );
+  const heldPath = route.view === "held" ? route.path : "";
+  const held = useViewRead(route.view === "held", `held ${heldPath}`, () => api.heldItem(heldPath));
+  const [sprintMode, setSprintMode] = useState<SprintMode>("board");
 
   usePaletteChord(useCallback(() => setPaletteOpen(true), []));
 
@@ -523,7 +766,106 @@ export function App() {
   );
   const statusNames = useMemo(() => board.columns.map((column) => column.status), [board]);
   const selected = state.issues.find((issue) => issue.id === selectedId);
-  const listView = route.view === "issue" ? "board" : route.view;
+  const navView = route.view === "issue" || route.view === "held" ? "board" : route.view;
+
+  // Phase W1: the Sprint view's model, the sprints a card can move to, and inline edits.
+  // The selection is kept as its URL text, so a fresh object for the same sprint is no change.
+  const sprintText = sprintSelectionText(
+    parseSprintSelection(queryParam(listQuery, SPRINT_PARAM) ?? "backlog"),
+  );
+  const sprintModel = useMemo(() => {
+    const selection: SprintSelection = parseSprintSelection(sprintText);
+    return sprintView(state.issues, {
+      statuses: state.statuses,
+      selection,
+      ...(rank ? { order: orderByPriorityRank } : {}),
+    });
+  }, [state.issues, state.statuses, rank, sprintText]);
+  const sprintBoard = useMemo(
+    () =>
+      boardView(
+        { ...state, issues: sprintModel.list },
+        {
+          columnWidth: NO_TRUNCATION,
+          rank,
+          ...(meta === undefined ? {} : { softWipLimit: meta.softWipLimit }),
+        },
+      ),
+    [state, sprintModel, rank, meta],
+  );
+  const sprintTargets = useCallback(
+    (key: string) => {
+      const issue = state.issues.find((candidate) => candidate.id === key);
+      const current = issue === undefined ? undefined : sprintOf(issue);
+      return sprintModel.picker
+        .map((entry) => {
+          const to = sprintSelectionText(entry.selection);
+          return {
+            to,
+            label: entry.selection.kind === "backlog" ? "Backlog" : `Sprint ${entry.label}`,
+          };
+        })
+        .filter((target) => target.to !== current);
+    },
+    [state.issues, sprintModel],
+  );
+  const issueOf = useCallback(
+    (key: string) => state.issues.find((issue) => issue.id === key),
+    [state.issues],
+  );
+  // A list row shows the priority being written while its write runs.
+  const shownIssue = useCallback(
+    (key: string) => {
+      const issue = issueOf(key);
+      return issue === undefined
+        ? undefined
+        : { ...issue, priority: edits.shown(key, "priority", issue.priority) };
+    },
+    [issueOf, edits],
+  );
+  const renderPriority = useCallback(
+    (key: string) => {
+      const issue = issueOf(key);
+      if (issue === undefined) return null;
+      return (
+        <PriorityEdit
+          issueLabel={issue.displayId ?? key}
+          value={edits.shown(key, "priority", issue.priority)}
+          disabled={edits.busy(key)}
+          onChange={(priority) => setPriority(key, priority)}
+        />
+      );
+    },
+    [issueOf, edits, setPriority],
+  );
+  const renderOwner = useCallback(
+    (key: string) => {
+      const issue = issueOf(key);
+      if (issue === undefined) return null;
+      const store = refOf(key).repository;
+      const read = owners.of(store);
+      return (
+        <OwnerPicker
+          issueLabel={issue.displayId ?? key}
+          owner={edits.shown(key, "owner", issue.assignee ?? "")}
+          choices={read?.choices}
+          error={read?.error}
+          onOpen={() => owners.load(store)}
+          onPick={(to) => setOwner(key, to)}
+          disabled={edits.busy(key)}
+        />
+      );
+    },
+    [issueOf, refOf, owners, edits, setOwner],
+  );
+  const backlogRows = useMemo(
+    () =>
+      backlog.rows.flatMap((row) => {
+        const issue = state.issues.find((candidate) => candidate.id === row.id);
+        return issue === undefined ? [] : [issue];
+      }),
+    [backlog, state.issues],
+  );
 
   const commands = useMemo((): PaletteCommand[] => {
     const moveLabel = commandById("card.move")?.label ?? "Move to";
@@ -537,6 +879,14 @@ export function App() {
           label: `${moveLabel} ${status}`,
           detail: name,
           run: () => move(selected.id, status),
+        });
+      }
+      for (const target of sprintTargets(selected.id)) {
+        list.push({
+          id: `sprint:${target.to}`,
+          label: `${moveLabel} ${target.label}`,
+          detail: name,
+          run: () => moveToSprint(selected.id, target.to),
         });
       }
       list.push({
@@ -556,14 +906,63 @@ export function App() {
     // The single-key shortcut setting (D-12), which the palette carries.
     list.push(shortcutCommand(keymap));
     return list;
-  }, [selected, statusNames, navigate, move, openIssue, listStore, keymap]);
+  }, [
+    selected,
+    statusNames,
+    navigate,
+    move,
+    moveToSprint,
+    sprintTargets,
+    openIssue,
+    listStore,
+    keymap,
+  ]);
 
   const pending = useMemo(
-    () => new Set([...Object.keys(state.pending), ...Object.keys(state.ranking ?? {}), ...writing]),
-    [state.pending, state.ranking, writing],
+    () =>
+      new Set([
+        ...Object.keys(state.pending),
+        ...Object.keys(state.ranking ?? {}),
+        ...state.issues.filter((issue) => edits.busy(issue.id)).map((issue) => issue.id),
+      ]),
+    [state.pending, state.ranking, state.issues, edits],
   );
   const repositories = meta?.repositories ?? [];
   const failedReads = reads.filter((read) => !read.ok);
+
+  const setQueueQuery = (query: string) =>
+    navigate({ view: "queue", store: listStore, ...(query === "" ? {} : { query }) });
+
+  const detailIssue = detail?.payload?.issue;
+  const detailOwner =
+    detailIssue === undefined || detail?.payload === undefined
+      ? undefined
+      : (() => {
+          const repository = detail.payload.repository;
+          const key = `detail:${repository}:${detailIssue.id}`;
+          const read = owners.of(repository);
+          return (
+            <OwnerPicker
+              issueLabel={detailIssue.displayId ?? detailIssue.id}
+              owner={edits.shown(key, "owner", detailIssue.assignee ?? "")}
+              choices={read?.choices}
+              error={read?.error}
+              onOpen={() => owners.load(repository)}
+              onPick={(to) =>
+                edits.edit(key, detailIssue.displayId ?? detailIssue.id, "owner", to, async () => {
+                  await api.owner(
+                    { id: detailIssue.id, repository },
+                    to,
+                    detailIssue.assignee ?? "",
+                    detailIssue.status,
+                  );
+                  await reloadDetail();
+                })
+              }
+              disabled={edits.busy(key)}
+            />
+          );
+        })();
 
   return (
     <div className="app">
@@ -579,7 +978,7 @@ export function App() {
             title="The Beads stores this server reads"
             value={listStore ?? ""}
             onChange={(event) =>
-              navigate({ view: listView, store: event.target.value || undefined })
+              navigate({ view: navView, store: event.target.value || undefined })
             }
           >
             <option value="">All stores</option>
@@ -664,22 +1063,119 @@ export function App() {
             issueHref={issueHref}
             onOpen={openIssue}
             onMove={move}
-            onReorder={reorder}
+            onReorder={(id, index) => reorder(id, index)}
+            sprintTargets={sprintTargets}
+            onSprint={moveToSprint}
+            renderPriority={renderPriority}
+            renderOwner={renderOwner}
             {...(repositoryOf === undefined ? {} : { repositoryOf })}
           />
         )}
         {route.view === "backlog" && (
           <Backlog
             view={backlog}
-            issue={(id) => state.issues.find((issue) => issue.id === id)}
+            issue={shownIssue}
             statuses={statusNames}
             pending={pending}
             issueHref={issueHref}
             onOpen={openIssue}
             onStatus={move}
             onPriority={setPriority}
+            sprintTargets={sprintTargets}
+            onSprint={moveToSprint}
+            renderOwner={renderOwner}
+            {...(rank
+              ? {
+                  onStep: (id: string, delta: -1 | 1) => stepList(backlogRows, id, delta),
+                  onDropOnto: (id: string, target: string, below: boolean) =>
+                    dropList(backlogRows, id, target, below),
+                }
+              : {})}
             {...(repositoryOf === undefined ? {} : { repositoryOf })}
           />
+        )}
+        {route.view === "sprints" && (
+          <SprintView
+            view={sprintModel}
+            mode={sprintMode}
+            onMode={setSprintMode}
+            onSelect={(selection) =>
+              navigate({
+                view: "sprints",
+                store: listStore,
+                query: withParam(listQuery, SPRINT_PARAM, sprintSelectionText(selection)),
+              })
+            }
+            onDropTo={moveToSprint}
+          >
+            {sprintMode === "board" ? (
+              <Board
+                view={sprintBoard}
+                rank={rank}
+                selectedId={selectedId}
+                onSelect={setSelectedId}
+                issueHref={issueHref}
+                onOpen={openIssue}
+                onMove={move}
+                onReorder={(id, index) => reorder(id, index, sprintModel.list)}
+                sprintTargets={sprintTargets}
+                onSprint={moveToSprint}
+                renderPriority={renderPriority}
+                renderOwner={renderOwner}
+                {...(repositoryOf === undefined ? {} : { repositoryOf })}
+              />
+            ) : (
+              <Backlog
+                view={listView(sprintModel.list)}
+                issue={shownIssue}
+                statuses={statusNames}
+                pending={pending}
+                issueHref={issueHref}
+                onOpen={openIssue}
+                onStatus={move}
+                onPriority={setPriority}
+                sprintTargets={sprintTargets}
+                onSprint={moveToSprint}
+                renderOwner={renderOwner}
+                {...(rank
+                  ? {
+                      onStep: (id: string, delta: -1 | 1) => stepList(sprintModel.list, id, delta),
+                      onDropOnto: (id: string, target: string, below: boolean) =>
+                        dropList(sprintModel.list, id, target, below),
+                    }
+                  : {})}
+                {...(repositoryOf === undefined ? {} : { repositoryOf })}
+              />
+            )}
+          </SprintView>
+        )}
+        {route.view === "queue" && (
+          <>
+            <ReadState read={queue} />
+            {(queue.data?.reads ?? []).map((read) =>
+              read.ok ? null : (
+                <p key={read.repository} className="app-error" role="alert">
+                  {read.repository}: {read.error.source ?? "the read"} failed: {read.error.message}
+                </p>
+              ),
+            )}
+            {queue.data !== undefined && (
+              <QueueView
+                rows={queue.data.rows}
+                order={queue.data.order}
+                filters={queueFilters}
+                onFilters={(filters: QueueFilters) =>
+                  setQueueQuery(withQueueFilters(listQuery ?? "", filters))
+                }
+                blocked={queueBlocked}
+                onBlocked={(blocked) =>
+                  setQueueQuery(withParam(listQuery, BLOCKED_PARAM, blocked ? "1" : undefined))
+                }
+                issueHref={(row) => hrefOf({ view: "issue", id: row.id, store: row.repository })}
+                onOpen={(row) => navigate({ view: "issue", id: row.id, store: row.repository })}
+              />
+            )}
+          </>
         )}
         {route.view === "roadmap" && (
           <>
@@ -742,7 +1238,11 @@ export function App() {
           <IssueDetail
             loading={detail?.payload === undefined && detail?.error === undefined}
             issue={detail?.payload?.issue}
-            repository={detail?.payload?.repository}
+            repository={
+              detail?.payload?.repository ??
+              route.store ??
+              (repositories.length === 1 ? repositories[0] : undefined)
+            }
             issueError={detail?.error}
             comments={detail?.payload?.comments ?? null}
             commentsError={
@@ -755,6 +1255,23 @@ export function App() {
             }
             issueHref={(id) =>
               hrefOf({ view: "issue", id, store: detail?.payload?.repository ?? route.store })
+            }
+            ownerPicker={detailOwner}
+          />
+        )}
+        {route.view === "held" && (
+          <HeldDetail
+            loading={held.data === undefined && held.error === undefined}
+            item={held.data?.item}
+            store={held.data?.store}
+            body={held.data?.body}
+            bodyError={held.data?.bodyError}
+            options={held.data?.options}
+            optionsError={held.data?.optionsError}
+            error={
+              held.error === undefined
+                ? undefined
+                : { source: held.error.source, message: held.error.message }
             }
           />
         )}

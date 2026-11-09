@@ -20,10 +20,25 @@ export type {
   FollowUpView,
   Indicator,
 } from "./composer/types.ts";
+// Phase W1's Sprint view, inline edits, Queue view and detail views.
+export type { HeldDetailProps, HeldItemSummary, HeldReadFailure } from "./detail/HeldDetail.tsx";
+export { HeldDetail } from "./detail/HeldDetail.tsx";
+export type { IssueLinksProps } from "./detail/IssueLinks.tsx";
+export { IssueLinks } from "./detail/IssueLinks.tsx";
+export type { MarkdownProps } from "./detail/Markdown.tsx";
+export { LINK_SCHEMES, Markdown, safeHref } from "./detail/Markdown.tsx";
 export type { IssueDetailProps, ReadFailure } from "./IssueDetail.tsx";
 export { IssueDetail } from "./IssueDetail.tsx";
+export type { PriorityEditProps, StatusEditProps } from "./inline-edit/fields.tsx";
+export { PRIORITIES, PriorityEdit, StatusEdit } from "./inline-edit/fields.tsx";
+export type { OwnerChoice, OwnerChoices, OwnerPickerProps } from "./inline-edit/OwnerPicker.tsx";
+export { OwnerPicker } from "./inline-edit/OwnerPicker.tsx";
+export type { EditField, FieldEdits, Refusal } from "./inline-edit/useFieldEdits.ts";
+export { FIELD_LABELS, useFieldEdits } from "./inline-edit/useFieldEdits.ts";
 export type { MoveToMenuProps } from "./MoveToMenu.tsx";
 export { MoveToMenu } from "./MoveToMenu.tsx";
+export type { QueueOrderView, QueueRowView, QueueViewProps } from "./queue/QueueView.tsx";
+export { QUEUE_FILTER_LABELS, QueueView } from "./queue/QueueView.tsx";
 export type { RoadmapProps } from "./Roadmap.tsx";
 export { Roadmap } from "./Roadmap.tsx";
 // The Review queue (web app design D-1, D-2, D-3, D-12, T-W1.1, T-W1.2, T-W1.4, T-W1.6).
@@ -34,6 +49,10 @@ export { ShortcutSettings } from "./review/ShortcutSettings.tsx";
 export type { AnswerInput, BodyRead, ReviewActions, UnblockResult } from "./review/types.ts";
 export type { SessionsProps } from "./Sessions.tsx";
 export { Sessions } from "./Sessions.tsx";
+export type { ListRankError, ListRankPlan } from "./sprint/order.ts";
+export { dropIndex, listView, planListRank, stepIndex } from "./sprint/order.ts";
+export type { SprintMode, SprintViewProps } from "./sprint/SprintView.tsx";
+export { SprintView } from "./sprint/SprintView.tsx";
 export type { ToastKind } from "./Toasts.tsx";
 export { TOAST_TIMEOUT_MS, ToastProvider, useNotify } from "./Toasts.tsx";
 export { tokenProperty, tokenVar } from "./tokens.ts";

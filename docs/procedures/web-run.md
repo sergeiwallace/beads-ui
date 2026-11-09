@@ -242,6 +242,26 @@ fallback while its stream is down.
 - Single-key shortcuts are on. Turn them off in the command palette or under Keyboard shortcuts
   on the Review page, where each command's key can be changed too; Ctrl and Cmd shortcuts keep
   working with them off.
+- Sprints has a picker of the backlog and every open sprint (`?sprint=sprint:<name>` in the URL)
+  and shows the chosen one's issues as a board or as a list. Move an issue between the backlog
+  and a sprint by dragging it onto a picker entry, from its Move to menu, or from the command
+  palette; the move writes the `sprint:<name>` label and drops any other sprint label.
+- On a card or a list row, the priority is a picker written in place, and the owner is a button
+  that opens the sessions an owner change may name: the work queue's live sessions on an allowed
+  repository, or the store's assignees without a queue, narrowed by `[handoff] receivers`. An
+  unclaimed task's owner is written at once; a task a session has claimed (assigned and
+  `in_progress`) is not reassigned, and a notice says its holder must hand it over. The issue's
+  detail has the same owner picker. A list row reorders by drag or by its Up and Down buttons,
+  among the rows of its own priority.
+- Queue lists every open task, in the work queue's order where `[queue] url` is set and otherwise
+  by priority, then rank, then age, and says which order it shows. Blocked only shows the blocked
+  tasks, each with what blocks it: its open `blocks` dependencies, or its newest comment for a
+  task in the blocked status. The epic, goal, type, size, owner and repository filters are in the
+  URL, so a filtered queue can be shared.
+- A held item's detail (`/held?path=<item path>`, the path `review` prints) shows its whole body
+  and, for a decision with structured options, its option cards above the body.
+- Descriptions, comments and held bodies are drawn as Markdown with no raw HTML; a link keeps only
+  an http, https or mailto URL, or a link to a heading on the same page.
 
 Analytics reads `bd history --events` for each issue that is open or was closed in the window
 and has been updated inside it, four at a time, and keeps each issue's events until its
@@ -304,7 +324,22 @@ repo = "my-repo"       # this store's name in the queue; the repository's name w
 
 [analytics]
 cost_export = ""       # an OTLP JSON Lines file of Claude Code's metrics; empty shows no cost
+
+[handoff]              # in your own file only
+receivers = ["team-*"] # the session names an owner change may pick; `*` matches any run
+
+[review]               # in your own file only
+command = ["held_cli.py"]   # the held store's tool, for a held item's detail
 ```
+
+`[handoff]` and `[review]` come from your own file alone, as `[queue]` does: a repository's file
+cannot widen who receives its tasks or name a command for the server to run. Without
+`[handoff] receivers`, every live session the queue's registry holds may be picked. Without
+`[review] command`, a held item's detail says held items are not read.
+
+Every response carries a Content Security Policy: scripts only from the server's own origin, so
+no inline script runs, and Trusted Types required for every script sink. The app's default
+Trusted Types policy passes HTML through DOMPurify and refuses every script and script URL.
 
 `cost_export` is a file an OpenTelemetry Collector's file exporter writes from Claude Code's
 `claude_code.cost.usage` and `claude_code.token.usage` metrics, which carry `session.id`. A
@@ -449,6 +484,12 @@ with a 400, and a request naming a store that is not open with a 404.
 | `POST /api/dispatch/unblock` | `{ "repo", "task", "resolution", "followUp" }`: an unblock dispatch to the task's owner (201), or the server's own unblock for a task with no owner (200, `"via": "server"`) |
 | `GET /api/dispatch/:id` | The dispatch's three indicators, `liveness`, `delivery` and `response`, each with its `source`, and an unblock's `followUp` |
 | `GET /api/dispatch/skills` | The work queue's skill catalog, for the composer's typeahead |
+| `POST /api/issues/:id/sprint?store=` | `{ "to", "from", "shown" }`, each of `to` and `from` `backlog` or `sprint:<name>`: the sprint label, guarded by the shown status; 409 when the status or the sprint moved first |
+| `POST /api/issues/:id/owner?store=` | `{ "to", "shown", "status" }`: an unclaimed task's assignee, guarded by the shown assignee and status; 400 for a session the handoff rule does not allow; 409 `handoff-required` for a claimed task, with nothing written |
+| `POST /api/issues/:id/list-rank?store=` | `{ "shown", "priority", "above", "below", "aboveStore", "belowStore" }`: a list row's rank key between its neighbours of the same priority; 409 when one moved first |
+| `GET /api/owners?store=` | The owner picker's sessions, with their `source` and the `rule` that narrowed them; `queueError` names a failed registry read |
+| `GET /api/queue-view[?blocked=1]` | The Queue view's rows across every open store, each with its blockers, and the `order` they are in |
+| `GET /api/held/item?path=` | A held item `review` lists in an open store: its `body`, its `options` and the read errors of each |
 
 ## Docker Compose
 
@@ -482,7 +523,7 @@ npm test                          # includes the web server suite and the Playwr
 ```
 
 The Playwright specs under `apps/web/e2e/` run the Board, Backlog, Issue detail, palette,
-Roadmap, Analytics and Sessions specs at 1280 px with a mouse and at 390 px on a touch screen; the
+Roadmap, Analytics, Sessions, Sprints and Queue specs at 1280 px with a mouse and at 390 px on a touch screen; the
 pointer drags run at 1280 px and the touch Move to menu at 390 px. Each spec gets its own server
 and a temporary store made with `bd init`; the store registry's spec (`stores.spec.ts`) serves
 several such stores from a private home's store inventory. The change feed's suite
