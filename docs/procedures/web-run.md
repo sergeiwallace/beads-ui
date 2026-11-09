@@ -118,6 +118,12 @@ without a restart.
 
 ## Use it
 
+- With no store chosen, the Board and the Backlog show every open store's issues, and each card
+  and row names its repository. The store picker in the app bar narrows the view to one store,
+  and the choice is in the URL (`?store=my-repo`), so a narrowed view can be shared or reloaded.
+  A store that cannot be read is named in an alert with its error, and the others still show.
+- An issue is addressed by its store and its id, so the same id in two stores is two cards, and
+  every write goes to the issue's own store.
 - The Board has one column per status `bd statuses` reports, grouped by category. Drag a card to
   another column to change its status. Every card also has a Move to button with the other
   statuses, so nothing needs a drag (WCAG 2.2, 2.5.7).
@@ -206,4 +212,5 @@ npm test                          # includes the web server suite and the Playwr
 The Playwright specs under `apps/web/e2e/` run the Board, Backlog, Issue detail and palette specs
 at 1280 px with a mouse and at 390 px on a touch screen; the pointer drags run at 1280 px and the
 touch Move to menu at 390 px. Each spec gets its own server and a temporary store made with
-`bd init`.
+`bd init`; the store registry's spec (`stores.spec.ts`) serves several such stores from a private
+home's store inventory.

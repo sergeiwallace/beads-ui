@@ -15,6 +15,8 @@ export interface BacklogProps {
   onOpen(id: string): void;
   onStatus(id: string, to: string): void;
   onPriority(id: string, priority: Priority): void;
+  /** The repository a row's issue comes from: with it, the table gains a Repository column. */
+  repositoryOf?: ((id: string) => string | undefined) | undefined;
 }
 
 /** The Backlog: one row an open issue, with its status and priority written in place. */
@@ -32,6 +34,7 @@ export function Backlog(props: BacklogProps) {
         <thead>
           <tr>
             <th scope="col">Id</th>
+            {props.repositoryOf !== undefined && <th scope="col">Repository</th>}
             <th scope="col">Title</th>
             <th scope="col">Type</th>
             <th scope="col">Status</th>
@@ -47,6 +50,9 @@ export function Backlog(props: BacklogProps) {
             return (
               <tr key={row.id} data-row-id={row.id} data-pending={busy || undefined}>
                 <td className="bu-id">{row.displayId}</td>
+                {props.repositoryOf !== undefined && (
+                  <td className="bu-repo">{props.repositoryOf(row.id)}</td>
+                )}
                 <td>
                   <a
                     href={props.issueHref(row.id)}
