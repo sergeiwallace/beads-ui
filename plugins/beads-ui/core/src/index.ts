@@ -169,6 +169,24 @@ export {
   legendText,
   NARROW_GUTTER_COLUMNS,
 } from "./indicators.ts";
+export type {
+  Keymap,
+  KeymapBinding,
+  KeymapError,
+  KeymapSettings,
+  KeyPress,
+  Shortcut,
+} from "./keymap.ts";
+export {
+  buildKeymap,
+  chordOf,
+  commandForPress,
+  DEFAULT_KEYMAP_SETTINGS,
+  DEFAULT_SHORTCUTS,
+  parseChord,
+  remapKey,
+  setSingleKeys,
+} from "./keymap.ts";
 export type { Labels, Tier } from "./layout.ts";
 export {
   buttonWidth,
