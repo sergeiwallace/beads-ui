@@ -1,4 +1,13 @@
-import type { Comment, Issue, Priority, Status } from "@beads-ui/core";
+import type {
+  AnalyticsView,
+  Comment,
+  Issue,
+  Priority,
+  RoadmapView,
+  SessionsView,
+  Status,
+} from "@beads-ui/core";
+import type { CostSection } from "@sergeiwallace/beads-ui-web-ui";
 
 /** The server's error body (server/routes.ts ApiError). */
 export interface ApiErrorBody {
@@ -68,6 +77,39 @@ export interface IssueRef {
   repository?: string | undefined;
 }
 
+export interface RoadmapPayload {
+  store: string;
+  asOf: string;
+  view: RoadmapView;
+}
+
+export interface AnalyticsPayload {
+  store: string;
+  asOf: string;
+  view: AnalyticsView;
+  sprints: string[];
+  sprint?: string;
+  histories: { read: number; failed: { id: string; message: string }[] };
+  cost: CostSection;
+}
+
+export interface SessionsPayload {
+  store: string;
+  asOf: string;
+  view: SessionsView;
+  /** The work queue read that failed; the view then holds the store's assignees. */
+  queueError?: ApiErrorBody;
+}
+
+/** A status move's answer: written through bd, or requested through the work queue (202). */
+export interface MovePayload {
+  id: string;
+  status: string;
+  via?: "queue";
+  holder?: string;
+  notice?: string;
+}
+
 // Every API path is relative to the app's base, so a later base path moves them all at once.
 const base = import.meta.env.BASE_URL;
 
@@ -120,7 +162,7 @@ export const api = {
   board: (store?: string) => call<BoardPayload>(`board${storeQuery(store)}`),
   issue: (ref: IssueRef) => call<IssuePayload>(issuePath(ref)),
   move: (ref: IssueRef, to: string, shown: string) =>
-    post<{ id: string; status: string }>(issuePath(ref, "/status"), { to, shown }),
+    post<MovePayload>(issuePath(ref, "/status"), { to, shown }),
   priority: (ref: IssueRef, priority: Priority, shown: string) =>
     post<{ id: string; priority: Priority }>(issuePath(ref, "/priority"), { priority, shown }),
   rank: (ref: IssueRef, shown: string, above?: IssueRef, below?: IssueRef) =>
@@ -131,4 +173,15 @@ export const api = {
       aboveStore: above?.repository,
       belowStore: below?.repository,
     }),
+  // Phase 3's remaining views read one store: the one chosen, or the only one open.
+  roadmap: (store?: string) => call<RoadmapPayload>(`roadmap${storeQuery(store)}`),
+  analytics: (weeks: number, sprint?: string, store?: string) =>
+    call<AnalyticsPayload>(
+      `analytics?${new URLSearchParams({
+        weeks: String(weeks),
+        ...(sprint ? { sprint } : {}),
+        ...(store === undefined ? {} : { store }),
+      })}`,
+    ),
+  sessions: (store?: string) => call<SessionsPayload>(`sessions${storeQuery(store)}`),
 };

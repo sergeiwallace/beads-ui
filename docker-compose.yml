@@ -1,0 +1,31 @@
+# The beads-ui web app under Docker Compose (T-3.5); docs/procedures/web-run.md, "Docker Compose".
+#
+#   docker compose up --build -d
+#   docker compose exec web beads-ui-web login-link    # then open the link it prints
+#
+# The server binds 127.0.0.1, so the container shares the host's network and the app answers on
+# the host's loopback, http://127.0.0.1:4810/ by default, and nowhere else. beads-ui-work holds
+# the checkout and its Dolt state; beads-ui-home the host config and the server's credentials.
+# Both survive `docker compose restart` and `docker compose down`; only `down --volumes` deletes
+# them.
+name: beads-ui
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    image: beads-ui-web:local
+    network_mode: host
+    environment:
+      # A git URL cloned into the volume on its first start; empty starts a new store.
+      BEADS_UI_REPO: ${BEADS_UI_REPO:-}
+      BEADS_UI_PORT: ${BEADS_UI_PORT:-4810}
+    volumes:
+      - beads-ui-work:/work
+      - beads-ui-home:/root
+    restart: unless-stopped
+
+volumes:
+  beads-ui-work:
+  beads-ui-home:

@@ -154,6 +154,7 @@ function parseIssue(value: unknown, path: string): Issue {
     ["deferUntil", "defer_until"],
     ["startedAt", "started_at"],
     ["closedAt", "closed_at"],
+    ["closedBySession", "closed_by_session"],
     ["leaseExpiresAt", "lease_expires_at"],
     ["heartbeatAt", "heartbeat_at"],
   ];

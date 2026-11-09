@@ -1,3 +1,5 @@
+export type { AnalyticsProps, CostSection } from "./Analytics.tsx";
+export { Analytics, WEEK_CHOICES } from "./Analytics.tsx";
 export type { BacklogProps } from "./Backlog.tsx";
 export { Backlog } from "./Backlog.tsx";
 export type { BoardProps } from "./Board.tsx";
@@ -8,6 +10,10 @@ export type { IssueDetailProps, ReadFailure } from "./IssueDetail.tsx";
 export { IssueDetail } from "./IssueDetail.tsx";
 export type { MoveToMenuProps } from "./MoveToMenu.tsx";
 export { MoveToMenu } from "./MoveToMenu.tsx";
+export type { RoadmapProps } from "./Roadmap.tsx";
+export { Roadmap } from "./Roadmap.tsx";
+export type { SessionsProps } from "./Sessions.tsx";
+export { Sessions } from "./Sessions.tsx";
 export type { ToastKind } from "./Toasts.tsx";
 export { TOAST_TIMEOUT_MS, ToastProvider, useNotify } from "./Toasts.tsx";
 export { tokenProperty, tokenVar } from "./tokens.ts";

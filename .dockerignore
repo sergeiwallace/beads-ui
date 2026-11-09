@@ -1,0 +1,10 @@
+**/node_modules
+**/dist
+**/.turbo
+**/test-results
+**/playwright-report
+.git
+.beads
+.worktrees
+.env
+.env.local

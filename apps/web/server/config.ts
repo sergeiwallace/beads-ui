@@ -2,7 +2,9 @@ import { readFile } from "node:fs/promises";
 import {
   type BeadsUiConfig,
   configCandidates,
+  resolveAnalytics,
   resolveConfig,
+  resolveQueue,
   resolveRank,
   resolveWeb,
   stateDirOf,
@@ -21,6 +23,12 @@ export interface WebConfig extends BeadsUiConfig {
   port?: number;
   /** `[views] rank`, on unless the file turns it off (D-21). */
   rank: boolean;
+  /** `[queue] url`: the work queue the Sessions view and leased status writes go through. */
+  queueUrl?: string;
+  /** `[queue] repo`: this store's name in the queue; its directory name when unset. */
+  queueRepo?: string;
+  /** `[analytics] cost_export`: the Claude Code cost export, as written in the file. */
+  costExport?: string;
   /** The file the settings came from, or undefined when no candidate exists. */
   source?: string;
   /** One line per setting the file got wrong; the default stands for each. */
@@ -75,6 +83,8 @@ async function firstFile(paths: readonly string[]): Promise<[string, string] | u
 /**
  * The web app's settings, read again on every call: the repository's `beads-ui.toml`, else the
  * user's (configCandidates). A file that cannot be parsed gives the defaults and says so.
+ * `[queue]` comes from the user's file alone, as `[hosts]` does: the work queue it names takes
+ * this host's status writes and shows its sessions, which a repository's file must not redirect.
  */
 export async function readWebConfig(repoRoot: string, env: ConfigEnv): Promise<WebConfig> {
   const found = await firstFile(configCandidates(repoRoot, env));
@@ -82,13 +92,25 @@ export async function readWebConfig(repoRoot: string, env: ConfigEnv): Promise<W
   const base = resolveConfig(text, repoRoot);
   const rank = resolveRank(text, WEB_RANK_DEFAULT);
   const web = resolveWeb(text);
+  const user = await readUserConfig(env);
+  const queue = resolveQueue(user.kind === "file" ? user.text : undefined);
+  const analytics = resolveAnalytics(text);
   const config: WebConfig = {
     ...base.config,
     rank: rank.rank,
-    problems: [...base.problems, ...rank.problems, ...web.problems],
+    problems: [
+      ...base.problems,
+      ...rank.problems,
+      ...web.problems,
+      ...queue.problems,
+      ...analytics.problems,
+    ],
   };
   if (web.host !== undefined) config.host = web.host;
   if (web.port !== undefined) config.port = web.port;
+  if (queue.url !== undefined) config.queueUrl = queue.url;
+  if (queue.repo !== undefined) config.queueRepo = queue.repo;
+  if (analytics.costExport !== undefined) config.costExport = analytics.costExport;
   if (found !== undefined) config.source = found[0];
   return config;
 }

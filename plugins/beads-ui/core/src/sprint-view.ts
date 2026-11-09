@@ -65,7 +65,8 @@ export function milestoneSprintOf(issue: Issue): string | undefined {
   return name === undefined || name === "" ? undefined : name;
 }
 
-function startsAtOf(issue: Issue): string | undefined {
+/** A sprint milestone's start, `sprint.starts_at` in its metadata, flat or nested. */
+export function startsAtOf(issue: Issue): string | undefined {
   const flat = issue.metadata["sprint.starts_at"];
   if (typeof flat === "string" && flat !== "") return flat;
   const nested = issue.metadata.sprint;

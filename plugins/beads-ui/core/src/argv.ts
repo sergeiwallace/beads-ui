@@ -83,6 +83,63 @@ export function timelineReadArgvs(types: readonly string[]): BdArgv[] {
   ]);
 }
 
+const STAMP = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}Z)?$/;
+
+function stamp(value: string): string {
+  if (!STAMP.test(value)) {
+    throw new RangeError(`invalid date for a bd argument: ${JSON.stringify(value)}`);
+  }
+  return value;
+}
+
+/**
+ * Analytics' reads (T-3.3): every issue not closed, then every one closed after `closedAfter`
+ * (`YYYY-MM-DD` or a UTC RFC 3339 stamp), the window's done issues; never the whole store.
+ */
+export function analyticsReadArgvs(closedAfter: string): [open: BdArgv, closed: BdArgv] {
+  return [
+    ["bd", "list", "--json", "--brief", "--limit", "0"],
+    [
+      "bd",
+      "list",
+      "--json",
+      "--brief",
+      "--status",
+      "closed",
+      `--closed-after=${stamp(closedAfter)}`,
+      "--limit",
+      "0",
+    ],
+  ];
+}
+
+/** How many closed issues were closed before `closedBefore`, by status (`bd count`). */
+export function closedBeforeCountArgv(closedBefore: string): BdArgv {
+  return [
+    "bd",
+    "count",
+    "--by-status",
+    "--status",
+    "closed",
+    `--closed-before=${stamp(closedBefore)}`,
+    "--json",
+  ];
+}
+
+/** Every issue carrying `label`, closed ones too: a sprint's members for its burndown (D-5). */
+export function labelledArgv(label: string): BdArgv {
+  return [
+    "bd",
+    "list",
+    "--json",
+    "--brief",
+    "--all",
+    `--label=${checked("label", label)}`,
+    "--limit",
+    "0",
+  ];
+}
+
 /** The store's Dolt head: its commit changes with every write, so it says when to re-read. */
 export function headArgv(): BdArgv {
   return ["bd", "vc", "status", "--json"];

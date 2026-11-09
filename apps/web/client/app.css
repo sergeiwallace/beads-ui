@@ -26,6 +26,8 @@ body {
 .app-nav {
   display: flex;
   gap: 0.25rem;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .app-nav a {
