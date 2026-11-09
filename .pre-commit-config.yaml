@@ -111,9 +111,12 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      # The two test hooks skip a commit whose staged paths are all docs/** or *.md
+      # (scripts/test-hook.mjs), and BEADS_UI_TEST_JOBS bounds how many test processes they
+      # start (default 1, at most 2; docs/procedures/web-run.md, Test it).
       - id: npm-test
-        name: npm test (Vitest, then claude plugin test)
-        entry: npm test
+        name: npm test (Vitest, then the mod's tests file by file)
+        entry: node scripts/test-hook.mjs npm test
         language: system
         pass_filenames: false
         always_run: true
@@ -139,8 +142,8 @@ repos:
         pass_filenames: false
         always_run: true
       - id: plugin-test
-        name: claude plugin test plugins/beads-ui (the mod's tests and the import probe)
-        entry: claude plugin test plugins/beads-ui
+        name: claude plugin test plugins/beads-ui, file by file (the mod's tests and the import probe)
+        entry: node scripts/test-hook.mjs node scripts/plugin-test.mjs plugins/beads-ui
         language: system
         pass_filenames: false
         always_run: true

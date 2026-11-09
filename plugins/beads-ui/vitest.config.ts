@@ -1,4 +1,5 @@
 import { defineConfig } from "vitest/config";
+import { testJobs } from "../../scripts/test-jobs.mjs";
 
 // Two runners share this folder, split by name (CONTRIBUTING.md, Tests).
 // `claude plugin test` runs every *.test.ts under it in the mod environment. Vitest runs
@@ -10,6 +11,8 @@ export default defineConfig({
     alias: { "claude-code/testing": "vitest" },
   },
   test: {
+    // BEADS_UI_TEST_JOBS bounds the workers (docs/procedures/web-run.md, Test it).
+    maxWorkers: testJobs(),
     include: ["**/*.spec.ts", "core/test/**/*.test.ts"],
     // The Node suites spawn claude, git, gitleaks and node; under a loaded host's pre-commit run
     // (Vitest beside claude plugin test) one spawn can pass the 5000 ms default on its own.
