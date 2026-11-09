@@ -1,8 +1,15 @@
 import { writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
+import type { Page } from "@playwright/test";
 import { hostConfig } from "../test/auth-env.ts";
 import { type FakeQueue, startFakeQueue } from "../test/queue-fake.ts";
 import { expect, test, written } from "./fixtures.ts";
+
+/** The page's read of `path`: the view draws once it lands, however long a loaded host takes. */
+const viewRead = (page: Page, path: string) =>
+  page.waitForResponse((response) => new URL(response.url()).pathname === path, {
+    timeout: 60_000,
+  });
 
 // T-3.4: the Sessions view from the work queue where `[queue] url` is set, from the store's
 // assignees without it, and a status change on a leased task written through the queue. The
@@ -34,7 +41,9 @@ test.describe("Sessions", () => {
     const id = await app.store.create("Claimed", { status: "in_progress" });
     await app.store.bd("update", id, "--assignee", "host-a/session-1");
 
+    const read = viewRead(page, "/api/sessions");
     await page.goto(`${app.url}sessions`);
+    await read;
 
     await expect(page.locator(".bu-sessions").getByRole("status")).toContainText(
       "Liveness is unavailable",
@@ -75,7 +84,9 @@ test.describe("Sessions", () => {
         },
       ];
 
+      const read = viewRead(page, "/api/sessions");
       await page.goto(`${app.url}sessions`);
+      await read;
 
       await expect(page.locator(".bu-sessions").getByRole("status")).toHaveText(
         "1 of 2 sessions in the work queue's registry are live.",

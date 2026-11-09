@@ -71,7 +71,9 @@ test.describe("the Roadmap", () => {
     await read;
 
     // Frappe draws the label over the bar; the group holding both takes the click.
+    const detail = viewRead(page, `/api/issues/${epic}`);
     await page.locator(`.bar-wrapper[data-issue-id="${epic}"]`).click();
+    await detail;
 
     await expect(page).toHaveURL(new RegExp(`/issues/${epic}$`));
     await expect(page.getByRole("heading", { name: "Clickable epic" })).toBeVisible();
