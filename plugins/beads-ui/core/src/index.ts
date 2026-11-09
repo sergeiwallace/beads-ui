@@ -50,9 +50,11 @@ export type {
   ResolvedConfig,
   ResolvedGlyphs,
   ResolvedPanel,
+  ResolvedRank,
   ResolvedSurfaces,
   ResolvedSync,
   ResolvedTheme,
+  ResolvedWeb,
   TomlError,
   TomlTable,
   TomlValue,
@@ -72,14 +74,18 @@ export {
   resolveConfig,
   resolveGlyphs,
   resolvePanel,
+  resolveRank,
   resolveReview,
   resolveSurfaces,
   resolveSync,
   resolveTheme,
+  resolveWeb,
   SURFACES_TABLE,
   SYNC_TABLE,
   THEME_TABLE,
   userConfigPath,
+  WEB_RANK_DEFAULT,
+  WEB_TABLE,
   withBandTable,
   withIndicatorsTable,
   withOverrides,
@@ -275,6 +281,17 @@ export {
 } from "./parsers.ts";
 export type { QuickAdd, QuickAddError } from "./quickadd.ts";
 export { createArgv, parseQuickAdd } from "./quickadd.ts";
+export type { RankError, RankNeighbours, RankRead } from "./rank.ts";
+export {
+  isRankKey,
+  keyBetween,
+  orderByPriorityRank,
+  orderByRank,
+  RANK_JITTER_STEPS,
+  RANK_KEY,
+  rankNeighbours,
+  readRank,
+} from "./rank.ts";
 export type { BdWhere, StoreFacts, StoreResolution, StoreSource } from "./resolve.ts";
 export {
   DIRECTORY_STORES_TABLE,
@@ -552,6 +569,9 @@ export type {
   MoveError,
   PageView,
   PendingMove,
+  PendingRank,
+  RankPlan,
+  RankPlanError,
 } from "./views/board.ts";
 export {
   BOARD_PAGE_LIMIT,
@@ -560,6 +580,7 @@ export {
   INITIAL_BOARD_STATE,
   pageOf,
   planMove,
+  planRank,
   reduceBoard,
   STALE_WRITE_EXIT,
   stepPage,

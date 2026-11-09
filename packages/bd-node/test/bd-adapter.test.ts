@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createArgv, type Issue, moveArgv } from "@beads-ui/core";
+import { boardReadArgvs, createArgv, type Issue, moveArgv } from "@beads-ui/core";
 import { afterEach, describe, expect, it } from "vitest";
 import { BD_INSTALL_PAGE, type BdResult, createBdClient, type StaleWrite } from "../src/index.ts";
 import { type StubBd, type StubReply, stubBd } from "./stub.ts";
@@ -537,5 +537,89 @@ describe("create and close through a stub bd", () => {
   it("should return notFound when bd close names the id as not found", async () => {
     const { client } = await stubbed({ exitCode: 1, stderr: "Issue BU-gone not found\n" });
     expect((await client.close("BU-gone")).kind).toBe("notFound");
+  });
+});
+
+describe("board, comments and where through a stub bd", () => {
+  it("should read the open issues and then the newest closed page, returning each issue once", async () => {
+    const { stub, client } = await stubbed({ stdout: ISSUE_JSON });
+    const issues = okValue(await client.board());
+    expect(issues.map((issue) => issue.id)).toEqual(["BU-abc"]);
+    expect(await stub.calls()).toEqual(boardReadArgvs().map((argv) => argv.slice(1).join(" ")));
+  });
+
+  it("should return the failed read with its exit code and stop when bd list fails", async () => {
+    const { stub, client } = await stubbed({ exitCode: 1, stderr: "Error: database is locked\n" });
+    const result = await client.board();
+    expect(result.kind).toBe("failed");
+    if (result.kind === "failed") {
+      expect(result.exitCode).toBe(1);
+      expect(result.message).toBe("bd list exited 1: Error: database is locked");
+    }
+    expect(await stub.calls()).toHaveLength(1);
+  });
+
+  it("should parse bd comments --json when bd answers", async () => {
+    const comment = {
+      id: "c-1",
+      issue_id: "BU-abc",
+      author: "host-a",
+      text: "looks right",
+      created_at: "2026-11-09T04:45:11Z",
+    };
+    const { stub, client } = await stubbed({ stdout: JSON.stringify([comment]) });
+    expect(okValue(await client.comments("BU-abc"))).toEqual([
+      {
+        id: "c-1",
+        issueId: "BU-abc",
+        author: "host-a",
+        text: "looks right",
+        createdAt: comment.created_at,
+      },
+    ]);
+    expect(await stub.calls()).toEqual(["comments BU-abc --json"]);
+  });
+
+  it("should return notFound when bd comments names the id as not found", async () => {
+    const { client } = await stubbed({ exitCode: 1, stderr: "Error: issue BU-gone not found\n" });
+    expect((await client.comments("BU-gone")).kind).toBe("notFound");
+  });
+
+  it("should say there is no store when bd where answers no_beads_directory", async () => {
+    const { client } = await stubbed({ exitCode: 1, stdout: '{"error":"no_beads_directory"}' });
+    expect(okValue(await client.where())).toEqual({ hasStore: false });
+  });
+
+  it("should return failed with bd's text when bd where answers anything else", async () => {
+    const { client } = await stubbed({ exitCode: 2, stderr: "Error: permission denied\n" });
+    const result = await client.where();
+    expect(result.kind).toBe("failed");
+    if (result.kind === "failed")
+      expect(result.message).toBe("bd where exited 2: Error: permission denied");
+  });
+});
+
+describe("metadata writes through a stub bd", () => {
+  it("should send metadata keys as one JSON object beside the status guard", async () => {
+    const { stub, client } = await stubbed({});
+    const result = await client.update(
+      "BU-abc",
+      { metadata: { rank: "a0V" } },
+      { ifStatus: "open" },
+    );
+    expect(result).toEqual({ kind: "ok", value: undefined });
+    expect(await stub.calls()).toEqual([
+      'update BU-abc --metadata={"rank":"a0V"} --if-status open --json',
+    ]);
+  });
+
+  it("should return a StaleWrite when a guarded metadata write exits 13", async () => {
+    const { client } = await stubbed({ exitCode: 13 });
+    const result = await client.update(
+      "BU-abc",
+      { metadata: { rank: "a0V" } },
+      { ifStatus: "open" },
+    );
+    expect(result.kind).toBe("stale");
   });
 });

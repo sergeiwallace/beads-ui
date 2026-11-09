@@ -1,12 +1,13 @@
 # beads-ui
 
 A task manager for [Beads](https://github.com/steveyegge/beads) issues, designed to run in three places
-from one shared core. Only the first exists today:
+from one shared core:
 
 - inside the Claude Code terminal UI, as a [Claude Code mod](https://code.claude.com/docs/en/plugins/mods/overview)
   (implemented);
-- [TODO, not started] inside Claude Desktop and Claude on the web, as an MCP UI app;
-- [TODO, not started] in a browser, as a web app you run locally or host from an infra-as-config template.
+- in a browser, as a web app you run locally (Board, Backlog and Issue detail implemented; hosting
+  from an infra-as-config template is [TODO]);
+- [TODO, not started] inside Claude Desktop and Claude on the web, as an MCP UI app.
 
 The goal is the views people expect from Jira, Linear or Todoist (board, backlog, sprints,
 roadmap, analytics), working on a Beads store, with one view of the tasks of every Claude Code
@@ -56,8 +57,13 @@ kind or session, and `s` groups by task, epic, kind or session. A row whose issu
 current item shows `✎`, and its options menu opens the first
 ([docs/procedures/mod-install.md](docs/procedures/mod-install.md#review-items)).
 
-The MCP UI app for Claude Desktop and claude.ai, and the web app, are [TODO]: neither has been
-started. They are the planned future state in
+The web app runs locally with one command: a Board with drag and drop and a Move to menu on every
+card, manual rank, a Backlog, Issue detail and a Ctrl+K command palette, all reading and writing
+the store through guarded `bd` calls ([docs/procedures/web-run.md](docs/procedures/web-run.md)).
+Its Roadmap, Analytics, Sessions and Sprints views, the review queue and hosting are [TODO].
+
+The MCP UI app for Claude Desktop and claude.ai is [TODO]: it has not been started. It and the rest
+of the web app are the planned future state in
 [docs/designs/beads-ui-design.md](docs/designs/beads-ui-design.md), and the research behind the
 design is in [docs/research/](docs/research/).
 
@@ -103,6 +109,8 @@ layers and not their UI components: each surface draws its own views.
 | `plugins/beads-ui/core/` | The shared core (`src/`) and its tests (`test/`); the DOM packages import it as `@beads-ui/core` |
 | `packages/` | Node and browser packages: the `bd` adapter, the web components and the MCP server, as later phases add them |
 | `packages/bd-node/` | The Node adapter that runs `bd ... --json` for the web and MCP servers and returns the core's types; it needs `bd` on `PATH` |
+| `packages/web-ui/` | The React components the web app and the MCP App share: Board, Backlog, Issue detail, the command palette and the theme tokens |
+| `apps/web/` | The web app: a Node server (`server/`, every route under `/api/`) and a Vite and React 19 client (`client/`), with its Playwright specs (`e2e/`) |
 | `scripts/check-core-purity.mjs` | The purity gate `npm run lint` runs on the shared core |
 | `.claude-plugin/marketplace.json` | The marketplace that lists the mod, `./plugins/beads-ui` |
 | `scripts/check-marketplace.mjs` | The pre-commit gate that runs `claude plugin validate .` and checks the marketplace lists the mod |

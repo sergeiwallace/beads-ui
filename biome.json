@@ -10,6 +10,7 @@
     "includes": [
       "plugins/**",
       "packages/**",
+      "apps/**",
       "scripts/**/*.mjs",
       "*.json",
       "*.ts",

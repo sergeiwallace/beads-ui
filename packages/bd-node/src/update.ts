@@ -13,6 +13,11 @@ export interface UpdateFields {
   estimatedMinutes?: number;
   addLabels?: readonly string[];
   removeLabels?: readonly string[];
+  /**
+   * Top-level metadata keys to set, each a string; bd merges them into the issue's metadata and
+   * keeps every other key. Sent as one JSON object, so a value is never retyped from its spelling.
+   */
+  metadata?: Readonly<Record<string, string>>;
 }
 
 /** bd writes nothing and exits 13 when a guard no longer holds. */
@@ -42,6 +47,9 @@ export function updateArgv(id: string, fields: UpdateFields, guard: UpdateGuard 
   if (fields.estimatedMinutes !== undefined) flags.push(`--estimate=${fields.estimatedMinutes}`);
   for (const label of fields.addLabels ?? []) flags.push(`--add-label=${labelArg(label)}`);
   for (const label of fields.removeLabels ?? []) flags.push(`--remove-label=${labelArg(label)}`);
+  if (fields.metadata !== undefined && Object.keys(fields.metadata).length > 0) {
+    flags.push(`--metadata=${JSON.stringify(fields.metadata)}`);
+  }
   // bd refuses a guard with no field update ("Requires a field update").
   if (flags.length === 0) throw new RangeError("bd update needs at least one field to write");
   if (guard.ifStatus !== undefined) flags.push("--if-status", statusArg(guard.ifStatus));
