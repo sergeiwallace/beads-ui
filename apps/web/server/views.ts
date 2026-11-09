@@ -38,6 +38,12 @@ import { type ApiContext, type ApiReply, type ApiRequest, bdFailure, failure } f
 
 /** How many `bd history` reads Analytics runs at once. */
 export const HISTORY_CONCURRENCY = 4;
+/**
+ * How long one `bd history` read may take. An embedded store runs one bd at a time, so a read
+ * waits behind the others in flight; bd-node's 10-second default counts that wait and timed
+ * out under load (measured 2026-11-09, four reads at once on a loaded host).
+ */
+export const HISTORY_TIMEOUT_MS = 30_000;
 
 type Unwrapped<T> = { value: T } | { reply: ApiReply };
 
@@ -120,7 +126,7 @@ async function flowsOf(
       const cached = store.get(issue.id);
       let events = cached?.updatedAt === issue.updatedAt ? cached.events : undefined;
       if (events === undefined) {
-        const read = await bd.history(issue.id);
+        const read = await bd.history(issue.id, { timeoutMs: HISTORY_TIMEOUT_MS });
         if (read.kind === "ok") {
           events = read.value;
           store.set(issue.id, { updatedAt: issue.updatedAt, events });

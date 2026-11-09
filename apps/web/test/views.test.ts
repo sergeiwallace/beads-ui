@@ -14,7 +14,7 @@ import {
   signIn,
 } from "./auth-env.ts";
 import { type FakeQueue, startFakeQueue } from "./queue-fake.ts";
-import { createStore, failingBd, type TestStore } from "./store.ts";
+import { createStore, failingBd, slowBd, type TestStore } from "./store.ts";
 
 // Phase 3's remaining routes through the real server and a real bd store: GET /api/roadmap
 // (T-3.2), GET /api/analytics (T-3.3), GET /api/sessions and the queue-routed status write
@@ -269,6 +269,33 @@ describe("GET /api/analytics (T-3.3)", () => {
     const first = reply.body.view.cumulativeFlow[0].counts;
     expect(first.wip).toBeGreaterThanOrEqual(1);
   });
+
+  it("should wait out a bd history read slower than bd-node's 10-second default", async () => {
+    // Its own one-issue store, so the slow reads are few; an embedded store queues them.
+    const small = await createStore("slow");
+    cleanup.push(small.remove);
+    await small.create("Slow history");
+    const slow = await slowBd(["history"], 11);
+    cleanup.push(slow.remove);
+    await host.write(
+      hostConfig({ allowRepos: [repoName(store.dir), QUEUE_REPO, repoName(small.dir)] }),
+    );
+    const started = await startServer({
+      repoRoot: small.dir,
+      port: 0,
+      clientDir,
+      configEnv: host.configEnv,
+      bdEnv: slow.env,
+    });
+    cleanup.push(started.close);
+    cookies.set(started, await signIn(started));
+
+    const reply = await get("/api/analytics?weeks=1", started);
+
+    expect(reply.status).toBe(200);
+    expect(reply.body.histories.failed).toEqual([]);
+    expect(reply.body.view.cumulativeFlow.at(-1).counts.active).toBe(1);
+  }, 90_000);
 
   describe("where a Claude Code cost export is configured", () => {
     let exportDir: string;
