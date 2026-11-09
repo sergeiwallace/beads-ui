@@ -31,11 +31,14 @@ export type ParseResult<T> = { ok: true; value: T } | { ok: false; error: ParseE
 type Source = ParseError["source"];
 type JsonObject = Record<string, unknown>;
 
+// Fields assigned in the body, not parameter properties: Node's type stripping runs this file as is.
 class Invalid {
-  constructor(
-    readonly path: string,
-    readonly message: string,
-  ) {}
+  readonly path: string;
+  readonly message: string;
+  constructor(path: string, message: string) {
+    this.path = path;
+    this.message = message;
+  }
 }
 
 function isObject(value: unknown): value is JsonObject {
