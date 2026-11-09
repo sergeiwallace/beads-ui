@@ -300,7 +300,7 @@ export async function analyticsRoute(request: ApiRequest, context: ApiContext): 
  * else the last segment of the `allow_repos` entry that opened the store (`name`, `owner/name` or
  * a path all give `name`).
  */
-const queueRepo = (config: WebConfig, repository: string): string =>
+export const queueRepo = (config: WebConfig, repository: string): string =>
   config.queueRepo ?? repository.replace(/\/+$/, "").split("/").pop() ?? repository;
 
 /** The allowlist's health line counts each kind of queue row it hides under this name. */
