@@ -2,7 +2,7 @@
 title: "beads-ui web app: review queue, event-based session dispatch, access and the queue dashboard"
 category: design
 tags: [design, beads-ui, web-app, review-queue, dispatch, event-driven, app-portal, access]
-status: draft
+status: approved
 source: "claude-opus-5-5-2026-10-28"
 template_version: "design-1.0.0"
 delegation_provenance:
@@ -42,7 +42,7 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 | A001 | the goals system, goal views and the privacy guard | Out of this doc by split; [the goals system design](beads-goals-system-design.md). This doc carries the privacy guard's web app consequence as [D-18](#d-18) |
 | A001 | the process clauses (orchestrate, research, wait for the prior-work compile, merge, sync, reap, design through /auto-flow, Sergei's review) | Process, not content: the [Run Ledger](#run-ledger) |
 
-**Status:** DRAFT, held for Sergei's review
+**Status:** Approved by Sergei on 2026-11-09, when he approved D-15 (a) and D-21 (a), the two decisions left for him; build in progress under BU-mg2.5.4, run `buw-build-2026-11-09`
 
 **Created:** 2026-10-28
 
@@ -74,6 +74,8 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 - [Data Model](#data-model)
   - [Dispatch record](#dispatch-record)
   - [Configuration](#configuration)
+  - [Envelope wire format](#envelope-wire-format)
+  - [Receiver API](#receiver-api)
 - [Integration](#integration)
 - [Implementation Phases](#implementation-phases)
   - [Phase W0: Security foundation, receiver and dispatch store](#phase-w0-security-foundation-receiver-and-dispatch-store)
@@ -87,19 +89,42 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 - [Run Ledger](#run-ledger)
   - [Transition verdicts](#transition-verdicts)
   - [Doc-audit rounds](#doc-audit-rounds)
+  - [Build run](#build-run)
 - [Design Decisions](#design-decisions)
   - [Decision Summary](#decision-summary)
   - [Decision Details](#decision-details)
+    - [D-1: Review queue layout](#d-1)
+    - [D-2: Where a decision's options come from](#d-2)
+    - [D-3: How a one-key answer is recorded](#d-3)
+    - [D-4: The composer](#d-4)
+    - [D-5: Status shown beside the composer](#d-5)
+    - [D-6: The dispatch ladder](#d-6)
+    - [D-7: Cross-host carriage](#d-7)
+    - [D-8: Authority of a web prompt](#d-8)
+    - [D-9: Owner change](#d-9)
+    - [D-10: Arming /start-goal](#d-10)
+    - [D-11: The ai-core dashboard code under the approved D-11](#d-11)
+    - [D-12: Single-key shortcuts](#d-12)
+    - [D-13: Live updates](#d-13)
+    - [D-14: Where dispatch records live](#d-14)
+    - [D-15: app-portal integration](#d-15)
+    - [D-16: Access routes](#d-16)
+    - [D-17: Authentication](#d-17)
+    - [D-18: What a host may show](#d-18)
+    - [D-19: Phase 6 Railway template (withdrawn)](#d-19)
+    - [D-20: The dispatch envelope's signature](#d-20)
+    - [D-21: Manual rank in the web app](#d-21)
+    - [D-22: The ai-harness changes this design needs](#d-22)
 - [Feedback Rounds](#feedback-rounds)
 - [Approval Log](#approval-log)
 
 ## Executive Summary
 
-This design turns the beads-ui web app, already planned as Phase 3 of the beads-ui design, into the place where Sergei steers his Claude Code sessions. It adds a keyboard-first Review queue that lists every blocked task, held decision and open question in priority order and lets him answer each with one key or a short reply, and a per-task composer that sends a prompt to the session owning the task. That prompt reaches the session by event: the server records it in the ai-core work queue and sends addressed Agent Mail, which the fleet's event-driven wake turns into a model turn only when there is something to do, with the shared prompt-injection library, the mod and the queue's turn-end pull as fallbacks under one kill switch. Changing a task's owner sends a receiver-first handoff, and a dispatch can ask the receiving session to arm `/start-goal`. Each machine pair reaches a loopback-bound server through the transport it already runs, with the server's own authentication in front, and a per-host repository allowlist keeps personal stores off the work host. The two most consequential calls are the dispatch ladder ([D-6](#d-6)) and the signed dispatch envelope ([D-8](#d-8)); two decisions are left for Sergei: whether app-portal's member contract takes a Node server ([D-15](#d-15)) and whether the web app turns manual rank on by default ([D-21](#d-21)). His 2026-11-01 ask settled the third, the ai-harness changes the build needs ([D-22](#d-22)), in favour of building them.
+This design turns the beads-ui web app, already planned as Phase 3 of the beads-ui design, into the place where Sergei steers his Claude Code sessions. It adds a keyboard-first Review queue that lists every blocked task, held decision and open question in priority order and lets him answer each with one key or a short reply, and a per-task composer that sends a prompt to the session owning the task. That prompt reaches the session by event: the server records it in the ai-core work queue and sends addressed Agent Mail, which the fleet's event-driven wake turns into a model turn only when there is something to do, with the shared prompt-injection library, the mod and the queue's turn-end pull as fallbacks under one kill switch. Changing a task's owner sends a receiver-first handoff, and a dispatch can ask the receiving session to arm `/start-goal`. Each machine pair reaches a loopback-bound server through the transport it already runs, with the server's own authentication in front, and a per-host repository allowlist keeps personal stores off the work host. The two most consequential calls are the dispatch ladder ([D-6](#d-6)) and the signed dispatch envelope ([D-8](#d-8)); Sergei approved the two decisions left for him on 2026-11-09: app-portal's member contract takes beads-ui's Node server as a `kind: portal` member ([D-15](#d-15)), and the web app turns manual rank on by default ([D-21](#d-21)). His 2026-11-01 ask settled the third, the ai-harness changes the build needs ([D-22](#d-22)), in favour of building them.
 
 ## Summary for a wide audience
 
-The web app gets a review inbox and a way to message the Claude Code session working on any task. A message wakes that session only when it arrives, so idle sessions cost nothing. Changing a task's owner hands the work over properly, and sessions can be asked to start working toward a goal. The app runs on each work machine and is opened from the paired laptop through the tunnel that pair already uses. Nothing changes for anyone until it is built; the build waits for Sergei's review of this design.
+The web app gets a review inbox and a way to message the Claude Code session working on any task. A message wakes that session only when it arrives, so idle sessions cost nothing. Changing a task's owner hands the work over properly, and sessions can be asked to start working toward a goal. The app runs on each work machine and is opened from the paired laptop through the tunnel that pair already uses. Sergei approved this design on 2026-11-09 and the build is under way; nothing changes for anyone until each phase ships.
 
 ## Problem Statement
 
@@ -178,7 +203,7 @@ The server reads task fields through the host refresher's snapshots and `bd --js
 
 ### Access for each machine pair
 
-On the work pair, the server binds to loopback on host-c and host-a reaches it through one more entry in the pair transport's supervised Session Manager port forward, with an SSH local forward as the fallback ([D-16](#d-16)). On the personal pair, the server binds to loopback on host-b and is published to host-f with `tailscale serve` at `/beads`, standalone ([D-16](#d-16)); it is registered in app-portal's `apps.yaml` only if Sergei rules [D-15](#d-15) for option (a). The server adds its own authentication on both pairs: a per-host token on every request, with the tailnet identity recorded but never trusted on its own ([D-17](#d-17)).
+On the work pair, the server binds to loopback on host-c and host-a reaches it through one more entry in the pair transport's supervised Session Manager port forward, with an SSH local forward as the fallback ([D-16](#d-16)). On the personal pair, the server binds to loopback on host-b and is published to host-f with `tailscale serve` at `/beads`, standalone ([D-16](#d-16)); under [D-15](#d-15), which Sergei approved, it is also registered in app-portal's `apps.yaml` as a `kind: portal` member. The server adds its own authentication on both pairs: a per-host token on every request, with the tailnet identity recorded but never trusted on its own ([D-17](#d-17)).
 
 ```mermaid
 flowchart TB
@@ -270,6 +295,29 @@ Credential files live in the server's state directory, owned by the server's use
 
 The kill switch is the event-driven wake's own call-time policy file. With automatic wakes off, the addressed Agent Mail is still sent and stays pending; only the model wake and the active rungs 3 and 4 are suppressed, and the notifier's passive header delivers the dispatch at the session's next tool call or turn end.
 
+### Envelope wire format
+
+Version 1, fixed by the build's coordinator on 2026-11-09 so the Node signer and the Python verifier agree byte for byte; shared golden vectors pin it (T-W0.4).
+
+- Timestamps are UTC RFC 3339 strings to the millisecond with a `Z` suffix.
+- `body_digest` is `sha256:` and 64 lowercase hex characters, the SHA-256 of the exact body bytes.
+- The signing input is the RFC 8785 canonical JSON, encoded UTF-8, of an object with exactly these keys: `id`, `task`, `target`, `kind`, `body_ref`, `body_digest`, `arm_goal`, `created_by`, `created_at`, `expires_at` and `signing_key_id`. It holds only strings, booleans and nested objects, so no number canonicalization arises.
+- The record carries `envelope: {"version": 1, "signing_key_id": "<id>", "signature": "<base64url, unpadded, 64-byte Ed25519 signature>"}`, and `envelope.signing_key_id` must equal the signed `signing_key_id`.
+- A receiver's trusted-keys map is `{"version": 1, "keys": [{"key_id", "public_key" (base64url, unpadded, raw 32 bytes), "not_before", "not_after" (or null), "revoked"}]}`. A key is usable when `not_before <= now < not_after` and it is not revoked.
+- Verification checks in this order and names the first failure: `malformed`, `unknown-key`, `key-revoked`, `key-not-yet-valid`, `key-expired`, `bad-signature`, `field-mismatch`, `body-digest-mismatch`, `expired`, `wrong-target`, `replayed`; a pass is `ok`.
+
+### Receiver API
+
+Version 1. Every receiver route is under `/api/receiver/v1/` and is authorised only by a receiver token (T-W0.1, T-W0.3), never by the browser session. Each receiving host holds its own token; the server's `receiver_token` reference names a map from host name to the token's SHA-256 in its state directory, so a token identifies exactly one host.
+
+| Route | Request | Answer |
+|---|---|---|
+| `GET /api/receiver/v1/dispatches?session=<s>` | `Authorization: Bearer <token>` | 200 `{"dispatches": [...]}`: the outstanding records, without bodies, whose target is the token's host and session `s` |
+| `GET /api/receiver/v1/dispatches/<id>/body?session=<s>` | the same | 200 with the body as `text/plain; charset=utf-8`, only when the host and session match the target and the task's repository is on the requesting host's allowlist |
+| `POST /api/receiver/v1/dispatches/<id>/receipts` | the same, JSON `{"session": "<s>", "state": "taken" or "acted" or "failed", "reason": "<optional>"}` | 204 once recorded |
+
+Every refusal is a 404 with an empty body, whatever its cause (a bad token, another host's dispatch, another session's, an unknown id), so a caller learns nothing about whether a dispatch exists. The receiving client lists at each natural boundary, fetches the body, verifies it as above, posts `taken` before the session acts, and posts `acted`, or `failed` with the verifier's reason, afterwards.
+
 ## Integration
 
 | System | What the web app uses | State on 2026-10-28 | If it is late |
@@ -280,7 +328,7 @@ The kill switch is the event-driven wake's own call-time policy file. With autom
 | ai-core work queue | Sessions, dispatch records, receipts, review items, SSE | Live on the work pair; its dashboard code is built but not mounted, and is the port source for the views this app shares with it ([D-11](#d-11)) | Local append-only dispatch store; poll for receipts |
 | Held store (ai-harness `held_cli.py`) | `review` items (D-37), `answer` (D-39), a new structured-options command ([D-2](#d-2)) | `review` and `answer` built | Render the Markdown body only and answer through the composer |
 | Pair transport (ai-harness) | One more `forwards` entry for the web port | Live | SSH local forward |
-| app-portal | `apps.yaml` registration on the personal pair | Live there; not on the work pair; whether its member contract takes a Node server is [D-15](#d-15), left for Sergei | Run standalone |
+| app-portal | `apps.yaml` registration on the personal pair | Live there; not on the work pair; [D-15](#d-15), approved 2026-11-09, admits beads-ui's Node server as a `kind: portal` member | Run standalone |
 | beads-ui mod | Rung 4 (`$.prompt.submit`) | Built | Skip the rung |
 
 <!-- dependency edges: the build issue BU-mg2.5.4 depends on the structured-options held command and on each host's wake policy being switched on; wired as bd edges in the same pass as this doc -->
@@ -463,11 +511,11 @@ Nothing that can make a session act ships before this phase: every later phase d
 
 ### Phase W3: Live updates, access and app-portal
 
-- **Scope:** the heads-query change feed and SSE shared across tabs; the work pair's forward entry and SSH fallback; Tailscale Serve and, subject to [D-15](#d-15), app-portal registration on the personal pair. Authentication and the allowlist are Phase W0's.
+- **Scope:** the heads-query change feed and SSE shared across tabs; the work pair's forward entry and SSH fallback; Tailscale Serve and, per [D-15](#d-15), app-portal registration on the personal pair. Authentication and the allowlist are Phase W0's.
 - **Deliverables:**
   - Files created: `apps/web/server/heads-feed.ts`, `apps/web/server/portal.ts` (the app-portal member duties); `apps/web/src/live/shared-feed.ts` (one SSE connection per browser, shared by its tabs); `docs/procedures/web-access.md`.
   - Files modified (ai-harness, per [D-22](#d-22)): the pair transport's `forwards` map gains the web port entry for the work pair.
-  - Files modified (app-portal, once D-15 is ruled): `apps.yaml` gains the `beads` member on the personal pair.
+  - Files modified (app-portal, per [D-15](#d-15)): `apps.yaml` gains the `beads` member on the personal pair, and the member contract admits a Node member that performs the member duties itself.
   - Tests added: `apps/web/test/heads-feed.test.ts`, `apps/web/test/portal.test.ts`, `apps/web/e2e/tabs.spec.ts`.
 - **Tasks + acceptance criteria:**
   - **T-W3.1 Change feed**
@@ -530,7 +578,7 @@ Nothing that can make a session act ships before this phase: every later phase d
 
 ## Open Questions
 
-The research doc's seven open questions are each answered by a decision here: the wake-policy interim by [D-6](#d-6), the ai-core dashboard by [D-11](#d-11), a paused goal by [D-10](#d-10), a control-chosen answer by [D-3](#d-3), app-portal by [D-15](#d-15) (left for Sergei), the envelope by [D-8](#d-8) and [D-20](#d-20), and the queue's home by [D-14](#d-14). Three questions arose while designing:
+The research doc's seven open questions are each answered by a decision here: the wake-policy interim by [D-6](#d-6), the ai-core dashboard by [D-11](#d-11), a paused goal by [D-10](#d-10), a control-chosen answer by [D-3](#d-3), app-portal by [D-15](#d-15) (approved by Sergei on 2026-11-09), the envelope by [D-8](#d-8) and [D-20](#d-20), and the queue's home by [D-14](#d-14). Three questions arose while designing:
 
 1. **[RESOLVED]** What key format and distribution should the signed dispatch envelope use?
    - **Resolution:** framed as a choice and decided in [D-20](#d-20): Ed25519, with the signing key only on the serving host and its public key installed on receivers.
@@ -588,13 +636,31 @@ This design doc hosts the `/auto-flow` Run Ledger for the web app's design stage
 | 5 | codex / audit / high (cross-family), leaf BU-mg2.5.3.1 | [round 5 findings](../research/findings/evidence/beads-ui-web-app-design-audit-r5-2026-10-28.md) | 5 MUST-FIX, 1 WORTH-CONSIDERING | Fixed: every cross-repository part of D-2, D-6, D-8, D-10, D-16 and D-20 is contingent on D-22 (M1); MCP dispatch goes through the web server's API with a token and the user's confirmation, and the MCP server holds no key (M2); the `[auth]` configuration contract and its fail-closed start (M3); one-key answers with a preselected recommendation and an undo window (M4); the receiver reference in T-W0.1 (M5). Successor brief: the build issue BU-mg2.5.4's description, sha256 `958e6e20c75820ce5123a252e8a96c2d0f96d9d72aabe11de0251c5b21ef2406` (10,182 bytes), read on 2026-10-28 (W1) |
 | 6 | codex / audit / high (cross-family), leaf BU-mg2.5.3.1 | [round 6 findings](../research/findings/evidence/beads-ui-web-app-design-audit-r6-2026-10-28.md) | 5 MUST-FIX, 2 WORTH-CONSIDERING | Fixed: the target host's allowlist governs dispatch creation and body return (M1); a Markdown rendering contract with no raw HTML, a scheme allowlist, CSP and Trusted Types (M2); one credential per route, with the MCP token and configured user in `[auth]` (M3); a signed key id, the receivers' trusted-keys map and rotation with overlap (M4); turn-end discovery through the receiver client at each natural boundary, so Phase W1 delivers without mail (M5); decision lineage set to W0 (W1). Open for Sergei's review: the build brief's body is recorded by digest only (W2). These round 6 fixes have not been re-audited |
 
+### Build run
+
+The build stage's ledger, written by the Opus coordinator for ops-vm-3 under run id `buw-build-2026-11-09`. The design stage above ended at Sergei's review; on 2026-11-09 he approved D-15 (a) and D-21 (a), which left the doc fully decided, and asked for the build end to end, all phases, live-validated and served for him to use.
+
+| Field | Value |
+|---|---|
+| run id | `buw-build-2026-11-09` |
+| stages | `implement` and `impl-audit` over this approved doc |
+| caller / source | auto-flow / the launcher's brief |
+| decision classes | implementation decisions inside this design; AD-N audit-finding decisions; nothing that changes an approved decision or a founding-ask requirement |
+| push | true: beads-ui and app-portal changes land by pull request merged on a green local gate; each ai-harness change lands as its own pull request under that repository's merge rules (D-22) |
+| model-family | claude: Opus leaves implement on this employer-API-billed host; Codex reviews only, as the cross-family check |
+| max-agents | 3 concurrent leaves, depth 1, each a leaf that cannot spawn |
+| integration | parent: each leaf's branch is read by content and merged into the coordinator's consolidated branch, which lands at each phase boundary |
+| scope | Phase 3 of the beads-ui design is built first in this run. Every phase here extends it ("which they assume built first or alongside", Implementation Phases), the ask names kanban and backlog views, and none of it existed when the build started: beads-ui `origin/main` `bebf2b7` had no `apps/` directory and `packages/` held only `bd-node`. Phase W4 needs the MCP server of the beads-ui design's Phase 4, so that server is built with W4. Both phases are approved parts of the parent design, so building them adds no new design |
+| interface contracts | the [Envelope wire format](#envelope-wire-format) and the [Receiver API](#receiver-api), fixed by the coordinator on 2026-11-09 before the first legs, as contained interface calls inside D-8, D-17, D-20 and T-W0.3 |
+| stage cursor | `implement`: the Phase 3 foundation, the D-2 options command and the envelope verifier legs launched |
+
 <!-- /doc:region name="overview" -->
 
 <!-- doc:region name="decisions" kind="replaceable" -->
 
 ## Design Decisions
 
-Every decision below was taken through the decision framework (`ai-harness/docs/procedures/decision-framework.md`): Gate 0 first, then the Authority test, then the five criteria, and each chosen option's Cons carry a mitigation. A decision marked `✅ Resolved by Opus orchestrator` is final for this run and goes to Sergei's review with the rest of the doc, as he asked; two are left `⏳ PENDING (human)`: D-15 because it changes app-portal's contracts, and D-21 because it changes a default of the parent design Sergei approved. D-22, which changes ai-harness's contracts, was settled by Sergei's 2026-11-01 ask and is marked `✅ Resolved by Sergei`.
+Every decision below was taken through the decision framework (`ai-harness/docs/procedures/decision-framework.md`): Gate 0 first, then the Authority test, then the five criteria, and each chosen option's Cons carry a mitigation. A decision marked `✅ Resolved by Opus orchestrator` is final for this run and goes to Sergei's review with the rest of the doc, as he asked; two were left for Sergei, D-15 because it changes app-portal's contracts and D-21 because it changes a default of the parent design he approved, and he approved option (a) of each on 2026-11-09 (`✅ Approved`). D-22, which changes ai-harness's contracts, was settled by Sergei's 2026-11-01 ask and is marked `✅ Resolved by Sergei`.
 
 ### Decision Summary
 
@@ -614,14 +680,14 @@ Every decision below was taken through the decision framework (`ai-harness/docs/
 | D-12 | Single-key shortcuts | (a) on by default with an off and remap setting; (b) off by default | (a) | | | WCAG 2.1.4 needs an off switch, not an off default; speed is the ask | `✅ Resolved by Opus orchestrator` |
 | D-13 | Live updates | (a) poll every store's Dolt head in one query, then SSE; (b) the events journal; (c) Dolt binlog replication | (a) | | | Sees synced changes; one cheap query | `✅ Resolved by Opus orchestrator` |
 | D-14 | Where dispatch records live | (a) the queue's prompt store where configured, a local append-only store otherwise; (b) local on both pairs; (c) run the queue on host-b too | (a) | | | Reuses what runs on each pair; one record shape | `✅ Resolved by Opus orchestrator` |
-| D-15 | app-portal integration | (a) beads-ui's Node server as a `kind: portal` upstream; (b) a static bundle served by ai-core; (c) both | (a) | | | (a) changes app-portal's member contract in another repository | `⏳ PENDING (human)` |
+| D-15 | app-portal integration | (a) beads-ui's Node server as a `kind: portal` upstream; (b) a static bundle served by ai-core; (c) both | (a) | (a) | No | (a) changes app-portal's member contract in another repository; Sergei approved (a) on 2026-11-09 | `✅ Approved` |
 | D-16 | Access routes | (a) pair transport forward on the work pair, `tailscale serve` on the personal pair; (b) SSH forwards on both; (c) a public origin behind OAuth | (a) | | | Each pair's existing supervised transport; zero inbound ports; the ai-harness part is contingent on D-22 | `✅ Resolved by Opus orchestrator` |
 | D-17 | Authentication | (a) Host, Origin and Fetch Metadata checks and a per-host token on both pairs, tailnet identity as an extra check; (b) trust tailnet headers on the personal pair; (c) an OAuth proxy | (a) | | | Identity headers can be forged on the loopback listener | `✅ Resolved by Opus orchestrator` |
 | D-18 | What a host may show | (a) a per-host repository allowlist on every store and queue read, fail closed; (b) a denylist of personal repositories; (c) rely on what the queue ingests | (a) | | | The privacy requirement; a denylist would have to name private repositories | `✅ Resolved by Opus orchestrator` |
 | D-19 | Phase 6 Railway template | withdrawn: outside this doc, filed as BU-isu | | | | Changes a deliverable of the parent design's Phase 6 | withdrawn |
 | D-20 | The dispatch envelope's signature | (a) Ed25519, signing key on the serving host only; (b) HMAC with a shared per-pair key; (c) SSH signatures | (a) | | | Receivers verify but cannot forge; both runtimes support it natively; the ai-harness part is contingent on D-22 | `✅ Resolved by Opus orchestrator` |
-| D-21 | Manual rank in the web app | (a) on by default with the parent design's D-6 keys; (b) off by default | (a) | | | The ask names rearranging; the parent design was approved as a whole | `⏳ PENDING (human)` |
-| D-22 | The ai-harness changes this design needs | (a) build them, one ai-harness PR each; (b) beads-ui only, with what ai-harness ships | (a) | | | (b) drops ask requirements; Sergei's 2026-11-01 ask settles (a) | `✅ Resolved by Sergei` |
+| D-21 | Manual rank in the web app | (a) on by default with the parent design's D-6 keys; (b) off by default | (a) | (a) | No | The ask names rearranging; the parent design was approved as a whole; Sergei approved (a) on 2026-11-09 | `✅ Approved` |
+| D-22 | The ai-harness changes this design needs | (a) build them, one ai-harness PR each; (b) beads-ui only, with what ai-harness ships | (a) | (a) | No | (b) drops ask requirements; Sergei's 2026-11-01 ask settles (a) | `✅ Resolved by Sergei` |
 
 ### Decision Details
 
@@ -1159,7 +1225,7 @@ Mitigation: one `DispatchStore` interface in core with both implementations run 
 
 <a id="d-15"></a>
 
-#### D-15: app-portal integration — `⏳ PENDING (human)`
+#### D-15: app-portal integration — ✅ Approved: (a) beads-ui's own Node server as a `kind: portal` upstream, performing the member duties itself
 
 **Context.** The ask: the app should "fit within the app-portal system ... as a modular web app". app-portal's member contract assumes a FastAPI process serving a static app under a `tailscale serve` path, with no Node at runtime; its `apps.yaml` accepts any loopback upstream, and a `kind: portal` row must name a health route. D-10 of the beads-ui design chose a Node server for the web app. Option (a) would make app-portal accept a Node member, which changes its member contract in another repository, so audit round 1 returned this to Sergei.
 
@@ -1191,11 +1257,11 @@ Mitigation: one `DispatchStore` interface in core with both implementations run 
 
 ##### Recommendation
 
-> **Decision:** `PENDING` — recommended (a) beads-ui's Node server as a `kind: portal` upstream.
-<!-- decision-record: chosen-option=PENDING; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
-<!-- decision-lineage: decision-id=BU-mg2.5.3/D-15; decision-topic=how the web app joins app-portal; governs=apps:web,integration:app-portal; normalized-proposition=the beads-ui Node server registers as a kind: portal upstream; applicability=phase:W3; outcome-id=; relation=different-question; related-decision-id=BU-mg2.2/D-11; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+> **Decision:** `✅ Approved` — (a) beads-ui's own Node server as a `kind: portal` upstream, performing the member duties itself. Approved by Sergei on 2026-11-09: "D-15: option A approved."
+<!-- decision-record: chosen-option=(a); ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
+<!-- decision-lineage: decision-id=BU-mg2.5.3/D-15; decision-topic=how the web app joins app-portal; governs=apps:web,integration:app-portal; normalized-proposition=the beads-ui Node server registers as a kind: portal upstream; applicability=phase:W3; outcome-id=; relation=different-question; related-decision-id=BU-mg2.2/D-11; supersedes=; approval-log-decision-id=BU-mg2.5.3/D-15; approval-actor=Sergei; approval-date=2026-11-09; approval-commit= -->
 
-Every option keeps the ask's portal fit, so Gate 0 holds whichever is chosen. Recommended (a): it keeps one server, and its Cons are bounded by the duties being few and listed. If (a) is approved, the duties (base path, SPA fallback that never shadows `/api`, `/healthz`, the shell header set, a manifest and no service worker) are built and tested in T-W3.2, and app-portal's contract gains the Node member in its own repository. Until the ruling, the app runs standalone on both pairs, and only the `apps.yaml` registration waits.
+Every option keeps the ask's portal fit, so Gate 0 holds whichever is chosen. Recommended (a): it keeps one server, and its Cons are bounded by the duties being few and listed. If (a) is approved, the duties (base path, SPA fallback that never shadows `/api`, `/healthz`, the shell header set, a manifest and no service worker) are built and tested in T-W3.2, and app-portal's contract gains the Node member in its own repository. With (a) approved, the build makes both changes; the app also runs standalone on both pairs, which stays the baseline for anyone running the public project without the portal.
 
 ---
 
@@ -1375,7 +1441,7 @@ Criterion 1 favours (a): a one-way door once sessions act on web prompts, and on
 
 <a id="d-21"></a>
 
-#### D-21: Manual rank in the web app — `⏳ PENDING (human)`
+#### D-21: Manual rank in the web app — ✅ Approved: (a) `views.rank` on by default in the web app, with the fractional-index keys D-6 chose
 
 **Context.** The ask names "rearrange them" among the web app's interactions. D-6 of the beads-ui design (resolved by the AI, not approved separately by Sergei) kept the MVP without manual rank and put rank behind `views.rank` in Phase 3, off unless set. A switch that is off by default would leave the web app unable to rearrange cards as shipped.
 
@@ -1398,9 +1464,9 @@ Criterion 1 favours (a): a one-way door once sessions act on web prompts, and on
 
 ##### Recommendation
 
-> **Decision:** `PENDING` — recommended (a) Manual rank on by default in the web app.
-<!-- decision-record: chosen-option=PENDING; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
-<!-- decision-lineage: decision-id=BU-mg2.5.3/D-21; decision-topic=manual rank in the web app; governs=apps:web,views:rank; normalized-proposition=the web app ships with manual rank on by default using the fractional-index keys of D-6; applicability=phase:W1; outcome-id=; relation=refines; related-decision-id=BU-mg2.2/D-6; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
+> **Decision:** `✅ Approved` — (a) `views.rank` on by default in the web app, with the fractional-index keys D-6 chose. Approved by Sergei on 2026-11-09: "D-21: option A approved."
+<!-- decision-record: chosen-option=(a); ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
+<!-- decision-lineage: decision-id=BU-mg2.5.3/D-21; decision-topic=manual rank in the web app; governs=apps:web,views:rank; normalized-proposition=the web app ships with manual rank on by default using the fractional-index keys of D-6; applicability=phase:W1; outcome-id=; relation=refines; related-decision-id=BU-mg2.2/D-6; supersedes=; approval-log-decision-id=BU-mg2.5.3/D-21; approval-actor=Sergei; approval-date=2026-11-09; approval-commit= -->
 
 Gate 0 favours (a): the ask names rearranging, and (b) would ship without it. But the parent design, D-6 included, was approved by Sergei as a whole, so changing its default is his call (Gate B); audit round 4 returned it. Mitigation: the switch stays, so a store that wants sort-only views can turn rank off; the mod is unchanged; jittered keys keep concurrent reorders from colliding, as D-6 planned. Confidence: high.
 
@@ -1461,5 +1527,9 @@ Option (b) drops ask requirements, so Gate 0 leaves (a) as the only way to keep 
 
 | Date | Decision | Actor | Notes |
 |------|----------|-------|-------|
+| 2026-11-01 | BU-mg2.5.3/D-22 | Sergei | Settled by his 2026-11-01 ask: build the ai-harness changes, one pull request each |
+| 2026-11-09 | BU-mg2.5.3/D-21 | Sergei | "D-21: option A approved." (a) `views.rank` on by default in the web app |
+| 2026-11-09 | BU-mg2.5.3/D-15 | Sergei | "D-15: option A approved." (a) beads-ui's Node server as a `kind: portal` upstream; amends app-portal's member contract |
+| 2026-11-09 | design | Sergei | With D-15 and D-21 approved the doc is fully decided; he asked for the build end to end, all phases, live-validated and served for use |
 
 <!-- /doc:region name="approval_log" -->
