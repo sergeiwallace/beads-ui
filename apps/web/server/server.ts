@@ -5,6 +5,7 @@ import { AllowlistHealth, readAllowlist } from "./allowlist.ts";
 import { type App, createApp } from "./app.ts";
 import { AuthLayer, AuthRefused, type AuthSettings, loadAuth } from "./auth.ts";
 import { type ConfigEnv, isLoopback, LOOPBACK, readWebConfig } from "./config.ts";
+import { releaseFollowUps } from "./dispatch.ts";
 import {
   DispatchRefused,
   DispatchService,
@@ -13,7 +14,7 @@ import {
   SWEEP_MS,
 } from "./dispatch-service.ts";
 import { createStoreRegistry } from "./registry.ts";
-import type { Route } from "./routes.ts";
+import type { ApiContext, Route } from "./routes.ts";
 
 export interface StartOptions {
   /**
@@ -147,28 +148,32 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     port,
     ...(options.clock === undefined ? {} : { clock: options.clock }),
   });
+  const context: ApiContext = {
+    repoRoot: options.repoRoot,
+    stores,
+    config: () => readWebConfig(options.repoRoot, options.configEnv),
+    allowlist,
+    health,
+    dispatches,
+    random: Math.random,
+    now: () => new Date(clock()).toISOString(),
+  };
   const started = createApp({
     clientDir: options.clientDir,
     auth,
     ...(options.routes === undefined ? {} : { routes: options.routes }),
     ...(options.heartbeatMs === undefined ? {} : { heartbeatMs: options.heartbeatMs }),
-    context: {
-      repoRoot: options.repoRoot,
-      stores,
-      config: () => readWebConfig(options.repoRoot, options.configEnv),
-      allowlist,
-      health,
-      dispatches,
-      random: Math.random,
-      now: () => new Date(clock()).toISOString(),
-    },
+    context,
   });
   app = started;
   // Expiry tombstones a dispatch nobody fetches, and a rotated key is published before its first
   // signature; one pass at a time, and a failed pass waits for the next.
   let sweeping: Promise<unknown> = Promise.resolve();
   const sweep = setInterval(() => {
-    sweeping = sweeping.then(() => dispatches.sweep()).catch(() => undefined);
+    sweeping = sweeping
+      .then(() => dispatches.sweep())
+      .then(() => releaseFollowUps(context))
+      .catch(() => undefined);
   }, options.sweepMs ?? SWEEP_MS);
   sweep.unref();
   return {

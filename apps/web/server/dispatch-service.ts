@@ -287,6 +287,11 @@ export class DispatchService {
     return formatTimestamp(new Date(this.#clock()));
   }
 
+  /** Where the user's `beads-ui.toml` is read from, for the dispatch routes' own settings. */
+  get configEnv(): ConfigEnv {
+    return this.#env;
+  }
+
   /**
    * The key `[auth]` names now, after publishing it: a key is in the published file before the
    * server signs anything with it, and the key it replaces stays valid there for 24 hours.

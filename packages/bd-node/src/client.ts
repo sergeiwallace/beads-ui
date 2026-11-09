@@ -4,6 +4,7 @@ import {
   boardReadArgvs,
   type Comment,
   closeArgv,
+  commentAddArgv,
   commentsArgv,
   createArgv,
   type HistoryEvent,
@@ -75,6 +76,8 @@ export interface BdClient {
   /** Returns the new issue's hash id; display-id minting is a later step over it (D-9). */
   create(quickAdd: QuickAdd, options?: CreateOptions): Promise<BdResult<string>>;
   close(id: string, options?: CallOptions): Promise<BdResult<void>>;
+  /** Adds a comment to an issue, written by `actor` when given. */
+  comment(id: string, text: string, actor?: string, options?: CallOptions): Promise<BdResult<void>>;
 }
 
 type Exited = Extract<RunOutcome, { kind: "exited" }>;
@@ -262,6 +265,13 @@ export function createBdClient(options: BdClientOptions): BdClient {
     },
     close(id, callOptions) {
       const argv = closeArgv(id);
+      return call(argv, callOptions, (out) => {
+        if (out.exitCode === 0) return { kind: "ok", value: undefined };
+        return notFound(id, out) ?? exitFailure(argv, out);
+      });
+    },
+    comment(id, text, actor, callOptions) {
+      const argv = commentAddArgv(id, text, actor);
       return call(argv, callOptions, (out) => {
         if (out.exitCode === 0) return { kind: "ok", value: undefined };
         return notFound(id, out) ?? exitFailure(argv, out);

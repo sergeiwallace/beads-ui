@@ -11,6 +11,7 @@ import type { BdResult } from "@sergeiwallace/beads-ui-bd-node";
 import type { Allowlist, AllowlistHealth } from "./allowlist.ts";
 import type { Caller } from "./auth.ts";
 import type { WebConfig } from "./config.ts";
+import { DISPATCH_ROUTES } from "./dispatch.ts";
 import type { DispatchService } from "./dispatch-service.ts";
 import { RECEIVER_ROUTES } from "./receiver-api.ts";
 import type { OpenStore, StoreRegistry } from "./registry.ts";
@@ -536,6 +537,8 @@ export const ROUTES: readonly Route[] = [
   { method: "GET", path: "/api/sessions", handle: sessionsRoute },
   // The receiver API (receiver-api.ts), authorised by a receiving host's token.
   ...RECEIVER_ROUTES,
+  // The Review queue and the composer's dispatches (dispatch.ts).
+  ...DISPATCH_ROUTES,
 ];
 
 export interface RouteMatch {
