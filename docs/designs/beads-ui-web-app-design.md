@@ -652,7 +652,16 @@ The build stage's ledger, written by the Opus coordinator for ops-vm-3 under run
 | integration | parent: each leaf's branch is read by content and merged into the coordinator's consolidated branch, which lands at each phase boundary |
 | scope | Phase 3 of the beads-ui design is built first in this run. Every phase here extends it ("which they assume built first or alongside", Implementation Phases), the ask names kanban and backlog views, and none of it existed when the build started: beads-ui `origin/main` `bebf2b7` had no `apps/` directory and `packages/` held only `bd-node`. Phase W4 needs the MCP server of the beads-ui design's Phase 4, so that server is built with W4. Both phases are approved parts of the parent design, so building them adds no new design |
 | interface contracts | the [Envelope wire format](#envelope-wire-format) and the [Receiver API](#receiver-api), fixed by the coordinator on 2026-11-09 before the first legs, as contained interface calls inside D-8, D-17, D-20 and T-W0.3 |
-| stage cursor | `implement`: the Phase 3 foundation, the D-2 options command and the envelope verifier legs launched |
+| stage cursor | `implement`: the Phase 3 foundation, the D-2 options command and the envelope verifier legs launched; see Build legs below |
+
+Build legs. Each is one Opus `engineer` leaf in its own worktree; beads-ui legs merge into the coordinator's consolidated branch, and each ai-harness leg lands as its own pull request.
+
+| Leg | Scope | Repository | Issue | State |
+|---|---|---|---|---|
+| A | Phase 3 foundation: `apps/web`, `packages/web-ui`, Board, Backlog, Detail, Move to, core rank on by default (D-21), the local run | beads-ui | BU-mg2.5.4.1 | running |
+| B | The held store's structured-options command (D-2) | ai-harness | its own store | built; every held test module: 892 passed, 3 skipped; pushed for its pull request |
+| C | The envelope verifier and golden vectors (T-W0.4, D-20) | ai-harness | its own store | built, 106 tests; ai-harness pull request #8733 open |
+| G1 | W1's core modules: review queue, decision options, delivery state, key map, sprint view | beads-ui | BU-mg2.5.4.2 | merged into the consolidated branch; Vitest 515 passed, plugin tests 909 passed |
 
 <!-- /doc:region name="overview" -->
 
