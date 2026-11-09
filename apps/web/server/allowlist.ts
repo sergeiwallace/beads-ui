@@ -79,14 +79,24 @@ export async function repositoryOf(repoRoot: string): Promise<string> {
 
 /**
  * Rows dropped for an unlisted repository, counted per source (the work queue, a store), so the
- * health line says how many are hidden and never which repositories they came from.
+ * health line says how many are hidden and never which repositories they came from; or that the
+ * allowlist could not be read at all, when no earlier count stands.
  */
 export class AllowlistHealth {
   readonly #hidden = new Map<string, number>();
+  #unreadable: string | undefined;
 
+  /** The rows `source` dropped under a readable allowlist. */
   record(source: string, hidden: number): void {
+    this.#unreadable = undefined;
     if (hidden === 0) this.#hidden.delete(source);
     else this.#hidden.set(source, hidden);
+  }
+
+  /** The allowlist could not be read: nothing is shown, so no earlier count stands. */
+  unreadable(reason: string): void {
+    this.#hidden.clear();
+    this.#unreadable = reason;
   }
 
   get hidden(): number {
@@ -102,11 +112,21 @@ export class AllowlistHealth {
     const rows = hidden === 1 ? "1 row" : `${hidden} rows`;
     return `${rows} from repositories not on this host's allowlist ${hidden === 1 ? "is" : "are"} hidden`;
   }
+
+  /** Every health line: the unreadable allowlist alone, else the hidden count. */
+  lines(): string[] {
+    if (this.#unreadable !== undefined) {
+      return [`the allowlist is unreadable, so no store or row is shown: ${this.#unreadable}`];
+    }
+    const line = this.line();
+    return line === undefined ? [] : [line];
+  }
 }
 
 /**
  * The rows whose repository is on the allowlist, every other row dropped and counted under
- * `source`. A row with no repository is dropped too; an unreadable allowlist keeps nothing.
+ * `source`. A row with no repository is dropped too; an unreadable allowlist keeps nothing and
+ * says so in the health line in place of any earlier count.
  */
 export function filterAllowed<T>(
   rows: readonly T[],
@@ -115,7 +135,10 @@ export function filterAllowed<T>(
   health: AllowlistHealth,
   source: string,
 ): T[] {
-  if (!allowlist.ok) return [];
+  if (!allowlist.ok) {
+    health.unreadable(allowlist.reason);
+    return [];
+  }
   const kept = rows.filter((row) => isAllowed(allowlist, repoOf(row)));
   health.record(source, rows.length - kept.length);
   return kept;

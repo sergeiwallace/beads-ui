@@ -180,10 +180,7 @@ async function boardRoute(_request: ApiRequest, context: ApiContext): Promise<Ap
   };
 }
 
-const healthLines = (context: ApiContext): string[] => {
-  const line = context.health.line();
-  return line === undefined ? [] : [line];
-};
+const healthLines = (context: ApiContext): string[] => context.health.lines();
 
 /**
  * The host's health: whether the allowlist reads and the served store is open, and how many
