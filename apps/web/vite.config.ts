@@ -11,7 +11,9 @@ const ganttCss = fileURLToPath(new URL("frappe-gantt.css", import.meta.resolve("
 
 export default defineConfig({
   root: fileURLToPath(new URL("./client", import.meta.url)),
-  base: "/",
+  // Relative, so the `<base>` the server writes into the shell places every asset under the
+  // app's base path (`/beads/` behind app-portal), whatever it is set to.
+  base: "./",
   // React Compiler 1.0 for the dense board (web app design, Stack and look).
   plugins: [react(), babel({ presets: [reactCompilerPreset()] })],
   resolve: {

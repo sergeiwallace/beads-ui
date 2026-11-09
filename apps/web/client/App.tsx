@@ -38,6 +38,7 @@ import {
   type StoreRead,
   signOut,
 } from "./api.ts";
+import { base } from "./base.ts";
 
 /** The views with a page of their own, in the order the nav lists them. */
 const VIEWS = [
@@ -54,7 +55,6 @@ type Route =
   | { view: ViewName; store?: string | undefined }
   | { view: "issue"; id: string; store?: string | undefined };
 
-const base = import.meta.env.BASE_URL;
 // Wide enough that core's terminal truncation never cuts a title in the browser.
 const NO_TRUNCATION = 10_000;
 const STORE_PARAM = "store";

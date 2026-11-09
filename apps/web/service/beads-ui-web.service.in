@@ -1,0 +1,19 @@
+# The beads-ui web server as a systemd user service. `beads-ui-web install-service` fills each
+# placeholder below from the host at install time and writes the unit to the user's systemd
+# directory; nothing here names a host, a path or a port.
+[Unit]
+Description=beads-ui web app
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=@WORKING_DIRECTORY@
+Environment=PATH=@PATH@
+@ENVIRONMENT@
+ExecStart=@NODE@ @BIN@ --port @PORT@
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

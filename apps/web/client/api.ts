@@ -8,6 +8,7 @@ import type {
   Status,
 } from "@beads-ui/core";
 import type { CostSection } from "@sergeiwallace/beads-ui-web-ui";
+import { base } from "./base.ts";
 
 /** The server's error body (server/routes.ts ApiError). */
 export interface ApiErrorBody {
@@ -110,8 +111,7 @@ export interface MovePayload {
   notice?: string;
 }
 
-// Every API path is relative to the app's base, so a later base path moves them all at once.
-const base = import.meta.env.BASE_URL;
+// Every API path is relative to the app's base, so the server's base path moves them all at once.
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;

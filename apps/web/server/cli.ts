@@ -6,6 +6,7 @@ import { parseArgs } from "node:util";
 import { ADMIN_USAGE, adminMain, isAdminCommand } from "./admin-cli.ts";
 import { type ConfigEnv, DEFAULT_PORT, readWebConfig } from "./config.ts";
 import { StartRefused, startServer } from "./server.ts";
+import { installServiceMain, SERVICE_USAGE } from "./service.ts";
 
 const APP_DIR = join(dirname(fileURLToPath(import.meta.url)), "..");
 const REPO_DIR = join(APP_DIR, "..", "..");
@@ -22,6 +23,7 @@ const CLIENT_SOURCES = [
 
 const USAGE = `usage: beads-ui-web [--port <n>] [--open]
 ${ADMIN_USAGE}
+${SERVICE_USAGE}
 
 Serves the beads-ui web app on http://127.0.0.1:<port>/ (default ${DEFAULT_PORT}, or
 [web] port in beads-ui.toml) for every Beads store on this host whose repository
@@ -79,6 +81,9 @@ export async function main(argv: readonly string[]): Promise<number> {
   };
   const command = argv[0];
   if (isAdminCommand(command)) return adminMain(command, argv.slice(1), configEnv, process.cwd());
+  if (command === "install-service") {
+    return installServiceMain(argv.slice(1), configEnv, process.cwd());
+  }
   let values: { port?: string | undefined; open?: boolean | undefined; help?: boolean | undefined };
   try {
     ({ values } = parseArgs({
@@ -105,7 +110,8 @@ export async function main(argv: readonly string[]): Promise<number> {
     await ensureClient();
     const running = await startServer({ repoRoot, port, clientDir: CLIENT_DIR, configEnv });
     const stores = running.stores.length === 0 ? "no store open" : running.stores.join(", ");
-    process.stdout.write(`beads-ui web: ${stores} at ${running.url}\n`);
+    const at = new URL((config.basePath ?? "/").slice(1), running.url).href;
+    process.stdout.write(`beads-ui web: ${stores} at ${at}\n`);
     if (running.storeClosed !== undefined) {
       process.stderr.write(`beads-ui web: ${running.storeClosed}\n`);
     }

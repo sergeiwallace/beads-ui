@@ -29,6 +29,8 @@ export interface Served {
 export interface ServeOptions {
   /** `[hosts] allow_repos`; the served store's repository alone unless given. */
   allowRepos?: string[];
+  /** More of the host's `beads-ui.toml`, such as a `[web]` table. */
+  extra?: string;
   /** Added to the command's environment, such as a HOME holding a store inventory. */
   env?: NodeJS.ProcessEnv;
 }
@@ -45,7 +47,10 @@ async function hostSettings(
   await mkdir(join(configHome, "beads-ui"), { recursive: true });
   await writeFile(
     join(configHome, "beads-ui", "beads-ui.toml"),
-    hostConfig({ allowRepos: options.allowRepos ?? [basename(dir)] }),
+    hostConfig({
+      allowRepos: options.allowRepos ?? [basename(dir)],
+      ...(options.extra === undefined ? {} : { extra: options.extra }),
+    }),
   );
   // A private HOME too: the server reads the host's store inventory under HOME, and a spec
   // serves only the stores it makes.

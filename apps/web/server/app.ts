@@ -2,6 +2,7 @@ import type { IncomingMessage, RequestListener, ServerResponse } from "node:http
 import { StoreClosed } from "./allowlist.ts";
 import { type AuthLayer, type Caller, routeClass } from "./auth.ts";
 import { EVENTS_PATH, HEARTBEAT_MS, openEvents } from "./events.ts";
+import { healthy, mountedPath, sendHealth, setMemberHeaders } from "./portal.ts";
 import { type ApiContext, failure, matchRoute, ROUTES, type Route } from "./routes.ts";
 import { serveClient } from "./static.ts";
 
@@ -17,6 +18,8 @@ export interface AppOptions {
   routes?: readonly Route[];
   /** How often an open event stream re-checks its session; HEARTBEAT_MS unless a test sets it. */
   heartbeatMs?: number;
+  /** The path the app is mounted under, `/beads/` behind app-portal; `/` by default. */
+  basePath?: string;
 }
 
 function sendJson(response: ServerResponse, status: number, body: unknown): void {
@@ -168,12 +171,25 @@ export interface App {
  * the route table and nothing else, the event stream, and every other GET to the built client.
  */
 export function createApp(options: AppOptions): App {
+  const basePath = options.basePath ?? "/";
   const handling = new Set<Promise<void>>();
   const streams = new Set<() => void>();
   const serve = async (request: IncomingMessage, response: ServerResponse) => {
+    setMemberHeaders(response);
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
+    url.pathname = mountedPath(url.pathname, basePath);
     const caller = await options.auth.admit(request, response, url);
     if (caller === undefined) return;
+    if (caller.kind === "health") {
+      const context = options.context;
+      const ok = healthy({
+        allowlist: await context.allowlist(),
+        stores: await context.stores.read(),
+        feed: context.feed?.status(),
+      });
+      sendHealth(response, ok, request.method === "HEAD");
+      return;
+    }
     if (url.pathname === EVENTS_PATH && request.method === "GET") {
       const sessionId = options.auth.sessionIdOf(caller);
       if (sessionId === undefined) {
@@ -191,7 +207,7 @@ export function createApp(options: AppOptions): App {
     }
     const isApi = url.pathname === "/api" || url.pathname.startsWith("/api/");
     if (isApi) await handleApi(request, response, url, caller, options);
-    else await serveClient(request, response, url.pathname, options.clientDir);
+    else await serveClient(request, response, url.pathname, options.clientDir, basePath);
   };
   const handle: RequestListener = (request, response) => {
     const done: Promise<void> = serve(request, response)
@@ -201,7 +217,10 @@ export function createApp(options: AppOptions): App {
           response.destroy();
           return;
         }
-        const path = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
+        const path = mountedPath(
+          new URL(request.url ?? "/", "http://127.0.0.1").pathname,
+          basePath,
+        );
         if (routeClass(path) === "receiver") sendEmpty(response, 500);
         else sendJson(response, 500, { error: { kind: "failed", source: "server", message } });
       })

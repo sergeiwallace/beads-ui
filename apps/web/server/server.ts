@@ -147,6 +147,7 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     settings,
     port,
     ...(options.clock === undefined ? {} : { clock: options.clock }),
+    ...(config.basePath === undefined ? {} : { basePath: config.basePath }),
   });
   const feed = new HeadsFeed<StoreBoard>({
     stores,
@@ -162,6 +163,7 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     auth,
     ...(options.routes === undefined ? {} : { routes: options.routes }),
     ...(options.heartbeatMs === undefined ? {} : { heartbeatMs: options.heartbeatMs }),
+    ...(config.basePath === undefined ? {} : { basePath: config.basePath }),
     context: {
       repoRoot: options.repoRoot,
       stores,

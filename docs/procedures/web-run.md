@@ -129,6 +129,37 @@ When the directory it started in is listed but bd finds no store there, it refus
 list and the inventory are read again on every request, so adding a repository opens its store
 without a restart.
 
+## Run it as a service
+
+To keep the server running, supervised, and have it start again after the host reboots, install
+it as a systemd user service from the directory you would start it in:
+
+```sh
+beads-ui-web install-service [--port <n>]
+```
+
+It fills the unit template (`apps/web/service/beads-ui-web.service.in`) from this host, writes
+`$XDG_CONFIG_HOME/systemd/user/beads-ui-web.service` (or `~/.config/systemd/user/...`), runs
+`systemctl --user daemon-reload`, and prints the unit it wrote and the one command that starts it:
+
+```sh
+systemctl --user enable --now beads-ui-web.service
+```
+
+The unit runs this checkout's `bin/beads-ui-web.mjs` with this Node, in the current directory, on
+`--port`, else `[web] port`, else 4810, with a `PATH` holding the directory of the `bd` it found,
+and with `XDG_CONFIG_HOME` and `XDG_STATE_HOME` when they are set. systemd restarts it 5 seconds
+after it fails. Running `install-service` again rewrites the same file and reloads, so there is
+only ever one unit; it says `wrote`, `rewrote` or `kept`. After a rewrite, restart it with
+`systemctl --user restart beads-ui-web.service`. It refuses, writing nothing, when `bd` is not on
+`PATH` or the port is not a whole number from 1 to 65535.
+
+A user service starts at boot only when the user has lingering on; `install-service` says so when
+it is off. `loginctl enable-linger <user>` turns it on. Follow the server with
+`journalctl --user -u beads-ui-web.service`.
+
+To reach the server from another machine, see [Reach the web app from another machine](web-access.md).
+
 ## Live updates
 
 While at least one page has its event stream open, the server polls every open store's Dolt
@@ -235,6 +266,7 @@ once, at start. `[auth]`, `[hosts]` and `[queue]` come from the user's file alon
 [web]
 port = 4810            # --port overrides it
 host = "127.0.0.1"     # beyond loopback only with a valid [auth] table
+base_path = "/beads"   # the path the app is mounted under, such as behind app-portal; "/" unset
 
 [views]
 rank = true            # the web app's default; false keeps columns sorted
@@ -310,7 +342,11 @@ client retries at its next boundary instead of dropping its receipt.
 
 ## The API
 
-Every route is under `/api/` and answers JSON; an error body is `{ "error": { "kind", "message",
+Every route but `/healthz` is under `/api/` and answers JSON. With `[web] base_path` set, every
+route and page is also served under that path (`/beads/api/board`), and a request with the path
+already stripped, as `tailscale serve` sends it, is served the same. Every reply carries
+`Referrer-Policy: strict-origin-when-cross-origin` and `X-Content-Type-Options: nosniff`, and the
+shell and the API `Cache-Control: no-store`; an error body is `{ "error": { "kind", "message",
 "source", "exitCode" } }`, where `source` names what failed, such as `bd list`.
 
 Every request must carry a Host on `[auth] hosts`, and each route takes one credential, chosen by
@@ -321,6 +357,7 @@ its path, and refuses any other route's:
 | `/api/receiver/v1/...` | `Authorization: Bearer <the receiving host's token>`; every refusal is an empty 404 |
 | `/api/mcp/v1/...` | `Authorization: Bearer <the MCP token>` |
 | `/api/admin/v1/...` | The host's admin key, derived from the browser secret; the host commands above use it |
+| `/healthz` | None; it answers only whether the server is healthy |
 | everything else, the app's pages included | The browser session cookie |
 
 A browser write (any method but GET and HEAD) also needs the `X-Beads-UI` header and
@@ -338,6 +375,7 @@ with a 400, and a request naming a store that is not open with a 404.
 | `GET /api/board[?store=]` | Every open store's statuses and issues, or one store's, each issue with its `repository`; `reads` gives each store's issue count or its error, and the call-time settings follow. Only when every store failed is the reply itself the failure |
 | `GET /api/health` | Whether the allowlist reads, which stores are open, and how many stores and rows it hid, never naming them |
 | `GET /api/events` | The browser's Server-Sent Events stream, on the session cookie: `change` (`{ "stores", "asOf" }`, the stores whose head moved) and `stale` (`{ "since", "message", "retryInMs" }`) |
+| `GET /healthz` | No credential: 200 `{"status":"ok"}` while the allowlist reads, a store is open and the change feed, while a page is open, reads every head; else 503 `{"status":"unavailable"}` |
 | `GET /api/auth/v1/exchange?code=` | Trades a one-time code for the session cookie, then redirects to the Board |
 | `POST /api/auth/v1/logout` | Ends the session on the server and clears its cookie |
 | `GET /api/issues/:id?store=` | One issue, its comments and its `repository` |
