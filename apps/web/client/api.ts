@@ -1,4 +1,13 @@
-import type { Comment, Issue, Priority, Status } from "@beads-ui/core";
+import type {
+  AnalyticsView,
+  Comment,
+  Issue,
+  Priority,
+  RoadmapView,
+  SessionsView,
+  Status,
+} from "@beads-ui/core";
+import type { CostSection } from "@sergeiwallace/beads-ui-web-ui";
 
 /** The server's error body (server/routes.ts ApiError). */
 export interface ApiErrorBody {
@@ -41,6 +50,39 @@ export interface IssuePayload {
   issue: Issue;
   comments: Comment[] | null;
   commentsError?: ApiErrorBody;
+}
+
+export interface RoadmapPayload {
+  store: string;
+  asOf: string;
+  view: RoadmapView;
+}
+
+export interface AnalyticsPayload {
+  store: string;
+  asOf: string;
+  view: AnalyticsView;
+  sprints: string[];
+  sprint?: string;
+  histories: { read: number; failed: { id: string; message: string }[] };
+  cost: CostSection;
+}
+
+export interface SessionsPayload {
+  store: string;
+  asOf: string;
+  view: SessionsView;
+  /** The work queue read that failed; the view then holds the store's assignees. */
+  queueError?: ApiErrorBody;
+}
+
+/** A status move's answer: written through bd, or requested through the work queue (202). */
+export interface MovePayload {
+  id: string;
+  status: string;
+  via?: "queue";
+  holder?: string;
+  notice?: string;
 }
 
 // Every API path is relative to the app's base, so a later base path moves them all at once.
@@ -90,7 +132,13 @@ export const api = {
   board: () => call<BoardPayload>("board"),
   issue: (id: string) => call<IssuePayload>(issuePath(id)),
   move: (id: string, to: string, shown: string) =>
-    post<{ id: string; status: string }>(`${issuePath(id)}/status`, { to, shown }),
+    post<MovePayload>(`${issuePath(id)}/status`, { to, shown }),
+  roadmap: () => call<RoadmapPayload>("roadmap"),
+  analytics: (weeks: number, sprint?: string) =>
+    call<AnalyticsPayload>(
+      `analytics?${new URLSearchParams({ weeks: String(weeks), ...(sprint ? { sprint } : {}) })}`,
+    ),
+  sessions: () => call<SessionsPayload>("sessions"),
   priority: (id: string, priority: Priority, shown: string) =>
     post<{ id: string; priority: Priority }>(`${issuePath(id)}/priority`, { priority, shown }),
   rank: (id: string, shown: string, above?: string, below?: string) =>

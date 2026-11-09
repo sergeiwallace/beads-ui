@@ -13,19 +13,32 @@ import {
   reduceBoard,
 } from "@beads-ui/core";
 import {
+  Analytics,
   Backlog,
   Board,
   CommandPalette,
   IssueDetail,
   type PaletteCommand,
   type ReadFailure,
+  Roadmap,
+  Sessions,
   useNotify,
   usePaletteChord,
 } from "@sergeiwallace/beads-ui-web-ui";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { ApiFailure, api, type BoardPayload, type IssuePayload, signOut } from "./api.ts";
 
-type Route = { view: "board" } | { view: "backlog" } | { view: "issue"; id: string };
+/** The views with a page of their own, in the order the nav lists them. */
+const VIEWS = [
+  { view: "board", label: "Board", path: "" },
+  { view: "backlog", label: "Backlog", path: "backlog" },
+  { view: "roadmap", label: "Roadmap", path: "roadmap" },
+  { view: "analytics", label: "Analytics", path: "analytics" },
+  { view: "sessions", label: "Sessions", path: "sessions" },
+] as const;
+
+type ViewName = (typeof VIEWS)[number]["view"];
+type Route = { view: ViewName } | { view: "issue"; id: string };
 
 const base = import.meta.env.BASE_URL;
 // Wide enough that core's terminal truncation never cuts a title in the browser.
@@ -33,18 +46,16 @@ const NO_TRUNCATION = 10_000;
 
 function routeOf(pathname: string): Route {
   const path = pathname.startsWith(base) ? pathname.slice(base.length) : pathname;
-  if (path === "backlog") return { view: "backlog" };
   const issue = /^issues\/(.+)$/.exec(path);
   if (issue?.[1] !== undefined) return { view: "issue", id: decodeURIComponent(issue[1]) };
-  return { view: "board" };
+  const view = VIEWS.find((entry) => entry.path !== "" && entry.path === path);
+  return { view: view?.view ?? "board" };
 }
 
 const hrefOf = (route: Route): string =>
-  route.view === "board"
-    ? base
-    : route.view === "backlog"
-      ? `${base}backlog`
-      : `${base}issues/${encodeURIComponent(route.id)}`;
+  route.view === "issue"
+    ? `${base}issues/${encodeURIComponent(route.id)}`
+    : `${base}${VIEWS.find((entry) => entry.view === route.view)?.path ?? ""}`;
 
 const issueHref = (id: string) => hrefOf({ view: "issue", id });
 
@@ -122,10 +133,10 @@ function useBoard() {
   }, [state.refresh, load, send]);
 
   // A refusal's toast says what core's board view says of it, from the state the refusal made.
-  const refused = (event: BoardEvent, title: string) => {
+  const refused = (event: BoardEvent, title: string, reason?: string) => {
     const next = send(event);
     const line = boardView(next, { columnWidth: NO_TRUNCATION }).conflictLine;
-    notify(failedStale(event) ? "conflict" : "error", title, line ?? title);
+    notify(failedStale(event) ? "conflict" : "error", title, reason ?? line ?? title);
   };
 
   const move = (id: string, to: string) => {
@@ -137,7 +148,19 @@ function useBoard() {
     const shown = latest.current.issues.find((issue) => issue.id === id)?.status ?? "";
     send(plan.value.event);
     api.move(id, to, shown).then(
-      () => send({ type: "move-succeeded", id }),
+      (moved) => {
+        send({ type: "move-succeeded", id });
+        // A leased task's move is a request the queue writes to Beads when its bridge runs.
+        if (moved.via === "queue") {
+          notify(
+            "info",
+            "Requested through the work queue",
+            `${moved.holder ?? "A session"} holds ${id}; the queue writes ${to} to Beads.`,
+          );
+        } else if (moved.notice !== undefined) {
+          notify("info", "Written through bd", moved.notice);
+        }
+      },
       (error: unknown) => {
         const failure = error instanceof ApiFailure ? error : undefined;
         const event: BoardEvent = {
@@ -146,7 +169,17 @@ function useBoard() {
           exitCode: failure?.exitCode ?? 1,
           message: failure?.message ?? String(error),
         };
-        refused(event, failure?.exitCode === 13 ? "Changed elsewhere" : "Move failed");
+        // The work queue's refusal names the status it holds; say that, not bd's conflict line.
+        const fromQueue = failure?.error.source?.startsWith("POST /api/queue/") === true;
+        refused(
+          event,
+          fromQueue
+            ? "The work queue refused the move"
+            : failure?.exitCode === 13
+              ? "Changed elsewhere"
+              : "Move failed",
+          fromQueue ? failure?.message : undefined,
+        );
       },
     );
   };
@@ -238,6 +271,76 @@ function useIssue(id: string | undefined): DetailRead | undefined {
   return read?.id === id ? read : undefined;
 }
 
+interface ViewRead<T> {
+  data?: T;
+  error?: ReadFailure;
+  loading: boolean;
+}
+
+/**
+ * A view's read while its page is open: on open, on focus, every `everySeconds` when given, and
+ * again whenever `key` changes. A failed read keeps the last data and says what failed.
+ */
+function useViewRead<T>(
+  active: boolean,
+  key: string,
+  read: (key: string) => Promise<T>,
+  everySeconds?: number,
+): ViewRead<T> {
+  const [state, setState] = useState<ViewRead<T>>({ loading: false });
+  const latest = useRef(read);
+  latest.current = read;
+  useEffect(() => {
+    if (!active) return;
+    let live = true;
+    const load = () => {
+      setState((current) => ({ ...current, loading: true }));
+      latest.current(key).then(
+        (data) => live && setState({ data, loading: false }),
+        (error: unknown) => {
+          if (!live) return;
+          const failure = error instanceof ApiFailure ? error.error : undefined;
+          setState((current) => ({
+            ...current,
+            loading: false,
+            error: {
+              source: failure?.source ?? "the beads-ui server",
+              message: failure?.message ?? String(error),
+            },
+          }));
+        },
+      );
+    };
+    load();
+    window.addEventListener("focus", load);
+    const timer =
+      everySeconds === undefined ? undefined : window.setInterval(load, everySeconds * 1000);
+    return () => {
+      live = false;
+      window.removeEventListener("focus", load);
+      if (timer !== undefined) window.clearInterval(timer);
+    };
+  }, [active, key, everySeconds]);
+  return state;
+}
+
+function ReadState({ read }: { read: ViewRead<unknown> }) {
+  if (read.error !== undefined) {
+    return (
+      <p className="bu-read-error" role="alert">
+        <strong>{read.error.source}</strong> failed: {read.error.message}
+      </p>
+    );
+  }
+  if (read.data === undefined)
+    return (
+      <p className="bu-dim" aria-busy="true">
+        Reading the store...
+      </p>
+    );
+  return null;
+}
+
 export function App() {
   const [route, navigate] = useRoute();
   const { state, meta, writing, move, reorder, setPriority } = useBoard();
@@ -245,6 +348,18 @@ export function App() {
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const rank = meta?.rank ?? false;
   const detail = useIssue(route.view === "issue" ? route.id : undefined);
+  const [weeks, setWeeks] = useState(12);
+  const [sprint, setSprint] = useState<string | undefined>(undefined);
+  const roadmap = useViewRead(route.view === "roadmap", "roadmap", api.roadmap);
+  const analytics = useViewRead(route.view === "analytics", `${weeks} ${sprint ?? ""}`, () =>
+    api.analytics(weeks, sprint),
+  );
+  const sessions = useViewRead(
+    route.view === "sessions",
+    "sessions",
+    api.sessions,
+    Math.max(10, meta?.refreshSeconds ?? 10),
+  );
 
   usePaletteChord(useCallback(() => setPaletteOpen(true), []));
 
@@ -292,10 +407,13 @@ export function App() {
         run: () => navigate({ view: "issue", id: selected.id }),
       });
     }
-    list.push(
-      { id: "go:board", label: "Go to Board", run: () => navigate({ view: "board" }) },
-      { id: "go:backlog", label: "Go to Backlog", run: () => navigate({ view: "backlog" }) },
-    );
+    for (const entry of VIEWS) {
+      list.push({
+        id: `go:${entry.view}`,
+        label: `Go to ${entry.label}`,
+        run: () => navigate({ view: entry.view }),
+      });
+    }
     return list;
   }, [selected, statusNames, navigate, move]);
 
@@ -311,26 +429,20 @@ export function App() {
           {meta?.store ?? "beads-ui"}
         </span>
         <nav className="app-nav" aria-label="Views">
-          <a
-            href={hrefOf({ view: "board" })}
-            aria-current={route.view === "board" ? "page" : undefined}
-            onClick={(event) => {
-              event.preventDefault();
-              navigate({ view: "board" });
-            }}
-          >
-            Board
-          </a>
-          <a
-            href={hrefOf({ view: "backlog" })}
-            aria-current={route.view === "backlog" ? "page" : undefined}
-            onClick={(event) => {
-              event.preventDefault();
-              navigate({ view: "backlog" });
-            }}
-          >
-            Backlog
-          </a>
+          {VIEWS.map((entry) => (
+            <a
+              key={entry.view}
+              href={hrefOf({ view: entry.view })}
+              aria-current={route.view === entry.view ? "page" : undefined}
+              onClick={(event) => {
+                if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+                event.preventDefault();
+                navigate({ view: entry.view });
+              }}
+            >
+              {entry.label}
+            </a>
+          ))}
         </nav>
         <span className="app-stamp">{board.asOf ?? ""}</span>
         <button
@@ -389,6 +501,61 @@ export function App() {
             onStatus={move}
             onPriority={setPriority}
           />
+        )}
+        {route.view === "roadmap" && (
+          <>
+            <ReadState read={roadmap} />
+            {roadmap.data !== undefined && (
+              <Roadmap
+                view={roadmap.data.view}
+                issueHref={issueHref}
+                onOpen={(id) => navigate({ view: "issue", id })}
+              />
+            )}
+          </>
+        )}
+        {route.view === "analytics" && (
+          <>
+            <ReadState read={analytics} />
+            {analytics.data !== undefined && (
+              <Analytics
+                view={analytics.data.view}
+                sprints={analytics.data.sprints}
+                sprint={analytics.data.sprint}
+                weeks={weeks}
+                cost={analytics.data.cost}
+                historyFailures={analytics.data.histories.failed}
+                issueHref={issueHref}
+                onWeeks={setWeeks}
+                onSprint={(name) => setSprint(name === "" ? undefined : name)}
+              />
+            )}
+          </>
+        )}
+        {route.view === "sessions" && (
+          <>
+            <ReadState read={sessions} />
+            {sessions.data !== undefined && (
+              <Sessions
+                view={sessions.data.view}
+                queueError={
+                  sessions.data.queueError === undefined
+                    ? undefined
+                    : {
+                        source: sessions.data.queueError.source ?? "the work queue",
+                        message: sessions.data.queueError.message,
+                      }
+                }
+                issueHref={(row) => {
+                  const task = row.currentTask;
+                  if (task === undefined) return undefined;
+                  const here =
+                    task.repo === undefined || state.issues.some((i) => i.id === task.id);
+                  return here ? issueHref(task.id) : undefined;
+                }}
+              />
+            )}
+          </>
         )}
         {route.view === "issue" && (
           <IssueDetail
