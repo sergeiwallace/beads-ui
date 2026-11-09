@@ -1,6 +1,6 @@
 import type { IncomingMessage, RequestListener, ServerResponse } from "node:http";
 import { StoreClosed } from "./allowlist.ts";
-import type { AuthLayer, Caller } from "./auth.ts";
+import { type AuthLayer, type Caller, routeClass } from "./auth.ts";
 import { EVENTS_PATH, HEARTBEAT_MS, openEvents } from "./events.ts";
 import { type ApiContext, failure, matchRoute, ROUTES, type Route } from "./routes.ts";
 import { serveClient } from "./static.ts";
@@ -29,9 +29,12 @@ function sendJson(response: ServerResponse, status: number, body: unknown): void
   response.end(text);
 }
 
-/** The one answer a receiver route gives for any refusal (Receiver API). */
-function sendEmpty404(response: ServerResponse): void {
-  response.writeHead(404, { "cache-control": "no-store", "content-length": 0 });
+/**
+ * A receiver route's only non-success answers (Receiver API): 404 for every refusal, whatever its
+ * cause, and a 5xx when the server cannot answer, which the receiving client retries; never a body.
+ */
+function sendEmpty(response: ServerResponse, status = 404): void {
+  response.writeHead(status, { "cache-control": "no-store", "content-length": 0 });
   response.end();
 }
 
@@ -75,7 +78,7 @@ async function handleApi(
   const match = matchRoute(request.method ?? "GET", pathname, options.routes ?? ROUTES);
   if (match === undefined) {
     if (caller.kind === "receiver") {
-      sendEmpty404(response);
+      sendEmpty(response);
       return;
     }
     const reply = failure({
@@ -103,7 +106,8 @@ async function handleApi(
       body = await readJson(request);
     } catch (error) {
       if (!(error instanceof BodyError)) throw error;
-      sendJson(response, error.status, { error: { kind: "invalid", message: error.message } });
+      if (caller.kind === "receiver") sendEmpty(response);
+      else sendJson(response, error.status, { error: { kind: "invalid", message: error.message } });
       return;
     }
   }
@@ -122,7 +126,7 @@ async function handleApi(
     });
   }
   if (caller.kind === "receiver" && reply.status >= 400) {
-    sendEmpty404(response);
+    sendEmpty(response, reply.status >= 500 ? reply.status : 404);
     return;
   }
   if (reply.status === 204) {
@@ -130,13 +134,14 @@ async function handleApi(
     response.end();
     return;
   }
-  if (typeof reply.body === "string") {
+  if (typeof reply.body === "string" || reply.body instanceof Uint8Array) {
+    const bytes = typeof reply.body === "string" ? Buffer.from(reply.body, "utf8") : reply.body;
     response.writeHead(reply.status, {
       "content-type": "text/plain; charset=utf-8",
       "cache-control": "no-store",
-      "content-length": Buffer.byteLength(reply.body),
+      "content-length": bytes.byteLength,
     });
-    response.end(reply.body);
+    response.end(bytes);
     return;
   }
   sendJson(response, reply.status, reply.body);
@@ -191,7 +196,9 @@ export function createApp(options: AppOptions): App {
           response.destroy();
           return;
         }
-        sendJson(response, 500, { error: { kind: "failed", source: "server", message } });
+        const path = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
+        if (routeClass(path) === "receiver") sendEmpty(response, 500);
+        else sendJson(response, 500, { error: { kind: "failed", source: "server", message } });
       })
       .finally(() => handling.delete(done));
     handling.add(done);
