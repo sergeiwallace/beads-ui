@@ -1,9 +1,17 @@
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import { DispatchStoreError } from "@beads-ui/core";
 import { AllowlistHealth, readAllowlist } from "./allowlist.ts";
 import { type App, createApp } from "./app.ts";
 import { AuthLayer, AuthRefused, type AuthSettings, loadAuth } from "./auth.ts";
 import { type ConfigEnv, isLoopback, LOOPBACK, readWebConfig } from "./config.ts";
+import {
+  DispatchRefused,
+  DispatchService,
+  openStore,
+  readStoreChoice,
+  SWEEP_MS,
+} from "./dispatch-service.ts";
 import { createStoreRegistry } from "./registry.ts";
 import type { Route } from "./routes.ts";
 
@@ -27,6 +35,8 @@ export interface StartOptions {
   clock?: () => number;
   /** How often an open event stream re-checks its session. */
   heartbeatMs?: number;
+  /** How often due dispatches expire and the published files are rewritten; SWEEP_MS by default. */
+  sweepMs?: number;
 }
 
 export interface RunningServer {
@@ -38,6 +48,10 @@ export interface RunningServer {
   stores: string[];
   /** Why no store is open at start, or undefined while at least one is. */
   storeClosed: string | undefined;
+  /** The dispatch store, signer and publisher the receiver API serves. */
+  dispatches: DispatchService;
+  /** What the dispatch service could not do at start, such as sign; the server runs on. */
+  dispatchProblems: string[];
   close(): Promise<void>;
 }
 
@@ -93,6 +107,23 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     }
   }
 
+  const clock = options.clock ?? Date.now;
+  const allowlist = (name?: string) => readAllowlist(options.configEnv, name);
+  let dispatches: DispatchService;
+  try {
+    dispatches = new DispatchService({
+      env: options.configEnv,
+      stateDir: settings.stateDir,
+      store: await openStore(await readStoreChoice(options.configEnv), settings.stateDir),
+      allowlist,
+      clock,
+    });
+  } catch (error) {
+    if (!(error instanceof DispatchRefused || error instanceof DispatchStoreError)) throw error;
+    throw new StartRefused(`the dispatch store cannot open: ${error.message}`);
+  }
+  const dispatchProblems = await dispatches.publish();
+
   let app: App | undefined;
   const server = createServer((request, response) => {
     if (app !== undefined) app.handle(request, response);
@@ -120,13 +151,21 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
       repoRoot: options.repoRoot,
       stores,
       config: () => readWebConfig(options.repoRoot, options.configEnv),
-      allowlist: (name?: string) => readAllowlist(options.configEnv, name),
+      allowlist,
       health,
+      dispatches,
       random: Math.random,
-      now: () => new Date().toISOString(),
+      now: () => new Date(clock()).toISOString(),
     },
   });
   app = started;
+  // Expiry tombstones a dispatch nobody fetches, and a rotated key is published before its first
+  // signature; one pass at a time, and a failed pass waits for the next.
+  let sweeping: Promise<unknown> = Promise.resolve();
+  const sweep = setInterval(() => {
+    sweeping = sweeping.then(() => dispatches.sweep()).catch(() => undefined);
+  }, options.sweepMs ?? SWEEP_MS);
+  sweep.unref();
   return {
     url: `http://${urlHost(host)}:${port}/`,
     port,
@@ -134,11 +173,14 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     auth,
     stores: reading.open.map((store) => store.repository),
     storeClosed: reading.closed,
+    dispatches,
+    dispatchProblems,
     // Requests in flight finish, with the bd calls they run, so a stop never leaves a bd writing
     // to the store after the server has gone: event streams end first, idle connections close at
     // once, whatever is still open at the deadline is cut, and then every handler settles, one
     // whose client went away included (each bd call ends within bd-node's timeout).
     close: async () => {
+      clearInterval(sweep);
       started.closeStreams();
       await new Promise<void>((resolve, reject) => {
         const deadline = setTimeout(() => server.closeAllConnections(), CLOSE_GRACE_MS);
@@ -150,6 +192,7 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
         server.closeIdleConnections();
       });
       await started.settled();
+      await sweeping;
     },
   };
 }

@@ -108,6 +108,9 @@ export async function main(argv: readonly string[]): Promise<number> {
     if (running.storeClosed !== undefined) {
       process.stderr.write(`beads-ui web: ${running.storeClosed}\n`);
     }
+    for (const problem of running.dispatchProblems) {
+      process.stderr.write(`beads-ui web: ${problem}\n`);
+    }
     process.stderr.write("beads-ui web: sign in with beads-ui-web login-link\n");
     if (values.open === true) {
       openBrowser(new URL(running.auth.mintCode().path, running.url).href);

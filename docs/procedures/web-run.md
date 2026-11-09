@@ -30,7 +30,7 @@ browser_secret = "state:browser-secret"
 receiver_token = "state:receiver-tokens.json"
 mcp_token = "state:mcp-token"
 configured_user = "you"
-signing_key = "secret-store:dispatch-signing-key"
+signing_key = "state:dispatch-signing-key"
 signing_key_id = "host-a-20261109"
 trusted_keys = "state:trusted-dispatch-keys.json"
 ```
@@ -53,6 +53,18 @@ A `state:` value names a file in the server's state directory,
 `$XDG_STATE_HOME/beads-ui/web/` (or `~/.local/state/beads-ui/web/`). The first start generates
 the browser secret, the MCP token and an empty receiver token map there, each mode 0600; nothing
 is written into a repository.
+
+The dispatch signing key is the one credential the server never generates. Make it once, as an
+Ed25519 PKCS #8 PEM of mode 0600, in the state directory:
+
+```sh
+openssl genpkey -algorithm ed25519 -out ~/.local/state/beads-ui/web/dispatch-signing-key
+chmod 600 ~/.local/state/beads-ui/web/dispatch-signing-key
+```
+
+The server reads it on every signature. Until it can, the server still starts and serves, prints
+`dispatches cannot be signed` with the reason, and refuses every new dispatch. It reads the key
+only from a `state:` reference; a `secret-store:` reference is reported that way too.
 
 ## Run it
 
@@ -164,6 +176,56 @@ soft_wip_limit = { in_progress = 5 }
 [stores.default]
 refresh_seconds = 10   # how often an open page re-reads the board
 ```
+
+## Dispatches and the receiver API
+
+A dispatch is a signed prompt for one session on one host (the web app design, Data Model). The
+server keeps dispatches in the work queue's prompt store when `[queue] url` is set in your own
+`beads-ui.toml`, and in a local append-only journal in its state directory otherwise:
+
+```toml
+[queue]
+url = "http://127.0.0.1:<queue port>"   # the work queue; leave the table out for the local store
+
+[dispatch]
+record = "queue"                        # optional: "queue" needs [queue] url; "local" ignores it
+```
+
+Either way the body lives in the state directory's `bodies/`, never in the queue or a backup.
+When the target posts `acted` or `failed`, or the dispatch passes its `expires_at` (24 hours after
+it was written), the server deletes the body and appends a tombstone, keeping the record and its
+receipts. Expiry runs at every receiver request and every 30 seconds.
+
+A dispatch is written only for a task whose repository is on the target host's published
+allowlist, `[hosts.<host>] allow_repos` in your `beads-ui.toml`, read at call time.
+
+The server publishes two files in its state directory, brought up to date at start and every 30
+seconds:
+
+| File | What it holds | Who reads it |
+|---|---|---|
+| `published-dispatch-keys.json` | This host's public signing keys as a trusted-keys map: `{"version": 1, "keys": [{"key_id", "public_key", "not_before", "not_after", "revoked"}]}` | Each receiving host's installer, which merges it into that host's trusted keys |
+| `published-allowlist.json` | This host's `[hosts] allow_repos`: `{"version": 1, "allow_repos": [...]}`, or an empty list with `unreadable` and the reason | The servers that dispatch to this host, for their `[hosts.<this host>]` |
+
+To rotate the signing key, write the new key to a new state file, then point `signing_key` at it
+and give it a new `signing_key_id` (`<host>-<yyyymmdd>`). The next sweep, or the next signature,
+whichever comes first, publishes the new key before anything is signed with it, and marks the old
+key valid for 24 more hours; the old key leaves the file after that. A key id names one key for
+its whole life: a key id already published for another key is refused.
+
+Each receiving host gets its own token from `beads-ui-web issue-receiver-token <host>` and calls
+these routes with `Authorization: Bearer <token>`:
+
+| Route | Answer |
+|---|---|
+| `GET /api/receiver/v1/dispatches?session=<s>` | 200 `{"dispatches": [...]}`: the outstanding records, without bodies, addressed to the token's host and session `s` |
+| `GET /api/receiver/v1/dispatches/<id>/body?session=<s>` | 200, the body's exact bytes as `text/plain; charset=utf-8`, for the dispatch's own host and session, while the task's repository is on the requesting host's allowlist |
+| `POST /api/receiver/v1/dispatches/<id>/receipts` | JSON `{"session", "state": "taken" or "acted" or "failed", "reason"}`; 204 once recorded, for the dispatch's own host and session and a move its state allows |
+
+Every refusal is a 404 with an empty body, whatever its cause: no token, a token this host never
+issued, another host's token, another session, an unknown id, a malformed receipt. A store the
+server cannot reach, such as a work queue that is down, is an empty 503, which the receiving
+client retries at its next boundary instead of dropping its receipt.
 
 ## The API
 
