@@ -54,9 +54,10 @@ async function readJson(request: IncomingMessage): Promise<unknown> {
 async function handleApi(
   request: IncomingMessage,
   response: ServerResponse,
-  pathname: string,
+  url: URL,
   options: AppOptions,
 ): Promise<void> {
+  const pathname = url.pathname;
   const match = matchRoute(request.method ?? "GET", pathname, options.routes ?? ROUTES);
   if (match === undefined) {
     const reply = failure({
@@ -76,7 +77,8 @@ async function handleApi(
       return;
     }
   }
-  const reply = await match.route.handle({ params: match.params, body }, options.context);
+  const query = Object.fromEntries(url.searchParams);
+  const reply = await match.route.handle({ params: match.params, body, query }, options.context);
   sendJson(response, reply.status, reply.body);
 }
 
@@ -101,7 +103,7 @@ export function createApp(options: AppOptions): App {
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
     const isApi = url.pathname === "/api" || url.pathname.startsWith("/api/");
     const work = isApi
-      ? handleApi(request, response, url.pathname, options)
+      ? handleApi(request, response, url, options)
       : serveClient(request, response, url.pathname, options.clientDir);
     const done: Promise<void> = work
       .catch((error: unknown) => {

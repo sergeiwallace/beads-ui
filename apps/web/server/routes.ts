@@ -9,6 +9,7 @@ import {
 } from "@beads-ui/core";
 import type { BdClient, BdResult } from "@sergeiwallace/beads-ui-bd-node";
 import type { WebConfig } from "./config.ts";
+import { analyticsRoute, queueStatusWrite, roadmapRoute, sessionsRoute } from "./views.ts";
 
 /** What every route reads through: the store's bd client and the call-time settings. */
 export interface ApiContext {
@@ -24,6 +25,8 @@ export interface ApiContext {
 export interface ApiRequest {
   params: Readonly<Record<string, string>>;
   body: unknown;
+  /** The URL's query parameters, last value of each name. */
+  query?: Readonly<Record<string, string>>;
 }
 
 export interface ApiReply {
@@ -74,7 +77,10 @@ export function failure(error: ApiError): ApiReply {
 const firstLine = (text: string): string => text.trim().split("\n")[0] ?? "";
 
 /** The reply for a bd call that did not succeed, naming the call as its source. */
-function bdFailure<T>(source: string, result: Exclude<BdResult<T>, { kind: "ok" }>): ApiReply {
+export function bdFailure<T>(
+  source: string,
+  result: Exclude<BdResult<T>, { kind: "ok" }>,
+): ApiReply {
   switch (result.kind) {
     case "stale":
       return failure({
@@ -183,12 +189,18 @@ async function statusRoute(request: ApiRequest, context: ApiContext): Promise<Ap
   if (to === undefined || shown === undefined) {
     return invalid("a status move needs `to` and `shown`, the status the card was drawn in");
   }
+  // A task the work queue holds a lease on moves through the queue (T-3.4).
+  const queued = await queueStatusWrite(context, id, to, shown);
+  if ("reply" in queued) return queued.reply;
   const result = await guardedWrite(() =>
     context.bd.update(id, { status: to }, { ifStatus: shown }),
   );
   if (isReply(result)) return result;
   if (result.kind !== "ok") return bdFailure("bd update", result);
-  return { status: 200, body: { id, status: to } };
+  return {
+    status: 200,
+    body: { id, status: to, ...(queued.notice === undefined ? {} : { notice: queued.notice }) },
+  };
 }
 
 const isPriority = (value: unknown): value is Priority =>
@@ -299,6 +311,10 @@ export const ROUTES: readonly Route[] = [
   { method: "POST", path: "/api/issues/:id/status", handle: statusRoute },
   { method: "POST", path: "/api/issues/:id/priority", handle: priorityRoute },
   { method: "POST", path: "/api/issues/:id/rank", handle: rankRoute },
+  // Phase 3's remaining views: Roadmap, Analytics and Sessions (server/views.ts).
+  { method: "GET", path: "/api/roadmap", handle: roadmapRoute },
+  { method: "GET", path: "/api/analytics", handle: analyticsRoute },
+  { method: "GET", path: "/api/sessions", handle: sessionsRoute },
 ];
 
 export interface RouteMatch {

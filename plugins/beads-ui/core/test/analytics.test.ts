@@ -95,6 +95,56 @@ describe("an issue's status changes from bd history --events", () => {
     ]);
   });
 
+  test("should open first and end on the issue's own status when bd lists one second's events out of order", () => {
+    const fields = issue("BU-3", { status: "closed", closedAt: "2026-11-03T09:00:00Z" });
+    // Created and closed in the same second, listed as if the close came first.
+    const events = unwrap(
+      parseBdHistoryEvents(
+        JSON.stringify([
+          {
+            id: "e-created",
+            issue_id: "BU-3",
+            event_type: "created",
+            actor: "host-a/session-1",
+            created_at: "2026-11-03T09:00:00Z",
+          },
+          {
+            id: "e-closed",
+            issue_id: "BU-3",
+            event_type: "closed",
+            actor: "host-a/session-1",
+            new_value: "Closed",
+            created_at: "2026-11-03T09:00:00Z",
+          },
+        ]),
+      ),
+    );
+
+    expect(statusChanges(fields, events).map((change) => change.status)).toEqual([
+      "open",
+      "closed",
+    ]);
+    // A close and a reopen inside one second, listed reopen-last: the issue is closed now.
+    const raced = unwrap(
+      parseBdHistoryEvents(
+        JSON.stringify(
+          [
+            ["e-reopened", "reopened", "2026-11-03T09:00:00Z"],
+            ["e-closed", "closed", "2026-11-03T09:00:00Z"],
+            ["e-created", "created", "2026-11-03T08:00:00Z"],
+          ].map(([id, type, at]) => ({
+            id,
+            issue_id: "BU-3",
+            event_type: type,
+            actor: "host-a/session-1",
+            created_at: at,
+          })),
+        ),
+      ),
+    );
+    expect(statusChanges(fields, raced).at(-1)?.status).toBe("closed");
+  });
+
   test("should fall back to the issue's own dates when bd returns no event that moves it", () => {
     const fields = issue("BU-2", {
       status: "closed",
@@ -228,6 +278,37 @@ describe("Analytics over the events (T-3.3)", () => {
         { day: "2026-11-11", ideal: 0 },
       ],
     });
+  });
+
+  test("should burn down the members given apart, and count none of them in the cumulative flow", () => {
+    // Done before a one-week window: in the burndown, never on top of the done floor.
+    const early = flow(issue("BU-m1", { labels: ["sprint:9"], status: "closed" }), [
+      ["2026-10-20T09:00:00Z", "created"],
+      ["2026-10-22T09:00:00Z", "closed"],
+    ]);
+    const open = flow(issue("BU-m2", { labels: ["sprint:9"] }), [
+      ["2026-10-20T09:00:00Z", "created"],
+    ]);
+    const sprint: SprintInfo = {
+      name: "9",
+      open: true,
+      members: 2,
+      startsAt: "2026-10-21",
+      dueAt: "2026-11-11T00:00:00Z",
+    };
+
+    const view = analyticsView([open], {
+      statuses,
+      now: NOW,
+      weeks: 1,
+      doneBefore: 1,
+      sprint,
+      members: [early, open],
+    });
+
+    expect(view.burndown.kind === "drawn" && view.burndown.members).toBe(2);
+    expect(view.burndown.kind === "drawn" && view.burndown.days.at(-3)?.remaining).toBe(1);
+    expect(view.cumulativeFlow.at(-1)?.counts).toEqual({ active: 1, wip: 0, frozen: 0, done: 1 });
   });
 
   test("should say why no burndown is drawn when the sprint has no start date or there is none", () => {

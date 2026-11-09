@@ -43,11 +43,16 @@ function statusOfJson(text: string | undefined): string | undefined {
   }
 }
 
+/** Within one second, `created` comes first; bd orders nothing else inside a second. */
+const tieRank = (event: HistoryEvent): number => (event.type === "created" ? 0 : 1);
+
 /**
  * The statuses `issue` moved through, oldest first, from its events: `created` opens it,
  * `status_changed` names the status it moved to, `closed` and `reopened` close and reopen it.
- * bd lists events newest first, with ties in that order, so the list is read back to front. With
- * no event that moves it, the issue's own `created_at`, `started_at` and `closed_at` stand in.
+ * bd lists events newest first by a one-second stamp, so the list is read back to front, and
+ * events inside one second can come in either order: `created` goes first among them, and the
+ * list always ends on the issue's own status, which is the one fact no ordering can get wrong.
+ * With no event that moves it, the issue's `created_at`, `started_at` and `closed_at` stand in.
  */
 export function statusChanges(issue: Issue, events: readonly HistoryEvent[]): StatusChange[] {
   const ordered = events
@@ -56,7 +61,7 @@ export function statusChanges(issue: Issue, events: readonly HistoryEvent[]): St
       (entry): entry is { event: HistoryEvent; index: number; at: number } =>
         entry.at !== undefined,
     )
-    .sort((a, b) => a.at - b.at || b.index - a.index);
+    .sort((a, b) => a.at - b.at || tieRank(a.event) - tieRank(b.event) || b.index - a.index);
   const changes: StatusChange[] = [];
   const firstMove = ordered.find((entry) => entry.event.type === "status_changed");
   const initial = statusOfJson(firstMove?.event.oldValue) ?? "open";
@@ -68,7 +73,14 @@ export function statusChanges(issue: Issue, events: readonly HistoryEvent[]): St
     } else if (event.type === "closed") changes.push({ at, status: "closed" });
     else if (event.type === "reopened") changes.push({ at, status: "open" });
   }
-  if (changes.length > 0) return changes;
+  const last = changes[changes.length - 1];
+  if (last !== undefined) {
+    if (last.status !== issue.status) {
+      const settled = time(issue.closedAt) ?? time(issue.updatedAt) ?? last.at;
+      changes.push({ at: Math.max(last.at, settled), status: issue.status });
+    }
+    return changes;
+  }
   const created = time(issue.createdAt);
   const started = time(issue.startedAt);
   const closed = time(issue.closedAt);
@@ -233,6 +245,11 @@ export interface AnalyticsOptions {
   doneBefore?: number;
   /** The sprint the burndown draws, with its dates; none draws no burndown. */
   sprint?: SprintInfo;
+  /**
+   * The sprint's members with their changes, those done before the window too, kept apart from
+   * `flows` so they never count twice in the cumulative flow; `flows`' labelled issues when unset.
+   */
+  members?: readonly IssueFlow[];
 }
 
 /**
@@ -323,7 +340,7 @@ export function analyticsView(
     cycleTime,
     closedWithoutStart,
     cumulativeFlow,
-    burndown: burndownOf(flows, options.sprint, statuses, now),
+    burndown: burndownOf(options.members ?? flows, options.sprint, statuses, now),
     aging,
   };
 }
