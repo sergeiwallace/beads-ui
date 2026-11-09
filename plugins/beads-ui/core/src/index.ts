@@ -128,6 +128,34 @@ export {
   reduceDelivery,
 } from "./delivery-state.ts";
 export type {
+  CreateResult,
+  DispatchEntry,
+  DispatchEnvelope,
+  DispatchKind,
+  DispatchRecord,
+  DispatchStore,
+  DispatchTarget,
+  DispatchTask,
+  ReceiptInput,
+  ReceiptRefusal,
+  ReceiptResult,
+  ReceiptState,
+  SignedDispatchFields,
+  StoredDispatch,
+  Tombstone,
+  TombstoneCause,
+} from "./dispatch-store.ts";
+export {
+  DISPATCH_KINDS,
+  DispatchStoreError,
+  foldDispatch,
+  isOutstanding,
+  planExpiry,
+  planReceipt,
+  RECEIPT_STATES,
+  receiptSource,
+} from "./dispatch-store.ts";
+export type {
   Filter,
   FilterError,
   FilterKey,
