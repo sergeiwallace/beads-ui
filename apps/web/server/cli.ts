@@ -3,7 +3,6 @@ import { readdir, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
-import { storeName } from "@beads-ui/core";
 import { ADMIN_USAGE, adminMain, isAdminCommand } from "./admin-cli.ts";
 import { type ConfigEnv, DEFAULT_PORT, readWebConfig } from "./config.ts";
 import { StartRefused, startServer } from "./server.ts";
@@ -23,8 +22,9 @@ const CLIENT_SOURCES = [
 const USAGE = `usage: beads-ui-web [--port <n>] [--open]
 ${ADMIN_USAGE}
 
-Serves the beads-ui web app for the Beads store in the current directory on
-http://127.0.0.1:<port>/ (default ${DEFAULT_PORT}, or [web] port in beads-ui.toml).
+Serves the beads-ui web app on http://127.0.0.1:<port>/ (default ${DEFAULT_PORT}, or
+[web] port in beads-ui.toml) for every Beads store on this host whose repository
+is on [hosts] allow_repos: the host's store inventory and the current directory's.
 Every request needs a browser session: run beads-ui-web login-link on this host
 and open the link it prints. The [auth] and [hosts] tables of your own
 beads-ui.toml must be set (the web app design, Configuration).
@@ -103,7 +103,8 @@ export async function main(argv: readonly string[]): Promise<number> {
     const port = parsePort(values.port) ?? config.port ?? DEFAULT_PORT;
     await ensureClient();
     const running = await startServer({ repoRoot, port, clientDir: CLIENT_DIR, configEnv });
-    process.stdout.write(`beads-ui web: ${storeName(repoRoot)} at ${running.url}\n`);
+    const stores = running.stores.length === 0 ? "no store open" : running.stores.join(", ");
+    process.stdout.write(`beads-ui web: ${stores} at ${running.url}\n`);
     if (running.storeClosed !== undefined) {
       process.stderr.write(`beads-ui web: ${running.storeClosed}\n`);
     }

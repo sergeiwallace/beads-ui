@@ -197,6 +197,32 @@ describe("queue rows", () => {
     for (const reply of [health, board]) expect(reply.text).not.toContain(UNLISTED);
   });
 
+  it("should drop the earlier hidden count and say the allowlist is unreadable once it stops reading", async () => {
+    const listed = repoName(store.dir);
+    await env.write(listing([listed]));
+    const server = await start({
+      rows: [
+        { id: "kept", repo: listed },
+        { id: "dropped", repo: UNLISTED },
+      ],
+    });
+    const cookie = await signIn(server);
+    await send(server, "/api/probe/queue", { headers: { cookie } });
+    expect((await send(server, "/api/health", { headers: { cookie } })).json()).toMatchObject({
+      hidden: 1,
+    });
+
+    await env.write(listing(undefined));
+    const queue = await send(server, "/api/probe/queue", { headers: { cookie } });
+    expect(queue.json()).toEqual({ rows: [] });
+    const health = await send(server, "/api/health", { headers: { cookie } });
+    expect(health.json()).toMatchObject({
+      hidden: 0,
+      lines: [expect.stringContaining("the allowlist is unreadable")],
+    });
+    expect(health.text).not.toContain(UNLISTED);
+  });
+
   it("should return no queue row while the allowlist is unreadable", async () => {
     await env.write(listing(undefined));
     const server = await start({ rows: [{ id: "kept", repo: repoName(store.dir) }] });

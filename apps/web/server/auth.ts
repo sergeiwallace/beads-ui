@@ -64,7 +64,15 @@ const isTable = (value: TomlValue | undefined): value is TomlTable =>
 
 const STATE_REF = /^state:([A-Za-z0-9][A-Za-z0-9._-]*)$/;
 const KEY_REF = /^(?:state|secret-store):[A-Za-z0-9][A-Za-z0-9._-]*$/;
-const HOST_VALUE = /^(?:[a-z0-9]([a-z0-9.-]*[a-z0-9])?|\[[0-9a-f:.]+\])(?::\d{1,5})?$/i;
+const HOST_VALUE = /^(?:[a-z0-9]([a-z0-9.-]*[a-z0-9])?|\[[0-9a-f:.]+\])(?::(\d{1,5}))?$/i;
+
+/** A Host value `[auth] hosts` accepts: a name or bracketed address, with a port from 1 to 65535. */
+const isHostValue = (value: string): boolean => {
+  const match = HOST_VALUE.exec(value);
+  if (match === null) return false;
+  const port = match[2];
+  return port === undefined || (Number(port) >= 1 && Number(port) <= 65_535);
+};
 const KEY_ID = /^[A-Za-z0-9][A-Za-z0-9.-]*-\d{8}$/;
 const SECRET_TEXT = /^[A-Za-z0-9_-]{43,}$/;
 const SHA256_HEX = /^[0-9a-f]{64}$/;
@@ -148,7 +156,13 @@ function parseAuthTable(
   const settings: AuthSettings = {
     source,
     stateDir,
-    hosts: stringList(table, "hosts", problems, (v) => HOST_VALUE.test(v), "a host name"),
+    hosts: stringList(
+      table,
+      "hosts",
+      problems,
+      isHostValue,
+      "a host name, with any port from 1 to 65535",
+    ),
     origins: stringList(
       table,
       "origins",

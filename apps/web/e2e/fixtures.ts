@@ -25,29 +25,51 @@ export interface Served {
   stop(): Promise<void>;
 }
 
+/** What a spec may change about the served host: its allowlist and the command's environment. */
+export interface ServeOptions {
+  /** `[hosts] allow_repos`; the served store's repository alone unless given. */
+  allowRepos?: string[];
+  /** Added to the command's environment, such as a HOME holding a store inventory. */
+  env?: NodeJS.ProcessEnv;
+}
+
 /**
  * The host settings the documented command needs, in a private config home: the `[auth]` table
  * and `[hosts] allow_repos` listing the store's repository. Credentials go to a private state home.
  */
-async function hostSettings(dir: string, configHome: string): Promise<NodeJS.ProcessEnv> {
+async function hostSettings(
+  dir: string,
+  configHome: string,
+  options: ServeOptions,
+): Promise<NodeJS.ProcessEnv> {
   await mkdir(join(configHome, "beads-ui"), { recursive: true });
   await writeFile(
     join(configHome, "beads-ui", "beads-ui.toml"),
-    hostConfig({ allowRepos: [basename(dir)] }),
+    hostConfig({ allowRepos: options.allowRepos ?? [basename(dir)] }),
   );
+  // A private HOME too: the server reads the host's store inventory under HOME, and a spec
+  // serves only the stores it makes.
+  await mkdir(join(configHome, "home"), { recursive: true });
   return {
     ...process.env,
+    HOME: join(configHome, "home"),
     XDG_CONFIG_HOME: configHome,
     XDG_STATE_HOME: join(configHome, "state"),
+    ...options.env,
   };
 }
 
 /**
  * Runs the documented command, `beads-ui-web --port 0`, in `dir`, and resolves on the URL line
- * it prints. The user's config is kept out with a private XDG_CONFIG_HOME and XDG_STATE_HOME.
+ * it prints. The user's config, state and store inventory are kept out with a private
+ * XDG_CONFIG_HOME, XDG_STATE_HOME and HOME.
  */
-export async function serve(dir: string, configHome: string): Promise<Served> {
-  const env = await hostSettings(dir, configHome);
+export async function serve(
+  dir: string,
+  configHome: string,
+  options: ServeOptions = {},
+): Promise<Served> {
+  const env = await hostSettings(dir, configHome, options);
   const started = Date.now();
   const child = spawn(process.execPath, [BIN, "--port", "0"], {
     cwd: dir,

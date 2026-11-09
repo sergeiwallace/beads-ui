@@ -517,6 +517,9 @@ describe("starting with the [auth] table", () => {
 
   it.each([
     ["hosts", ["http://localhost"]],
+    ["hosts", ["localhost:99999"]],
+    ["hosts", ["localhost:0"]],
+    ["hosts", ["[::1]:65536"]],
     ["origins", ["localhost:4810"]],
     ["origins", ["http://localhost:4810/"]],
     ["browser_secret", "file:browser-secret"],

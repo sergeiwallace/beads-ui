@@ -10,6 +10,8 @@ export interface ReadFailure {
 export interface IssueDetailProps {
   loading: boolean;
   issue?: Issue | undefined;
+  /** The repository of the store the issue was read from. */
+  repository?: string | undefined;
   /** Why the issue itself could not be read; the fields are not drawn. */
   issueError?: ReadFailure | undefined;
   comments: readonly Comment[] | null;
@@ -46,6 +48,9 @@ export function IssueDetail(props: IssueDetailProps) {
     return <article className="bu-detail" aria-busy={props.loading} />;
   }
   const fields: [string, React.ReactNode][] = [
+    ...(props.repository === undefined
+      ? []
+      : ([["Repository", props.repository]] as [string, React.ReactNode][])),
     ["Type", issue.type],
     ["Status", issue.status],
     [

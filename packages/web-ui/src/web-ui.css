@@ -161,6 +161,16 @@
   font-weight: 600;
 }
 
+.bu-repo {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.75rem;
+  color: var(--bu-text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .bu-assignee {
   font-size: 0.8rem;
   color: var(--bu-text-dim);

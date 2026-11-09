@@ -25,6 +25,7 @@ import {
   send,
 } from "./auth-env.ts";
 import { type FakeQueue, startFakeQueue } from "./fake-queue.ts";
+import { repoStore, type StoreHost, storeHost } from "./host-stores.ts";
 import { createStore, type TestStore } from "./store.ts";
 
 // T-W0.3 (the receiver API), T-W0.2's last two criteria and T-W0.4's rotation, server side: each
@@ -43,6 +44,8 @@ const TARGET = { host: "host-b", session: "session-1" };
 const BODY = "Pick up the next ready task; the résumé is in the notes.\n";
 
 let store: TestStore;
+/** A private home whose store inventory lists a real store for WORK, the dispatches' task repository. */
+let stores: StoreHost;
 let clientDir: string;
 let now = Date.parse("2026-11-09T12:00:00.000Z");
 const cleanup: (() => Promise<void>)[] = [];
@@ -90,7 +93,7 @@ async function start(env: HostEnv, options: { sweepMs?: number } = {}): Promise<
     repoRoot: store.dir,
     port: 0,
     clientDir,
-    configEnv: env.configEnv,
+    configEnv: { ...env.configEnv, home: stores.home },
     clock: () => now,
     ...(options.sweepMs === undefined ? {} : { sweepMs: options.sweepMs }),
   });
@@ -236,6 +239,11 @@ async function until(check: () => Promise<boolean>, ms = 5_000): Promise<boolean
 
 beforeAll(async () => {
   store = await createStore("recv");
+  stores = await storeHost();
+  cleanup.push(stores.remove);
+  const work = join(stores.root, WORK);
+  await repoStore(work, { prefix: "work", git: false });
+  await stores.inventory([{ prefix: "work", dir: work }]);
   const holder = await hostEnv();
   cleanup.push(holder.remove);
   clientDir = join(holder.configHome, "client");
@@ -467,6 +475,25 @@ describe("the target and requesting host's allowlist (T-W0.2)", () => {
     ).rejects.toThrow(/host-d's published allowlist: \[hosts\.host-d\] allow_repos is missing/);
     expect(listed(await list(host, host.tokens["host-b"]))).toEqual([]);
     expect(await bodyFiles(host)).toEqual([]);
+  });
+
+  it("should refuse a dispatch whose task's repository has no open store on this host, storing nothing", async () => {
+    const absent = "absent-repo";
+    await host.env.write(
+      config({
+        allowRepos: [repoName(store.dir), WORK, absent],
+        published: `[hosts.host-b]\nallow_repos = ["${WORK}", "${absent}"]`,
+      }),
+    );
+    try {
+      await expect(
+        host.server.dispatches.create(dispatchTo({ task: { repo: absent, id: "absent-1" } })),
+      ).rejects.toThrow(new DispatchRefused(`${absent} is not an open store on this host`));
+      expect(listed(await list(host, host.tokens["host-b"]))).toEqual([]);
+      expect(await bodyFiles(host)).toEqual([]);
+    } finally {
+      await host.env.write(config());
+    }
   });
 
   it("should return no body, and list nothing, once the task's repository leaves the requesting host's allowlist", async () => {

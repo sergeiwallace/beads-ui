@@ -8,13 +8,21 @@ export interface ApiErrorBody {
   exitCode?: number | null;
 }
 
+/** How one store's read went in a board read: its issue count, or the error it failed with. */
+export type StoreRead =
+  | { repository: string; ok: true; count: number }
+  | { repository: string; ok: false; error: ApiErrorBody };
+
 export class ApiFailure extends Error {
   readonly status: number;
   readonly error: ApiErrorBody;
-  constructor(status: number, error: ApiErrorBody) {
+  /** A board read over several stores that all failed names each store's failure. */
+  readonly reads: StoreRead[];
+  constructor(status: number, error: ApiErrorBody, reads: StoreRead[] = []) {
     super(error.message);
     this.status = status;
     this.error = error;
+    this.reads = reads;
   }
 
   /** bd's exit status for the reducers: 13 for a stale guard, null when bd never ran. */
@@ -24,16 +32,25 @@ export class ApiFailure extends Error {
   }
 }
 
+/** An issue as the board read returns it: with the repository of the store it is in. */
+export type StoredIssue = Issue & { repository: string };
+
 export interface BoardPayload {
+  /** The store the read covers, or "every open store". */
   store: string;
+  /** The store `?store=` named, or null for every open store. */
+  chosen: string | null;
+  /** Every store open on the host, each by the repository the allowlist opened it as. */
+  repositories: string[];
+  reads: StoreRead[];
   statuses: Status[];
-  issues: Issue[];
+  issues: StoredIssue[];
   rank: boolean;
   softWipLimit: Record<string, number>;
   refreshSeconds: number;
   asOf: string;
   problems: string[];
-  /** Counts of rows the host's allowlist hid, never naming their repositories. */
+  /** Counts of stores and rows the host's allowlist hid, never naming their repositories. */
   health: string[];
 }
 
@@ -41,6 +58,14 @@ export interface IssuePayload {
   issue: Issue;
   comments: Comment[] | null;
   commentsError?: ApiErrorBody;
+  repository: string;
+}
+
+/** An issue by its store and id: the same id in two stores is two issues. */
+export interface IssueRef {
+  id: string;
+  /** The store's repository; with none the server reads its only open store. */
+  repository?: string | undefined;
 }
 
 // Every API path is relative to the app's base, so a later base path moves them all at once.
@@ -58,7 +83,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
     });
   }
   const body = (await response.json().catch(() => undefined)) as
-    | { error?: ApiErrorBody }
+    | { error?: ApiErrorBody; reads?: StoreRead[] }
     | undefined;
   if (!response.ok) {
     throw new ApiFailure(
@@ -68,6 +93,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
         source: "the beads-ui server",
         message: `answered ${response.status}`,
       },
+      body?.reads ?? [],
     );
   }
   return body as T;
@@ -84,15 +110,25 @@ export async function signOut(): Promise<void> {
   await fetch(`${base}api/auth/v1/logout`, { method: "POST", headers: WRITE_HEADERS, body: "{}" });
 }
 
-const issuePath = (id: string) => `issues/${encodeURIComponent(id)}`;
+const storeQuery = (repository: string | undefined) =>
+  repository === undefined ? "" : `?store=${encodeURIComponent(repository)}`;
+
+const issuePath = (ref: IssueRef, action = "") =>
+  `issues/${encodeURIComponent(ref.id)}${action}${storeQuery(ref.repository)}`;
 
 export const api = {
-  board: () => call<BoardPayload>("board"),
-  issue: (id: string) => call<IssuePayload>(issuePath(id)),
-  move: (id: string, to: string, shown: string) =>
-    post<{ id: string; status: string }>(`${issuePath(id)}/status`, { to, shown }),
-  priority: (id: string, priority: Priority, shown: string) =>
-    post<{ id: string; priority: Priority }>(`${issuePath(id)}/priority`, { priority, shown }),
-  rank: (id: string, shown: string, above?: string, below?: string) =>
-    post<{ id: string; rank: string }>(`${issuePath(id)}/rank`, { shown, above, below }),
+  board: (store?: string) => call<BoardPayload>(`board${storeQuery(store)}`),
+  issue: (ref: IssueRef) => call<IssuePayload>(issuePath(ref)),
+  move: (ref: IssueRef, to: string, shown: string) =>
+    post<{ id: string; status: string }>(issuePath(ref, "/status"), { to, shown }),
+  priority: (ref: IssueRef, priority: Priority, shown: string) =>
+    post<{ id: string; priority: Priority }>(issuePath(ref, "/priority"), { priority, shown }),
+  rank: (ref: IssueRef, shown: string, above?: IssueRef, below?: IssueRef) =>
+    post<{ id: string; rank: string }>(issuePath(ref, "/rank"), {
+      shown,
+      above: above?.id,
+      below: below?.id,
+      aboveStore: above?.repository,
+      belowStore: below?.repository,
+    }),
 };

@@ -27,6 +27,8 @@ export interface BoardProps {
   onMove(id: string, to: string): void;
   /** `index` counts slots in the card's column with the card taken out (core planRank). */
   onReorder(id: string, index: number): void;
+  /** The repository a card's issue comes from, drawn on the card when given. */
+  repositoryOf?: ((id: string) => string | undefined) | undefined;
 }
 
 type CardData = { kind: "card"; id: string; status: string };
@@ -94,6 +96,7 @@ function Card({ card, status, rank, selected, index, props }: CardProps) {
       }),
     );
   }, [card.id, card.pending, status, rank]);
+  const repository = props.repositoryOf?.(card.id);
 
   return (
     <li
@@ -113,6 +116,7 @@ function Card({ card, status, rank, selected, index, props }: CardProps) {
     >
       <div className="bu-card-head">
         <span className="bu-id">{card.displayId}</span>
+        {repository !== undefined && <span className="bu-repo">{repository}</span>}
         <span className="bu-priority" style={{ color: tokenVar(card.priorityToken) }}>
           {card.priority}
         </span>
