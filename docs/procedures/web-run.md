@@ -2,7 +2,8 @@
 
 The beads-ui web app serves a Board, a Backlog, a Roadmap, Analytics, Sessions and an Issue
 detail view for one Beads store, from a Node server on your own machine. It reads and writes
-through `bd`, so it needs `bd` on your `PATH` and a repository with a `.beads` store.
+through `bd`, so it needs `bd` on your `PATH` and a repository with a `.beads` store. To run it in
+a container instead, see [Docker Compose](#docker-compose).
 
 ## Set up once
 
@@ -228,6 +229,30 @@ in `writes.jsonl` in the state directory. A dispatch route also refuses a reques
 | `GET /api/roadmap` | The Roadmap's bars, dependency lines and undated epics and milestones |
 | `GET /api/analytics?weeks=&sprint=` | The charts' data for `weeks` (1 to 52, default 12) and the named sprint, else the current one; `histories.failed` names each failed `bd history` read and `histories.skipped` counts the issues untouched since before the window; `cost` is the cost section |
 | `GET /api/sessions` | The Sessions view, from the work queue or the store's assignees; `queueError` names a failed queue read |
+
+## Docker Compose
+
+The repository's `docker-compose.yml` runs the web app in a container with `bd` 1.3.4. It keeps
+the checkout it serves, with that checkout's `.beads` Dolt state, on the `beads-ui-work` volume
+at `/work`, and the host's `beads-ui.toml` with the server's credentials on the `beads-ui-home`
+volume:
+
+```sh
+docker compose up --build -d                                    # a new, empty store
+BEADS_UI_REPO=https://example.com/you/repo.git docker compose up --build -d   # or clone one
+docker compose exec web beads-ui-web login-link                 # open the link it prints
+```
+
+On its first start an empty volume gets the clone of `BEADS_UI_REPO` when set, else a new
+repository, and `bd init` when the checkout has no `.beads`; a host `beads-ui.toml` is written
+that allows that one repository (`work`) with the `[auth]` table above. Every later start serves
+what the volumes hold, so issues, the checkout, its Dolt history and the settings survive
+`docker compose restart` and `docker compose down`; only `docker compose down --volumes` deletes
+them. Run `bd` against the same store with `docker compose exec web bd list`.
+
+The server binds `127.0.0.1` only, so the container uses the host's network and the app answers
+on the host's loopback, `http://127.0.0.1:4810/` unless `BEADS_UI_PORT` says otherwise, and on no
+other address. This needs a Linux Docker host, or Docker Desktop with host networking turned on.
 
 ## Test it
 
