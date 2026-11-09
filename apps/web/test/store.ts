@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -50,29 +50,46 @@ export async function createStore(prefix = "web"): Promise<TestStore> {
   };
 }
 
-/**
- * A directory holding a `bd` that fails the named subcommands with a lock error and hands every
- * other call to the real bd, so a route's read failure is bd's own exit status and text.
- */
-export async function failingBd(subcommands: readonly string[]): Promise<{
+export interface WrappedBd {
+  /** PATH with the wrapper first. */
   env: NodeJS.ProcessEnv;
+  /** Written by the wrapper when it reaches its special case, for a test to wait on. */
+  marker: string;
   remove(): Promise<void>;
-}> {
+}
+
+// A `bd` that runs `special` for the subcommands it names and hands every other call to the
+// real bd; `special` may run the real bd too, through "$REAL".
+async function wrappedBd(subcommands: readonly string[], special: string): Promise<WrappedBd> {
   const real = (await exec("sh", ["-c", "command -v bd"], { encoding: "utf8" })).stdout.trim();
-  const dir = await mkdtemp(join(tmpdir(), "beads-ui-web-failing-bd-"));
-  await mkdir(dir, { recursive: true });
+  const dir = await mkdtemp(join(tmpdir(), "beads-ui-web-wrapped-bd-"));
+  const marker = join(dir, "reached");
+  const quote = (text: string) => `'${text.replaceAll("'", `'\\''`)}'`;
   const script = [
     "#!/bin/sh",
+    `REAL=${quote(real)}`,
     `case "$1" in`,
-    `  ${subcommands.join("|")}) echo "Error: database is locked" >&2; exit 1 ;;`,
+    `  ${subcommands.join("|")}) touch ${quote(marker)}; ${special} ;;`,
     "esac",
-    `exec '${real.replaceAll("'", `'\\''`)}' "$@"`,
+    'exec "$REAL" "$@"',
     "",
   ].join("\n");
   await writeFile(join(dir, "bd"), script);
   await chmod(join(dir, "bd"), 0o755);
   return {
     env: { ...process.env, PATH: `${dir}:${process.env.PATH ?? ""}` },
+    marker,
     remove: () => rm(dir, { recursive: true }),
   };
 }
+
+/**
+ * A `bd` that fails the named subcommands with a lock error and hands every other call to the
+ * real bd, so a route's read failure is bd's own exit status and text.
+ */
+export const failingBd = (subcommands: readonly string[]): Promise<WrappedBd> =>
+  wrappedBd(subcommands, 'echo "Error: database is locked" >&2; exit 1');
+
+/** A `bd` that waits `seconds` before running the named subcommands, then runs the real bd. */
+export const slowBd = (subcommands: readonly string[], seconds: number): Promise<WrappedBd> =>
+  wrappedBd(subcommands, `sleep ${seconds}`);

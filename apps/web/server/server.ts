@@ -23,6 +23,9 @@ export interface RunningServer {
   close(): Promise<void>;
 }
 
+/** How long a stop waits for requests in flight: past bd-node's 10-second call timeout. */
+export const CLOSE_GRACE_MS = 15_000;
+
 /** A start the server refuses, with the reason it prints. */
 export class StartRefused extends Error {}
 
@@ -74,10 +77,18 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     url: `http://${LOOPBACK}:${port}/`,
     port,
     server,
+    // Requests in flight finish, with the bd calls they run, so a stop never leaves a bd writing
+    // to the store after the server has gone; idle connections close at once, and whatever is
+    // still open at the deadline is cut.
     close: () =>
       new Promise((resolve, reject) => {
-        server.closeAllConnections();
-        server.close((error) => (error ? reject(error) : resolve()));
+        const deadline = setTimeout(() => server.closeAllConnections(), CLOSE_GRACE_MS);
+        server.close((error) => {
+          clearTimeout(deadline);
+          if (error) reject(error);
+          else resolve();
+        });
+        server.closeIdleConnections();
       }),
   };
 }

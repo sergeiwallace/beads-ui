@@ -1,10 +1,10 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { LOOPBACK } from "../server/config.ts";
 import { type RunningServer, StartRefused, startServer } from "../server/server.ts";
-import { createStore, failingBd, type TestStore } from "./store.ts";
+import { createStore, failingBd, slowBd, type TestStore } from "./store.ts";
 
 let store: TestStore;
 let configHome: string;
@@ -288,5 +288,33 @@ describe("POST /api/issues/:id/rank", () => {
       await rm(join(store.dir, "beads-ui.toml"));
     }
     expect((await post(`/api/issues/${card}/rank`, { shown: "open" })).status).toBe(200);
+  });
+});
+
+describe("stopping the server", () => {
+  it("should finish a write in flight, its bd call included, before it stops", async () => {
+    const id = await store.create("Written during the stop");
+    const slow = await slowBd(["update"], 2);
+    cleanup.push(slow.remove);
+    const stopping = await start({ bdEnv: slow.env });
+    const write = fetch(new URL(`/api/issues/${id}/status`, stopping.url), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ to: "in_progress", shown: "open" }),
+    });
+    // The stop starts once the server's bd update is running.
+    await expect
+      .poll(() =>
+        access(slow.marker).then(
+          () => true,
+          () => false,
+        ),
+      )
+      .toBe(true);
+
+    await stopping.close();
+
+    expect((await write).status).toBe(200);
+    expect((await store.show(id)).status).toBe("in_progress");
   });
 });
