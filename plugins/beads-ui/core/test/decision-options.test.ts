@@ -24,7 +24,7 @@ const decision = (extra: Record<string, unknown> = {}) => ({
     { key: "c", label: "Both, chosen by a setting" },
   ],
   recommended: "a",
-  anchor: "d-3",
+  anchor: "decision-d-3",
   ...extra,
 });
 
@@ -63,7 +63,7 @@ describe("drawing a held decision", () => {
         { key: "c", label: "Both, chosen by a setting", number: 3, recommended: false },
       ],
       recommended: "a",
-      anchor: "d-3",
+      anchor: "decision-d-3",
     });
     expect(optionCardMode(optionsForItem(output, ITEM))).toBe("cards");
   });
@@ -188,6 +188,25 @@ describe("malformed command output", () => {
       cards: [],
       error: { field: "heading", problem: "line 12: stale generated heading" },
     });
+    const notHeld = parsed(
+      stdout([item(ITEM, [], { field: "frontmatter", problem: "the file is not a held item" })]),
+    );
+    expect(optionsForItem(notHeld, ITEM)?.error?.field).toBe("frontmatter");
+  });
+
+  test("should give the item no cards and name the field when its error is not the command's shape", () => {
+    const cases: [unknown, string][] = [
+      [{ field: "summary", problem: "unknown part" }, "items[0].error.field"],
+      [{ field: "block" }, "items[0].error"],
+      ["stale heading", "items[0].error"],
+      [undefined, "items[0].error"],
+    ];
+    for (const [error, field] of cases) {
+      const row = { item: ITEM, kind: "decision", decisions: [decision()], error };
+      const found = optionsForItem(parsed(stdout([row])), ITEM);
+      expect(found?.cards).toEqual([]);
+      expect(found?.error?.field).toBe(field);
+    }
   });
 
   test("should refuse the whole output and name the field when it is not the options payload", () => {
@@ -199,6 +218,7 @@ describe("malformed command output", () => {
       [JSON.stringify({ version: 1 }), "items"],
       [stdout([{ kind: "decision", decisions: [], error: null }]), "items[0].item"],
       [stdout([item(ITEM, [], null, "summary")]), "items[0].kind"],
+      [stdout([item(ITEM, [], null, "open-question")]), "items[0].kind"],
     ];
     for (const [text, field] of refusals) {
       const result = parseDecisionOptions(text);

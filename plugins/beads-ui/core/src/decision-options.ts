@@ -7,9 +7,24 @@ import type { Result } from "./model.ts";
 
 /** The payload version this reads; any other is refused. */
 export const OPTIONS_VERSION = 1;
-/** The item kinds the command prints; an option card's reader tells these apart. */
-export const OPTIONS_ITEM_KINDS = ["decision", "open-question", "blocker", "other"] as const;
+/**
+ * The item kinds the command prints (`held_cli.py`'s OPTIONS_KINDS, and `other` for every other
+ * held kind, so an open question arrives as `other`).
+ */
+export const OPTIONS_ITEM_KINDS = ["decision", "blocker", "other"] as const;
 export type OptionsItemKind = (typeof OPTIONS_ITEM_KINDS)[number];
+/**
+ * The parts an item's `error.field` can name: `format_decision.decision_options` raises the first
+ * five, the command adds `item` for a file it cannot read.
+ */
+export const OPTIONS_ERROR_FIELDS = [
+  "frontmatter",
+  "block",
+  "heading",
+  "options",
+  "recommended",
+  "item",
+] as const;
 /** Options past the ninth have no number key. */
 export const MAX_NUMBER_KEYS = 9;
 
@@ -113,11 +128,17 @@ function itemOf(value: unknown, at: string): ItemOptions {
   }
   const item: ItemOptions = { item: value.item, kind, cards: [] };
   const error = value.error;
-  if (error !== null && error !== undefined) {
-    if (!isRecord(error) || !nonEmpty(error.field) || typeof error.problem !== "string") {
-      item.error = { field: `${at}.error`, problem: "is not an object with a field and a problem" };
+  if (error !== null) {
+    const field = isRecord(error) ? error.field : undefined;
+    if (!isRecord(error) || typeof error.problem !== "string") {
+      item.error = { field: `${at}.error`, problem: "is neither null nor a field and a problem" };
+    } else if (!OPTIONS_ERROR_FIELDS.some((one) => one === field)) {
+      item.error = {
+        field: `${at}.error.field`,
+        problem: `is ${JSON.stringify(field)}, not a part the options command names`,
+      };
     } else {
-      item.error = { field: error.field, problem: error.problem };
+      item.error = { field: String(field), problem: error.problem };
     }
     return item;
   }

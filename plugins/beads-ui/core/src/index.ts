@@ -96,6 +96,7 @@ export type {
 } from "./decision-options.ts";
 export {
   MAX_NUMBER_KEYS,
+  OPTIONS_ERROR_FIELDS,
   OPTIONS_ITEM_KINDS,
   OPTIONS_VERSION,
   optionCardMode,
