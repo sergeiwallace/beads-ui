@@ -1,0 +1,179 @@
+/* The Review queue (web app design D-1): a split list and detail; below 600 px one item at a time,
+   with the list a key or a button away. */
+
+.bu-review {
+  display: grid;
+  grid-template-columns: minmax(16rem, 2fr) 3fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.bu-review-list,
+.bu-review-detail {
+  min-width: 0;
+}
+
+.bu-review-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  border: 0;
+  padding: 0;
+  margin: 0 0 0.5rem;
+}
+
+.bu-review-filter {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+}
+
+.bu-review-heading {
+  font-size: 1rem;
+  margin: 0.75rem 0 0.25rem;
+}
+
+.bu-review-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bu-review-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--bu-border);
+}
+
+.bu-review-row[aria-current="true"] {
+  background: var(--bu-surface-hover);
+}
+
+.bu-review-open {
+  flex: 1;
+  min-height: var(--bu-target);
+  text-align: left;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.bu-review-open:focus-visible,
+.bu-option-card:focus-visible {
+  outline: 2px solid var(--bu-surface-focus);
+}
+
+.bu-review-priority,
+.bu-review-kind {
+  font-family: var(--bu-mono);
+  font-size: 0.8rem;
+}
+
+.bu-review-back {
+  display: none;
+}
+
+.bu-option-card {
+  border: 1px solid var(--bu-border);
+  border-radius: var(--bu-radius);
+  padding: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.bu-option-card-title {
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+}
+
+.bu-option-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bu-option {
+  width: 100%;
+  min-height: var(--bu-target);
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: calc(var(--bu-radius) - 2px);
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.bu-option[aria-checked="true"] {
+  border-color: var(--bu-surface-focus);
+  background: var(--bu-surface-hover);
+}
+
+.bu-option-recommended {
+  font-size: 0.8rem;
+  color: var(--bu-text-dim);
+}
+
+.bu-held-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: inherit;
+  border-top: 1px solid var(--bu-border);
+  padding-top: 0.5rem;
+}
+
+.bu-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0.5rem 0;
+}
+
+.bu-textarea {
+  font: inherit;
+  min-height: 4rem;
+  padding: 0.25rem;
+  border: 1px solid var(--bu-border);
+  border-radius: calc(var(--bu-radius) - 2px);
+  background: var(--bu-surface-card);
+  color: inherit;
+}
+
+.bu-undo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px dashed var(--bu-surface-focus);
+  border-radius: var(--bu-radius);
+}
+
+.bu-bulk-list {
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.bu-bulk-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+@media (max-width: 600px) {
+  .bu-review {
+    grid-template-columns: 1fr;
+  }
+
+  .bu-review[data-showing="detail"] .bu-review-list,
+  .bu-review[data-showing="list"] .bu-review-detail {
+    display: none;
+  }
+
+  .bu-review[data-showing="detail"] .bu-review-back {
+    display: inline-flex;
+  }
+}
