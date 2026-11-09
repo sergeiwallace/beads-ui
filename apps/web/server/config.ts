@@ -5,15 +5,17 @@ import {
   resolveConfig,
   resolveRank,
   resolveWeb,
+  stateDirOf,
+  userConfigPath,
   WEB_RANK_DEFAULT,
 } from "@beads-ui/core";
 
-/** The only address the server binds; the authentication layer is what may widen it. */
+/** The address the server binds unless `[web] host` names another, which needs `[auth]`. */
 export const LOOPBACK = "127.0.0.1";
 export const DEFAULT_PORT = 4810;
 
 export interface WebConfig extends BeadsUiConfig {
-  /** `[web] host`, when the file sets one; the server refuses any value but LOOPBACK. */
+  /** `[web] host`, when the file sets one; beyond loopback only with a valid `[auth]` table. */
   host?: string;
   /** `[web] port`, when the file sets one. */
   port?: number;
@@ -27,7 +29,36 @@ export interface WebConfig extends BeadsUiConfig {
 
 export interface ConfigEnv {
   xdgConfigHome?: string | undefined;
+  /** Where the server's credentials live (serverStateDir). */
+  xdgStateHome?: string | undefined;
   home?: string | undefined;
+}
+
+/** The user's own `beads-ui.toml`, the only file the host's `[auth]` and `[hosts]` come from. */
+export type UserConfigFile =
+  | { kind: "file"; path: string; text: string }
+  | { kind: "error"; path: string; message: string }
+  | { kind: "none" };
+
+/**
+ * Reads the user's `beads-ui.toml` (userConfigPath), never the repository's: a repository's own
+ * file must not widen what the host accepts or shows, as `[sync]` is read from it alone.
+ */
+export async function readUserConfig(env: ConfigEnv): Promise<UserConfigFile> {
+  const path = userConfigPath(env);
+  if (path === undefined) return { kind: "none" };
+  try {
+    return { kind: "file", path, text: await readFile(path, "utf8") };
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    return { kind: "error", path, message: code === "ENOENT" ? "no such file" : String(code) };
+  }
+}
+
+/** The web server's state directory: `web/` in the host's beads-ui state directory. */
+export function serverStateDir(env: ConfigEnv): string | undefined {
+  const dir = stateDirOf({ xdgStateHome: env.xdgStateHome, home: env.home });
+  return dir === undefined ? undefined : `${dir}/web`;
 }
 
 async function firstFile(paths: readonly string[]): Promise<[string, string] | undefined> {
@@ -62,8 +93,6 @@ export async function readWebConfig(repoRoot: string, env: ConfigEnv): Promise<W
   return config;
 }
 
-/** Why the server must not start on `host`, or undefined for the loopback address. */
-export function hostRefusal(host: string | undefined): string | undefined {
-  if (host === undefined || host === LOOPBACK) return undefined;
-  return `beads-ui web binds ${LOOPBACK} only; refusing [web] host = ${JSON.stringify(host)}`;
-}
+/** Whether `host` is a loopback address: anything else needs the whole `[auth]` table. */
+export const isLoopback = (host: string): boolean =>
+  host === LOOPBACK || host === "localhost" || host === "::1";

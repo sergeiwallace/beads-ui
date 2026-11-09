@@ -4,7 +4,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { storeName } from "@beads-ui/core";
-import { DEFAULT_PORT, readWebConfig } from "./config.ts";
+import { ADMIN_USAGE, adminMain, isAdminCommand } from "./admin-cli.ts";
+import { type ConfigEnv, DEFAULT_PORT, readWebConfig } from "./config.ts";
 import { StartRefused, startServer } from "./server.ts";
 
 const APP_DIR = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -20,11 +21,15 @@ const CLIENT_SOURCES = [
 ];
 
 const USAGE = `usage: beads-ui-web [--port <n>] [--open]
+${ADMIN_USAGE}
 
 Serves the beads-ui web app for the Beads store in the current directory on
 http://127.0.0.1:<port>/ (default ${DEFAULT_PORT}, or [web] port in beads-ui.toml).
+Every request needs a browser session: run beads-ui-web login-link on this host
+and open the link it prints. The [auth] and [hosts] tables of your own
+beads-ui.toml must be set (the web app design, Configuration).
   --port <n>  the port; 0 picks a free one
-  --open      open the Board in the default browser`;
+  --open      sign this host's browser in and open the Board`;
 
 async function newestMtime(path: string): Promise<number> {
   const info = await stat(path).catch(() => undefined);
@@ -66,6 +71,13 @@ function parsePort(text: string | undefined): number | undefined {
 }
 
 export async function main(argv: readonly string[]): Promise<number> {
+  const configEnv: ConfigEnv = {
+    xdgConfigHome: process.env.XDG_CONFIG_HOME,
+    xdgStateHome: process.env.XDG_STATE_HOME,
+    home: process.env.HOME,
+  };
+  const command = argv[0];
+  if (isAdminCommand(command)) return adminMain(command, argv.slice(1), configEnv, process.cwd());
   let values: { port?: string | undefined; open?: boolean | undefined; help?: boolean | undefined };
   try {
     ({ values } = parseArgs({
@@ -85,7 +97,6 @@ export async function main(argv: readonly string[]): Promise<number> {
     return 0;
   }
   const repoRoot = process.cwd();
-  const configEnv = { xdgConfigHome: process.env.XDG_CONFIG_HOME, home: process.env.HOME };
   try {
     const config = await readWebConfig(repoRoot, configEnv);
     for (const problem of config.problems) process.stderr.write(`beads-ui.toml: ${problem}\n`);
@@ -93,7 +104,13 @@ export async function main(argv: readonly string[]): Promise<number> {
     await ensureClient();
     const running = await startServer({ repoRoot, port, clientDir: CLIENT_DIR, configEnv });
     process.stdout.write(`beads-ui web: ${storeName(repoRoot)} at ${running.url}\n`);
-    if (values.open === true) openBrowser(running.url);
+    if (running.storeClosed !== undefined) {
+      process.stderr.write(`beads-ui web: ${running.storeClosed}\n`);
+    }
+    process.stderr.write("beads-ui web: sign in with beads-ui-web login-link\n");
+    if (values.open === true) {
+      openBrowser(new URL(running.auth.mintCode().path, running.url).href);
+    }
     const stop = () => {
       running.close().finally(() => process.exit(0));
     };

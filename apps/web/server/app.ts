@@ -1,4 +1,7 @@
 import type { IncomingMessage, RequestListener, ServerResponse } from "node:http";
+import { StoreClosed } from "./allowlist.ts";
+import type { AuthLayer, Caller } from "./auth.ts";
+import { EVENTS_PATH, HEARTBEAT_MS, openEvents } from "./events.ts";
 import { type ApiContext, failure, matchRoute, ROUTES, type Route } from "./routes.ts";
 import { serveClient } from "./static.ts";
 
@@ -7,9 +10,13 @@ export const MAX_BODY_BYTES = 64 * 1024;
 
 export interface AppOptions {
   context: ApiContext;
+  /** The authentication layer: every request passes it before any route or file. */
+  auth: AuthLayer;
   /** The built client (`dist/client`); every path outside `/api/` is served from it. */
   clientDir: string;
   routes?: readonly Route[];
+  /** How often an open event stream re-checks its session; HEARTBEAT_MS unless a test sets it. */
+  heartbeatMs?: number;
 }
 
 function sendJson(response: ServerResponse, status: number, body: unknown): void {
@@ -20,6 +27,12 @@ function sendJson(response: ServerResponse, status: number, body: unknown): void
     "content-length": Buffer.byteLength(text),
   });
   response.end(text);
+}
+
+/** The one answer a receiver route gives for any refusal (Receiver API). */
+function sendEmpty404(response: ServerResponse): void {
+  response.writeHead(404, { "cache-control": "no-store", "content-length": 0 });
+  response.end();
 }
 
 class BodyError {
@@ -54,17 +67,35 @@ async function readJson(request: IncomingMessage): Promise<unknown> {
 async function handleApi(
   request: IncomingMessage,
   response: ServerResponse,
-  pathname: string,
+  url: URL,
+  caller: Caller,
   options: AppOptions,
 ): Promise<void> {
+  const pathname = url.pathname;
   const match = matchRoute(request.method ?? "GET", pathname, options.routes ?? ROUTES);
   if (match === undefined) {
+    if (caller.kind === "receiver") {
+      sendEmpty404(response);
+      return;
+    }
     const reply = failure({
       kind: "unknown-route",
       message: `no API route ${request.method} ${pathname}`,
     });
     sendJson(response, reply.status, reply.body);
     return;
+  }
+  if (match.route.dispatch === true) {
+    const refusal = options.auth.dispatchRefusal(request, caller);
+    if (refusal !== undefined) {
+      const reply = failure({
+        kind: "forbidden",
+        source: "[auth] dispatch_identities",
+        message: refusal,
+      });
+      sendJson(response, reply.status, reply.body);
+      return;
+    }
   }
   let body: unknown;
   if (match.route.method === "POST") {
@@ -76,7 +107,38 @@ async function handleApi(
       return;
     }
   }
-  const reply = await match.route.handle({ params: match.params, body }, options.context);
+  let reply: Awaited<ReturnType<Route["handle"]>>;
+  try {
+    reply = await match.route.handle(
+      { params: match.params, query: url.searchParams, body, caller },
+      options.context,
+    );
+  } catch (error) {
+    if (!(error instanceof StoreClosed)) throw error;
+    reply = failure({
+      kind: "store-closed",
+      source: "[hosts] allow_repos",
+      message: error.message,
+    });
+  }
+  if (caller.kind === "receiver" && reply.status >= 400) {
+    sendEmpty404(response);
+    return;
+  }
+  if (reply.status === 204) {
+    response.writeHead(204, { "cache-control": "no-store" });
+    response.end();
+    return;
+  }
+  if (typeof reply.body === "string") {
+    response.writeHead(reply.status, {
+      "content-type": "text/plain; charset=utf-8",
+      "cache-control": "no-store",
+      "content-length": Buffer.byteLength(reply.body),
+    });
+    response.end(reply.body);
+    return;
+  }
   sendJson(response, reply.status, reply.body);
 }
 
@@ -88,22 +150,41 @@ export interface App {
    * its client has gone, so a stop waits for this as well as for the connections to close.
    */
   settled(): Promise<void>;
+  /** Ends every open event stream, so a stop does not wait on them. */
+  closeStreams(): void;
 }
 
 /**
- * The server's one request handler: every `/api/` path goes to the route table and nothing else,
- * every other GET to the built client. A later layer (authentication, a Host allowlist, a base
- * path) wraps this handler and so stands in front of every route.
+ * The server's one request handler: the authentication layer first, then every `/api/` path to
+ * the route table and nothing else, the event stream, and every other GET to the built client.
  */
 export function createApp(options: AppOptions): App {
   const handling = new Set<Promise<void>>();
-  const handle: RequestListener = (request, response) => {
+  const streams = new Set<() => void>();
+  const serve = async (request: IncomingMessage, response: ServerResponse) => {
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
+    const caller = await options.auth.admit(request, response, url);
+    if (caller === undefined) return;
+    if (url.pathname === EVENTS_PATH && request.method === "GET") {
+      const sessionId = options.auth.sessionIdOf(caller);
+      if (sessionId === undefined) {
+        sendJson(response, 401, { error: { kind: "unauthenticated", message: "not signed in" } });
+        return;
+      }
+      await openEvents(response, {
+        auth: options.auth,
+        sessionId,
+        heartbeatMs: options.heartbeatMs ?? HEARTBEAT_MS,
+        open: streams,
+      });
+      return;
+    }
     const isApi = url.pathname === "/api" || url.pathname.startsWith("/api/");
-    const work = isApi
-      ? handleApi(request, response, url.pathname, options)
-      : serveClient(request, response, url.pathname, options.clientDir);
-    const done: Promise<void> = work
+    if (isApi) await handleApi(request, response, url, caller, options);
+    else await serveClient(request, response, url.pathname, options.clientDir);
+  };
+  const handle: RequestListener = (request, response) => {
+    const done: Promise<void> = serve(request, response)
       .catch((error: unknown) => {
         const message = error instanceof Error ? error.message : String(error);
         if (response.headersSent) {
@@ -119,6 +200,9 @@ export function createApp(options: AppOptions): App {
     handle,
     async settled() {
       while (handling.size > 0) await Promise.allSettled([...handling]);
+    },
+    closeStreams() {
+      for (const end of [...streams]) end();
     },
   };
 }
