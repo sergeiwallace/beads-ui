@@ -36,14 +36,17 @@ export function dayOf(stamp: string): number | undefined {
 }
 
 /** A status's category as `bd statuses` lists it; bd 1.3's built-in one when it is not listed. */
-function categoryOf(issue: Issue, statuses: readonly Status[]): StatusCategory {
-  const listed = statuses.find((status) => status.name === issue.status)?.category;
+export function statusCategory(name: string, statuses: readonly Status[]): StatusCategory {
+  const listed = statuses.find((status) => status.name === name)?.category;
   if (listed !== undefined) return listed;
-  if (issue.status === "closed") return "done";
-  if (["in_progress", "blocked", "hooked"].includes(issue.status)) return "wip";
-  if (issue.status === "deferred" || issue.status === "pinned") return "frozen";
+  if (name === "closed") return "done";
+  if (["in_progress", "blocked", "hooked"].includes(name)) return "wip";
+  if (name === "deferred" || name === "pinned") return "frozen";
   return "active";
 }
+
+const categoryOf = (issue: Issue, statuses: readonly Status[]): StatusCategory =>
+  statusCategory(issue.status, statuses);
 
 export interface TimelineEntry {
   id: string;

@@ -1,3 +1,23 @@
+export type {
+  AgingItem,
+  AnalyticsOptions,
+  AnalyticsView,
+  Burndown,
+  CycleTimePoint,
+  FlowDay,
+  IssueFlow,
+  StatusChange,
+  ThroughputWeek,
+} from "./analytics.ts";
+export {
+  ANALYTICS_DEFAULT_WEEKS,
+  ANALYTICS_MAX_WEEKS,
+  analyticsView,
+  currentSprint,
+  FLOW_ORDER,
+  ROLLING_WINDOW,
+  statusChanges,
+} from "./analytics.ts";
 export {
   boardReadArgvs,
   CLOSED_PAGE_SIZE,
@@ -92,6 +112,14 @@ export {
   withPanelTable,
   withSurfacesTable,
 } from "./config.ts";
+export type {
+  CostExportError,
+  CostExportResult,
+  IssueCost,
+  SessionUsage,
+  TokenCounts,
+} from "./cost.ts";
+export { COST_METRIC, costPerIssue, parseCostExport, TOKEN_METRIC } from "./cost.ts";
 export type {
   DecisionOptionsOutput,
   ItemOptions,
@@ -398,6 +426,38 @@ export {
   submitReviewFilter,
 } from "./reviewList.ts";
 export type {
+  RoadmapBar,
+  RoadmapItem,
+  RoadmapLink,
+  RoadmapLinkKind,
+  RoadmapView,
+} from "./roadmap.ts";
+export { ROADMAP_LINK_KINDS, roadmapView } from "./roadmap.ts";
+export type {
+  QueueEvent,
+  QueueParseError,
+  QueueParseResult,
+  QueueSession,
+  QueueSessionsInput,
+  QueueTask,
+  SessionRow,
+  SessionsView,
+  SessionTask,
+} from "./sessions.ts";
+export {
+  ageText,
+  beadsSessionsView,
+  CLAIM_EVENT,
+  claimedAt,
+  LEASED_QUEUE_STATES,
+  LIVENESS_UNAVAILABLE,
+  leasedTask,
+  parseQueueSessions,
+  parseQueueTaskEvents,
+  parseQueueTasks,
+  queueSessionsView,
+} from "./sessions.ts";
+export type {
   BoardEntry,
   BoardSnapshot,
   FileLease,
@@ -474,6 +534,7 @@ export {
   sprintSelectionText,
   sprintsOf,
   sprintView,
+  startsAtOf,
 } from "./sprint-view.ts";
 export type {
   Finished,
@@ -826,6 +887,7 @@ export {
   isTimelineIssue,
   RASTER_COLORS,
   RASTER_MAX_COLUMNS,
+  statusCategory,
   TIMELINE_TYPES,
   timelineLayout,
   timelinePlacement,
