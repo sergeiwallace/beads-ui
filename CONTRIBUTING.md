@@ -19,6 +19,7 @@ repository to prove the secret scan refuses it, and fails naming the binary when
 ```sh
 npm ci
 bash .githooks/install.sh
+npm run e2e:install -w apps/web
 ```
 
 The hook install wires the pre-commit and pre-push gates, including the gitleaks secret scan.
@@ -29,7 +30,7 @@ Run these before you push. The hooks run them too.
 
 ```sh
 npm run lint        # Biome, the core purity gate and the core type check
-npm test            # Vitest, then claude plugin test for the mod
+npm test            # Vitest, the web app's Playwright specs, then claude plugin test for the mod
 npx tsc --noEmit    # type check of the whole repository
 ```
 
@@ -79,6 +80,13 @@ Suites under `packages/<name>/test/*.test.ts` sit outside the plugin and run und
 The `bd` adapter's suite, `packages/bd-node/test/bd-adapter.test.ts`, reads this repository's own
 Beads store with `bd list`, `show`, `statuses` and `ready`, so `npm test` needs `bd` on your `PATH`.
 It drives every write through a stub `bd` in a temporary directory and never writes to the store.
+
+The web app's suites build their own store. `apps/web/test/*.test.ts` (Vitest) call the server's
+routes over HTTP against a temporary store made with `bd init`; `apps/web/e2e/*.spec.ts`
+(Playwright) run the documented command against one store each and drive a browser at 1280 px with
+a mouse and at 390 px on a touch screen. `npm run e2e:install -w apps/web` puts Chromium in this
+checkout's `node_modules`, where the specs look for it. Component suites are
+`packages/web-ui/test/*.test.tsx`, under Vitest with jsdom.
 
 ## Pull requests
 
