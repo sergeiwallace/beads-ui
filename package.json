@@ -5,7 +5,8 @@
   "packageManager": "npm@11.19.0",
   "workspaces": [
     "plugins/*",
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "scripts": {
     "lint": "biome check . && turbo run lint typecheck",

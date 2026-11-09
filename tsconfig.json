@@ -1,13 +1,22 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["es2023"],
-    "types": ["node"]
+    "lib": ["es2023", "dom", "dom.iterable"],
+    "jsx": "react-jsx",
+    "types": ["node", "vite/client"]
   },
   "include": [
     "plugins/*/core/**/*.ts",
     "packages/*/src/**/*.ts",
+    "packages/*/src/**/*.tsx",
     "packages/*/test/**/*.ts",
+    "packages/*/test/**/*.tsx",
+    "apps/*/client/**/*.ts",
+    "apps/*/client/**/*.tsx",
+    "apps/*/server/**/*.ts",
+    "apps/*/test/**/*.ts",
+    "apps/*/e2e/**/*.ts",
+    "apps/*/*.ts",
     "*.ts"
   ],
   "exclude": ["**/test/fixtures/**", "node_modules"]

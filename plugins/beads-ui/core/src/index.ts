@@ -50,9 +50,11 @@ export type {
   ResolvedConfig,
   ResolvedGlyphs,
   ResolvedPanel,
+  ResolvedRank,
   ResolvedSurfaces,
   ResolvedSync,
   ResolvedTheme,
+  ResolvedWeb,
   TomlError,
   TomlTable,
   TomlValue,
@@ -72,20 +74,87 @@ export {
   resolveConfig,
   resolveGlyphs,
   resolvePanel,
+  resolveRank,
   resolveReview,
   resolveSurfaces,
   resolveSync,
   resolveTheme,
+  resolveWeb,
   SURFACES_TABLE,
   SYNC_TABLE,
   THEME_TABLE,
   userConfigPath,
+  WEB_RANK_DEFAULT,
+  WEB_TABLE,
   withBandTable,
   withIndicatorsTable,
   withOverrides,
   withPanelTable,
   withSurfacesTable,
 } from "./config.ts";
+export type {
+  DecisionOptionsOutput,
+  ItemOptions,
+  OptionCard,
+  OptionChoice,
+  OptionsError,
+  OptionsItemKind,
+} from "./decision-options.ts";
+export {
+  MAX_NUMBER_KEYS,
+  OPTIONS_ERROR_FIELDS,
+  OPTIONS_ITEM_KINDS,
+  OPTIONS_VERSION,
+  optionCardMode,
+  optionForKey,
+  optionsForItem,
+  parseDecisionOptions,
+} from "./decision-options.ts";
+export type {
+  AppliedTransition,
+  DeliveryMachine,
+  DeliveryState,
+  DeliveryTransition,
+  RejectedTransition,
+} from "./delivery-state.ts";
+export {
+  allowsTransition,
+  DELIVERY_STATES,
+  DELIVERY_TRANSITIONS,
+  deliveryLabel,
+  deliveryMachine,
+  isDeliveryState,
+  isFinalDelivery,
+  reduceDelivery,
+} from "./delivery-state.ts";
+export type {
+  CreateResult,
+  DispatchEntry,
+  DispatchEnvelope,
+  DispatchKind,
+  DispatchRecord,
+  DispatchStore,
+  DispatchTarget,
+  DispatchTask,
+  ReceiptInput,
+  ReceiptRefusal,
+  ReceiptResult,
+  ReceiptState,
+  SignedDispatchFields,
+  StoredDispatch,
+  Tombstone,
+  TombstoneCause,
+} from "./dispatch-store.ts";
+export {
+  DISPATCH_KINDS,
+  DispatchStoreError,
+  foldDispatch,
+  isOutstanding,
+  planExpiry,
+  planReceipt,
+  RECEIPT_STATES,
+  receiptSource,
+} from "./dispatch-store.ts";
 export type {
   Filter,
   FilterError,
@@ -135,6 +204,24 @@ export {
   legendText,
   NARROW_GUTTER_COLUMNS,
 } from "./indicators.ts";
+export type {
+  Keymap,
+  KeymapBinding,
+  KeymapError,
+  KeymapSettings,
+  KeyPress,
+  Shortcut,
+} from "./keymap.ts";
+export {
+  buildKeymap,
+  chordOf,
+  commandForPress,
+  DEFAULT_KEYMAP_SETTINGS,
+  DEFAULT_SHORTCUTS,
+  parseChord,
+  remapKey,
+  setSingleKeys,
+} from "./keymap.ts";
 export type { Labels, Tier } from "./layout.ts";
 export {
   buttonWidth,
@@ -222,6 +309,17 @@ export {
 } from "./parsers.ts";
 export type { QuickAdd, QuickAddError } from "./quickadd.ts";
 export { createArgv, parseQuickAdd } from "./quickadd.ts";
+export type { RankError, RankNeighbours, RankRead } from "./rank.ts";
+export {
+  isRankKey,
+  keyBetween,
+  orderByPriorityRank,
+  orderByRank,
+  RANK_JITTER_STEPS,
+  RANK_KEY,
+  rankNeighbours,
+  readRank,
+} from "./rank.ts";
 export type { BdWhere, StoreFacts, StoreResolution, StoreSource } from "./resolve.ts";
 export {
   DIRECTORY_STORES_TABLE,
@@ -258,6 +356,38 @@ export {
   showItemArgv,
   storeForTask,
 } from "./review.ts";
+export type {
+  QueueFilterKey,
+  QueueFilters,
+  QueueIssue,
+  QueueReadFailure,
+  ReviewAction,
+  ReviewQueueEntry,
+  ReviewQueueEvent,
+  ReviewQueueSection,
+  ReviewQueueState,
+  ReviewQueueView,
+} from "./review-queue.ts";
+export {
+  CURATION_SCALE,
+  compareQueueEntries,
+  curationOf,
+  decodeQueueFilters,
+  encodeQueueFilters,
+  goalsOf,
+  heldEntry,
+  INITIAL_REVIEW_QUEUE,
+  matchesQueueFilters,
+  NOTHING_TO_REVIEW,
+  normalizeQueueFilters,
+  QUEUE_FILTER_KEYS,
+  REVIEW_ACTIONS,
+  reduceReviewQueue,
+  reviewQueueView,
+  sortQueueEntries,
+  taskEntry,
+  withQueueFilters,
+} from "./review-queue.ts";
 export type {
   ReviewFilter,
   ReviewFilterError,
@@ -356,6 +486,24 @@ export {
   sortLabel,
 } from "./sort.ts";
 export type {
+  SprintInfo,
+  SprintPickerEntry,
+  SprintSelection,
+  SprintView,
+  SprintViewOptions,
+} from "./sprint-view.ts";
+export {
+  BACKLOG_LABEL,
+  milestoneSprintOf,
+  parseSprintSelection,
+  SPRINT_LABEL_PREFIX,
+  selectedIssues,
+  sprintLabelsOf,
+  sprintSelectionText,
+  sprintsOf,
+  sprintView,
+} from "./sprint-view.ts";
+export type {
   Finished,
   PendingSubmit,
   SubmitAnswer,
@@ -449,6 +597,9 @@ export type {
   MoveError,
   PageView,
   PendingMove,
+  PendingRank,
+  RankPlan,
+  RankPlanError,
 } from "./views/board.ts";
 export {
   BOARD_PAGE_LIMIT,
@@ -457,6 +608,7 @@ export {
   INITIAL_BOARD_STATE,
   pageOf,
   planMove,
+  planRank,
   reduceBoard,
   STALE_WRITE_EXIT,
   stepPage,

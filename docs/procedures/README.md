@@ -18,3 +18,4 @@ Repeatable workflows, operational how-tos, and development processes.
 | File | Description |
 |------|-------------|
 | [mod-install.md](mod-install.md) | Load or install the beads-ui Claude Code mod, its keys, quick-add grammar, configuration defaults and how to report a bug |
+| [web-run.md](web-run.md) | Run the web app locally with one command, its views, configuration, API routes and tests |

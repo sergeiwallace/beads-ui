@@ -3,7 +3,8 @@ import { buildColumns, buildSwimlanes, type SwimlaneMode } from "../columns.ts";
 import { applyFilter, type Filter } from "../filter.ts";
 import { GUTTER_TREE_CHARS } from "../indicators.ts";
 import { CARD_FRAME_TREE_CHARS, PRESS_TREE_CHARS } from "../layout.ts";
-import type { BdArgv, Issue, Result, Status, StatusCategory } from "../model.ts";
+import type { BdArgv, Issue, RandomSource, Result, Status, StatusCategory } from "../model.ts";
+import { keyBetween, RANK_KEY, type RankError, rankNeighbours, readRank } from "../rank.ts";
 import type { SortSpec } from "../sort.ts";
 import { priorityToken, statusToken, type Token } from "../tokens.ts";
 import { asOf, priorityBadge, truncate } from "./text.ts";
@@ -24,6 +25,13 @@ export interface PendingMove {
   to: string;
 }
 
+/** A reorder shown at once and not yet confirmed: the card's `metadata.rank` before and after. */
+export interface PendingRank {
+  /** undefined when the card had no rank. */
+  from: unknown;
+  to: string;
+}
+
 export interface BoardState {
   loaded: boolean;
   issues: Issue[];
@@ -38,6 +46,12 @@ export interface BoardState {
   conflict?: { id: string; shown: string; attempted: string };
   /** The last move that failed for another reason. */
   moveError?: { id: string; exitCode: number; message: string };
+  /** Reorders shown optimistically and not yet confirmed, by issue id (views.rank). */
+  ranking?: Readonly<Record<string, PendingRank>>;
+  /** The last reorder another actor won: the card changed before its rank was written. */
+  rankConflict?: { id: string };
+  /** The last reorder that failed for another reason; exitCode null when bd never ran it. */
+  rankError?: { id: string; exitCode: number | null; message: string };
   /** Issue ids to re-read with `bd show` (showArgv) and feed back as `issue-refreshed`. */
   refresh: string[];
 }
@@ -48,7 +62,10 @@ export type BoardEvent =
   | { type: "move-requested"; id: string; to: string }
   | { type: "move-succeeded"; id: string }
   | { type: "move-failed"; id: string; exitCode: number; message: string }
-  | { type: "issue-refreshed"; issue: Issue };
+  | { type: "issue-refreshed"; issue: Issue }
+  | { type: "rank-requested"; id: string; key: string }
+  | { type: "rank-succeeded"; id: string; key: string }
+  | { type: "rank-failed"; id: string; exitCode: number | null; message: string };
 
 export const INITIAL_BOARD_STATE: BoardState = {
   loaded: false,
@@ -68,12 +85,30 @@ function withoutKey<T>(record: Readonly<Record<string, T>>, key: string): Record
   return next;
 }
 
+function withRank(issues: readonly Issue[], id: string, rank: unknown): Issue[] {
+  return issues.map((issue) => {
+    if (issue.id !== id) return issue;
+    const metadata = { ...issue.metadata };
+    if (rank === undefined) delete metadata[RANK_KEY];
+    else metadata[RANK_KEY] = rank;
+    return { ...issue, metadata };
+  });
+}
+
+// A new write clears whatever the last one reported.
+function withoutOutcomes(state: BoardState): BoardState {
+  const { conflict: _c, moveError: _m, rankConflict: _rc, rankError: _re, ...rest } = state;
+  return rest;
+}
+
 export function reduceBoard(state: BoardState, event: BoardEvent): BoardState {
   switch (event.type) {
     case "load-succeeded": {
       let issues = event.issues;
       for (const [id, move] of Object.entries(state.pending))
         issues = withStatus(issues, id, move.to);
+      for (const [id, rank] of Object.entries(state.ranking ?? {}))
+        issues = withRank(issues, id, rank.to);
       const { loadError: _cleared, ...rest } = state;
       return { ...rest, loaded: true, issues, statuses: event.statuses, loadedAt: event.at };
     }
@@ -88,10 +123,9 @@ export function reduceBoard(state: BoardState, event: BoardEvent): BoardState {
       };
     case "move-requested": {
       const issue = state.issues.find((candidate) => candidate.id === event.id);
-      if (issue === undefined || state.pending[event.id] !== undefined) return state;
-      const { conflict: _c, moveError: _m, ...rest } = state;
+      if (issue === undefined || busy(state, event.id)) return state;
       return {
-        ...rest,
+        ...withoutOutcomes(state),
         issues: withStatus(state.issues, event.id, event.to),
         pending: { ...state.pending, [event.id]: { from: issue.status, to: event.to } },
       };
@@ -133,8 +167,54 @@ export function reduceBoard(state: BoardState, event: BoardEvent): BoardState {
         refresh: state.refresh.filter((id) => id !== issue.id),
       };
     }
+    case "rank-requested": {
+      const issue = state.issues.find((candidate) => candidate.id === event.id);
+      if (issue === undefined || busy(state, event.id)) return state;
+      return {
+        ...withoutOutcomes(state),
+        issues: withRank(state.issues, event.id, event.key),
+        ranking: {
+          ...state.ranking,
+          [event.id]: { from: issue.metadata[RANK_KEY], to: event.key },
+        },
+      };
+    }
+    case "rank-succeeded": {
+      if (state.ranking?.[event.id] === undefined) return state;
+      return {
+        ...state,
+        issues: withRank(state.issues, event.id, event.key),
+        ranking: withoutKey(state.ranking, event.id),
+      };
+    }
+    case "rank-failed": {
+      const rank = state.ranking?.[event.id];
+      if (rank === undefined || state.ranking === undefined) return state;
+      const restored = {
+        ...state,
+        issues: withRank(state.issues, event.id, rank.from),
+        ranking: withoutKey(state.ranking, event.id),
+      };
+      if (event.exitCode === STALE_WRITE_EXIT) {
+        return {
+          ...restored,
+          rankConflict: { id: event.id },
+          refresh: restored.refresh.includes(event.id)
+            ? restored.refresh
+            : [...restored.refresh, event.id],
+        };
+      }
+      return {
+        ...restored,
+        rankError: { id: event.id, exitCode: event.exitCode, message: event.message },
+      };
+    }
   }
 }
+
+// One write in flight a card: a move and a reorder of the same card never race each other.
+const busy = (state: BoardState, id: string): boolean =>
+  state.pending[id] !== undefined || state.ranking?.[id] !== undefined;
 
 export type MoveError =
   | { kind: "unknown-issue"; message: string }
@@ -156,7 +236,7 @@ export function planMove(
   if (issue === undefined) {
     return { ok: false, error: { kind: "unknown-issue", message: `${id} is not on the board` } };
   }
-  if (state.pending[id] !== undefined) {
+  if (busy(state, id)) {
     return { ok: false, error: { kind: "move-pending", message: `${id} is still moving` } };
   }
   if (!state.statuses.some((status) => status.name === to)) {
@@ -169,6 +249,66 @@ export function planMove(
     ok: true,
     value: { argv: moveArgv(id, to, issue.status), event: { type: "move-requested", id, to } },
   };
+}
+
+export type RankPlanError = MoveError | RankError | { kind: "same-place"; message: string };
+
+/** A planned reorder: the event that shows it, and what the write is checked against. */
+export interface RankPlan {
+  event: Extract<BoardEvent, { type: "rank-requested" }>;
+  /** The card's drawn status, which guards the write as a move's is. */
+  shown: string;
+  /** The ranked neighbours the key falls between, by id; the server re-reads their keys. */
+  above?: string;
+  below?: string;
+}
+
+/**
+ * What dropping `id` at slot `index` of its own column does under views.rank (D-6): a key
+ * between the slot's ranked neighbours, written to the card alone, so no other card is
+ * renumbered. `index` counts slots in the column's drawn order with the card taken out.
+ */
+export function planRank(
+  state: BoardState,
+  id: string,
+  index: number,
+  random: RandomSource,
+): Result<RankPlan, RankPlanError> {
+  const issue = state.issues.find((candidate) => candidate.id === id);
+  if (issue === undefined) {
+    return { ok: false, error: { kind: "unknown-issue", message: `${id} is not on the board` } };
+  }
+  if (busy(state, id)) {
+    return { ok: false, error: { kind: "move-pending", message: `${id} is still moving` } };
+  }
+  const column =
+    buildColumns(state.statuses, state.issues, { rank: true }).columns.find(
+      (candidate) => candidate.status.name === issue.status,
+    )?.issues ?? [];
+  const { above, below } = rankNeighbours(column, id, index);
+  const keyOf = (neighbour: Issue | undefined): string | undefined => {
+    const read = neighbour === undefined ? undefined : readRank(neighbour);
+    return read?.kind === "ranked" ? read.key : undefined;
+  };
+  const current = readRank(issue);
+  const low = keyOf(above);
+  const high = keyOf(below);
+  if (
+    current.kind === "ranked" &&
+    (low === undefined || low < current.key) &&
+    (high === undefined || current.key < high)
+  ) {
+    return { ok: false, error: { kind: "same-place", message: `${id} is already there` } };
+  }
+  const key = keyBetween(low, high, random);
+  if (!key.ok) return key;
+  const plan: RankPlan = {
+    event: { type: "rank-requested", id, key: key.value },
+    shown: issue.status,
+  };
+  if (above !== undefined) plan.above = above.id;
+  if (below !== undefined) plan.below = below.id;
+  return { ok: true, value: plan };
 }
 
 export interface CardView {
@@ -243,6 +383,8 @@ export interface BoardViewOptions {
   filter?: Filter;
   readyIds?: ReadonlySet<string>;
   sort?: SortSpec;
+  /** `views.rank`: each column in rank order (buildColumns). */
+  rank?: boolean;
   /**
    * Pages the board so the drawn tree stays within a budget: a mod tree is cut off past 100,000
    * serialized characters. Without it every card is drawn on one page.
@@ -468,6 +610,13 @@ function conflictLine(state: BoardState): string | undefined {
     const { id, exitCode, message } = state.moveError;
     return `moving ${id} failed (exit ${exitCode}): ${message}`;
   }
+  if (state.rankConflict !== undefined) {
+    return `${state.rankConflict.id} changed elsewhere before the reorder; restored and refreshed`;
+  }
+  if (state.rankError !== undefined) {
+    const { id, exitCode, message } = state.rankError;
+    return `reordering ${id} failed${exitCode === null ? "" : ` (exit ${exitCode})`}: ${message}`;
+  }
   return undefined;
 }
 
@@ -485,6 +634,7 @@ export function boardView(state: BoardState, options: BoardViewOptions): BoardVi
   const columnOptions = {
     ...(options.softWipLimit === undefined ? {} : { softWipLimit: options.softWipLimit }),
     ...(options.sort === undefined ? {} : { sort: options.sort }),
+    ...(options.rank === undefined ? {} : { rank: options.rank }),
   };
   const { columns, unplaced } = buildColumns(state.statuses, issues, columnOptions);
   const total = buildColumns(state.statuses, state.issues, columnOptions).columns;

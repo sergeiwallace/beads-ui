@@ -1,21 +1,28 @@
 import {
   type BdArgv,
+  type BdWhere,
+  boardReadArgvs,
+  type Comment,
   closeArgv,
+  commentsArgv,
   createArgv,
   type Issue,
   listArgv,
   type ParseResult,
+  parseBdComments,
   parseBdCreatedId,
   parseBdList,
   parseBdReady,
   parseBdShow,
   parseBdStatuses,
+  parseBdWhere,
   type QuickAdd,
   readyArgv,
   STALE_WRITE_EXIT,
   type Status,
   showArgv,
   statusesArgv,
+  whereArgv,
 } from "@beads-ui/core";
 import type { BdResult, Failed, NotFound } from "./result.ts";
 import { commandName, DEFAULT_TIMEOUT_MS, type RunOutcome, runBd } from "./run.ts";
@@ -41,6 +48,15 @@ export interface CreateOptions extends CallOptions {
 
 export interface BdClient {
   list(options?: CallOptions): Promise<BdResult<Issue[]>>;
+  /**
+   * The board's reads (boardReadArgvs, D-29): every issue not closed, then the newest page of
+   * closed ones, one bd call after the other; never every closed issue.
+   */
+  board(options?: CallOptions): Promise<BdResult<Issue[]>>;
+  /** Every comment on an issue, oldest first. */
+  comments(id: string, options?: CallOptions): Promise<BdResult<Comment[]>>;
+  /** Whether bd finds a store from cwd. */
+  where(options?: CallOptions): Promise<BdResult<BdWhere>>;
   show(id: string, options?: CallOptions): Promise<BdResult<Issue>>;
   statuses(options?: CallOptions): Promise<BdResult<Status[]>>;
   ready(options?: CallOptions): Promise<BdResult<Issue[]>>;
@@ -146,6 +162,40 @@ export function createBdClient(options: BdClientOptions): BdClient {
     list(callOptions) {
       const argv = listArgv();
       return call(argv, callOptions, (out) => parsed(argv, out, parseBdList));
+    },
+    async board(callOptions) {
+      const [open, closed] = boardReadArgvs();
+      const first = await call(open, callOptions, (out) => parsed(open, out, parseBdList));
+      if (first.kind !== "ok") return first;
+      const second = await call(closed, callOptions, (out) => parsed(closed, out, parseBdList));
+      if (second.kind !== "ok") return second;
+      const seen = new Set(first.value.map((issue) => issue.id));
+      return {
+        kind: "ok",
+        value: [...first.value, ...second.value.filter((issue) => !seen.has(issue.id))],
+      };
+    },
+    comments(id, callOptions) {
+      const argv = commentsArgv(id);
+      return call(
+        argv,
+        callOptions,
+        (out) => notFound(id, out) ?? parsed(argv, out, parseBdComments),
+      );
+    },
+    where(callOptions) {
+      const argv = whereArgv();
+      return call(argv, callOptions, (out) => {
+        const where = parseBdWhere(out.exitCode, out.stdout);
+        if (where !== undefined) return { kind: "ok", value: where };
+        if (out.exitCode !== 0) return exitFailure(argv, out);
+        return {
+          kind: "failed",
+          exitCode: 0,
+          stderr: out.stderr,
+          message: `${commandName(argv)} returned output the core could not read`,
+        };
+      });
     },
     show(id, callOptions) {
       const argv = showArgv(id);

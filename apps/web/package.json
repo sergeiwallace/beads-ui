@@ -1,0 +1,33 @@
+{
+  "name": "@sergeiwallace/beads-ui-web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "beads-ui-web": "./bin/beads-ui-web.mjs"
+  },
+  "scripts": {
+    "build": "vite build",
+    "start": "node bin/beads-ui-web.mjs",
+    "typecheck": "tsc -p .",
+    "test": "vitest run && npm run test:e2e",
+    "test:e2e": "PLAYWRIGHT_BROWSERS_PATH=0 playwright test",
+    "e2e:install": "PLAYWRIGHT_BROWSERS_PATH=0 playwright install chromium"
+  },
+  "dependencies": {
+    "@babel/core": "7.29.13",
+    "@rolldown/plugin-babel": "0.3.0",
+    "@sergeiwallace/beads-ui-bd-node": "0.0.0",
+    "@sergeiwallace/beads-ui-web-ui": "0.0.0",
+    "@vitejs/plugin-react": "6.2.1",
+    "babel-plugin-react-compiler": "1.0.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "vite": "8.3.6"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0"
+  }
+}

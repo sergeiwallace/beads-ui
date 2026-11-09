@@ -1,5 +1,6 @@
 import { applyFilter, describeFilterError, type FilterState } from "../filter.ts";
 import type { Issue, Status } from "../model.ts";
+import { orderByPriorityRank } from "../rank.ts";
 import { DEFAULT_SORT, type SortSpec, sortIssues } from "../sort.ts";
 import { priorityToken, type Token } from "../tokens.ts";
 import { type PageView, pageOf } from "./board.ts";
@@ -39,6 +40,8 @@ export interface BacklogOptions {
   filter: FilterState;
   readyIds?: ReadonlySet<string>;
   sort?: SortSpec;
+  /** `views.rank`: with no `sort` given, priority then rank then age (orderByPriorityRank). */
+  rank?: boolean;
   /** Width of the title column; the display id is cut to `idWidth`. */
   titleWidth: number;
   idWidth?: number;
@@ -68,7 +71,10 @@ export function backlogView(issues: readonly Issue[], options: BacklogOptions): 
   else filterLine = filtered.error.message;
 
   const idWidth = options.idWidth ?? 32;
-  const sorted = sortIssues(shown, options.sort ?? DEFAULT_SORT);
+  const sorted =
+    options.sort === undefined && options.rank === true
+      ? orderByPriorityRank(shown)
+      : sortIssues(shown, options.sort ?? DEFAULT_SORT);
   const page = pageOf(
     "backlog",
     sorted.length,
