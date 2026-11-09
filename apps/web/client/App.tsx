@@ -23,7 +23,7 @@ import {
   usePaletteChord,
 } from "@sergeiwallace/beads-ui-web-ui";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { ApiFailure, api, type BoardPayload, type IssuePayload } from "./api.ts";
+import { ApiFailure, api, type BoardPayload, type IssuePayload, signOut } from "./api.ts";
 
 type Route = { view: "board" } | { view: "backlog" } | { view: "issue"; id: string };
 
@@ -340,6 +340,15 @@ export function App() {
         >
           Commands <kbd>Ctrl K</kbd>
         </button>
+        <button
+          type="button"
+          className="bu-button app-sign-out"
+          onClick={() => {
+            void signOut().finally(() => window.location.reload());
+          }}
+        >
+          Sign out
+        </button>
       </header>
       {board.errorLine !== undefined && (
         <p className="app-error" role="alert">
@@ -349,6 +358,11 @@ export function App() {
       {(meta?.problems ?? []).map((problem) => (
         <p key={problem} className="app-problem">
           beads-ui.toml: {problem}
+        </p>
+      ))}
+      {(meta?.health ?? []).map((line) => (
+        <p key={line} className="app-problem">
+          {line}
         </p>
       ))}
       <main className="app-main">

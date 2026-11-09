@@ -103,11 +103,12 @@ describe("remapping", () => {
     const result = remapKey(keymap(), "review.approve", "ctrl+k");
 
     expect(result.ok).toBe(false);
-    if (!result.ok)
+    if (!result.ok) {
       expect(result.error).toMatchObject({
         kind: "conflict",
         commands: ["review.approve", "palette.open"],
       });
+    }
   });
 
   test("should refuse the settings and name both commands when stored remaps give one key to two commands", () => {

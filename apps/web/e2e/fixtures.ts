@@ -1,31 +1,57 @@
-import { type ChildProcess, spawn } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { type ChildProcess, execFile, spawn } from "node:child_process";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { test as base, expect } from "@playwright/test";
+import { promisify } from "node:util";
+import { test as base, expect, type Page } from "@playwright/test";
+import { hostConfig } from "../test/auth-env.ts";
 import { createStore, type TestStore } from "../test/store.ts";
+
+const exec = promisify(execFile);
 
 export const BIN = fileURLToPath(new URL("../bin/beads-ui-web.mjs", import.meta.url));
 
 export interface Served {
   url: string;
+  port: number;
   /** Milliseconds from spawning the command to its URL line. */
   startedInMs: number;
   child: ChildProcess;
+  /** The environment the command ran with: its private config and state homes. */
+  env: NodeJS.ProcessEnv;
+  cwd: string;
   output(): string;
   stop(): Promise<void>;
 }
 
 /**
+ * The host settings the documented command needs, in a private config home: the `[auth]` table
+ * and `[hosts] allow_repos` listing the store's repository. Credentials go to a private state home.
+ */
+async function hostSettings(dir: string, configHome: string): Promise<NodeJS.ProcessEnv> {
+  await mkdir(join(configHome, "beads-ui"), { recursive: true });
+  await writeFile(
+    join(configHome, "beads-ui", "beads-ui.toml"),
+    hostConfig({ allowRepos: [basename(dir)] }),
+  );
+  return {
+    ...process.env,
+    XDG_CONFIG_HOME: configHome,
+    XDG_STATE_HOME: join(configHome, "state"),
+  };
+}
+
+/**
  * Runs the documented command, `beads-ui-web --port 0`, in `dir`, and resolves on the URL line
- * it prints. The user's config is kept out with a private XDG_CONFIG_HOME.
+ * it prints. The user's config is kept out with a private XDG_CONFIG_HOME and XDG_STATE_HOME.
  */
 export async function serve(dir: string, configHome: string): Promise<Served> {
+  const env = await hostSettings(dir, configHome);
   const started = Date.now();
   const child = spawn(process.execPath, [BIN, "--port", "0"], {
     cwd: dir,
-    env: { ...process.env, XDG_CONFIG_HOME: configHome },
+    env,
     stdio: ["ignore", "pipe", "pipe"],
   });
   let output = "";
@@ -41,8 +67,11 @@ export async function serve(dir: string, configHome: string): Promise<Served> {
   });
   return {
     url,
+    port: Number(new URL(url).port),
     startedInMs: Date.now() - started,
     child,
+    env,
+    cwd: dir,
     output: () => output,
     stop: () =>
       new Promise((resolve) => {
@@ -56,40 +85,67 @@ export async function serve(dir: string, configHome: string): Promise<Served> {
   };
 }
 
+/**
+ * The sign-in link the documented host command prints, `beads-ui-web login-link`, for the
+ * origin the browser opens the server on.
+ */
+export async function loginLink(served: Served): Promise<string> {
+  const { stdout } = await exec(
+    process.execPath,
+    [BIN, "login-link", "--port", String(served.port), "--origin", new URL(served.url).origin],
+    { cwd: served.cwd, env: served.env, encoding: "utf8", timeout: 30_000 },
+  );
+  return stdout.trim();
+}
+
+/** Signs `page` in through a fresh link; the page lands on the Board. */
+export async function signIn(page: Page, served: Served): Promise<void> {
+  await page.goto(await loginLink(served));
+}
+
 export interface App {
   store: TestStore;
   served: Served;
   url: string;
 }
 
-export const test = base.extend<{ app: App; configHome: string }>({
+export const test = base.extend<{
+  configHome: string;
+  /** A served store, not signed in. */
+  served: Served & { store: TestStore };
+  /** A served store with the page signed in. */
+  app: App;
+}>({
   // biome-ignore lint/correctness/noEmptyPattern: Playwright reads a fixture's dependencies from this pattern.
   configHome: async ({}, use) => {
     const dir = await mkdtemp(join(tmpdir(), "beads-ui-e2e-config-"));
     await use(dir);
     await rm(dir, { recursive: true });
   },
-  app: async ({ configHome }, use) => {
+  served: async ({ configHome }, use) => {
     const store = await createStore("e2e");
     const served = await serve(store.dir, configHome);
-    await use({ store, served, url: served.url });
+    await use(Object.assign(served, { store }));
     await served.stop();
     await store.remove();
+  },
+  app: async ({ served, page }, use) => {
+    await signIn(page, served);
+    await use({ store: served.store, served, url: served.url });
   },
 });
 
 export { expect };
 
 /** The Board column for a status. */
-export const column = (page: import("@playwright/test").Page, status: string) =>
+export const column = (page: Page, status: string) =>
   page.locator(`section.bu-column[data-status="${status}"]`);
 
 /** A card by its issue id. */
-export const card = (page: import("@playwright/test").Page, id: string) =>
-  page.locator(`li.bu-card[data-card-id="${id}"]`);
+export const card = (page: Page, id: string) => page.locator(`li.bu-card[data-card-id="${id}"]`);
 
 /** The card ids of a column, top to bottom. */
-export async function columnIds(page: import("@playwright/test").Page, status: string) {
+export async function columnIds(page: Page, status: string) {
   return column(page, status)
     .locator("li.bu-card")
     .evaluateAll((cards) => cards.map((element) => element.getAttribute("data-card-id")));
@@ -100,11 +156,7 @@ export async function columnIds(page: import("@playwright/test").Page, status: s
  * store: an embedded store runs one bd process at a time, so a polling spec would queue its own
  * reads in front of the write it is waiting for.
  */
-export const written = (
-  page: import("@playwright/test").Page,
-  id: string,
-  kind: "status" | "priority" | "rank",
-) =>
+export const written = (page: Page, id: string, kind: "status" | "priority" | "rank") =>
   page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&
