@@ -1,25 +1,23 @@
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { createBdClient } from "@sergeiwallace/beads-ui-bd-node";
-import {
-  AllowlistHealth,
-  gatedBd,
-  readAllowlist,
-  repositoryOf,
-  storeClosedReason,
-} from "./allowlist.ts";
+import { AllowlistHealth, readAllowlist } from "./allowlist.ts";
 import { type App, createApp } from "./app.ts";
 import { AuthLayer, AuthRefused, type AuthSettings, loadAuth } from "./auth.ts";
 import { type ConfigEnv, isLoopback, LOOPBACK, readWebConfig } from "./config.ts";
+import { createStoreRegistry } from "./registry.ts";
 import type { Route } from "./routes.ts";
 
 export interface StartOptions {
-  /** The repository whose `.beads/` store the app serves; bd runs there. */
+  /**
+   * The directory the server starts in. Its store is one of the host's stores, beside every store
+   * in the host's store inventory (`$HOME/.beads/shared-server/publish-sweep.json`), and its
+   * `beads-ui.toml` is the settings file the server reads.
+   */
   repoRoot: string;
   /** 0 picks a free port. */
   port: number;
   clientDir: string;
-  /** Where the user's `beads-ui.toml` and the server's state directory are looked for. */
+  /** Where the user's `beads-ui.toml`, the server's state directory and the store inventory are looked for. */
   configEnv: ConfigEnv;
   /** The environment bd runs with; the server's own when unset. */
   bdEnv?: NodeJS.ProcessEnv;
@@ -36,9 +34,9 @@ export interface RunningServer {
   port: number;
   server: Server;
   auth: AuthLayer;
-  /** The name the allowlist knows the served repository by. */
-  repository: string;
-  /** Why no store is open at start, or undefined when the served store is open. */
+  /** The stores open at start, each named as the allowlist entry that opened it. */
+  stores: string[];
+  /** Why no store is open at start, or undefined while at least one is. */
   storeClosed: string | undefined;
   close(): Promise<void>;
 }
@@ -53,9 +51,10 @@ const urlHost = (host: string) => (host.includes(":") ? `[${host}]` : host);
 
 /**
  * Starts the web app behind its authentication layer. The whole `[auth]` table must validate, on
- * loopback too; `[web] host` may name an address beyond loopback only then. The served store opens
- * only while its repository is on the host's allowlist; otherwise the server starts with no store
- * open and says why, and a directory where bd finds no store refuses the start.
+ * loopback too; `[web] host` may name an address beyond loopback only then. It opens every store
+ * on the host whose repository is on the host's allowlist, whatever directory it started in;
+ * with none open it starts and says why, and an allowlisted start directory where bd finds no
+ * store refuses the start.
  */
 export async function startServer(options: StartOptions): Promise<RunningServer> {
   const config = await readWebConfig(options.repoRoot, options.configEnv);
@@ -73,18 +72,16 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     throw new StartRefused(error.message);
   }
 
-  const repository = await repositoryOf(options.repoRoot);
-  const closed = () => storeClosedReason(options.configEnv, repository);
-  const storeClosed = await closed();
-  const bd = gatedBd(
-    createBdClient({
-      cwd: options.repoRoot,
-      ...(options.bdEnv === undefined ? {} : { env: options.bdEnv }),
-    }),
-    closed,
-  );
-  if (storeClosed === undefined) {
-    const where = await bd.where();
+  const health = new AllowlistHealth();
+  const stores = createStoreRegistry({
+    repoRoot: options.repoRoot,
+    configEnv: options.configEnv,
+    ...(options.bdEnv === undefined ? {} : { bdEnv: options.bdEnv }),
+    health,
+  });
+  const reading = await stores.read();
+  if (reading.startedIn !== undefined) {
+    const where = await stores.client(reading.startedIn).where();
     if (where.kind !== "ok") {
       const reason = where.kind === "failed" ? where.message : `bd where: ${where.kind}`;
       throw new StartRefused(`cannot read the Beads store from ${options.repoRoot}: ${reason}`);
@@ -114,7 +111,6 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     port,
     ...(options.clock === undefined ? {} : { clock: options.clock }),
   });
-  const health = new AllowlistHealth();
   const started = createApp({
     clientDir: options.clientDir,
     auth,
@@ -122,7 +118,7 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     ...(options.heartbeatMs === undefined ? {} : { heartbeatMs: options.heartbeatMs }),
     context: {
       repoRoot: options.repoRoot,
-      bd,
+      stores,
       config: () => readWebConfig(options.repoRoot, options.configEnv),
       allowlist: (name?: string) => readAllowlist(options.configEnv, name),
       health,
@@ -136,8 +132,8 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     port,
     server,
     auth,
-    repository,
-    storeClosed,
+    stores: reading.open.map((store) => store.repository),
+    storeClosed: reading.closed,
     // Requests in flight finish, with the bd calls they run, so a stop never leaves a bd writing
     // to the store after the server has gone: event streams end first, idle connections close at
     // once, whatever is still open at the deadline is cut, and then every handler settles, one

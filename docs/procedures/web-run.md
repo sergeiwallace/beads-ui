@@ -1,8 +1,9 @@
 # Run the web app locally
 
-The beads-ui web app serves a Board, a Backlog and an Issue detail view for one Beads store, from a
-Node server on your own machine. It reads and writes through `bd`, so it needs `bd` on your `PATH`
-and a repository with a `.beads` store.
+The beads-ui web app serves a Board, a Backlog and an Issue detail view over every Beads store on
+your machine whose repository is on your allowlist, from a Node server on your own machine. It
+reads and writes through `bd`, so it needs `bd` on your `PATH` and at least one repository with a
+`.beads` store.
 
 ## Set up once
 
@@ -19,7 +20,7 @@ widen what your host accepts or shows. A sample to copy, with your own repositor
 
 ```toml
 [hosts]
-allow_repos = ["my-repo", "my-other-repo"]   # the repositories this host may show
+allow_repos = ["my-repo", "my-org/my-other-repo"]   # the repositories this host may show
 
 [auth]
 hosts = ["127.0.0.1", "localhost"]            # Host values accepted
@@ -34,6 +35,20 @@ signing_key_id = "host-a-20261109"
 trusted_keys = "state:trusted-dispatch-keys.json"
 ```
 
+An `allow_repos` entry names a repository in one of three ways:
+
+| Entry | Names |
+|---|---|
+| `my-repo` | The repository called `my-repo`: the last segment of its `origin` remote, or its directory's name when it has no remote |
+| `my-org/my-repo` | The repository whose `origin` remote ends `my-org/my-repo` (a `host/owner/name` entry works too); a repository with no remote never matches it |
+| `/path/to/my-repo` or `~/my-repo` | The repository at that directory (its main working tree) |
+
+Two different repositories never share an identity: the server knows a repository by its
+normalized `origin` remote, or by its directory where it has none, so a linked worktree counts as
+its repository. When one entry names more than one repository on the host (two clones called
+`my-repo` with different owners, say), the server opens none of them through it and the health
+line names the entry; name the owner or the path instead.
+
 A `state:` value names a file in the server's state directory,
 `$XDG_STATE_HOME/beads-ui/web/` (or `~/.local/state/beads-ui/web/`). The first start generates
 the browser secret, the MCP token and an empty receiver token map there, each mode 0600; nothing
@@ -41,15 +56,19 @@ is written into a repository.
 
 ## Run it
 
-In the repository whose `.beads` store you want to see, run the one command:
+Run the one command, from any directory:
 
 ```sh
 node /path/to/beads-ui/apps/web/bin/beads-ui-web.mjs
 ```
 
-It prints the address it serves, such as `beads-ui web: my-repo at http://127.0.0.1:4810/`. To
-run it by name from any directory, link it once from the checkout with
-`npm link --workspace apps/web`, then run `beads-ui-web`.
+The server reads the stores of your host: every store the host's store inventory lists,
+`~/.beads/shared-server/publish-sweep.json` (ai-harness's `bd_publish_sweep.py` writes it;
+without it there are none), and the store of the directory you started in. It opens each one
+whose repository is on `[hosts] allow_repos` and no other. It prints the stores it opened and the address it serves,
+such as `beads-ui web: my-repo, my-org/my-other-repo at http://127.0.0.1:4810/`. To run it by
+name from any directory, link it once from the checkout with `npm link --workspace apps/web`, then
+run `beads-ui-web`.
 
 Then sign in. On the same host, while the server runs:
 
@@ -90,10 +109,12 @@ naming the key, when any `[auth]` key is missing, empty or malformed, or a crede
 unreadable or not mode 0600, on loopback too. To reach it from another machine, forward the port
 over SSH or your own tunnel. Ctrl+C stops it.
 
-When the repository it was started in is not on `[hosts] allow_repos`, or that list cannot be
-read, the server still starts but opens no store: it runs no `bd` command, and the Board says
-why. The list is read again on every request, so adding the repository opens the store without
-a restart.
+A store whose repository is not on `[hosts] allow_repos` stays closed: the server runs no `bd`
+command against it, and the health line counts it without naming it. When no store is open, or
+the list cannot be read, the server still starts but opens no store, and the Board says why.
+When the directory it started in is listed but bd finds no store there, it refuses to start. The
+list and the inventory are read again on every request, so adding a repository opens its store
+without a restart.
 
 ## Use it
 
@@ -114,7 +135,9 @@ a restart.
 Every write is guarded: a status move runs `bd update --status <to> --if-status <shown>`, and a
 priority or rank write carries the same `--if-status` guard. When another actor changed the
 issue first, bd exits 13 and writes nothing; the card goes back to where it was, a conflict toast
-says what happened, and the card is read again.
+says what happened, and the card is read again. A rank write reads both neighbours again just
+before it writes, and refuses with a conflict when either was reordered or moved in the meantime,
+so the new key always lies between them.
 
 ## Configuration
 
@@ -157,17 +180,21 @@ A browser write (any method but GET and HEAD) also needs the `X-Beads-UI` header
 in `writes.jsonl` in the state directory. A dispatch route also refuses a request whose
 `Tailscale-User-Login` is not on `[auth] dispatch_identities`.
 
+An issue route names its store with `?store=<repository>`, the repository as the board names it.
+With one store open the parameter may be left out; with several, a request without it is refused
+with a 400, and a request naming a store that is not open with a 404.
+
 | Route | What it does |
 |---|---|
-| `GET /api/board` | The store's statuses and issues, and the call-time settings |
-| `GET /api/health` | Whether the allowlist reads, and how many rows it hid, never naming them |
+| `GET /api/board[?store=]` | Every open store's statuses and issues, or one store's, each issue with its `repository`; `reads` gives each store's issue count or its error, and the call-time settings follow. Only when every store failed is the reply itself the failure |
+| `GET /api/health` | Whether the allowlist reads, which stores are open, and how many stores and rows it hid, never naming them |
 | `GET /api/events` | The browser's Server-Sent Events stream, on the session cookie |
 | `GET /api/auth/v1/exchange?code=` | Trades a one-time code for the session cookie, then redirects to the Board |
 | `POST /api/auth/v1/logout` | Ends the session on the server and clears its cookie |
-| `GET /api/issues/:id` | One issue and its comments |
-| `POST /api/issues/:id/status` | `{ "to", "shown" }`: the guarded status write; 409 on exit 13 |
-| `POST /api/issues/:id/priority` | `{ "priority", "shown" }`: priority, guarded by the shown status |
-| `POST /api/issues/:id/rank` | `{ "shown", "above", "below" }`: a rank key between the two neighbours; 422 names a malformed neighbour |
+| `GET /api/issues/:id?store=` | One issue, its comments and its `repository` |
+| `POST /api/issues/:id/status?store=` | `{ "to", "shown" }`: the guarded status write; 409 on exit 13 |
+| `POST /api/issues/:id/priority?store=` | `{ "priority", "shown" }`: priority, guarded by the shown status |
+| `POST /api/issues/:id/rank?store=` | `{ "shown", "above", "below", "aboveStore", "belowStore" }`: a rank key between the two neighbours, each read in its own store (the card's unless named); 409 when either moved before the write; 422 names a malformed neighbour |
 
 ## Test it
 
