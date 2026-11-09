@@ -219,9 +219,11 @@ export function createStoreRegistry(options: RegistryOptions): StoreRegistry {
       synced: false,
     };
     const candidates = bandStores(here, await readInventory(home));
+    const resolved = await Promise.all(candidates.map((store) => identityOf(store.path)));
     const known: { store: BandStore; identity: RepositoryIdentity }[] = [];
-    for (const store of candidates) {
-      const identity = await identityOf(store.path);
+    for (const [i, store] of candidates.entries()) {
+      const identity = resolved[i];
+      if (identity === undefined) continue;
       // One repository reached by two paths (a linked worktree and its main tree) is one store.
       const same = known.find(
         (entry) =>

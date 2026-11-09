@@ -35,8 +35,12 @@ async function hostSettings(dir: string, configHome: string): Promise<NodeJS.Pro
     join(configHome, "beads-ui", "beads-ui.toml"),
     hostConfig({ allowRepos: [basename(dir)] }),
   );
+  // A private HOME too: the server reads the host's store inventory under HOME, and a spec
+  // serves only the stores it makes.
+  await mkdir(join(configHome, "home"), { recursive: true });
   return {
     ...process.env,
+    HOME: join(configHome, "home"),
     XDG_CONFIG_HOME: configHome,
     XDG_STATE_HOME: join(configHome, "state"),
   };
@@ -44,7 +48,8 @@ async function hostSettings(dir: string, configHome: string): Promise<NodeJS.Pro
 
 /**
  * Runs the documented command, `beads-ui-web --port 0`, in `dir`, and resolves on the URL line
- * it prints. The user's config is kept out with a private XDG_CONFIG_HOME and XDG_STATE_HOME.
+ * it prints. The user's config, state and store inventory are kept out with a private
+ * XDG_CONFIG_HOME, XDG_STATE_HOME and HOME.
  */
 export async function serve(dir: string, configHome: string): Promise<Served> {
   const env = await hostSettings(dir, configHome);
