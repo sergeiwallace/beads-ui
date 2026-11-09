@@ -1,25 +1,31 @@
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { createBdClient } from "@sergeiwallace/beads-ui-bd-node";
-import {
-  AllowlistHealth,
-  gatedBd,
-  readAllowlist,
-  repositoryOf,
-  storeClosedReason,
-} from "./allowlist.ts";
+import { DispatchStoreError } from "@beads-ui/core";
+import { AllowlistHealth, readAllowlist } from "./allowlist.ts";
 import { type App, createApp } from "./app.ts";
 import { AuthLayer, AuthRefused, type AuthSettings, loadAuth } from "./auth.ts";
 import { type ConfigEnv, isLoopback, LOOPBACK, readWebConfig } from "./config.ts";
+import {
+  DispatchRefused,
+  DispatchService,
+  openStore,
+  readStoreChoice,
+  SWEEP_MS,
+} from "./dispatch-service.ts";
+import { createStoreRegistry } from "./registry.ts";
 import type { Route } from "./routes.ts";
 
 export interface StartOptions {
-  /** The repository whose `.beads/` store the app serves; bd runs there. */
+  /**
+   * The directory the server starts in. Its store is one of the host's stores, beside every store
+   * in the host's store inventory (`$HOME/.beads/shared-server/publish-sweep.json`), and its
+   * `beads-ui.toml` is the settings file the server reads.
+   */
   repoRoot: string;
   /** 0 picks a free port. */
   port: number;
   clientDir: string;
-  /** Where the user's `beads-ui.toml` and the server's state directory are looked for. */
+  /** Where the user's `beads-ui.toml`, the server's state directory and the store inventory are looked for. */
   configEnv: ConfigEnv;
   /** The environment bd runs with; the server's own when unset. */
   bdEnv?: NodeJS.ProcessEnv;
@@ -29,6 +35,8 @@ export interface StartOptions {
   clock?: () => number;
   /** How often an open event stream re-checks its session. */
   heartbeatMs?: number;
+  /** How often due dispatches expire and the published files are rewritten; SWEEP_MS by default. */
+  sweepMs?: number;
 }
 
 export interface RunningServer {
@@ -36,10 +44,14 @@ export interface RunningServer {
   port: number;
   server: Server;
   auth: AuthLayer;
-  /** The name the allowlist knows the served repository by. */
-  repository: string;
-  /** Why no store is open at start, or undefined when the served store is open. */
+  /** The stores open at start, each named as the allowlist entry that opened it. */
+  stores: string[];
+  /** Why no store is open at start, or undefined while at least one is. */
   storeClosed: string | undefined;
+  /** The dispatch store, signer and publisher the receiver API serves. */
+  dispatches: DispatchService;
+  /** What the dispatch service could not do at start, such as sign; the server runs on. */
+  dispatchProblems: string[];
   close(): Promise<void>;
 }
 
@@ -53,9 +65,10 @@ const urlHost = (host: string) => (host.includes(":") ? `[${host}]` : host);
 
 /**
  * Starts the web app behind its authentication layer. The whole `[auth]` table must validate, on
- * loopback too; `[web] host` may name an address beyond loopback only then. The served store opens
- * only while its repository is on the host's allowlist; otherwise the server starts with no store
- * open and says why, and a directory where bd finds no store refuses the start.
+ * loopback too; `[web] host` may name an address beyond loopback only then. It opens every store
+ * on the host whose repository is on the host's allowlist, whatever directory it started in;
+ * with none open it starts and says why, and an allowlisted start directory where bd finds no
+ * store refuses the start.
  */
 export async function startServer(options: StartOptions): Promise<RunningServer> {
   const config = await readWebConfig(options.repoRoot, options.configEnv);
@@ -73,18 +86,16 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     throw new StartRefused(error.message);
   }
 
-  const repository = await repositoryOf(options.repoRoot);
-  const closed = () => storeClosedReason(options.configEnv, repository);
-  const storeClosed = await closed();
-  const bd = gatedBd(
-    createBdClient({
-      cwd: options.repoRoot,
-      ...(options.bdEnv === undefined ? {} : { env: options.bdEnv }),
-    }),
-    closed,
-  );
-  if (storeClosed === undefined) {
-    const where = await bd.where();
+  const health = new AllowlistHealth();
+  const stores = createStoreRegistry({
+    repoRoot: options.repoRoot,
+    configEnv: options.configEnv,
+    ...(options.bdEnv === undefined ? {} : { bdEnv: options.bdEnv }),
+    health,
+  });
+  const reading = await stores.read();
+  if (reading.startedIn !== undefined) {
+    const where = await stores.client(reading.startedIn).where();
     if (where.kind !== "ok") {
       const reason = where.kind === "failed" ? where.message : `bd where: ${where.kind}`;
       throw new StartRefused(`cannot read the Beads store from ${options.repoRoot}: ${reason}`);
@@ -95,6 +106,24 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
       );
     }
   }
+
+  const clock = options.clock ?? Date.now;
+  const allowlist = (name?: string) => readAllowlist(options.configEnv, name);
+  let dispatches: DispatchService;
+  try {
+    dispatches = new DispatchService({
+      env: options.configEnv,
+      stateDir: settings.stateDir,
+      store: await openStore(await readStoreChoice(options.configEnv), settings.stateDir),
+      allowlist,
+      stores,
+      clock,
+    });
+  } catch (error) {
+    if (!(error instanceof DispatchRefused || error instanceof DispatchStoreError)) throw error;
+    throw new StartRefused(`the dispatch store cannot open: ${error.message}`);
+  }
+  const dispatchProblems = await dispatches.publish();
 
   let app: App | undefined;
   const server = createServer((request, response) => {
@@ -114,7 +143,6 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     port,
     ...(options.clock === undefined ? {} : { clock: options.clock }),
   });
-  const health = new AllowlistHealth();
   const started = createApp({
     clientDir: options.clientDir,
     auth,
@@ -122,27 +150,38 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     ...(options.heartbeatMs === undefined ? {} : { heartbeatMs: options.heartbeatMs }),
     context: {
       repoRoot: options.repoRoot,
-      bd,
+      stores,
       config: () => readWebConfig(options.repoRoot, options.configEnv),
-      allowlist: (name?: string) => readAllowlist(options.configEnv, name),
+      allowlist,
       health,
+      dispatches,
       random: Math.random,
-      now: () => new Date().toISOString(),
+      now: () => new Date(clock()).toISOString(),
     },
   });
   app = started;
+  // Expiry tombstones a dispatch nobody fetches, and a rotated key is published before its first
+  // signature; one pass at a time, and a failed pass waits for the next.
+  let sweeping: Promise<unknown> = Promise.resolve();
+  const sweep = setInterval(() => {
+    sweeping = sweeping.then(() => dispatches.sweep()).catch(() => undefined);
+  }, options.sweepMs ?? SWEEP_MS);
+  sweep.unref();
   return {
     url: `http://${urlHost(host)}:${port}/`,
     port,
     server,
     auth,
-    repository,
-    storeClosed,
+    stores: reading.open.map((store) => store.repository),
+    storeClosed: reading.closed,
+    dispatches,
+    dispatchProblems,
     // Requests in flight finish, with the bd calls they run, so a stop never leaves a bd writing
     // to the store after the server has gone: event streams end first, idle connections close at
     // once, whatever is still open at the deadline is cut, and then every handler settles, one
     // whose client went away included (each bd call ends within bd-node's timeout).
     close: async () => {
+      clearInterval(sweep);
       started.closeStreams();
       await new Promise<void>((resolve, reject) => {
         const deadline = setTimeout(() => server.closeAllConnections(), CLOSE_GRACE_MS);
@@ -154,6 +193,7 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
         server.closeIdleConnections();
       });
       await started.settled();
+      await sweeping;
     },
   };
 }

@@ -28,13 +28,20 @@ import {
   type Status,
   sprintsOf,
   statusChanges,
-  storeName,
 } from "@beads-ui/core";
 import type { BdClient, BdResult } from "@sergeiwallace/beads-ui-bd-node";
-import { filterAllowed, repositoryOf } from "./allowlist.ts";
+import { filterAllowed } from "./allowlist.ts";
 import type { WebConfig } from "./config.ts";
 import { claimTimes, leasedTasks, QueueClient, type QueueFailure } from "./queue.ts";
-import { type ApiContext, type ApiReply, type ApiRequest, bdFailure, failure } from "./routes.ts";
+import {
+  type ApiContext,
+  type ApiReply,
+  type ApiRequest,
+  bdFailure,
+  failure,
+  isStore,
+  storeOf,
+} from "./routes.ts";
 
 /** How many `bd history` reads Analytics runs at once. */
 export const HISTORY_CONCURRENCY = 4;
@@ -53,23 +60,25 @@ function unwrap<T>(source: string, result: BdResult<T>): Unwrapped<T> {
 
 const nowOf = (context: ApiContext): number => Date.parse(context.now());
 
-async function readStatuses(context: ApiContext): Promise<Unwrapped<Status[]>> {
-  return unwrap("bd statuses", await context.bd.statuses());
+async function readStatuses(bd: BdClient): Promise<Unwrapped<Status[]>> {
+  return unwrap("bd statuses", await bd.statuses());
 }
 
 // ── Roadmap (T-3.2) ──────────────────────────────────────────────────────────
 
-export async function roadmapRoute(_request: ApiRequest, context: ApiContext): Promise<ApiReply> {
-  const statuses = await readStatuses(context);
+export async function roadmapRoute(request: ApiRequest, context: ApiContext): Promise<ApiReply> {
+  const store = await storeOf(request, context);
+  if (!isStore(store)) return store;
+  const statuses = await readStatuses(store.bd);
   if ("reply" in statuses) return statuses.reply;
   // The whole store, brief: a bar's progress counts every child, closed ones too.
-  const issues = unwrap("bd list", await context.bd.list());
+  const issues = unwrap("bd list", await store.bd.list());
   if ("reply" in issues) return issues.reply;
   const asOf = context.now();
   return {
     status: 200,
     body: {
-      store: storeName(context.repoRoot),
+      store: store.repository,
       asOf,
       view: roadmapView(issues.value, { statuses: statuses.value, today: asOf }),
     },
@@ -209,23 +218,25 @@ const sprintOrder = (a: SprintInfo, b: SprintInfo) =>
 export async function analyticsRoute(request: ApiRequest, context: ApiContext): Promise<ApiReply> {
   const weeks = parseWeeks(request.query.get("weeks") ?? undefined);
   if (typeof weeks !== "number") return weeks;
+  const store = await storeOf(request, context);
+  if (!isStore(store)) return store;
   const config = await context.config();
   const now = nowOf(context);
   const windowStart = Math.floor(now / DAY_MS) * DAY_MS - (weeks * 7 - 1) * DAY_MS;
 
-  const statuses = await readStatuses(context);
+  const statuses = await readStatuses(store.bd);
   if ("reply" in statuses) return statuses.reply;
   const [openArgv, closedArgv] = analyticsReadArgvs(utcStamp(windowStart - 1000));
-  const open = unwrap("bd list", await context.bd.listBy(openArgv));
+  const open = unwrap("bd list", await store.bd.listBy(openArgv));
   if ("reply" in open) return open.reply;
-  const closedRead = unwrap("bd list", await context.bd.listBy(closedArgv));
+  const closedRead = unwrap("bd list", await store.bd.listBy(closedArgv));
   if ("reply" in closedRead) return closedRead.reply;
   const closed = closedRead.value.filter(
     (issue) => issue.closedAt !== undefined && Date.parse(issue.closedAt) >= windowStart,
   );
   const counted = unwrap(
     "bd count",
-    await context.bd.count(closedBeforeCountArgv(utcStamp(windowStart))),
+    await store.bd.count(closedBeforeCountArgv(utcStamp(windowStart))),
   );
   if ("reply" in counted) return counted.reply;
   const issues = dedupe([...open.value, ...closed]);
@@ -247,13 +258,13 @@ export async function analyticsRoute(request: ApiRequest, context: ApiContext): 
   if (sprint !== undefined) {
     const read = unwrap(
       "bd list",
-      await context.bd.listBy(labelledArgv(`${SPRINT_LABEL_PREFIX}${sprint.name}`)),
+      await store.bd.listBy(labelledArgv(`${SPRINT_LABEL_PREFIX}${sprint.name}`)),
     );
     if ("reply" in read) return read.reply;
     members = read.value;
   }
 
-  const read = await flowsOf(context.bd, dedupe([...issues, ...members]), windowStart);
+  const read = await flowsOf(store.bd, dedupe([...issues, ...members]), windowStart);
   const byId = new Map(read.flows.map((flow) => [flow.issue.id, flow]));
   const pick = (list: readonly Issue[]) => list.flatMap((issue) => byId.get(issue.id) ?? []);
   const options = {
@@ -267,7 +278,7 @@ export async function analyticsRoute(request: ApiRequest, context: ApiContext): 
   return {
     status: 200,
     body: {
-      store: storeName(context.repoRoot),
+      store: store.repository,
       asOf: context.now(),
       view: analyticsView(pick(issues), options),
       sprints: sprints.map((s) => s.name),
@@ -285,23 +296,26 @@ export async function analyticsRoute(request: ApiRequest, context: ApiContext): 
 // ── Sessions and the queue adapter (T-3.4) ───────────────────────────────────
 
 /**
- * This store's name in the work queue: `[queue] repo`, else the name the allowlist knows the
- * repository by, its main working tree's directory, so a linked worktree names its repository.
+ * This store's name in the work queue, which keys a repository by its bare name: `[queue] repo`,
+ * else the last segment of the `allow_repos` entry that opened the store (`name`, `owner/name` or
+ * a path all give `name`).
  */
-const queueRepo = async (config: WebConfig, context: ApiContext): Promise<string> =>
-  config.queueRepo ?? (await repositoryOf(context.repoRoot));
+const queueRepo = (config: WebConfig, repository: string): string =>
+  config.queueRepo ?? repository.replace(/\/+$/, "").split("/").pop() ?? repository;
 
 /** The allowlist's health line counts each kind of queue row it hides under this name. */
 const QUEUE_SOURCE = "the work queue";
 
-export async function sessionsRoute(_request: ApiRequest, context: ApiContext): Promise<ApiReply> {
+export async function sessionsRoute(request: ApiRequest, context: ApiContext): Promise<ApiReply> {
   const config = await context.config();
-  const statuses = await readStatuses(context);
+  const store = await storeOf(request, context);
+  if (!isStore(store)) return store;
+  const statuses = await readStatuses(store.bd);
   if ("reply" in statuses) return statuses.reply;
-  const issues = unwrap("bd list", await context.bd.board());
+  const issues = unwrap("bd list", await store.bd.board());
   if ("reply" in issues) return issues.reply;
   const now = nowOf(context);
-  const base = { store: storeName(context.repoRoot), asOf: context.now() };
+  const base = { store: store.repository, asOf: context.now() };
   const fromBeads = () => beadsSessionsView(issues.value, { statuses: statuses.value, now });
   if (config.queueUrl === undefined) {
     return { status: 200, body: { ...base, view: fromBeads() } };
@@ -342,7 +356,7 @@ export async function sessionsRoute(_request: ApiRequest, context: ApiContext): 
     tasks: shownTasks,
     claims,
     issues: issues.value,
-    store: await queueRepo(config, context),
+    store: queueRepo(config, store.repository),
     statuses: statuses.value,
     now,
   });
@@ -370,6 +384,7 @@ export type QueueWrite = { reply: ApiReply } | { notice?: string };
  */
 export async function queueStatusWrite(
   context: ApiContext,
+  repository: string,
   id: string,
   to: string,
   shown: string,
@@ -377,7 +392,7 @@ export async function queueStatusWrite(
   const config = await context.config();
   if (config.queueUrl === undefined) return {};
   const queue = new QueueClient(config.queueUrl);
-  const repo = await queueRepo(config, context);
+  const repo = queueRepo(config, repository);
   const task = await queue.task(repo, id);
   if (!task.ok) {
     if (task.failure.kind === "not-found") return {};
