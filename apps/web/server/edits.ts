@@ -13,6 +13,8 @@ import {
   sprintSelectionText,
 } from "@beads-ui/core";
 import { filterAllowed } from "./allowlist.ts";
+import { ownerOf, readDispatchSettings, writeDispatch } from "./dispatch.ts";
+import { claimedOwnerChange } from "./owner-handoff.ts";
 import { QueueClient } from "./queue.ts";
 import type { OpenStore } from "./registry.ts";
 import {
@@ -199,20 +201,35 @@ export interface HandoffRequest {
   holder: string;
   /** The receiver the user picked. */
   receiver: string;
+  /** The host the work queue's registry has the receiver on, when it does. */
+  receiverMachine?: string;
 }
 
 /**
- * The owner change of a task a live session holds a claim on. The fleet's handoff is receiver
- * first (D-9): the holder is asked to hand the claim over, and the server never reassigns it
- * itself. Sending that request is T-W2.2's handoff dispatch, a later phase; until it lands, this
- * function is the one place that change plugs in, and it writes nothing and says why.
+ * The owner change of a task a session holds a claim on (D-9, T-W2.2): the fleet's receiver-first
+ * handoff. The issue is read again first, so a claim that moved since the page drew it is stale
+ * and nothing is sent.
  */
-export async function requestOwnerHandoff(request: HandoffRequest): Promise<ApiReply> {
-  return failure({
-    kind: "handoff-required",
-    source: "owner change",
-    message: `${request.holder} holds the claim on ${request.id}; moving it to ${request.receiver} needs a handoff request to ${request.holder}, which this server does not send yet, so nothing was written`,
-  });
+export async function requestOwnerHandoff(
+  request: HandoffRequest,
+  context: ApiContext,
+): Promise<ApiReply> {
+  const read = await request.store.bd.show(request.id);
+  if (read.kind !== "ok") return bdFailure("bd show", read);
+  if (read.value.assignee !== request.holder || read.value.status !== CLAIMED_STATUS) {
+    return stale(`${request.id}'s claim changed since it was drawn; nothing was sent`);
+  }
+  return claimedOwnerChange(
+    {
+      store: request.store,
+      issue: read.value,
+      receiver: request.receiver,
+      ...(request.receiverMachine === undefined
+        ? {}
+        : { receiverMachine: request.receiverMachine }),
+    },
+    context,
+  );
 }
 
 /**
@@ -236,7 +253,8 @@ export async function ownerRoute(request: ApiRequest, context: ApiContext): Prom
   if (!isStore(store)) return store;
   const listed = await ownerCandidates(context, store);
   if ("status" in listed) return listed;
-  if (!listed.candidates.some((candidate) => candidate.name === to)) {
+  const picked = listed.candidates.find((candidate) => candidate.name === to);
+  if (picked === undefined) {
     const rule =
       listed.rule === undefined ? "" : ` and [handoff] receivers = ${JSON.stringify(listed.rule)}`;
     return invalid(
@@ -244,14 +262,53 @@ export async function ownerRoute(request: ApiRequest, context: ApiContext): Prom
     );
   }
   if (shown !== "" && status === CLAIMED_STATUS) {
-    return requestOwnerHandoff({ store, id, holder: shown, receiver: to });
+    return requestOwnerHandoff(
+      {
+        store,
+        id,
+        holder: shown,
+        receiver: to,
+        ...(picked.machine === undefined || picked.machine === ""
+          ? {}
+          : { receiverMachine: picked.machine }),
+      },
+      context,
+    );
   }
   const result = await guardedWrite(() =>
     store.bd.update(id, { assignee: to }, { ifStatus: status, ifAssignee: shown }),
   );
   if (isReply(result)) return result;
   if (result.kind !== "ok") return bdFailure("bd update", result);
-  return { status: 200, body: { id, assignee: to } };
+  const prompt = text(request.body, "prompt");
+  if (prompt === undefined || prompt.trim() === "")
+    return { status: 200, body: { id, assignee: to } };
+  // The typed prompt goes to the new owner, as any prompt on the task does (T-W2.2).
+  const read = await store.bd.show(id);
+  if (read.kind !== "ok") return bdFailure("bd show", read);
+  const settings = await readDispatchSettings(context);
+  const owner = await ownerOf(read.value, context, settings);
+  if (!owner.ok) {
+    return { status: 200, body: { id, assignee: to, promptError: owner.reason } };
+  }
+  const sent = await writeDispatch(context, {
+    task: { repo: store.repository, id },
+    target: owner.value,
+    kind: "prompt",
+    body: prompt,
+    armGoal: true,
+    mirrorIn: store,
+  });
+  return sent.status === 201
+    ? { status: 200, body: { id, assignee: to, ...(sent.body as object) } }
+    : {
+        status: 200,
+        body: {
+          id,
+          assignee: to,
+          promptError: (sent.body as { error: { message: string } }).error.message,
+        },
+      };
 }
 
 type Neighbour = { key: string | undefined } | ApiReply;

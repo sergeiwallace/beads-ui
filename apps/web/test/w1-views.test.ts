@@ -254,9 +254,11 @@ describe("the owner picker's routes", () => {
       status: "in_progress",
     });
 
+    // T-W2.2: session-h names no host and the queue does not place it, so its liveness cannot be
+    // established; the handoff path writes nothing and offers a retry.
     expect(reply.status).toBe(409);
-    expect(reply.body.error.kind).toBe("handoff-required");
-    expect(reply.body.error.message).toContain("session-h holds the claim");
+    expect(reply.body.error.kind).toBe("owner-unknown");
+    expect(reply.body.error.message).toMatch(/^owner state unknown: .*session-h/);
     expect(await assigneeOf(id)).toBe("session-h");
   });
 
