@@ -1595,5 +1595,6 @@ Option (b) drops ask requirements, so Gate 0 leaves (a) as the only way to keep 
 | 2026-11-09 | BU-mg2.5.3/D-21 | Sergei | "D-21: option A approved." (a) `views.rank` on by default in the web app |
 | 2026-11-09 | BU-mg2.5.3/D-15 | Sergei | "D-15: option A approved." (a) beads-ui's Node server as a `kind: portal` upstream; amends app-portal's member contract |
 | 2026-11-09 | design | Sergei | With D-15 and D-21 approved the doc is fully decided; he asked for the build end to end, all phases, live-validated and served for use |
+| 2026-11-09 | Phase W0 live run, work pair (partial) | Opus coordinator | [Evidence](evidence/web-app-live/w0-2026-11-09.md): a cross-site write, a write without the write header, a forged identity header, a foreign Host header and a revoked session each refused, with a control write reaching validation; a good dispatch verified and receipted and a body-tampered one refused with `body-digest-mismatch`. Not yet run: the `unknown-key` dispatch, the restart with a dispatch outstanding, the unlisted repository, and the personal pair |
 
 <!-- /doc:region name="approval_log" -->
