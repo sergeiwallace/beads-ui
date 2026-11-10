@@ -15,6 +15,7 @@ import {
   type DispatchTarget,
   type DispatchTask,
   deliveryLabel,
+  GOAL_PAUSED,
   heldBase,
   type Issue,
   isFinalDelivery,
@@ -23,6 +24,7 @@ import {
   REVIEW_TIMEOUT_MS,
   type ReviewItem,
   resolveReview,
+  rungSummary,
   type StoredDispatch,
   type TomlTable,
   type TomlValue,
@@ -42,6 +44,7 @@ const STATUS_BY_KIND: Readonly<Record<string, number>> = {
   forbidden: 403,
   "not-found": 404,
   stale: 409,
+  "not-held": 409,
   failed: 502,
   timeout: 504,
 };
@@ -530,7 +533,7 @@ type Resolved<T> = { ok: true; value: T } | { ok: false; reason: string };
  * The session a task's dispatch goes to: its assignee, at the host the assignee names, else the
  * host the work queue's session registry has it on, else `[dispatch] host`.
  */
-async function ownerOf(
+export async function ownerOf(
   issue: Issue,
   context: ApiContext,
   settings: DispatchSettings,
@@ -589,8 +592,14 @@ async function mirror(store: OpenStore, id: string, text: string): Promise<strin
   }
 }
 
-/** Writes one signed dispatch and mirrors it on the task when the task is an issue in `store`. */
-async function writeDispatch(
+/** What the ladder notes when the user clears the composer's arm-goal control (T-W2.3). */
+export const ARM_GOAL_CLEARED = "the user cleared arm-goal for this dispatch";
+
+/**
+ * Writes one signed dispatch, mirrors it on the task when the task is an issue in `store`, and
+ * hands it to the dispatch ladder (D-6).
+ */
+export async function writeDispatch(
   context: ApiContext,
   input: {
     task: DispatchTask;
@@ -598,6 +607,8 @@ async function writeDispatch(
     kind: DispatchKind;
     body: string;
     armGoal: boolean;
+    /** True when the user cleared the composer's arm-goal control for this one dispatch. */
+    armGoalCleared?: boolean;
     /** The open store whose issue the task is, for the mirrored comment; none for a held-only item. */
     mirrorIn?: OpenStore;
   },
@@ -622,14 +633,25 @@ async function writeDispatch(
     target: record.target,
     state,
   };
+  const cleared = input.armGoalCleared === true;
+  if (created.created && cleared) {
+    await context.dispatches.store.annotate(record.id, {
+      op: "note",
+      id: record.id,
+      at: context.now(),
+      source: "the composer",
+      text: ARM_GOAL_CLEARED,
+    });
+  }
   if (input.mirrorIn !== undefined && created.created) {
     const problem = await mirror(
       input.mirrorIn,
       input.task.id,
-      `beads-ui dispatch ${record.id}: ${record.kind} for ${record.target.session}@${record.target.host}, delivered when the session next picks up its dispatches.`,
+      `beads-ui dispatch ${record.id}: ${record.kind} for ${record.target.session}@${record.target.host}${cleared ? ", arm-goal cleared by the user" : ""}, delivered through the dispatch ladder.`,
     );
     if (problem !== undefined) summary.mirrorError = problem;
   }
+  if (created.created) await context.ladder.submit(record);
   return { status: 201, body: { dispatch: summary } };
 }
 
@@ -681,6 +703,7 @@ async function promptRoute(request: ApiRequest, context: ApiContext): Promise<Ap
       kind: "prompt",
       body: text,
       armGoal,
+      armGoalCleared: !armGoal,
       ...(joinedStore === undefined || row.joined === undefined ? {} : { mirrorIn: joinedStore }),
     });
   }
@@ -695,6 +718,7 @@ async function promptRoute(request: ApiRequest, context: ApiContext): Promise<Ap
     kind: "prompt",
     body: text,
     armGoal,
+    armGoalCleared: !armGoal,
     mirrorIn: found.store,
   });
 }
@@ -744,6 +768,7 @@ async function decisionsOf(
 async function answerRoute(request: ApiRequest, context: ApiContext): Promise<ApiReply> {
   const path = textOf(request.body, "item");
   if (path === undefined) return invalid("an answer names its held item with `item`");
+  const followUp = textOf(request.body, "followUp");
   const typed =
     isObject(request.body) && typeof request.body.text === "string" ? request.body.text : undefined;
   const rawChoices = isObject(request.body) ? request.body.choices : undefined;
@@ -789,18 +814,30 @@ async function answerRoute(request: ApiRequest, context: ApiContext): Promise<Ap
     item: { store: row.item.store, relpath: row.item.relpath, path: row.item.path },
     answer,
   });
+  const task =
+    row.joined === undefined
+      ? { repo: row.repository, id: row.item.relpath || row.item.path }
+      : { repo: row.joined.repo, id: row.joined.issue.id };
   const reply = await writeDispatch(context, {
-    task:
-      row.joined === undefined
-        ? { repo: row.repository, id: row.item.relpath || row.item.path }
-        : { repo: row.joined.repo, id: row.joined.issue.id },
+    task,
     target: target.value,
     kind: "answer",
     body,
-    armGoal: false,
+    armGoal: followUp !== undefined,
     ...(joinedStore === undefined || row.joined === undefined ? {} : { mirrorIn: joinedStore }),
   });
-  if (reply.status === 201) (reply.body as { answer?: string }).answer = answer;
+  if (reply.status === 201) {
+    (reply.body as { answer?: string }).answer = answer;
+    if (followUp !== undefined) {
+      const { dispatch } = reply.body as { dispatch: DispatchSummaryBody };
+      await queueFollowUp(context, {
+        unblock: dispatch.id,
+        task,
+        target: target.value,
+        text: followUp,
+      });
+    }
+  }
   return reply;
 }
 
@@ -827,6 +864,19 @@ async function readFollowUps(dir: string): Promise<FollowUp[]> {
   } catch {
     return [];
   }
+}
+
+/** Keeps a next-step prompt until the dispatch it follows is acted on. */
+function queueFollowUp(
+  context: ApiContext,
+  input: { unblock: string; task: DispatchTask; target: DispatchTarget; text: string },
+): Promise<void> {
+  return followUpSerial.run(async () => {
+    const dir = context.dispatches.stateDir;
+    const followUps = await readFollowUps(dir);
+    followUps.push({ ...input, state: "pending" });
+    await writeFollowUps(dir, followUps);
+  });
 }
 
 async function writeFollowUps(dir: string, followUps: readonly FollowUp[]): Promise<void> {
@@ -870,6 +920,7 @@ export function releaseFollowUps(context: ApiContext): Promise<void> {
         });
         followUp.state = "sent";
         followUp.prompt = created.dispatch.record.id;
+        if (created.created) await context.ladder.submit(created.dispatch.record);
         const open = await openStores(context).catch(() => [] as OpenStore[]);
         const store = open.find((one) => one.repository === followUp.task.repo);
         if (store !== undefined) {
@@ -935,22 +986,16 @@ async function unblockRoute(request: ApiRequest, context: ApiContext): Promise<A
     target: target.value,
     kind: "unblock",
     body: JSON.stringify({ version: 1, resolution, to: "in_progress" }),
-    armGoal: false,
+    armGoal: followUp !== undefined,
     mirrorIn: store,
   });
   if (reply.status === 201 && followUp !== undefined) {
     const { dispatch } = reply.body as { dispatch: DispatchSummaryBody };
-    await followUpSerial.run(async () => {
-      const dir = context.dispatches.stateDir;
-      const followUps = await readFollowUps(dir);
-      followUps.push({
-        unblock: dispatch.id,
-        task: { repo: store.repository, id: issue.id },
-        target: target.value,
-        state: "pending",
-        text: followUp,
-      });
-      await writeFollowUps(dir, followUps);
+    await queueFollowUp(context, {
+      unblock: dispatch.id,
+      task: { repo: store.repository, id: issue.id },
+      target: target.value,
+      text: followUp,
     });
   }
   return reply.status === 201
@@ -1023,6 +1068,8 @@ async function statusRoute(request: ApiRequest, context: ApiContext): Promise<Ap
     return failure({ kind: "not-found", source: "dispatch store", message: "no such dispatch" });
   }
   const { record, machine, state } = dispatch;
+  const summary = rungSummary(dispatch.rungs);
+  const label = deliveryLabel(machine);
   const body: Record<string, unknown> = {
     id: record.id,
     kind: record.kind,
@@ -1030,8 +1077,19 @@ async function statusRoute(request: ApiRequest, context: ApiContext): Promise<Ap
     state,
     final: isFinalDelivery(state),
     liveness: await livenessOf(context, record.target),
-    delivery: { text: deliveryLabel(machine), source: machine.source, tone: DELIVERY_TONE[state] },
+    delivery: {
+      text: summary === undefined || isFinalDelivery(state) ? label : `${label} (${summary})`,
+      source: machine.source,
+      tone: DELIVERY_TONE[state],
+    },
     response: responseOf(dispatch),
+    ladder: {
+      rungs: dispatch.rungs,
+      ...(summary === undefined ? {} : { summary }),
+      notes: dispatch.notes,
+      ...(dispatch.hold === undefined ? {} : { hold: dispatch.hold }),
+    },
+    deliverNow: dispatch.hold?.reason === GOAL_PAUSED,
   };
   if (record.kind === "unblock") {
     const followUp = (await readFollowUps(context.dispatches.stateDir)).find(
@@ -1047,6 +1105,19 @@ async function statusRoute(request: ApiRequest, context: ApiContext): Promise<Ap
     }
   }
   return { status: 200, body };
+}
+
+/** "Deliver now" on a dispatch waiting on a paused goal (T-W2.3): delivered at once. */
+async function deliverNowRoute(request: ApiRequest, context: ApiContext): Promise<ApiReply> {
+  const id = request.params.id ?? "";
+  const by =
+    request.caller.kind === "browser"
+      ? (request.caller.identity ?? "the signed-in user")
+      : "the user";
+  const done = await context.ladder.deliverNow(id, by);
+  if (!done.ok)
+    return failure({ kind: "not-held", source: "dispatch ladder", message: done.reason });
+  return { status: 200, body: { id, released: true } };
 }
 
 /** The work queue's skill catalog, for the composer's typeahead. */
@@ -1096,4 +1167,10 @@ export const DISPATCH_ROUTES: readonly Route[] = [
   { method: "POST", path: "/api/dispatch/answer", dispatch: true, handle: answerRoute },
   { method: "POST", path: "/api/dispatch/unblock", dispatch: true, handle: unblockRoute },
   { method: "GET", path: "/api/dispatch/:id", handle: statusRoute },
+  {
+    method: "POST",
+    path: "/api/dispatch/:id/deliver-now",
+    dispatch: true,
+    handle: deliverNowRoute,
+  },
 ];

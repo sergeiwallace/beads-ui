@@ -6,6 +6,7 @@ import { type App, createApp } from "./app.ts";
 import { AuthLayer, AuthRefused, type AuthSettings, loadAuth } from "./auth.ts";
 import { type ConfigEnv, isLoopback, LOOPBACK, readWebConfig } from "./config.ts";
 import { releaseFollowUps } from "./dispatch.ts";
+import { DispatchLadder } from "./dispatch-ladder.ts";
 import {
   DispatchRefused,
   DispatchService,
@@ -54,6 +55,8 @@ export interface RunningServer {
   storeClosed: string | undefined;
   /** The dispatch store, signer and publisher the receiver API serves. */
   dispatches: DispatchService;
+  /** The dispatch ladder: carriers, local rungs, holds and their release. */
+  ladder: DispatchLadder;
   /** What the dispatch service could not do at start, such as sign; the server runs on. */
   dispatchProblems: string[];
   /** What the dispatch service did at start, such as generate its signing key; one line each. */
@@ -163,6 +166,12 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
       (await readWebConfig(options.repoRoot, options.configEnv)).refreshSeconds * 1000,
     clock,
   });
+  const ladder = new DispatchLadder({
+    store: () => dispatches.store,
+    stateDir: settings.stateDir,
+    configEnv: options.configEnv,
+    clock,
+  });
   const context: ApiContext = {
     repoRoot: options.repoRoot,
     stores,
@@ -170,6 +179,7 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     allowlist,
     health,
     dispatches,
+    ladder,
     feed,
     random: Math.random,
     now: () => new Date(clock()).toISOString(),
@@ -191,6 +201,7 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     sweeping = sweeping
       .then(() => dispatches.sweep())
       .then(() => releaseFollowUps(context))
+      .then(() => ladder.sweep())
       .catch(() => undefined);
   }, options.sweepMs ?? SWEEP_MS);
   sweep.unref();
@@ -202,6 +213,7 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     stores: reading.open.map((store) => store.repository),
     storeClosed: reading.closed,
     dispatches,
+    ladder,
     dispatchProblems,
     dispatchNotices,
     feed,
@@ -211,6 +223,7 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     // whose client went away included (each bd call ends within bd-node's timeout).
     close: async () => {
       clearInterval(sweep);
+      ladder.close();
       // Streams first: with none open the feed starts no further bd, so its stop is quick.
       started.closeStreams();
       await feed.stop();
@@ -225,6 +238,7 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
       });
       await started.settled();
       await sweeping;
+      await ladder.idle();
     },
   };
 }

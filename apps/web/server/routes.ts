@@ -12,6 +12,7 @@ import type { Allowlist, AllowlistHealth } from "./allowlist.ts";
 import type { Caller } from "./auth.ts";
 import type { WebConfig } from "./config.ts";
 import { DISPATCH_ROUTES } from "./dispatch.ts";
+import type { DispatchLadder } from "./dispatch-ladder.ts";
 import type { DispatchService } from "./dispatch-service.ts";
 import { listRankRoute, ownerRoute, ownersRoute, sprintRoute } from "./edits.ts";
 import type { HeadsFeed } from "./heads-feed.ts";
@@ -41,6 +42,8 @@ export interface ApiContext {
   health: AllowlistHealth;
   /** The dispatch store the receiver API serves, with the signer and the expiry sweep. */
   dispatches: DispatchService;
+  /** How a written dispatch reaches its session (D-6, D-7, D-10). */
+  ladder: DispatchLadder;
   /** The change feed: a store's board read is kept until its Dolt head moves (D-13). */
   feed?: HeadsFeed<StoreBoard>;
   random: RandomSource;
@@ -74,7 +77,9 @@ export type ApiErrorKind =
   | "forbidden"
   | "store-closed"
   // An owner change on a claimed task, which goes through the holder's handoff (edits.ts).
-  | "handoff-required";
+  | "handoff-required"
+  // A dispatch action its dispatch's state does not allow, such as deliver now (T-W2.3).
+  | "not-held";
 
 /** Every error body is `{ error: ApiError }`; `source` names what failed (`bd list`, a field). */
 export interface ApiError {
@@ -114,6 +119,7 @@ const STATUS_BY_KIND: Readonly<Record<ApiErrorKind, number>> = {
   forbidden: 403,
   "store-closed": 503,
   "handoff-required": 409,
+  "not-held": 409,
 };
 
 export function failure(error: ApiError): ApiReply {

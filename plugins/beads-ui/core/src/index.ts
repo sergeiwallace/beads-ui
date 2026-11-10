@@ -198,6 +198,7 @@ export {
   WAKES_OFF,
 } from "./dispatch-policy.ts";
 export type {
+  AnnotateResult,
   CreateResult,
   DispatchEntry,
   DispatchEnvelope,
@@ -206,6 +207,7 @@ export type {
   DispatchStore,
   DispatchTarget,
   DispatchTask,
+  LadderEntry,
   ReceiptInput,
   ReceiptRefusal,
   ReceiptResult,
@@ -219,7 +221,10 @@ export {
   DISPATCH_KINDS,
   DispatchStoreError,
   foldDispatch,
+  isHeld,
   isOutstanding,
+  LADDER_OPS,
+  planAnnotate,
   planExpiry,
   planReceipt,
   RECEIPT_STATES,

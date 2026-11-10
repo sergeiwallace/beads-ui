@@ -9,6 +9,7 @@ import {
   isFinalDelivery,
   reduceDelivery,
 } from "./delivery-state.ts";
+import type { RungAttempt, RungName } from "./dispatch-policy.ts";
 
 export const DISPATCH_KINDS = ["prompt", "answer", "unblock", "handoff-request"] as const;
 export type DispatchKind = (typeof DISPATCH_KINDS)[number];
@@ -68,11 +69,42 @@ export interface ReceiptInput {
 /** Why a body was deleted: the dispatch was consumed (acted on or failed) or it expired. */
 export type TombstoneCause = "acted" | "failed" | "expired";
 
+/**
+ * What the dispatch ladder records on a dispatch (T-W2.1, T-W2.3): a delivery move with the record
+ * that proves it (a shown receipt, the wake policy, a hold and its release), each rung's attempt,
+ * and a note such as the user clearing arm-goal. A hold is a wait the receiver API does not serve.
+ */
+export type LadderEntry =
+  | {
+      op: "delivery";
+      id: string;
+      at: string;
+      to: "shown" | "waiting" | "queued";
+      source: string;
+      reason?: string;
+      /** A wait the ladder holds back from the receiver: a paused goal or the hourly cap. */
+      hold?: boolean;
+      /** When the hold ends on its own, when it is known. */
+      until?: string;
+    }
+  | {
+      op: "rung";
+      id: string;
+      at: string;
+      rung: RungName;
+      outcome: "sent" | "failed" | "skipped";
+      detail: string;
+    }
+  | { op: "note"; id: string; at: string; source: string; text: string };
+
+export const LADDER_OPS: readonly string[] = ["delivery", "rung", "note"];
+
 /** One appended entry after a dispatch's record; the store's log holds nothing else about it. */
 export type DispatchEntry =
   | ({ op: "receipt"; id: string } & ReceiptInput)
   | { op: "expired"; id: string; at: string }
-  | { op: "tombstone"; id: string; at: string; cause: TombstoneCause };
+  | { op: "tombstone"; id: string; at: string; cause: TombstoneCause }
+  | LadderEntry;
 
 export interface Tombstone {
   at: string;
@@ -85,6 +117,11 @@ export interface StoredDispatch {
   state: DeliveryState;
   machine: DeliveryMachine;
   receipts: (ReceiptInput & { source: string })[];
+  /** Each ladder rung tried, in order. */
+  rungs: RungAttempt[];
+  notes: { at: string; source: string; text: string }[];
+  /** Present while the ladder holds the dispatch back: the receiver API does not serve it. */
+  hold?: { reason: string; source: string; until?: string };
   /** Present once the body is deleted; the record and its receipts stay. */
   tombstone?: Tombstone;
 }
@@ -96,6 +133,10 @@ export type ReceiptRefusal = {
 };
 
 export type ReceiptResult = { ok: true; dispatch: StoredDispatch } | ReceiptRefusal;
+
+export type AnnotateResult =
+  | { ok: true; dispatch: StoredDispatch }
+  | { ok: false; problem: "unknown-dispatch" | "rejected"; detail: string };
 
 export interface CreateResult {
   /** False when a record with this id was already stored; the store keeps that one. */
@@ -117,6 +158,8 @@ export interface DispatchStore {
   /** Every dispatch to `target` not yet acted on, failed or expired, oldest first. */
   outstanding(target: DispatchTarget): Promise<StoredDispatch[]>;
   receipt(id: string, receipt: ReceiptInput): Promise<ReceiptResult>;
+  /** Appends one ladder entry, refused when it is a delivery move the dispatch's state forbids. */
+  annotate(id: string, entry: LadderEntry): Promise<AnnotateResult>;
   /** Expires every open dispatch whose `expires_at` is at or before `now`; returns their ids. */
   expire(now: string): Promise<string[]>;
   /** Drops the bytes of every tombstoned body and of any body no record holds. */
@@ -141,10 +184,36 @@ export function foldDispatch(
 ): StoredDispatch {
   let machine = deliveryMachine("queued", "dispatch record");
   const receipts: StoredDispatch["receipts"] = [];
+  const rungs: RungAttempt[] = [];
+  const notes: StoredDispatch["notes"] = [];
+  let hold: StoredDispatch["hold"];
   let tombstone: Tombstone | undefined;
   for (const entry of entries) {
     if (entry.id !== record.id) continue;
-    if (entry.op === "receipt") {
+    if (entry.op === "delivery") {
+      const transition: { to: string; source: string; at: string; reason?: string } = {
+        to: entry.to,
+        source: entry.source,
+        at: entry.at,
+      };
+      if (entry.reason !== undefined) transition.reason = entry.reason;
+      const next = reduceDelivery(machine, transition);
+      if (next.history.length > machine.history.length) {
+        hold =
+          entry.to === "waiting" && entry.hold === true
+            ? {
+                reason: entry.reason ?? "held",
+                source: entry.source,
+                ...(entry.until === undefined ? {} : { until: entry.until }),
+              }
+            : undefined;
+      }
+      machine = next;
+    } else if (entry.op === "rung") {
+      rungs.push({ rung: entry.rung, outcome: entry.outcome, detail: entry.detail, at: entry.at });
+    } else if (entry.op === "note") {
+      notes.push({ at: entry.at, source: entry.source, text: entry.text });
+    } else if (entry.op === "receipt") {
       const { op: _op, id: _id, ...receipt } = entry;
       const source = receiptSource(receipt);
       const transition: { to: string; source: string; at: string; reason?: string } = {
@@ -162,10 +231,36 @@ export function foldDispatch(
       tombstone = { at: entry.at, cause: entry.cause };
     }
   }
-  const stored: StoredDispatch = { record, state: machine.state, machine, receipts };
+  const stored: StoredDispatch = { record, state: machine.state, machine, receipts, rungs, notes };
+  if (hold !== undefined && machine.state === "waiting") stored.hold = hold;
   if (tombstone !== undefined) stored.tombstone = tombstone;
   return stored;
 }
+
+/** What appending a ladder entry would do: the entry, or why a delivery move is refused. */
+export function planAnnotate(
+  record: DispatchRecord,
+  entries: readonly DispatchEntry[],
+  entry: LadderEntry,
+): { ok: true; entries: DispatchEntry[] } | { ok: false; problem: "rejected"; detail: string } {
+  if (entry.op !== "delivery") return { ok: true, entries: [entry] };
+  const before = foldDispatch(record, entries);
+  if (before.tombstone !== undefined) {
+    return { ok: false, problem: "rejected", detail: `dispatch ${record.id} has ended` };
+  }
+  const after = foldDispatch(record, [...entries, entry]);
+  if (after.machine.rejected.length > before.machine.rejected.length) {
+    return {
+      ok: false,
+      problem: "rejected",
+      detail: after.machine.rejected.at(-1)?.problem ?? "rejected",
+    };
+  }
+  return { ok: true, entries: [entry] };
+}
+
+/** True while the ladder holds a dispatch back from its receiver (a paused goal, the hourly cap). */
+export const isHeld = (dispatch: StoredDispatch): boolean => dispatch.hold !== undefined;
 
 /**
  * What appending `receipt` to a dispatch would do: the entries to append (the receipt, then a
