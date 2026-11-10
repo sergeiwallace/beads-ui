@@ -46,3 +46,11 @@ node scripts/plugin-version.mjs bump                           # write the requi
 
 Both compare against `origin/main`; pass `--base <ref>` for another. Exit status 0 means ok, 1 refused,
 2 could not run. After a refused merge: merge `origin/main` into the branch, run `bump`, commit, push.
+
+## Tags and releases
+
+Once a version that beats the previous one reaches `main`, `.github/workflows/release.yml` creates
+the tag `v<version>` and a GitHub Release whose notes are that version's section of
+[CHANGELOG.md](../../CHANGELOG.md). Add the section to the changelog in the same change that raises
+the version; without one the release carries a one-line note. The standard behind it is in the
+`sergeiwallace/.github` repository, `docs/release-standard.md`.
