@@ -230,6 +230,33 @@ describe("GET /api/review (T-W1.1)", () => {
     }
   });
 
+  it("should name the options read as failed, and pass none of its output on, when the options command prints malformed output", async () => {
+    const leak = `unlisted-repo ${itemPath("decide-elsewhere")}`;
+    for (const printed of [
+      `not JSON: ${leak}`,
+      JSON.stringify({ version: 1, items: leak }),
+      JSON.stringify([{ item: itemPath("decide-elsewhere"), store: "unlisted-repo" }]),
+    ]) {
+      await writeHeld({ "options.json": printed });
+      try {
+        const reply = await get("/api/review");
+        expect(reply.status).toBe(200);
+        const body = reply.json() as {
+          held: { state: string };
+          options: { state: string; failure?: { source: string; detail?: string } };
+        };
+        expect(body.held.state).toBe("ok");
+        expect(body.options.state, printed).toBe("failed");
+        expect(body.options.failure?.source).toBe("held options");
+        expect(body.options.failure?.detail).toMatch(/not the options JSON/);
+        expect(reply.text, printed).not.toContain("unlisted-repo");
+        expect(reply.text, printed).not.toContain("decide-elsewhere");
+      } finally {
+        await resetHeld();
+      }
+    }
+  });
+
   it("should say held items are not read when no review command is set", async () => {
     await env.write(config().replace(/\[review\]\ncommand = .*\n/, ""));
     try {
@@ -411,6 +438,62 @@ describe("POST /api/dispatch/answer (T-W1.2)", () => {
         source: "held options",
         message: expect.stringMatching(/exit 2/),
       });
+    } finally {
+      await resetHeld();
+    }
+  });
+
+  it("should pass item paths after --, and refuse one that starts with - without running the options command", async () => {
+    const dashed = "-rf.md";
+    await writeHeld({
+      "review.json": JSON.stringify({
+        schema: 1,
+        fingerprint: "f2",
+        host: "host-c",
+        pair: ["host-c"],
+        scope: "pair",
+        read_at: "2026-11-09T12:00:00Z",
+        stores: {
+          [repoName(store.dir)]: { path: "/stores/held/docs/held", status: "ok", error: null },
+        },
+        items: [
+          reviewItem("decide-one", { task: ids.joined }),
+          { ...reviewItem("dashed"), path: dashed },
+        ],
+      }),
+      "options.json": JSON.stringify({
+        version: 1,
+        items: [
+          { item: itemPath("decide-one"), kind: "decision", decisions: DECISIONS, error: null },
+          { item: dashed, kind: "decision", decisions: DECISIONS, error: null },
+        ],
+      }),
+    });
+    try {
+      expect((await get("/api/review")).status).toBe(200);
+      await writeFile(join(heldDir, "calls.jsonl"), "");
+      const refusedReply = await post("/api/dispatch/answer", {
+        item: dashed,
+        choices: [{ decision: "D-3", key: "a" }],
+      });
+      expect(refusedReply.status).toBe(403);
+      expect(
+        (refusedReply.json() as { error: { source: string; message: string } }).error,
+      ).toMatchObject({
+        source: "held options",
+        message: expect.stringMatching(/starts with "-"/),
+      });
+      const answered = await post("/api/dispatch/answer", {
+        item: itemPath("decide-one"),
+        choices: [{ decision: "D-3", key: "a" }],
+      });
+      expect(answered.status).toBe(201);
+      const calls = (await readFile(join(heldDir, "calls.jsonl"), "utf8"))
+        .split("\n")
+        .filter(Boolean)
+        .map((line) => JSON.parse(line) as string[])
+        .filter((call) => call[0] === "options");
+      expect(calls).toEqual([["options", "--scope", "pair", "--", itemPath("decide-one")]]);
     } finally {
       await resetHeld();
     }

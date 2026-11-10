@@ -4,6 +4,7 @@ import { useDispatchStatus } from "../composer/PromptComposer.tsx";
 import { StatusIndicators } from "../composer/StatusIndicators.tsx";
 import { describeRefusal, findSecrets } from "../composer/secrets.ts";
 import type { DispatchStatus, DispatchSummary } from "../composer/types.ts";
+import { Markdown } from "../detail/Markdown.tsx";
 import { OptionCard } from "./OptionCard.tsx";
 import type { AnswerInput, BodyRead } from "./types.ts";
 
@@ -57,10 +58,12 @@ function Body({ body }: { body: BodyRead }) {
       </p>
     );
   }
+  // The same sanitizing renderer as the held item's detail (T-W1.2, T-W1.7): headings, safe links
+  // and an option card's `#` anchor work, and raw HTML never reaches the page.
   return (
-    <pre className="bu-held-body" data-testid="held-body">
-      {body.text}
-    </pre>
+    <div data-testid="held-body">
+      <Markdown text={body.text} className="bu-held-body" />
+    </div>
   );
 }
 

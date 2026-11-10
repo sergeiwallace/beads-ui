@@ -336,8 +336,21 @@ async function readOptions(
   settings: DispatchSettings,
   paths: readonly string[],
 ): Promise<{ state: "ok"; stdout: string } | { state: "failed"; failure: ReadFailure }> {
+  // An item path is an argument, never an option: one that starts with "-" is refused before the
+  // call, and the paths follow "--" so the held tool reads every one of them as an item.
+  const flagLike = paths.find((path) => path.startsWith("-"));
+  if (flagLike !== undefined) {
+    return {
+      state: "failed",
+      failure: {
+        source: HELD_OPTIONS_SOURCE,
+        exitCode: null,
+        detail: `refused an item path that starts with "-": ${JSON.stringify(flagLike)}`,
+      },
+    };
+  }
   const held = settings.held ?? [];
-  const argv = [...heldBase(held), "options", "--scope", "pair", ...paths];
+  const argv = [...heldBase(held), "options", "--scope", "pair", "--", ...paths];
   const outcome = await run(argv, { timeoutMs: REVIEW_TIMEOUT_MS });
   if (outcome.kind !== "exited" || outcome.stdout.trim() === "") {
     return {
@@ -348,16 +361,23 @@ async function readOptions(
   return { state: "ok", stdout: outcome.stdout };
 }
 
-/** Keeps only the options of `paths`, so nothing the allowlist hid leaves the server. */
-function optionsFor(stdout: string, paths: ReadonlySet<string>): string {
+/** Why the options read failed when its output could not be filtered (T-W1.1). */
+export const OPTIONS_UNREADABLE = "printed output that is not the options JSON";
+
+/**
+ * Keeps only the options of `paths`, so nothing the allowlist hid leaves the server; undefined
+ * when the output is not the options JSON, which then leaves the server not at all.
+ */
+function optionsFor(stdout: string, paths: ReadonlySet<string>): string | undefined {
   let json: unknown;
   try {
     json = JSON.parse(stdout);
   } catch {
-    return stdout;
+    return undefined;
   }
   const payload = json as { items?: unknown };
-  if (typeof json !== "object" || json === null || !Array.isArray(payload.items)) return stdout;
+  if (typeof json !== "object" || json === null || Array.isArray(json)) return undefined;
+  if (!Array.isArray(payload.items)) return undefined;
   const items = payload.items.filter(
     (row) =>
       typeof row === "object" &&
@@ -396,7 +416,17 @@ async function reviewRoute(_request: ApiRequest, context: ApiContext): Promise<A
       held.rows.length === 0
         ? { state: "ok" as const, stdout: '{"version":1,"items":[]}' }
         : await readOptions(settings, []);
-    options = read.state === "ok" ? { state: "ok", stdout: optionsFor(read.stdout, paths) } : read;
+    if (read.state === "failed") options = read;
+    else {
+      const kept = optionsFor(read.stdout, paths);
+      options =
+        kept === undefined
+          ? {
+              state: "failed",
+              failure: { source: HELD_OPTIONS_SOURCE, exitCode: 0, detail: OPTIONS_UNREADABLE },
+            }
+          : { state: "ok", stdout: kept };
+    }
   }
   const shownTasks = tasks.issues.filter(({ issue }) =>
     (REVIEW_TASK_STATUSES as readonly string[]).includes(issue.status),
@@ -689,7 +719,9 @@ async function decisionsOf(
 ): Promise<OptionDecision[] | string> {
   const read = await readOptions(settings, [path]);
   if (read.state === "failed") {
-    return `${read.failure.source} could not be read (${read.failure.exitCode === null ? "no exit code" : `exit ${read.failure.exitCode}`})`;
+    const code = read.failure.exitCode === null ? "no exit code" : `exit ${read.failure.exitCode}`;
+    const why = read.failure.detail === undefined ? "" : `: ${read.failure.detail}`;
+    return `${read.failure.source} could not be read (${code})${why}`;
   }
   try {
     const json = JSON.parse(read.stdout) as {
