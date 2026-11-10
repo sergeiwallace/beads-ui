@@ -94,6 +94,8 @@ export type LadderEntry =
       rung: RungName;
       outcome: "sent" | "failed" | "skipped";
       detail: string;
+      /** On a sent carrier rung: every dispatch id that went out in the same event. */
+      event?: string[];
     }
   | { op: "note"; id: string; at: string; source: string; text: string };
 
@@ -210,7 +212,13 @@ export function foldDispatch(
       }
       machine = next;
     } else if (entry.op === "rung") {
-      rungs.push({ rung: entry.rung, outcome: entry.outcome, detail: entry.detail, at: entry.at });
+      rungs.push({
+        rung: entry.rung,
+        outcome: entry.outcome,
+        detail: entry.detail,
+        at: entry.at,
+        ...(entry.event === undefined ? {} : { event: [...entry.event] }),
+      });
     } else if (entry.op === "note") {
       notes.push({ at: entry.at, source: entry.source, text: entry.text });
     } else if (entry.op === "receipt") {

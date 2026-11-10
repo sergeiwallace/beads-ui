@@ -240,6 +240,42 @@ describe("rung 1, Agent Mail through the notifier (T-W2.1)", () => {
     expect(read.delivery.source).toBe(`shown receipt from ${owner}@${HOST}`);
   });
 
+  it("should show every dispatch of a coalesced event, and try no rung 3 for any, when the shown receipt names only the first id", async () => {
+    await env.write(config({ coalesce: 10, shownWithin: 5 }));
+    const { id, owner } = await ownedTask();
+    const started = Date.now();
+    const first = await prompt(id, "One");
+    const second = await prompt(id, "Two");
+    const third = await prompt(id, "Three");
+    expect(Date.now() - started).toBeLessThan(10_000);
+    await waitFor(async () => expect(await calls("agent-mail")).toHaveLength(1));
+    // The board cuts a subject at 60 characters, so the receiving host knows the first id only.
+    const reply = await receiver(`/dispatches/${first}/shown`, { session: owner });
+    expect(reply.status).toBe(204);
+    await settle();
+    for (const one of [first, second, third]) {
+      const read = await status(one);
+      expect(read.state, one).toBe("shown");
+      expect(read.delivery.source, one).toBe(`shown receipt from ${owner}@${HOST}`);
+    }
+    expect(await calls("prompt-injection")).toEqual([]);
+    expect(await calls("mod-submit")).toEqual([]);
+  });
+
+  it("should show no dispatch of a coalesced event when the shown receipt comes from another session", async () => {
+    await env.write(config({ coalesce: 10 }));
+    const { id } = await ownedTask();
+    const started = Date.now();
+    const first = await prompt(id, "One");
+    const second = await prompt(id, "Two");
+    expect(Date.now() - started).toBeLessThan(10_000);
+    await waitFor(async () => expect(await calls("agent-mail")).toHaveLength(1));
+    const reply = await receiver(`/dispatches/${first}/shown`, { session: "someone-else" });
+    expect(reply.status).toBe(404);
+    await settle();
+    for (const one of [first, second]) expect((await status(one)).state, one).toBe("queued");
+  });
+
   it("should refuse a shown receipt from another session and leave the state as it was", async () => {
     const { id } = await ownedTask();
     const dispatch = await prompt(id, "Not yours");

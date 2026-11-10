@@ -292,6 +292,8 @@ export interface RungAttempt {
   outcome: "sent" | "failed" | "skipped";
   detail: string;
   at: string;
+  /** Every dispatch id that went out in the same carried event, this one included. */
+  event?: string[];
 }
 
 /** The delivery indicator's line for a dispatch's rungs: which delivered, or which failed and why. */

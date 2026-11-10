@@ -418,8 +418,22 @@ export class DispatchLadder {
     return this.#options.store().annotate(id, entry);
   }
 
-  #rung(id: string, rung: RungName, outcome: "sent" | "failed" | "skipped", detail: string) {
-    return this.#append(id, { op: "rung", id, at: this.#now(), rung, outcome, detail });
+  #rung(
+    id: string,
+    rung: RungName,
+    outcome: "sent" | "failed" | "skipped",
+    detail: string,
+    event?: readonly string[],
+  ) {
+    return this.#append(id, {
+      op: "rung",
+      id,
+      at: this.#now(),
+      rung,
+      outcome,
+      detail,
+      ...(event === undefined ? {} : { event: [...event] }),
+    });
   }
 
   /**
@@ -539,9 +553,16 @@ export class DispatchLadder {
     }
     const pointer = dispatchPointer(open.map((dispatch) => dispatch.record));
     let carried = false;
+    // The ids that go out together: a carrier may cut the subject, so a shown receipt for any
+    // one of them stands for the whole event (shown below).
+    const event = open.map((dispatch) => dispatch.record.id);
     for (const carrier of plan.carriers) {
       const result = await tools.carry(carrier, target, pointer);
-      await each((id) => this.#rung(id, carrier, result.ok ? "sent" : "failed", result.detail));
+      await each((id) =>
+        result.ok
+          ? this.#rung(id, carrier, "sent", result.detail, event)
+          : this.#rung(id, carrier, "failed", result.detail),
+      );
       if (result.ok) {
         carried = true;
         break;
@@ -603,19 +624,33 @@ export class DispatchLadder {
   }
 
   /** A shown receipt from the dispatch's own target: the notifier showed its header. */
+  /**
+   * A shown receipt from the dispatch's own target: the notifier showed the header of the event
+   * that carried it. Every dispatch of that event is shown, each with this receipt as its source,
+   * since a carrier may cut the subject to its first id; a receipt from anyone else changes
+   * nothing.
+   */
   shown(id: string, from: DispatchTarget): Promise<boolean> {
     return this.#track(
       (async () => {
-        const dispatch = await this.#options.store().get(id);
+        const store = this.#options.store();
+        const dispatch = await store.get(id);
         if (dispatch === undefined || address(dispatch.record.target) !== address(from))
           return false;
-        const result = await this.#options.store().annotate(id, {
-          op: "delivery",
-          id,
-          at: this.#now(),
-          to: "shown",
-          source: `shown receipt from ${address(from)}`,
-        });
+        const carried = dispatch.rungs.filter(
+          (rung) => rung.outcome === "sent" && rung.event !== undefined,
+        );
+        const event = carried.at(-1)?.event ?? [id];
+        const source = `shown receipt from ${address(from)}`;
+        const mark = (one: string) =>
+          store.annotate(one, { op: "delivery", id: one, at: this.#now(), to: "shown", source });
+        const result = await mark(id);
+        for (const other of event) {
+          if (other === id) continue;
+          const sibling = await store.get(other);
+          if (sibling === undefined || address(sibling.record.target) !== address(from)) continue;
+          await mark(other);
+        }
         return result.ok;
       })(),
     );
