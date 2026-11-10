@@ -9,6 +9,8 @@ export interface HandoffView {
   state: string;
   source: string;
   final: boolean;
+  /** What this server reads in the store, which is not proof that anything was published. */
+  observation?: string;
   holder: { session: string; host: string };
   receiver: { session: string; host: string };
 }
@@ -60,6 +62,9 @@ export function HandoffStatus({ read, pollMs = HANDOFF_POLL_MS }: HandoffStatusP
         from {view.source}; {view.holder.session}@{view.holder.host} to {view.receiver.session}@
         {view.receiver.host}
       </span>
+      {view.observation !== undefined && (
+        <span className="bu-dim bu-handoff-observation"> ({view.observation})</span>
+      )}
     </output>
   );
 }

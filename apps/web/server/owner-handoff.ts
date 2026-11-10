@@ -372,7 +372,7 @@ async function handoffState(
   handoff: Handoff,
   store: OpenStore | undefined,
   context: ApiContext,
-): Promise<{ state: string; source: string; final: boolean }> {
+): Promise<{ state: string; source: string; final: boolean; observation?: string }> {
   if (handoff.mode === "git-inbox") {
     if (handoff.confirmed !== undefined) {
       return {
@@ -447,14 +447,13 @@ async function handoffState(
   if (taken !== undefined) return { state: "taken", source: sourceOf(taken), final: false };
   const sent = latest("sent");
   if (sent !== undefined) return { state: "handoff sent", source: sourceOf(sent), final: false };
+  // This server may read the store before it is published (a shared database), so what it reads
+  // is only an observation; "handoff sent" comes from the holder's sent receipt alone.
   const read = store === undefined ? undefined : await store.bd.show(handoff.task.id);
-  if (read?.kind === "ok" && read.value.assignee === handoff.receiver.session) {
-    return {
-      state: "handoff sent",
-      source: `the published store: bd show ${handoff.task.id} names ${handoff.receiver.session}, read ${context.now()}`,
-      final: false,
-    };
-  }
+  const observed =
+    read?.kind === "ok" && read.value.assignee === handoff.receiver.session
+      ? `the store as this server reads it names ${handoff.receiver.session} (bd show ${handoff.task.id}, ${context.now()})`
+      : undefined;
   return {
     state: `handoff pending to ${handoff.receiver.session}`,
     source:
@@ -462,6 +461,7 @@ async function handoffState(
         ? "the handoff record"
         : `dispatch ${dispatch.record.id}: ${dispatch.state}`,
     final: false,
+    ...(observed === undefined ? {} : { observation: observed }),
   };
 }
 

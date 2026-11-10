@@ -34,6 +34,19 @@ describe("the handoff status on a task", () => {
     expect(read).toHaveBeenCalledTimes(3);
   });
 
+  it("should show what the server reads in the store beside a pending handoff, as an observation only", async () => {
+    const pending = {
+      ...view("handoff pending to receiver-1", "dispatch 01JD: queued"),
+      observation: "the store as this server reads it names receiver-1",
+    };
+    render(<HandoffStatus read={() => Promise.resolve(pending)} pollMs={1_000} />);
+    expect(await screen.findByText("handoff pending to receiver-1")).toBeTruthy();
+    expect(screen.getByLabelText("Owner handoff").textContent).toContain(
+      "(the store as this server reads it names receiver-1)",
+    );
+    expect(screen.queryByText("handoff sent")).toBeNull();
+  });
+
   it("should draw nothing for a task with no handoff", async () => {
     const read = vi.fn(() => Promise.resolve(undefined));
     const { container } = render(<HandoffStatus read={read} pollMs={10} />);

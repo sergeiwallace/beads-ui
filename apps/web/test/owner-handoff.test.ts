@@ -110,6 +110,7 @@ const handoff = async (id: string) =>
     state: string;
     source: string;
     final: boolean;
+    observation?: string;
   };
 const listed = async (session: string) =>
   (
@@ -227,11 +228,25 @@ describe("a task a live session holds (T-W2.2)", () => {
     const receipt = (body: Record<string, unknown>) =>
       receiver(`/dispatches/${request?.id}/receipts`, { session: holder, ...body });
     expect((await receipt({ state: "taken" })).status).toBe(204);
-    // The holder reassigns its claim and publishes the store (session-handoff Step 2).
+    // The holder reassigns its claim (session-handoff Step 2). This server reads the store
+    // before any publication, so what it reads is an observation, never "handoff sent".
     await store.bd("update", id, "--assignee", target, "--actor", holder);
+    const observed = await handoff(id);
+    expect(observed.state).toBe(`handoff pending to ${target}`);
+    expect(observed.observation).toMatch(
+      new RegExp(`^the store as this server reads it names ${target} \\(bd show ${id}, `),
+    );
+    // The holder publishes the store and says so.
+    const published = await receiver(`/dispatches/${request?.id}/progress`, {
+      session: holder,
+      step: "sent",
+      reason: "bd_dolt_publish.py --attest: shared, converged",
+    });
+    expect(published.status).toBe(204);
     const sent = await handoff(id);
     expect(sent.state).toBe("handoff sent");
-    expect(sent.source).toMatch(new RegExp(`^the published store: bd show ${id} names ${target}`));
+    expect(sent.source).toMatch(new RegExp(`^progress receipt from ${holder}@${HOST}`));
+    expect(sent.source).toContain("sent: bd_dolt_publish.py --attest: shared, converged");
     // The receiver replies taken; the holder records the reply.
     const progress = await receiver(`/dispatches/${request?.id}/progress`, {
       session: holder,
