@@ -54,6 +54,7 @@ import {
   ApiFailure,
   api,
   type BoardPayload,
+  HandoffPending,
   type IssuePayload,
   type IssueRef,
   type StoredIssue,
@@ -61,7 +62,7 @@ import {
   signOut,
 } from "./api.ts";
 import { base } from "./base.ts";
-import { ReviewPage, shortcutCommand, TaskComposer, useKeymap } from "./review.tsx";
+import { ReviewPage, shortcutCommand, TaskComposer, TaskHandoff, useKeymap } from "./review.tsx";
 
 /** The views with a page of their own, in the order the nav lists them. */
 const VIEWS = [
@@ -165,11 +166,18 @@ const failedStale = (event: BoardEvent): boolean =>
 
 /** What a refused inline edit says (T-W1.0): a conflict, or why else it was refused. */
 const describeRefusal = (error: unknown): Refusal => {
+  if (error instanceof HandoffPending)
+    return { conflict: false, message: error.message, kind: "info" };
   const failure = error instanceof ApiFailure ? error : undefined;
+  const info =
+    failure?.error.kind === "handoff-required" || failure?.error.kind === "owner-unknown";
   return {
     conflict: failure?.exitCode === 13,
-    message: failure?.message ?? String(error),
-    ...(failure?.error.kind === "handoff-required" ? { kind: "info" as const } : {}),
+    message:
+      failure?.error.retry === true
+        ? `${failure.message}. Pick the owner again to retry.`
+        : (failure?.message ?? String(error)),
+    ...(info ? { kind: "info" as const } : {}),
   };
 };
 
@@ -1278,7 +1286,10 @@ export function App() {
         {/* The Review queue, and the composer on a task's detail (client/review.tsx). */}
         {route.view === "review" && <ReviewPage />}
         {route.view === "issue" && detail?.payload !== undefined && (
-          <TaskComposer id={detail.payload.issue.id} repository={detail.payload.repository} />
+          <>
+            <TaskHandoff id={detail.payload.issue.id} repository={detail.payload.repository} />
+            <TaskComposer id={detail.payload.issue.id} repository={detail.payload.repository} />
+          </>
         )}
       </main>
       <CommandPalette

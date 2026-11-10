@@ -19,6 +19,7 @@ export type {
   DispatchSummary,
   FollowUpView,
   Indicator,
+  SendOptions,
 } from "./composer/types.ts";
 // Phase W1's Sprint view, inline edits, Queue view and detail views.
 export type { HeldDetailProps, HeldItemSummary, HeldReadFailure } from "./detail/HeldDetail.tsx";
@@ -31,6 +32,8 @@ export type { IssueDetailProps, ReadFailure } from "./IssueDetail.tsx";
 export { IssueDetail } from "./IssueDetail.tsx";
 export type { PriorityEditProps, StatusEditProps } from "./inline-edit/fields.tsx";
 export { PRIORITIES, PriorityEdit, StatusEdit } from "./inline-edit/fields.tsx";
+export type { HandoffStatusProps, HandoffView } from "./inline-edit/HandoffStatus.tsx";
+export { HandoffStatus } from "./inline-edit/HandoffStatus.tsx";
 export type { OwnerChoice, OwnerChoices, OwnerPickerProps } from "./inline-edit/OwnerPicker.tsx";
 export { OwnerPicker } from "./inline-edit/OwnerPicker.tsx";
 export type { EditField, FieldEdits, Refusal } from "./inline-edit/useFieldEdits.ts";

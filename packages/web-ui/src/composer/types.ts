@@ -47,4 +47,11 @@ export interface DispatchStatus {
   response: Indicator;
   /** An unblock's next-step prompt, delivered to the same session once the unblock is acted on. */
   followUp?: FollowUpView;
+  /** True while the dispatch waits on the session's paused goal, so "Deliver now" may release it. */
+  deliverNow?: boolean;
+}
+
+/** What the composer sends beside the text; arm-goal is on unless the user clears it (T-W2.3). */
+export interface SendOptions {
+  armGoal: false;
 }

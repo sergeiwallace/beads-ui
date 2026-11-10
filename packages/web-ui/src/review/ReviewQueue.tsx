@@ -424,8 +424,9 @@ export function ReviewQueue({
             )}
             <PromptComposer
               label={`Prompt ${selected.id}`}
-              send={(text) => actions.prompt(selected, text)}
+              send={(text, options) => actions.prompt(selected, text, options)}
               status={actions.status}
+              {...(actions.deliverNow === undefined ? {} : { deliverNow: actions.deliverNow })}
               {...(actions.loadSkills === undefined ? {} : { loadSkills: actions.loadSkills })}
               {...(pollMs === undefined ? {} : { pollMs })}
             />
