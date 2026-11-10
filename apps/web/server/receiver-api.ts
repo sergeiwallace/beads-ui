@@ -19,11 +19,18 @@ import type { ApiContext, ApiReply, ApiRequest, Route } from "./routes.ts";
 
 export const RECEIVER_PREFIX = "/api/receiver/v1";
 
-/** A handoff request's progress steps (T-W2.2): the holder's publication, the receiver's reply. */
-export const HANDOFF_STEPS = ["sent", "taken"] as const;
+/**
+ * A handoff request's progress steps (T-W2.2), each posted by the holder: `sent` once it has
+ * reassigned its claim and published the store, `taken` when it relays the receiver's reply, and
+ * `verified` when its verify step ran, with that step's exit status.
+ */
+export const HANDOFF_STEPS = ["sent", "taken", "verified"] as const;
 
-const noteText = (step: string, evidence: string | undefined) =>
-  evidence === undefined || evidence === "" ? step : `${step}: ${evidence}`;
+/** A progress note's text: `sent`, `taken: <reason>`, `verified exit 0: <reason>`. */
+export const progressText = (step: string, exitCode: number | undefined, reason: unknown) => {
+  const head = exitCode === undefined ? step : `${step} exit ${exitCode}`;
+  return typeof reason === "string" && reason !== "" ? `${head}: ${reason}` : head;
+};
 
 /** The longest failure reason a receipt may carry. */
 export const MAX_REASON_LENGTH = 2_000;
@@ -115,17 +122,24 @@ const postShown = receiverRoute(async (host, { params, body }, context) => {
 });
 
 /**
- * A handoff request's progress from its own target, the holder (T-W2.2): `sent` once it has
- * reassigned its claim and published the store, `taken` when the receiver replied; `reason`
- * carries the evidence (the publication's attestation, the reply). Recorded as a note.
+ * A handoff request's progress from its own target, the holder, while it is outstanding (T-W2.2):
+ * `{"session", "step": "sent" | "taken" | "verified", "reason"?, "exit_code"?}`. `reason` carries
+ * the evidence (the publication, the reply); `exit_code`, the verify step's exit status, is
+ * required on `verified` and refused on any other step. Recorded as a note on the dispatch.
  */
 const postProgress = receiverRoute(async (host, { params, body }, context) => {
   if (!isObject(body) || !isSession(body.session)) return REFUSED;
   const { session, step, reason } = body;
+  const exitCode = body.exit_code;
   if (typeof step !== "string" || !(HANDOFF_STEPS as readonly string[]).includes(step)) {
     return REFUSED;
   }
   if (reason !== undefined && (typeof reason !== "string" || reason.length > MAX_REASON_LENGTH)) {
+    return REFUSED;
+  }
+  if (step === "verified") {
+    if (typeof exitCode !== "number" || !Number.isInteger(exitCode) || exitCode < 0) return REFUSED;
+  } else if (exitCode !== undefined) {
     return REFUSED;
   }
   const dispatch = await context.dispatches.store.get(params.id ?? "");
@@ -136,7 +150,7 @@ const postProgress = receiverRoute(async (host, { params, body }, context) => {
     id: dispatch.record.id,
     at: context.now(),
     source: `progress receipt from ${session}@${host}`,
-    text: noteText(step, reason),
+    text: progressText(step, step === "verified" ? (exitCode as number) : undefined, reason),
   });
   return noted.ok ? { status: 204, body: null } : REFUSED;
 });

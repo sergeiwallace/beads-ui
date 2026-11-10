@@ -244,12 +244,72 @@ describe("a task a live session holds (T-W2.2)", () => {
     expect(taken.source).toMatch(new RegExp(`progress receipt from ${holder}@${HOST}`));
     expect(taken.source).toContain(`taken ${id}, store published`);
     // The holder's verify exits 0 and it lets go.
-    expect((await receipt({ state: "acted", reason: "handoff.py verify exited 0" })).status).toBe(
-      204,
-    );
+    const verified = await receiver(`/dispatches/${request?.id}/progress`, {
+      session: holder,
+      step: "verified",
+      exit_code: 0,
+      reason: "handoff.py verify exited 0; rows dropped",
+    });
+    expect(verified.status).toBe(204);
     const done = await handoff(id);
     expect(done).toMatchObject({ state: "handoff complete", final: true });
-    expect(done.source).toMatch(/handoff.py verify exited 0/);
+    expect(done.source).toMatch(new RegExp(`^progress receipt from ${holder}@${HOST}`));
+    expect(done.source).toContain("verified exit 0: handoff.py verify exited 0; rows dropped");
+    expect((await receipt({ state: "acted" })).status).toBe(204);
+  });
+});
+
+describe("the holder's verify step (T-W2.2)", () => {
+  async function requested() {
+    const task = await claimed();
+    await liveness(`${task.holder}@${HOST}`, { liveness: "live" });
+    await ownerChange(task.id, task.receiver, task.holder, "in_progress");
+    const [request] = await listed(task.holder);
+    const progress = (body: Record<string, unknown>) =>
+      receiver(`/dispatches/${request?.id}/progress`, { session: task.holder, ...body });
+    const receipt = (body: Record<string, unknown>) =>
+      receiver(`/dispatches/${request?.id}/receipts`, { session: task.holder, ...body });
+    return { ...task, progress, receipt };
+  }
+
+  it("should not show the handoff complete on an acted receipt with no verify receipt", async () => {
+    const { id, progress, receipt } = await requested();
+    expect((await receipt({ state: "taken" })).status).toBe(204);
+    expect((await progress({ step: "taken", reason: "the receiver replied" })).status).toBe(204);
+    expect((await receipt({ state: "acted", reason: "done with the request" })).status).toBe(204);
+    const read = await handoff(id);
+    expect(read.state).toBe("taken");
+    expect(read.final).toBe(false);
+  });
+
+  it("should show verify failed, not complete, when the verify step exits nonzero", async () => {
+    const { id, progress } = await requested();
+    const reply = await progress({
+      step: "verified",
+      exit_code: 1,
+      reason: "BU-1 names the sender",
+    });
+    expect(reply.status).toBe(204);
+    const read = await handoff(id);
+    expect(read).toMatchObject({
+      state: "handoff verify failed: BU-1 names the sender",
+      final: false,
+    });
+  });
+
+  it("should refuse an exit code on another step, and a verify receipt without an integer exit code", async () => {
+    const { id, progress } = await requested();
+    for (const body of [
+      { step: "sent", exit_code: 0 },
+      { step: "verified" },
+      { step: "verified", exit_code: "0" },
+      { step: "verified", exit_code: 1.5 },
+    ]) {
+      const reply = await progress(body);
+      expect(reply.status, JSON.stringify(body)).toBe(404);
+      expect(reply.text).toBe("");
+    }
+    expect((await handoff(id)).state).toMatch(/^handoff pending to /);
   });
 });
 

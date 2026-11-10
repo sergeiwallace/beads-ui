@@ -337,6 +337,36 @@ export async function claimedOwnerChange(
   };
 }
 
+const PROGRESS_SOURCE = "progress receipt from ";
+const PROGRESS_TEXT = /^(sent|taken|verified)(?: exit (\d+))?(?:: ([\s\S]*))?$/;
+
+interface Progress {
+  step: "sent" | "taken" | "verified";
+  exitCode?: number;
+  reason?: string;
+  source: string;
+  at: string;
+  text: string;
+}
+
+/** The holder's progress receipts on a handoff request, oldest first. */
+function progressOf(notes: readonly { at: string; source: string; text: string }[]): Progress[] {
+  return notes.flatMap((note) => {
+    if (!note.source.startsWith(PROGRESS_SOURCE)) return [];
+    const match = PROGRESS_TEXT.exec(note.text);
+    if (match === null) return [];
+    const progress: Progress = {
+      step: match[1] as Progress["step"],
+      source: note.source,
+      at: note.at,
+      text: note.text,
+    };
+    if (match[2] !== undefined) progress.exitCode = Number(match[2]);
+    if (match[3] !== undefined) progress.reason = match[3];
+    return [progress];
+  });
+}
+
 /** A handoff's state now, each from the record that proves it. */
 async function handoffState(
   handoff: Handoff,
@@ -390,11 +420,20 @@ async function handoffState(
   }
   const dispatch = await context.dispatches.store.get(handoff.dispatch ?? "");
   const last = dispatch?.receipts.at(-1);
-  if (dispatch?.state === "acted" && last !== undefined) {
+  const progress = progressOf(dispatch?.notes ?? []);
+  const latest = (step: Progress["step"]) => progress.filter((one) => one.step === step).at(-1);
+  const sourceOf = (one: Progress) => `${one.source} at ${one.at}: ${one.text}`;
+  // Complete only on the holder's verify receipt with exit 0 (T-W2.2); an acted receipt alone
+  // says the holder finished with the request, not that the handoff verified.
+  const verified = latest("verified");
+  if (verified?.exitCode === 0) {
+    return { state: "handoff complete", source: sourceOf(verified), final: true };
+  }
+  if (verified !== undefined) {
     return {
-      state: "handoff complete",
-      source: `${last.source} at ${last.at}${last.reason === undefined ? "" : `: ${last.reason}`}`,
-      final: true,
+      state: `handoff verify failed: ${verified.reason ?? `exit ${verified.exitCode}`}`,
+      source: sourceOf(verified),
+      final: false,
     };
   }
   if (dispatch?.state === "failed" || dispatch?.state === "expired") {
@@ -404,21 +443,10 @@ async function handoffState(
       final: true,
     };
   }
-  const taken = dispatch?.notes.filter((note) => note.text.startsWith("taken")).at(-1);
-  if (taken !== undefined)
-    return {
-      state: "taken",
-      source: `${taken.source} at ${taken.at}: ${taken.text}`,
-      final: false,
-    };
-  const sentNote = dispatch?.notes.filter((note) => note.text.startsWith("sent")).at(-1);
-  if (sentNote !== undefined) {
-    return {
-      state: "handoff sent",
-      source: `${sentNote.source} at ${sentNote.at}: ${sentNote.text}`,
-      final: false,
-    };
-  }
+  const taken = latest("taken");
+  if (taken !== undefined) return { state: "taken", source: sourceOf(taken), final: false };
+  const sent = latest("sent");
+  if (sent !== undefined) return { state: "handoff sent", source: sourceOf(sent), final: false };
   const read = store === undefined ? undefined : await store.bd.show(handoff.task.id);
   if (read?.kind === "ok" && read.value.assignee === handoff.receiver.session) {
     return {
