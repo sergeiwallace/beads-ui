@@ -967,7 +967,9 @@ async function unblockRoute(request: ApiRequest, context: ApiContext): Promise<A
     if (commented !== undefined) {
       return failure({ kind: "failed", source: "bd comments add", message: commented });
     }
-    const argv = [...settings.unblockCommand, issue.id, "--to", "in_progress", "--why", resolution];
+    // The comment above keeps the resolution whole; bd-unblock takes a `--why` of one line only.
+    const why = resolution.replace(/\s+/g, " ").trim();
+    const argv = [...settings.unblockCommand, issue.id, "--to", "in_progress", "--why", why];
     const outcome = await run(argv, { cwd: store.path, timeoutMs: UNBLOCK_TIMEOUT_MS });
     if (outcome.kind !== "exited" || outcome.exitCode !== 0) {
       const failed = runFailure(settings.unblockCommand.join(" "), outcome, UNBLOCK_TIMEOUT_MS);
