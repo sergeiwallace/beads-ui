@@ -634,17 +634,27 @@ describe("goal arming (T-W2.3)", () => {
     expect(reply.text).toMatch(/not waiting on a paused goal/);
   });
 
-  it("should refuse a paused report with no until, and hold nothing on it", async () => {
+  it("should hold a dispatch on a paused report with no until, then release it when the receiver reports the goal active", async () => {
     const { id, owner } = await ownedTask();
     const reported = await receiver("/sessions/goal", {
       session: owner,
       state: "paused",
       reason: "usage limit",
     });
-    expect(reported.status).toBe(404);
-    const dispatch = await prompt(id, "Not held");
+    expect(reported.status).toBe(204);
+    const dispatch = await prompt(id, "After a pause with no known end");
+    await settle();
+    const read = await status(dispatch);
+    expect(read.delivery.text).toBe("waiting: goal paused");
+    expect(read.deliverNow).toBe(true);
+    expect(read.ladder.hold?.until).toBeUndefined();
+    expect((await listed(owner)).map((one) => one.id)).not.toContain(dispatch);
+    expect(await calls("agent-mail")).toEqual([]);
+    expect((await receiver("/sessions/goal", { session: owner, state: "active" })).status).toBe(
+      204,
+    );
     await waitFor(async () => expect(await calls("agent-mail")).toHaveLength(1));
-    expect((await status(dispatch)).ladder.hold).toBeUndefined();
+    expect(flag((await calls("agent-mail"))[0], "--subject")).toBe(`beads-ui dispatch ${dispatch}`);
     expect((await listed(owner)).map((one) => one.id)).toContain(dispatch);
   });
 

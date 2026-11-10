@@ -463,7 +463,7 @@ export class DispatchLadder {
           source: `goal state reported by ${key} at ${state.goals[key]?.at}`,
           reason: goal.reason,
           hold: true,
-          until: goal.until,
+          ...(goal.until === undefined ? {} : { until: goal.until }),
         });
         return;
       }
