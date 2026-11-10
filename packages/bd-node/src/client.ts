@@ -4,9 +4,12 @@ import {
   boardReadArgvs,
   type Comment,
   closeArgv,
+  commentAddArgv,
   commentsArgv,
   createArgv,
   type HistoryEvent,
+  headArgv,
+  headsArgv,
   historyArgv,
   type Issue,
   listArgv,
@@ -20,6 +23,8 @@ import {
   parseBdShow,
   parseBdStatuses,
   parseBdWhere,
+  parseHead,
+  parseHeads,
   type QuickAdd,
   readyArgv,
   STALE_WRITE_EXIT,
@@ -75,6 +80,15 @@ export interface BdClient {
   /** Returns the new issue's hash id; display-id minting is a later step over it (D-9). */
   create(quickAdd: QuickAdd, options?: CreateOptions): Promise<BdResult<string>>;
   close(id: string, options?: CallOptions): Promise<BdResult<void>>;
+  /** The store's Dolt head (`bd vc status --json`): its commit moves with every write. */
+  head(options?: CallOptions): Promise<BdResult<string>>;
+  /**
+   * The Dolt heads of `databases`, in their order, in one query on the server this store's bd
+   * reaches (headsArgv): every store on that server answers at the cost of one process.
+   */
+  heads(databases: readonly string[], options?: CallOptions): Promise<BdResult<string[]>>;
+  /** Adds a comment to an issue, written by `actor` when given. */
+  comment(id: string, text: string, actor?: string, options?: CallOptions): Promise<BdResult<void>>;
 }
 
 type Exited = Extract<RunOutcome, { kind: "exited" }>;
@@ -90,6 +104,15 @@ function exitFailure(argv: BdArgv, out: Exited): Failed {
     exitCode: out.exitCode,
     stderr: out.stderr,
     message: `${commandName(argv)} exited ${out.exitCode}${detail === "" ? "" : `: ${detail}`}`,
+  };
+}
+
+function unreadable(argv: BdArgv, out: Exited): Failed {
+  return {
+    kind: "failed",
+    exitCode: 0,
+    stderr: out.stderr,
+    message: `${commandName(argv)} returned output the core could not read`,
   };
 }
 
@@ -262,6 +285,29 @@ export function createBdClient(options: BdClientOptions): BdClient {
     },
     close(id, callOptions) {
       const argv = closeArgv(id);
+      return call(argv, callOptions, (out) => {
+        if (out.exitCode === 0) return { kind: "ok", value: undefined };
+        return notFound(id, out) ?? exitFailure(argv, out);
+      });
+    },
+    head(callOptions) {
+      const argv = headArgv();
+      return call(argv, callOptions, (out) => {
+        if (out.exitCode !== 0) return exitFailure(argv, out);
+        const head = parseHead(out.stdout);
+        return head === undefined ? unreadable(argv, out) : { kind: "ok", value: head };
+      });
+    },
+    heads(databases, callOptions) {
+      const argv = headsArgv(databases);
+      return call(argv, callOptions, (out) => {
+        if (out.exitCode !== 0) return exitFailure(argv, out);
+        const heads = parseHeads(out.stdout, databases.length);
+        return heads === undefined ? unreadable(argv, out) : { kind: "ok", value: heads };
+      });
+    },
+    comment(id, text, actor, callOptions) {
+      const argv = commentAddArgv(id, text, actor);
       return call(argv, callOptions, (out) => {
         if (out.exitCode === 0) return { kind: "ok", value: undefined };
         return notFound(id, out) ?? exitFailure(argv, out);

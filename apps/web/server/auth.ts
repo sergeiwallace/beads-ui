@@ -46,12 +46,15 @@ export class AuthRefused extends Error {}
 export type Caller =
   | { kind: "browser"; session: string; identity: string | undefined }
   | { kind: "receiver"; host: string }
-  | { kind: "mcp" };
+  | { kind: "mcp" }
+  /** `/healthz`: no credential, and an answer that says only whether the server is healthy. */
+  | { kind: "health" };
 
 /** Which credential a path takes: one per route class, never another's. */
-export type RouteClass = "browser" | "receiver" | "mcp" | "admin" | "auth";
+export type RouteClass = "browser" | "receiver" | "mcp" | "admin" | "auth" | "health";
 
 export function routeClass(pathname: string): RouteClass {
+  if (pathname === "/healthz") return "health";
   if (pathname.startsWith("/api/receiver/")) return "receiver";
   if (pathname.startsWith("/api/mcp/")) return "mcp";
   if (pathname.startsWith("/api/admin/")) return "admin";
@@ -607,6 +610,8 @@ export class AuthLayer {
       case "admin":
         await this.#admin(request, response, url);
         return undefined;
+      case "health":
+        return { kind: "health" };
       case "auth":
         await this.#auth(request, response, url, refuse);
         return undefined;

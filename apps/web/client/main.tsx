@@ -1,3 +1,5 @@
+// First, so the Trusted Types default policy exists before any module can reach a DOM sink.
+import "./trusted-types.ts";
 import "@sergeiwallace/beads-ui-web-ui/theme.css";
 import "@sergeiwallace/beads-ui-web-ui/web-ui.css";
 import "./app.css";

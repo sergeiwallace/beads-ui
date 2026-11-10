@@ -1,7 +1,9 @@
 import type { IncomingMessage, RequestListener, ServerResponse } from "node:http";
 import { StoreClosed } from "./allowlist.ts";
 import { type AuthLayer, type Caller, routeClass } from "./auth.ts";
+import { applyContentSecurityPolicy } from "./csp.ts";
 import { EVENTS_PATH, HEARTBEAT_MS, openEvents } from "./events.ts";
+import { healthy, mountedPath, sendHealth, setMemberHeaders } from "./portal.ts";
 import { type ApiContext, failure, matchRoute, ROUTES, type Route } from "./routes.ts";
 import { serveClient } from "./static.ts";
 
@@ -17,6 +19,8 @@ export interface AppOptions {
   routes?: readonly Route[];
   /** How often an open event stream re-checks its session; HEARTBEAT_MS unless a test sets it. */
   heartbeatMs?: number;
+  /** The path the app is mounted under, `/beads/` behind app-portal; `/` by default. */
+  basePath?: string;
 }
 
 function sendJson(response: ServerResponse, status: number, body: unknown): void {
@@ -111,6 +115,8 @@ async function handleApi(
       return;
     }
   }
+  // A write moves its store's head before the next poll sees it, so no kept read survives it.
+  if (match.route.method === "POST") options.context.feed?.forget();
   let reply: Awaited<ReturnType<Route["handle"]>>;
   try {
     reply = await match.route.handle(
@@ -125,6 +131,8 @@ async function handleApi(
       message: error.message,
     });
   }
+  // And after it: a board read that ran beside the write may have kept the state before it.
+  if (match.route.method === "POST") options.context.feed?.forget();
   if (caller.kind === "receiver" && reply.status >= 400) {
     sendEmpty(response, reply.status >= 500 ? reply.status : 404);
     return;
@@ -164,13 +172,37 @@ export interface App {
  * the route table and nothing else, the event stream, and every other GET to the built client.
  */
 export function createApp(options: AppOptions): App {
+  const basePath = options.basePath ?? "/";
   const handling = new Set<Promise<void>>();
   const streams = new Set<() => void>();
+  // Set once the server stops: a browser's EventSource reconnects the moment its stream ends, and
+  // a stream opened then would hold the stop open until its connection is cut.
+  let closing = false;
   const serve = async (request: IncomingMessage, response: ServerResponse) => {
+    // app-portal's member header set and the Content Security Policy (T-W1.7), on every response
+    // before any handler writes: /healthz, the API, the shell and every refusal alike.
+    setMemberHeaders(response);
+    applyContentSecurityPolicy(response);
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
+    url.pathname = mountedPath(url.pathname, basePath);
     const caller = await options.auth.admit(request, response, url);
     if (caller === undefined) return;
+    if (caller.kind === "health") {
+      const context = options.context;
+      const ok = healthy({
+        allowlist: await context.allowlist(),
+        stores: await context.stores.read(),
+        feed: context.feed?.status(),
+      });
+      sendHealth(response, ok, request.method === "HEAD");
+      return;
+    }
     if (url.pathname === EVENTS_PATH && request.method === "GET") {
+      if (closing) {
+        response.writeHead(503, { connection: "close", "content-length": 0 });
+        response.end();
+        return;
+      }
       const sessionId = options.auth.sessionIdOf(caller);
       if (sessionId === undefined) {
         sendJson(response, 401, { error: { kind: "unauthenticated", message: "not signed in" } });
@@ -181,12 +213,13 @@ export function createApp(options: AppOptions): App {
         sessionId,
         heartbeatMs: options.heartbeatMs ?? HEARTBEAT_MS,
         open: streams,
+        ...(options.context.feed === undefined ? {} : { feed: options.context.feed }),
       });
       return;
     }
     const isApi = url.pathname === "/api" || url.pathname.startsWith("/api/");
     if (isApi) await handleApi(request, response, url, caller, options);
-    else await serveClient(request, response, url.pathname, options.clientDir);
+    else await serveClient(request, response, url.pathname, options.clientDir, basePath);
   };
   const handle: RequestListener = (request, response) => {
     const done: Promise<void> = serve(request, response)
@@ -196,7 +229,10 @@ export function createApp(options: AppOptions): App {
           response.destroy();
           return;
         }
-        const path = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
+        const path = mountedPath(
+          new URL(request.url ?? "/", "http://127.0.0.1").pathname,
+          basePath,
+        );
         if (routeClass(path) === "receiver") sendEmpty(response, 500);
         else sendJson(response, 500, { error: { kind: "failed", source: "server", message } });
       })
@@ -209,6 +245,7 @@ export function createApp(options: AppOptions): App {
       while (handling.size > 0) await Promise.allSettled([...handling]);
     },
     closeStreams() {
+      closing = true;
       for (const end of [...streams]) end();
     },
   };

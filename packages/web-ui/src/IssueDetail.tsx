@@ -1,4 +1,7 @@
 import { type Comment, type Issue, priorityBadge, priorityToken } from "@beads-ui/core";
+import type { ReactNode } from "react";
+import { IssueLinks } from "./detail/IssueLinks.tsx";
+import { Markdown } from "./detail/Markdown.tsx";
 import { tokenVar } from "./tokens.ts";
 
 /** A read that failed, named by what failed (`bd show`, `bd comments`). */
@@ -10,7 +13,7 @@ export interface ReadFailure {
 export interface IssueDetailProps {
   loading: boolean;
   issue?: Issue | undefined;
-  /** The repository of the store the issue was read from. */
+  /** The repository of the store the issue was read from, or the one the page asked. */
   repository?: string | undefined;
   /** Why the issue itself could not be read; the fields are not drawn. */
   issueError?: ReadFailure | undefined;
@@ -18,14 +21,17 @@ export interface IssueDetailProps {
   /** Why the comments could not be read; said in their place, never shown as no comments. */
   commentsError?: ReadFailure | undefined;
   issueHref(id: string): string;
+  /** The owner picker, drawn beside the assignee (T-W1.0). */
+  ownerPicker?: ReactNode | undefined;
 }
 
 const NOT_SET = "not set";
 
-function Failure({ failure }: { failure: ReadFailure }) {
+function Failure({ failure, store }: { failure: ReadFailure; store?: string | undefined }) {
   return (
     <p className="bu-read-error" role="alert">
-      <strong>{failure.source}</strong> failed: {failure.message}
+      <strong>{failure.source}</strong> failed{store === undefined ? "" : ` in ${store}`}:{" "}
+      {failure.message}
     </p>
   );
 }
@@ -34,23 +40,26 @@ function date(value: string | undefined): string {
   return value === undefined ? NOT_SET : value.slice(0, 16).replace("T", " ");
 }
 
-/** One issue's fields, description and comments, read from the store. */
+/**
+ * One issue's fields, description, comments and links, each read from the issue's own store; the
+ * description and comments drawn as Markdown with no raw HTML (web app design T-W1.7).
+ */
 export function IssueDetail(props: IssueDetailProps) {
   const { issue } = props;
   if (props.issueError !== undefined) {
     return (
       <article className="bu-detail">
-        <Failure failure={props.issueError} />
+        <Failure failure={props.issueError} store={props.repository} />
       </article>
     );
   }
   if (issue === undefined) {
     return <article className="bu-detail" aria-busy={props.loading} />;
   }
-  const fields: [string, React.ReactNode][] = [
+  const fields: [string, ReactNode][] = [
     ...(props.repository === undefined
       ? []
-      : ([["Repository", props.repository]] as [string, React.ReactNode][])),
+      : ([["Repository", props.repository]] as [string, ReactNode][])),
     ["Type", issue.type],
     ["Status", issue.status],
     [
@@ -59,7 +68,7 @@ export function IssueDetail(props: IssueDetailProps) {
         {priorityBadge(issue.priority)}
       </span>,
     ],
-    ["Assignee", issue.assignee ?? NOT_SET],
+    ["Assignee", props.ownerPicker ?? issue.assignee ?? NOT_SET],
     ["Owner", issue.owner ?? NOT_SET],
     ["Labels", issue.labels.length === 0 ? "none" : issue.labels.join(", ")],
     [
@@ -74,6 +83,10 @@ export function IssueDetail(props: IssueDetailProps) {
     ],
     ["Created", date(issue.createdAt)],
     ["Updated", date(issue.updatedAt)],
+    ...(issue.startedAt === undefined
+      ? []
+      : ([["Started", date(issue.startedAt)]] as [string, ReactNode][])),
+    ...(issue.dueAt === undefined ? [] : ([["Due", date(issue.dueAt)]] as [string, ReactNode][])),
     ["Closed", issue.closedAt === undefined ? "open" : date(issue.closedAt)],
   ];
   return (
@@ -95,13 +108,17 @@ export function IssueDetail(props: IssueDetailProps) {
         {issue.description === undefined ? (
           <p className="bu-dim">No description</p>
         ) : (
-          <p className="bu-description">{issue.description}</p>
+          <Markdown text={issue.description} className="bu-description" />
         )}
+      </section>
+      <section aria-labelledby="bu-links">
+        <h2 id="bu-links">Links</h2>
+        <IssueLinks dependencies={issue.dependencies} issueHref={props.issueHref} />
       </section>
       <section aria-labelledby="bu-comments">
         <h2 id="bu-comments">Comments</h2>
         {props.commentsError !== undefined ? (
-          <Failure failure={props.commentsError} />
+          <Failure failure={props.commentsError} store={props.repository} />
         ) : props.comments === null ? (
           <p className="bu-dim" aria-busy="true">
             Reading comments
@@ -116,7 +133,7 @@ export function IssueDetail(props: IssueDetailProps) {
                   <strong>{comment.author}</strong>{" "}
                   <span className="bu-dim">{date(comment.createdAt)}</span>
                 </p>
-                <p className="bu-description">{comment.text}</p>
+                <Markdown text={comment.text} className="bu-comment-body" />
               </li>
             ))}
           </ol>

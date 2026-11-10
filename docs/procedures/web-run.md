@@ -55,17 +55,21 @@ A `state:` value names a file in the server's state directory,
 the browser secret, the MCP token and an empty receiver token map there, each mode 0600; nothing
 is written into a repository.
 
-The dispatch signing key is the one credential the server never generates. Make it once, as an
-Ed25519 PKCS #8 PEM of mode 0600, in the state directory:
+The dispatch signing key is generated too. When the `state:` file `signing_key` names does not
+exist at server start, the server writes a new Ed25519 PKCS #8 PEM there, created with mode
+0600, publishes its public key under `signing_key_id`, and prints one line naming the key id
+(never the key). To bring your own key instead, put it there before the first start:
 
 ```sh
 openssl genpkey -algorithm ed25519 -out ~/.local/state/beads-ui/web/dispatch-signing-key
 chmod 600 ~/.local/state/beads-ui/web/dispatch-signing-key
 ```
 
-The server reads it on every signature. Until it can, the server still starts and serves, prints
-`dispatches cannot be signed` with the reason, and refuses every new dispatch. It reads the key
-only from a `state:` reference; a `secret-store:` reference is reported that way too.
+The server reads the key on every signature. A key file that exists is never overwritten: one
+that cannot be read, has a mode wider than 0600 or does not parse leaves the server starting and
+serving, printing `dispatches cannot be signed` with the reason, and refusing every new dispatch.
+It reads the key only from a `state:` reference; a `secret-store:` reference is reported that way
+too, and nothing is generated for it.
 
 ## Run it
 
@@ -129,6 +133,59 @@ When the directory it started in is listed but bd finds no store there, it refus
 list and the inventory are read again on every request, so adding a repository opens its store
 without a restart.
 
+## Run it as a service
+
+To keep the server running, supervised, and have it start again after the host reboots, install
+it as a systemd user service from the directory you would start it in:
+
+```sh
+beads-ui-web install-service [--port <n>]
+```
+
+It fills the unit template (`apps/web/service/beads-ui-web.service.in`) from this host, writes
+`$XDG_CONFIG_HOME/systemd/user/beads-ui-web.service` (or `~/.config/systemd/user/...`), runs
+`systemctl --user daemon-reload`, and prints the unit it wrote and the one command that starts it:
+
+```sh
+systemctl --user enable --now beads-ui-web.service
+```
+
+The unit runs this checkout's `bin/beads-ui-web.mjs` with this Node, in the current directory, on
+`--port`, else `[web] port`, else 4810, with a `PATH` holding the directory of the `bd` it found,
+and with `XDG_CONFIG_HOME` and `XDG_STATE_HOME` when they are set. systemd restarts it 5 seconds
+after it fails. Running `install-service` again rewrites the same file and reloads, so there is
+only ever one unit; it says `wrote`, `rewrote` or `kept`. After a rewrite, restart it with
+`systemctl --user restart beads-ui-web.service`. It refuses, writing nothing, when `bd` is not on
+`PATH` or the port is not a whole number from 1 to 65535.
+
+A user service starts at boot only when the user has lingering on; `install-service` says so when
+it is off. `loginctl enable-linger <user>` turns it on. Follow the server with
+`journalctl --user -u beads-ui-web.service`.
+
+To reach the server from another machine, see [Reach the web app from another machine](web-access.md).
+
+## Live updates
+
+While at least one page has its event stream open, the server polls every open store's Dolt
+head, every `refresh_seconds` (read before each poll), and reads again only the stores whose head
+moved; then it pushes one `change` event naming them
+on `/api/events`, and the open page reads its view again. Stores on one Dolt sql-server answer in
+one query (`bd sql "SELECT @@<db>_head, ..."`), so a host whose stores share a server costs one
+`bd` process per poll; an embedded store answers alone, with `bd vc status`. A store's board read
+is kept until its head moves, and any write through the server drops every kept read. With no
+stream open the server runs no `bd` for the feed and keeps no read.
+
+When the heads cannot be read, the server keeps what it last read, pushes a `stale` event with the
+time it first failed, and tries again after twice the interval, then four times, up to a minute
+(or the interval, when that is longer); the page says `Live updates stale since <time>; retrying`
+until a poll reads every head.
+
+All the app's tabs in one browser share one event stream: the tab holding a Web Lock opens it and
+passes each event to the others over a BroadcastChannel. When that tab closes, the browser grants
+the lock to another open tab, which opens the stream at once. A browser without either API gives
+each tab its own stream. The page also re-reads on focus and every `refresh_seconds`, as a
+fallback while its stream is down.
+
 ## Use it
 
 - With no store chosen, the Board and the Backlog show every open store's issues, and each card
@@ -166,6 +223,45 @@ without a restart.
 - Sessions lists every session with its state, current task, last heartbeat and claim age when
   `[queue] url` names the work queue. Without it the view lists the store's assignees and says
   liveness is unavailable, since only the queue's registry knows whether a session is alive.
+- Review lists every held item, blocked task and in-progress task in three sections, Answer,
+  Unblock and Prompt, each by priority, then impact, then age. The filters above the list (epic,
+  goal, type, size, owner and repository) are in the URL, so a filtered queue can be shared or
+  reloaded. J and K move through the list; on a phone one item shows at a time, and Back to the
+  list, or U, returns to it.
+- A held decision is an option card with the recommended option chosen. Enter takes it, or a
+  number key takes that option, and a five-second window follows in which Escape or Undo takes
+  it back; then the answer goes to the session holding the item. Without option cards the item's
+  body shows with a box for a typed answer. Tick several decisions and pick Approve
+  recommendations to answer each with its recommendation, after a confirm that lists them.
+- A blocked task takes a resolution and, optionally, a next-step prompt for the same session.
+- Every Review item and every task's detail has a composer: Write a prompt opens it, `/` offers
+  the work queue's skills, Enter is a new line and Queue prompt sends. Text that looks like a
+  credential is refused, naming the kind of credential, never the text. A sent prompt shows its
+  session's liveness, its delivery state and the session's response, each with where it comes
+  from.
+- Single-key shortcuts are on. Turn them off in the command palette or under Keyboard shortcuts
+  on the Review page, where each command's key can be changed too; Ctrl and Cmd shortcuts keep
+  working with them off.
+- Sprints has a picker of the backlog and every open sprint (`?sprint=sprint:<name>` in the URL)
+  and shows the chosen one's issues as a board or as a list. Move an issue between the backlog
+  and a sprint by dragging it onto a picker entry, from its Move to menu, or from the command
+  palette; the move writes the `sprint:<name>` label and drops any other sprint label.
+- On a card or a list row, the priority is a picker written in place, and the owner is a button
+  that opens the sessions an owner change may name: the work queue's live sessions on an allowed
+  repository, or the store's assignees without a queue, narrowed by `[handoff] receivers`. An
+  unclaimed task's owner is written at once; a task a session has claimed (assigned and
+  `in_progress`) is not reassigned, and a notice says its holder must hand it over. The issue's
+  detail has the same owner picker. A list row reorders by drag or by its Up and Down buttons,
+  among the rows of its own priority.
+- Queue lists every open task, in the work queue's order where `[queue] url` is set and otherwise
+  by priority, then rank, then age, and says which order it shows. Blocked only shows the blocked
+  tasks, each with what blocks it: its open `blocks` dependencies, or its newest comment for a
+  task in the blocked status. The epic, goal, type, size, owner and repository filters are in the
+  URL, so a filtered queue can be shared.
+- A held item's detail (`/held?path=<item path>`, the path `review` prints) shows its whole body
+  and, for a decision with structured options, its option cards above the body.
+- Descriptions, comments and held bodies are drawn as Markdown with no raw HTML; a link keeps only
+  an http, https or mailto URL, or a link to a heading on the same page.
 
 Analytics reads `bd history --events` for each issue that is open or was closed in the window
 and has been updated inside it, four at a time, and keeps each issue's events until its
@@ -213,13 +309,14 @@ once, at start. `[auth]`, `[hosts]` and `[queue]` come from the user's file alon
 [web]
 port = 4810            # --port overrides it
 host = "127.0.0.1"     # beyond loopback only with a valid [auth] table
+base_path = "/beads"   # the path the app is mounted under, such as behind app-portal; "/" unset
 
 [views]
 rank = true            # the web app's default; false keeps columns sorted
 soft_wip_limit = { in_progress = 5 }
 
 [stores.default]
-refresh_seconds = 10   # how often an open page re-reads the board and Sessions
+refresh_seconds = 10   # how often the server polls the stores' heads, and the fallback re-read
 
 [queue]                # in your own file only
 url = ""               # empty: no work queue; else its base URL, such as http://127.0.0.1:<port>
@@ -227,7 +324,22 @@ repo = "my-repo"       # this store's name in the queue; the repository's name w
 
 [analytics]
 cost_export = ""       # an OTLP JSON Lines file of Claude Code's metrics; empty shows no cost
+
+[handoff]              # in your own file only
+receivers = ["team-*"] # the session names an owner change may pick; `*` matches any run
+
+[review]               # in your own file only
+command = ["held_cli.py"]   # the held store's tool, for a held item's detail
 ```
+
+`[handoff]` and `[review]` come from your own file alone, as `[queue]` does: a repository's file
+cannot widen who receives its tasks or name a command for the server to run. Without
+`[handoff] receivers`, every live session the queue's registry holds may be picked. Without
+`[review] command`, a held item's detail says held items are not read.
+
+Every response carries a Content Security Policy: scripts only from the server's own origin, so
+no inline script runs, and Trusted Types required for every script sink. The app's default
+Trusted Types policy passes HTML through DOMPurify and refuses every script and script URL.
 
 `cost_export` is a file an OpenTelemetry Collector's file exporter writes from Claude Code's
 `claude_code.cost.usage` and `claude_code.token.usage` metrics, which carry `session.id`. A
@@ -286,9 +398,47 @@ issued, another host's token, another session, an unknown id, a malformed receip
 server cannot reach, such as a work queue that is down, is an empty 503, which the receiving
 client retries at its next boundary instead of dropping its receipt.
 
+## The Review queue's settings
+
+The Review view reads the held store through the same `[review] command` the mod reads (the
+held tool's `review`, `options` and `show` verbs, each run with no shell and a 20-second
+timeout), and reaches a task's owning session through its assignee. Both come from your own
+`beads-ui.toml`, read on every request:
+
+```toml
+[review]
+command = ["held_cli.py"]               # the held store's tool; unset, the view lists tasks only
+
+[dispatch]
+host = "host-b"                         # this host's name as receivers know it, for an owner named with no host
+unblock_command = ["bd-unblock"]        # what the server runs to unblock a task no session owns
+```
+
+A task's dispatch goes to its assignee: at the host the assignee names (`worker@host-b`), else
+the host the work queue's session registry has it on, else `[dispatch] host`; with none of them
+the write is refused and says so. A held item's dispatch goes to the session that holds it, at
+the machine the item names. A one-key answer is recorded as each decision's option letter and
+label, then the line `Chosen with a control in the beads-ui Review queue, not typed: the option
+letter above is the answer.`; a typed answer is recorded exactly as typed. The answer
+dispatch's body is JSON, `{"version": 1, "item": {"store", "relpath", "path"}, "answer"}`, and
+an unblock's is `{"version": 1, "resolution", "to": "in_progress"}`; a prompt's body is its text.
+Every dispatch is mirrored as a bd comment on its task naming the dispatch id, and in this phase
+it is delivered when the receiving session next lists its dispatches through the receiver API.
+
+An unblock's next-step prompt waits in `dispatch-follow-ups.json` in the state directory and is
+sent to the same session once the unblock is acted on; when the unblock fails or expires it is
+dropped with the reason, and its text is deleted either way. A task with no assignee is unblocked
+by the server itself: it writes the resolution as a bd comment, then runs
+`<unblock_command> <id> --to in_progress --why <resolution>` in the task's store, and a refusal
+is shown with its exit code.
+
 ## The API
 
-Every route is under `/api/` and answers JSON; an error body is `{ "error": { "kind", "message",
+Every route but `/healthz` is under `/api/` and answers JSON. With `[web] base_path` set, every
+route and page is also served under that path (`/beads/api/board`), and a request with the path
+already stripped, as `tailscale serve` sends it, is served the same. Every reply carries
+`Referrer-Policy: strict-origin-when-cross-origin` and `X-Content-Type-Options: nosniff`, and the
+shell and the API `Cache-Control: no-store`; an error body is `{ "error": { "kind", "message",
 "source", "exitCode" } }`, where `source` names what failed, such as `bd list`.
 
 Every request must carry a Host on `[auth] hosts`, and each route takes one credential, chosen by
@@ -299,6 +449,7 @@ its path, and refuses any other route's:
 | `/api/receiver/v1/...` | `Authorization: Bearer <the receiving host's token>`; every refusal is an empty 404 |
 | `/api/mcp/v1/...` | `Authorization: Bearer <the MCP token>` |
 | `/api/admin/v1/...` | The host's admin key, derived from the browser secret; the host commands above use it |
+| `/healthz` | None; it answers only whether the server is healthy |
 | everything else, the app's pages included | The browser session cookie |
 
 A browser write (any method but GET and HEAD) also needs the `X-Beads-UI` header and
@@ -315,7 +466,8 @@ with a 400, and a request naming a store that is not open with a 404.
 |---|---|
 | `GET /api/board[?store=]` | Every open store's statuses and issues, or one store's, each issue with its `repository`; `reads` gives each store's issue count or its error, and the call-time settings follow. Only when every store failed is the reply itself the failure |
 | `GET /api/health` | Whether the allowlist reads, which stores are open, and how many stores and rows it hid, never naming them |
-| `GET /api/events` | The browser's Server-Sent Events stream, on the session cookie |
+| `GET /api/events` | The browser's Server-Sent Events stream, on the session cookie: `change` (`{ "stores", "asOf" }`, the stores whose head moved) and `stale` (`{ "since", "message", "retryInMs" }`) |
+| `GET /healthz` | No credential: 200 `{"status":"ok"}` while the allowlist reads, a store is open and the change feed, while a page is open, reads every head; else 503 `{"status":"unavailable"}` |
 | `GET /api/auth/v1/exchange?code=` | Trades a one-time code for the session cookie, then redirects to the Board |
 | `POST /api/auth/v1/logout` | Ends the session on the server and clears its cookie |
 | `GET /api/issues/:id?store=` | One issue, its comments and its `repository` |
@@ -325,6 +477,19 @@ with a 400, and a request naming a store that is not open with a 404.
 | `GET /api/roadmap?store=` | The Roadmap's bars, dependency lines and undated epics and milestones |
 | `GET /api/analytics?weeks=&sprint=&store=` | The charts' data for `weeks` (1 to 52, default 12) and the named sprint, else the current one; `histories.failed` names each failed `bd history` read and `histories.skipped` counts the issues untouched since before the window; `cost` is the cost section |
 | `GET /api/sessions?store=` | The Sessions view, from the work queue or the store's assignees; `queueError` names a failed queue read |
+| `GET /api/review` | The Review queue: `held` (the open, current held items the allowlist permits, each with its joined issue, or the failed read with its exit code, or why none are read), `options` (the options command's output for those items), and every open store's blocked and in-progress `tasks` |
+| `GET /api/review/body?path=` | A held item's Markdown body through the held tool's `show`; only for an item the Review queue holds |
+| `POST /api/dispatch/prompt` | `{ "repo", "task", "text" }` or `{ "item", "text" }`: a prompt to the task's owner or the item's holder; 201 with the dispatch |
+| `POST /api/dispatch/answer` | `{ "item", "choices": [{ "decision", "key" }] }` or `{ "item", "text" }`: an answer to the item's holder; 201 with the dispatch and the exact answer text |
+| `POST /api/dispatch/unblock` | `{ "repo", "task", "resolution", "followUp" }`: an unblock dispatch to the task's owner (201), or the server's own unblock for a task with no owner (200, `"via": "server"`) |
+| `GET /api/dispatch/:id` | The dispatch's three indicators, `liveness`, `delivery` and `response`, each with its `source`, and an unblock's `followUp` |
+| `GET /api/dispatch/skills` | The work queue's skill catalog, for the composer's typeahead |
+| `POST /api/issues/:id/sprint?store=` | `{ "to", "from", "shown" }`, each of `to` and `from` `backlog` or `sprint:<name>`: the sprint label, guarded by the shown status; 409 when the status or the sprint moved first |
+| `POST /api/issues/:id/owner?store=` | `{ "to", "shown", "status" }`: an unclaimed task's assignee, guarded by the shown assignee and status; 400 for a session the handoff rule does not allow; 409 `handoff-required` for a claimed task, with nothing written |
+| `POST /api/issues/:id/list-rank?store=` | `{ "shown", "priority", "above", "below", "aboveStore", "belowStore" }`: a list row's rank key between its neighbours of the same priority; 409 when one moved first |
+| `GET /api/owners?store=` | The owner picker's sessions, with their `source` and the `rule` that narrowed them; `queueError` names a failed registry read |
+| `GET /api/queue-view[?blocked=1]` | The Queue view's rows across every open store, each with its blockers, and the `order` they are in |
+| `GET /api/held/item?path=` | A held item `review` lists in an open store: its `body`, its `options` and the read errors of each |
 
 ## Docker Compose
 
@@ -358,10 +523,13 @@ npm test                          # includes the web server suite and the Playwr
 ```
 
 The Playwright specs under `apps/web/e2e/` run the Board, Backlog, Issue detail, palette,
-Roadmap, Analytics and Sessions specs at 1280 px with a mouse and at 390 px on a touch screen; the
+Roadmap, Analytics, Sessions, Sprints and Queue specs at 1280 px with a mouse and at 390 px on a touch screen; the
 pointer drags run at 1280 px and the touch Move to menu at 390 px. Each spec gets its own server
 and a temporary store made with `bd init`; the store registry's spec (`stores.spec.ts`) serves
-several such stores from a private home's store inventory. The work-queue cases run against an
+several such stores from a private home's store inventory. The change feed's suite
+(`apps/web/test/heads-feed.test.ts`) also starts its own Dolt sql-server on a free loopback port,
+when `dolt` is on `PATH`, to read two stores' heads in one query; without `dolt` that case is
+skipped and the embedded-store cases still run. The work-queue cases run against an
 in-process queue that answers the queue service's routes with its shapes
 (`apps/web/test/queue-fake.ts`); to also read a live queue, run the server suite with
 `BEADS_UI_LIVE_QUEUE_URL` set to its URL.

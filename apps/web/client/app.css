@@ -45,6 +45,11 @@ body {
   background: var(--bu-surface-hover);
 }
 
+.app-stale {
+  font-size: 0.8rem;
+  color: var(--bu-text-dim);
+}
+
 .app-stamp {
   margin-left: auto;
   font-size: 0.8rem;

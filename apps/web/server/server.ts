@@ -5,6 +5,7 @@ import { AllowlistHealth, readAllowlist } from "./allowlist.ts";
 import { type App, createApp } from "./app.ts";
 import { AuthLayer, AuthRefused, type AuthSettings, loadAuth } from "./auth.ts";
 import { type ConfigEnv, isLoopback, LOOPBACK, readWebConfig } from "./config.ts";
+import { releaseFollowUps } from "./dispatch.ts";
 import {
   DispatchRefused,
   DispatchService,
@@ -12,8 +13,9 @@ import {
   readStoreChoice,
   SWEEP_MS,
 } from "./dispatch-service.ts";
+import { HeadsFeed } from "./heads-feed.ts";
 import { createStoreRegistry } from "./registry.ts";
-import type { Route } from "./routes.ts";
+import { type ApiContext, type Route, readStoreBoard, type StoreBoard } from "./routes.ts";
 
 export interface StartOptions {
   /**
@@ -37,6 +39,8 @@ export interface StartOptions {
   heartbeatMs?: number;
   /** How often due dispatches expire and the published files are rewritten; SWEEP_MS by default. */
   sweepMs?: number;
+  /** The change feed's poll interval; `refresh_seconds` from beads-ui.toml, read before each poll, by default. */
+  feedIntervalMs?: number;
 }
 
 export interface RunningServer {
@@ -52,6 +56,10 @@ export interface RunningServer {
   dispatches: DispatchService;
   /** What the dispatch service could not do at start, such as sign; the server runs on. */
   dispatchProblems: string[];
+  /** What the dispatch service did at start, such as generate its signing key; one line each. */
+  dispatchNotices: string[];
+  /** The change feed: every store's Dolt head, polled, and an event when one moves. */
+  feed: HeadsFeed<StoreBoard>;
   close(): Promise<void>;
 }
 
@@ -123,6 +131,8 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     if (!(error instanceof DispatchRefused || error instanceof DispatchStoreError)) throw error;
     throw new StartRefused(`the dispatch store cannot open: ${error.message}`);
   }
+  const generated = await dispatches.ensureSigningKey();
+  const dispatchNotices = generated === undefined ? [] : [generated];
   const dispatchProblems = await dispatches.publish();
 
   let app: App | undefined;
@@ -142,29 +152,46 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     settings,
     port,
     ...(options.clock === undefined ? {} : { clock: options.clock }),
+    ...(config.basePath === undefined ? {} : { basePath: config.basePath }),
   });
+  const feed = new HeadsFeed<StoreBoard>({
+    stores,
+    read: readStoreBoard,
+    keep: (board) => board.ok,
+    intervalMs: async () =>
+      options.feedIntervalMs ??
+      (await readWebConfig(options.repoRoot, options.configEnv)).refreshSeconds * 1000,
+    clock,
+  });
+  const context: ApiContext = {
+    repoRoot: options.repoRoot,
+    stores,
+    config: () => readWebConfig(options.repoRoot, options.configEnv),
+    allowlist,
+    health,
+    dispatches,
+    feed,
+    random: Math.random,
+    now: () => new Date(clock()).toISOString(),
+  };
   const started = createApp({
     clientDir: options.clientDir,
     auth,
     ...(options.routes === undefined ? {} : { routes: options.routes }),
     ...(options.heartbeatMs === undefined ? {} : { heartbeatMs: options.heartbeatMs }),
-    context: {
-      repoRoot: options.repoRoot,
-      stores,
-      config: () => readWebConfig(options.repoRoot, options.configEnv),
-      allowlist,
-      health,
-      dispatches,
-      random: Math.random,
-      now: () => new Date(clock()).toISOString(),
-    },
+    ...(config.basePath === undefined ? {} : { basePath: config.basePath }),
+    context,
   });
   app = started;
+  feed.start();
   // Expiry tombstones a dispatch nobody fetches, and a rotated key is published before its first
   // signature; one pass at a time, and a failed pass waits for the next.
   let sweeping: Promise<unknown> = Promise.resolve();
   const sweep = setInterval(() => {
-    sweeping = sweeping.then(() => dispatches.sweep()).catch(() => undefined);
+    sweeping = sweeping
+      .then(() => dispatches.sweep())
+      .then(() => releaseFollowUps(context))
+      .catch(() => undefined);
   }, options.sweepMs ?? SWEEP_MS);
   sweep.unref();
   return {
@@ -176,13 +203,17 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     storeClosed: reading.closed,
     dispatches,
     dispatchProblems,
+    dispatchNotices,
+    feed,
     // Requests in flight finish, with the bd calls they run, so a stop never leaves a bd writing
     // to the store after the server has gone: event streams end first, idle connections close at
     // once, whatever is still open at the deadline is cut, and then every handler settles, one
     // whose client went away included (each bd call ends within bd-node's timeout).
     close: async () => {
       clearInterval(sweep);
+      // Streams first: with none open the feed starts no further bd, so its stop is quick.
       started.closeStreams();
+      await feed.stop();
       await new Promise<void>((resolve, reject) => {
         const deadline = setTimeout(() => server.closeAllConnections(), CLOSE_GRACE_MS);
         server.close((error) => {

@@ -4,8 +4,8 @@
 // servers (its public signing keys as a trusted-keys map, and its repository allowlist); and the
 // sweep that expires a dispatch, tombstoning its body.
 
-import { createPublicKey, randomBytes } from "node:crypto";
-import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
+import { createPublicKey, generateKeyPairSync, randomBytes } from "node:crypto";
+import { lstat, mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   type CreateResult,
@@ -287,6 +287,11 @@ export class DispatchService {
     return formatTimestamp(new Date(this.#clock()));
   }
 
+  /** Where the user's `beads-ui.toml` is read from, for the dispatch routes' own settings. */
+  get configEnv(): ConfigEnv {
+    return this.#env;
+  }
+
   /**
    * The key `[auth]` names now, after publishing it: a key is in the published file before the
    * server signs anything with it, and the key it replaces stays valid there for 24 hours.
@@ -336,6 +341,41 @@ export class DispatchService {
       await publishFile(path, `${JSON.stringify({ version: 1, keys }, null, 2)}\n`);
       return { key, user };
     });
+  }
+
+  /**
+   * At server start: when the `state:` file `[auth] signing_key` names does not exist, generates
+   * an Ed25519 key there, created with mode 0600, and returns the one line to log, which names
+   * the key id and never the key. A file that exists is never touched, whatever is wrong with it:
+   * signing then refuses with the reason, as publish reports.
+   */
+  async ensureSigningKey(): Promise<string | undefined> {
+    let settings: Awaited<ReturnType<typeof loadAuth>>;
+    try {
+      settings = await loadAuth(this.#env);
+    } catch (error) {
+      if (error instanceof AuthRefused) return undefined;
+      throw error;
+    }
+    const name = STATE_REF.exec(settings.signingKey)?.[1];
+    if (name === undefined) return undefined;
+    const path = join(settings.stateDir, name);
+    try {
+      await lstat(path);
+      return undefined;
+    } catch (error) {
+      if (code(error) !== "ENOENT") return undefined;
+    }
+    const { privateKey } = generateKeyPairSync("ed25519");
+    const pem = privateKey.export({ format: "pem", type: "pkcs8" }).toString();
+    await mkdir(settings.stateDir, { recursive: true, mode: 0o700 });
+    try {
+      await writeFile(path, pem, { mode: 0o600, flag: "wx" });
+    } catch (error) {
+      if (code(error) === "EEXIST") return undefined;
+      throw error;
+    }
+    return `generated the dispatch signing key ${settings.signingKeyId} in the server's state directory`;
   }
 
   /** Publishes this host's allowlist; an unreadable one is published as allowing nothing. */

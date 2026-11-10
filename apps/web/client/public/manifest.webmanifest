@@ -1,0 +1,11 @@
+{
+  "name": "beads-ui",
+  "short_name": "Beads",
+  "description": "A board, backlog and review queue over your Beads stores",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#14161a",
+  "theme_color": "#14161a",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

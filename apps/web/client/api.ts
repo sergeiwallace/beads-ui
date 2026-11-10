@@ -2,12 +2,27 @@ import type {
   AnalyticsView,
   Comment,
   Issue,
+  ItemOptions,
   Priority,
+  ReviewItem,
   RoadmapView,
   SessionsView,
   Status,
 } from "@beads-ui/core";
-import type { CostSection } from "@sergeiwallace/beads-ui-web-ui";
+import type {
+  CostSection,
+  DispatchStatus,
+  DispatchSummary,
+  // A held item's detail read failure (server/held-detail.ts); the Review read's own failure
+  // shape, from server/dispatch.ts, is HeldReadFailure below.
+  HeldReadFailure as HeldDetailFailure,
+  HeldItemSummary,
+  QueueOrderView,
+  QueueRowView,
+  Skill,
+  UnblockResult,
+} from "@sergeiwallace/beads-ui-web-ui";
+import { base } from "./base.ts";
 
 /** The server's error body (server/routes.ts ApiError). */
 export interface ApiErrorBody {
@@ -110,8 +125,7 @@ export interface MovePayload {
   notice?: string;
 }
 
-// Every API path is relative to the app's base, so a later base path moves them all at once.
-const base = import.meta.env.BASE_URL;
+// Every API path is relative to the app's base, so the server's base path moves them all at once.
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
@@ -184,4 +198,98 @@ export const api = {
       })}`,
     ),
   sessions: (store?: string) => call<SessionsPayload>(`sessions${storeQuery(store)}`),
+  // Phase W1: sprint moves, the owner picker, list reorder, the Queue view and held-item detail.
+  sprint: (ref: IssueRef, to: string, from: string, shown: string) =>
+    post<{ id: string; sprint: string }>(issuePath(ref, "/sprint"), { to, from, shown }),
+  owner: (ref: IssueRef, to: string, shown: string, status: string) =>
+    post<{ id: string; assignee: string }>(issuePath(ref, "/owner"), { to, shown, status }),
+  listRank: (ref: IssueRef, shown: string, priority: number, above?: IssueRef, below?: IssueRef) =>
+    post<{ id: string; rank: string }>(issuePath(ref, "/list-rank"), {
+      shown,
+      priority,
+      above: above?.id,
+      below: below?.id,
+      aboveStore: above?.repository,
+      belowStore: below?.repository,
+    }),
+  owners: (store?: string) => call<OwnersPayload>(`owners${storeQuery(store)}`),
+  queueView: (blocked: boolean) =>
+    call<QueueViewPayload>(`queue-view${blocked ? "?blocked=1" : ""}`),
+  heldItem: (path: string) => call<HeldItemPayload>(`held/item?path=${encodeURIComponent(path)}`),
 };
+
+// The Review queue's and the composer's routes (server/dispatch.ts), in their own block.
+
+/** A held read that did not succeed, named with its exit code. */
+export interface HeldReadFailure {
+  source: string;
+  exitCode: number | null;
+  detail?: string;
+}
+
+export interface ReviewPayload {
+  asOf: string;
+  held:
+    | { state: "unset"; message: string }
+    | { state: "failed"; failure: HeldReadFailure }
+    | {
+        state: "ok";
+        rows: { item: ReviewItem; repository: string; joined?: { repo: string; issue: Issue } }[];
+      };
+  options:
+    | { state: "unset" }
+    | { state: "ok"; stdout: string }
+    | { state: "failed"; failure: HeldReadFailure };
+  tasks: { repo: string; issue: Issue }[];
+  /** Every goal issue's id, for the goal filter. */
+  goals: string[];
+  failures: HeldReadFailure[];
+  problems: string[];
+  health: string[];
+}
+
+interface Written {
+  dispatch: DispatchSummary;
+}
+
+export const dispatchApi = {
+  review: () => call<ReviewPayload>("review"),
+  heldBody: (path: string) =>
+    call<{ path: string; body: string }>(`review/body?path=${encodeURIComponent(path)}`),
+  prompt: (body: { repo: string; task: string; text: string } | { item: string; text: string }) =>
+    post<Written>("dispatch/prompt", body),
+  answer: (
+    body: { item: string } & ({ choices: { decision: string; key: string }[] } | { text: string }),
+  ) => post<Written & { answer: string }>("dispatch/answer", body),
+  unblock: (body: { repo: string; task: string; resolution: string; followUp?: string }) =>
+    post<UnblockResult>("dispatch/unblock", body),
+  status: (id: string) => call<DispatchStatus>(`dispatch/${encodeURIComponent(id)}`),
+  skills: () => call<{ skills: Skill[] }>("dispatch/skills"),
+};
+/** The owner picker's candidates for a store (server/edits.ts OwnerCandidates). */
+export interface OwnersPayload {
+  store: string;
+  candidates: { name: string; state?: string; machine?: string }[];
+  source: string;
+  rule?: string[];
+  queueError?: { source: string; message: string };
+}
+
+/** The Queue view's read (server/queue-view.ts). */
+export interface QueueViewPayload {
+  asOf: string;
+  blocked: boolean;
+  order: QueueOrderView;
+  reads: StoreRead[];
+  rows: QueueRowView[];
+}
+
+/** A held item's detail (server/held-detail.ts). */
+export interface HeldItemPayload {
+  item: HeldItemSummary & { store: string };
+  store: string;
+  body?: string;
+  bodyError?: HeldDetailFailure;
+  options?: ItemOptions;
+  optionsError?: HeldDetailFailure;
+}

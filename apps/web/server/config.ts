@@ -2,10 +2,12 @@ import { readFile } from "node:fs/promises";
 import {
   type BeadsUiConfig,
   configCandidates,
+  parseToml,
   resolveAnalytics,
   resolveConfig,
   resolveQueue,
   resolveRank,
+  resolveReview,
   resolveWeb,
   stateDirOf,
   userConfigPath,
@@ -21,6 +23,8 @@ export interface WebConfig extends BeadsUiConfig {
   host?: string;
   /** `[web] port`, when the file sets one. */
   port?: number;
+  /** `[web] base_path` as `/beads/`, when the file sets one; the app is mounted at `/` otherwise. */
+  basePath?: string;
   /** `[views] rank`, on unless the file turns it off (D-21). */
   rank: boolean;
   /** `[queue] url`: the work queue the Sessions view and leased status writes go through. */
@@ -29,6 +33,13 @@ export interface WebConfig extends BeadsUiConfig {
   queueRepo?: string;
   /** `[analytics] cost_export`: the Claude Code cost export, as written in the file. */
   costExport?: string;
+  /**
+   * `[handoff] receivers`, from the user's file alone: the session-name patterns (`*` matches any
+   * run of characters) an owner change may name. Unset, every session the registry holds may.
+   */
+  handoffReceivers?: string[];
+  /** `[review] command`, from the user's file alone: the held store's tool, for held items' detail. */
+  reviewCommand?: string[];
   /** The file the settings came from, or undefined when no candidate exists. */
   source?: string;
   /** One line per setting the file got wrong; the default stands for each. */
@@ -108,11 +119,53 @@ export async function readWebConfig(repoRoot: string, env: ConfigEnv): Promise<W
   };
   if (web.host !== undefined) config.host = web.host;
   if (web.port !== undefined) config.port = web.port;
+  if (web.basePath !== undefined) config.basePath = web.basePath;
   if (queue.url !== undefined) config.queueUrl = queue.url;
   if (queue.repo !== undefined) config.queueRepo = queue.repo;
   if (analytics.costExport !== undefined) config.costExport = analytics.costExport;
+  // The owner picker's rule and the held tool come from the user's file, as `[queue]` does: a
+  // repository's own file must not widen who may receive its tasks or name a command to run.
+  const userText = user.kind === "file" ? user.text : undefined;
+  const handoff = resolveHandoff(userText);
+  config.problems.push(...handoff.problems);
+  if (handoff.receivers !== undefined) config.handoffReceivers = handoff.receivers;
+  const review = resolveReview(userText);
+  config.problems.push(...review.problems);
+  if (review.command !== undefined) config.reviewCommand = review.command;
   if (found !== undefined) config.source = found[0];
   return config;
+}
+
+/** The `beads-ui.toml` table of the owner picker's handoff rule (web app design T-W1.0). */
+export const HANDOFF_TABLE = "handoff";
+
+/** `[handoff] receivers`: a list of session-name patterns, or nothing when unset. */
+export function resolveHandoff(text: string | undefined): {
+  receivers?: string[];
+  problems: string[];
+} {
+  const problems: string[] = [];
+  if (text === undefined) return { problems };
+  const parsed = parseToml(text);
+  if (!parsed.ok) return { problems };
+  const table = parsed.value[HANDOFF_TABLE];
+  if (table === undefined) return { problems };
+  const receivers =
+    typeof table === "object" && table !== null && !Array.isArray(table)
+      ? (table as Record<string, unknown>).receivers
+      : undefined;
+  if (receivers === undefined) return { problems };
+  if (
+    !Array.isArray(receivers) ||
+    receivers.length === 0 ||
+    !receivers.every((one) => typeof one === "string" && one.trim() !== "")
+  ) {
+    problems.push(
+      `${HANDOFF_TABLE}.receivers must be a list of session-name patterns such as ["team-*"]; the owner picker offers no session`,
+    );
+    return { receivers: [], problems };
+  }
+  return { receivers: [...receivers] as string[], problems };
 }
 
 /** Whether `host` is a loopback address: anything else needs the whole `[auth]` table. */

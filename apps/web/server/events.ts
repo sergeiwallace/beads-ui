@@ -1,5 +1,6 @@
 import type { ServerResponse } from "node:http";
 import type { AuthLayer } from "./auth.ts";
+import type { FeedEvent, FeedStatus } from "./heads-feed.ts";
 
 /** The browser's one Server-Sent Events stream; the change feed (Phase W3) writes into it. */
 export const EVENTS_PATH = "/api/events";
@@ -14,6 +15,11 @@ export interface StreamOptions {
   heartbeatMs: number;
   /** Every open stream's end, so a server stop can end them all. */
   open: Set<() => void>;
+  /** The change feed whose events the stream carries; a stale feed says so as the stream opens. */
+  feed?: {
+    subscribe(listener: (event: FeedEvent) => void): () => void;
+    status(): FeedStatus;
+  };
 }
 
 /**
@@ -29,6 +35,7 @@ export function openEvents(response: ServerResponse, options: StreamOptions): Pr
       ended = true;
       clearInterval(timer);
       unsubscribe();
+      unfeed();
       options.open.delete(end);
       response.end();
       resolve();
@@ -39,6 +46,12 @@ export function openEvents(response: ServerResponse, options: StreamOptions): Pr
       connection: "keep-alive",
     });
     response.write("event: ready\ndata: {}\n\n");
+    const send = (event: FeedEvent) => {
+      if (!ended) response.write(`event: ${event.type}\ndata: ${JSON.stringify(event.data)}\n\n`);
+    };
+    const stale = options.feed?.status().stale;
+    if (stale !== undefined) send({ type: "stale", data: stale });
+    const unfeed = options.feed?.subscribe(send) ?? (() => undefined);
     const timer = setInterval(() => {
       void options.auth.stillValid(options.sessionId).then((valid) => {
         if (!valid) end();

@@ -1,7 +1,8 @@
 import { createReadStream } from "node:fs";
-import { stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { extname, join, resolve, sep } from "node:path";
+import { basename, extname, join, resolve, sep } from "node:path";
+import { shellHtml } from "./portal.ts";
 
 const TYPES: Readonly<Record<string, string>> = {
   ".html": "text/html; charset=utf-8",
@@ -13,6 +14,7 @@ const TYPES: Readonly<Record<string, string>> = {
   ".json": "application/json; charset=utf-8",
   ".woff2": "font/woff2",
   ".map": "application/json; charset=utf-8",
+  ".webmanifest": "application/manifest+json",
 };
 
 function sendText(response: ServerResponse, status: number, text: string): void {
@@ -31,13 +33,16 @@ async function isFile(path: string): Promise<boolean> {
 /**
  * Serves the built client: a file under `clientDir` when the path names one, else `index.html`
  * for any extensionless path, so `/backlog` and `/issues/<id>` load the app. Never a path outside
- * `clientDir`, and never for `/api/`, which app.ts routes first.
+ * `clientDir`, and never for `/api/` or `/healthz`, which app.ts routes first. The shell,
+ * `index.html`, carries the base path in its `<base>` and is never cached (app-portal's member
+ * header set); a hashed asset under `assets/` is cached for good.
  */
 export async function serveClient(
   request: IncomingMessage,
   response: ServerResponse,
   pathname: string,
   clientDir: string,
+  basePath = "/",
 ): Promise<void> {
   if (request.method !== "GET" && request.method !== "HEAD") {
     sendText(response, 405, "only GET and HEAD reach the client");
@@ -67,6 +72,16 @@ export async function serveClient(
       sendText(response, 503, "the web client is not built; run npm run build -w apps/web");
       return;
     }
+  }
+  if (basename(file) === "index.html") {
+    const html = Buffer.from(shellHtml(await readFile(file, "utf8"), basePath), "utf8");
+    response.writeHead(200, {
+      "content-type": TYPES[".html"] ?? "text/html",
+      "cache-control": "no-store",
+      "content-length": html.byteLength,
+    });
+    response.end(request.method === "HEAD" ? undefined : html);
+    return;
   }
   const hashed = file.includes(`${sep}assets${sep}`);
   response.writeHead(200, {

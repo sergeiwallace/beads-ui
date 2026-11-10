@@ -31,6 +31,10 @@ export interface ServeOptions {
   allowRepos?: string[];
   /** Added to the command's environment, such as a HOME holding a store inventory. */
   env?: NodeJS.ProcessEnv;
+  /** More of the user's `beads-ui.toml`, after `[hosts]` and `[auth]`. */
+  extra?: string;
+  /** `[auth]` keys to set in place of the defaults. */
+  auth?: Record<string, string | string[] | undefined>;
 }
 
 /**
@@ -45,7 +49,11 @@ async function hostSettings(
   await mkdir(join(configHome, "beads-ui"), { recursive: true });
   await writeFile(
     join(configHome, "beads-ui", "beads-ui.toml"),
-    hostConfig({ allowRepos: options.allowRepos ?? [basename(dir)] }),
+    hostConfig({
+      allowRepos: options.allowRepos ?? [basename(dir)],
+      ...(options.extra === undefined ? {} : { extra: options.extra }),
+      ...(options.auth === undefined ? {} : { auth: options.auth }),
+    }),
   );
   // A private HOME too: the server reads the host's store inventory under HOME, and a spec
   // serves only the stores it makes.
@@ -142,7 +150,9 @@ export const test = base.extend<{
   configHome: async ({}, use) => {
     const dir = await mkdtemp(join(tmpdir(), "beads-ui-e2e-config-"));
     await use(dir);
-    await rm(dir, { recursive: true });
+    // bd writes its event log under the private HOME (`.beads/eventsData`) for a moment after the
+    // served command has exited, so a one-shot removal can meet a directory still filling.
+    await rm(dir, { recursive: true, maxRetries: 10, retryDelay: 200 });
   },
   served: async ({ configHome }, use) => {
     const store = await createStore("e2e");

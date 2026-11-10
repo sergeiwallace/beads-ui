@@ -10,8 +10,8 @@ import {
   extractClosestEdge,
 } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
 import type { BoardView, CardView, ColumnHeaderView } from "@beads-ui/core";
-import { useEffect, useRef, useState } from "react";
-import { MoveToMenu } from "./MoveToMenu.tsx";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import { MoveToMenu, type SprintTarget } from "./MoveToMenu.tsx";
 import { tokenVar } from "./tokens.ts";
 
 export interface BoardProps {
@@ -29,6 +29,13 @@ export interface BoardProps {
   onReorder(id: string, index: number): void;
   /** The repository a card's issue comes from, drawn on the card when given. */
   repositoryOf?: ((id: string) => string | undefined) | undefined;
+  /** The sprints and the backlog a card can move to from its Move to menu (T-W1.0). */
+  sprintTargets?: ((id: string) => readonly SprintTarget[]) | undefined;
+  onSprint?: ((id: string, to: string) => void) | undefined;
+  /** The card's priority as an inline edit, in place of its badge. */
+  renderPriority?: ((id: string) => ReactNode) | undefined;
+  /** The card's owner picker, in place of its assignee. */
+  renderOwner?: ((id: string) => ReactNode) | undefined;
 }
 
 type CardData = { kind: "card"; id: string; status: string };
@@ -117,9 +124,13 @@ function Card({ card, status, rank, selected, index, props }: CardProps) {
       <div className="bu-card-head">
         <span className="bu-id">{card.displayId}</span>
         {repository !== undefined && <span className="bu-repo">{repository}</span>}
-        <span className="bu-priority" style={{ color: tokenVar(card.priorityToken) }}>
-          {card.priority}
-        </span>
+        {props.renderPriority === undefined ? (
+          <span className="bu-priority" style={{ color: tokenVar(card.priorityToken) }}>
+            {card.priority}
+          </span>
+        ) : (
+          props.renderPriority(card.id)
+        )}
       </div>
       <a
         className="bu-card-title"
@@ -135,12 +146,20 @@ function Card({ card, status, rank, selected, index, props }: CardProps) {
         {card.title}
       </a>
       <div className="bu-card-foot">
-        <span className="bu-assignee">{card.assignee}</span>
+        {props.renderOwner === undefined ? (
+          <span className="bu-assignee">{card.assignee}</span>
+        ) : (
+          props.renderOwner(card.id)
+        )}
         <MoveToMenu
           cardLabel={card.displayId}
           targets={card.moveTargets}
           disabled={card.pending}
           onMove={(to) => props.onMove(card.id, to)}
+          sprintTargets={props.sprintTargets?.(card.id)}
+          onSprint={
+            props.onSprint === undefined ? undefined : (to: string) => props.onSprint?.(card.id, to)
+          }
           {...(rank
             ? { onStep: (delta: -1 | 1) => props.onReorder(card.id, Math.max(0, index + delta)) }
             : {})}
