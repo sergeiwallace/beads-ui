@@ -14,7 +14,12 @@ import {
 } from "@beads-ui/core";
 import { filterAllowed } from "./allowlist.ts";
 import { ownerOf, readDispatchSettings, writeDispatch } from "./dispatch.ts";
-import { claimedOwnerChange } from "./owner-handoff.ts";
+import {
+  claimedOwnerChange,
+  failedGitInboxHandoff,
+  forgetHandoff,
+  sendGitInboxHandoff,
+} from "./owner-handoff.ts";
 import { QueueClient } from "./queue.ts";
 import type { OpenStore } from "./registry.ts";
 import {
@@ -261,6 +266,12 @@ export async function ownerRoute(request: ApiRequest, context: ApiContext): Prom
       `${to} is not a session the handoff rules allow (read from ${listed.source}${rule})`,
     );
   }
+  // A handoff whose claim was released but whose git-inbox send failed: picking the same
+  // receiver again sends it again, and never releases the claim a second time (T-W2.2).
+  const failedSend = await failedGitInboxHandoff(context, store.repository, id);
+  if (failedSend !== undefined && failedSend.receiver.session === to) {
+    return sendGitInboxHandoff(context, store, failedSend);
+  }
   if (shown !== "" && status === CLAIMED_STATUS) {
     return requestOwnerHandoff(
       {
@@ -280,6 +291,7 @@ export async function ownerRoute(request: ApiRequest, context: ApiContext): Prom
   );
   if (isReply(result)) return result;
   if (result.kind !== "ok") return bdFailure("bd update", result);
+  if (failedSend !== undefined) await forgetHandoff(context, store.repository, id);
   const prompt = text(request.body, "prompt");
   if (prompt === undefined || prompt.trim() === "")
     return { status: 200, body: { id, assignee: to } };

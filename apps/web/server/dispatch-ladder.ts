@@ -463,7 +463,7 @@ export class DispatchLadder {
           source: `goal state reported by ${key} at ${state.goals[key]?.at}`,
           reason: goal.reason,
           hold: true,
-          ...(goal.until === undefined ? {} : { until: goal.until }),
+          until: goal.until,
         });
         return;
       }
@@ -752,6 +752,56 @@ export class DispatchLadder {
   /** Resolves once nothing the ladder started is still running or scheduled. */
   async idle(): Promise<void> {
     while (this.#work.size > 0) await Promise.allSettled([...this.#work]);
+  }
+
+  /**
+   * At server start: the coalescing windows and the shown deadlines of the last run were only in
+   * memory, so each session dispatched to in the last hour has its outstanding dispatches planned
+   * again. One never carried goes out now as one event; one carried with no shown receipt and no
+   * local rung tried gets its shown deadline from now. Held dispatches wait for the sweep.
+   */
+  resume(): Promise<void> {
+    return this.#track(
+      this.#serial
+        .run(async () => {
+          const state = await this.#readState();
+          const policy = resolveDispatchPolicy(await this.#config());
+          const shownWithin = policy.ok ? policy.policy.shownWithinS * 1000 : 0;
+          const store = this.#options.store();
+          for (const key of Object.keys(state.sent)) {
+            const at = key.lastIndexOf("@");
+            if (at <= 0) continue;
+            const target = { session: key.slice(0, at), host: key.slice(at + 1) };
+            const open = (await store.outstanding(target)).filter(
+              (dispatch) => dispatch.state === "queued" && dispatch.hold === undefined,
+            );
+            const fresh = open.filter((dispatch) => dispatch.rungs.length === 0);
+            if (fresh.length > 0) {
+              void this.#track(this.#deliver(fresh.map((dispatch) => dispatch.record.id)));
+            }
+            const waiting = open.filter(
+              (dispatch) =>
+                dispatch.rungs.some(
+                  (rung) => rung.outcome === "sent" && rung.event !== undefined,
+                ) &&
+                !dispatch.rungs.some(
+                  (rung) =>
+                    rung.rung === "prompt-injection" ||
+                    rung.rung === "mod-submit" ||
+                    rung.rung === "turn-end",
+                ),
+            );
+            const first = waiting[0];
+            if (first !== undefined) {
+              const ids = waiting.map((dispatch) => dispatch.record.id);
+              this.#later(shownWithin, () =>
+                this.#fallback(ids, `beads-ui-dispatch-${first.record.id}`),
+              );
+            }
+          }
+        })
+        .catch(() => undefined),
+    );
   }
 
   close(): void {

@@ -172,6 +172,8 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     configEnv: options.configEnv,
     clock,
   });
+  // The last run's coalescing windows and shown deadlines were only in memory.
+  void ladder.resume();
   const context: ApiContext = {
     repoRoot: options.repoRoot,
     stores,

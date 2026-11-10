@@ -185,10 +185,6 @@ describe("a receiving session's goal", () => {
       reason: "goal paused",
       until: "2026-11-09T13:00:00.000Z",
     });
-    expect(goalHold({ state: "paused", at: now }, now)).toEqual({
-      held: true,
-      reason: "goal paused",
-    });
   });
 
   test("should not hold once the goal is active, there is none, or the pause window has ended", () => {
@@ -203,6 +199,9 @@ describe("a receiving session's goal", () => {
   test("should refuse a goal report that names no known state or a pause end that is not a UTC time", () => {
     expect(parseGoalReport({ state: "sleeping" }, now)).toMatch(/state must be/);
     expect(parseGoalReport({ state: "paused", until: "tomorrow" }, now)).toMatch(/until must be/);
+    expect(parseGoalReport({ state: "paused", reason: "usage limit" }, now)).toMatch(
+      /until is required on a paused report/,
+    );
     expect(parseGoalReport({ state: "paused", until: "2026-11-09T13:00:00Z" }, now)).toEqual({
       state: "paused",
       at: now,

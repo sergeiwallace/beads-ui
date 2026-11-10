@@ -229,7 +229,8 @@ export function rateCheck(sentAt: readonly number[], nowMs: number, max: number)
 /** A receiving session's goal, as it reports it through the receiver API (D-10). */
 export type GoalReport =
   | { state: "active" | "none"; at: string }
-  | { state: "paused"; at: string; until?: string; reason?: string };
+  /** `until` is required: a pause with no end would hold the session's dispatches forever. */
+  | { state: "paused"; at: string; until: string; reason?: string };
 
 export const GOAL_PAUSED = "goal paused";
 
@@ -239,16 +240,15 @@ export function parseGoalReport(body: unknown, at: string): GoalReport | string 
   const { state, until, reason } = body as Record<string, unknown>;
   if (state === "active" || state === "none") return { state, at };
   if (state !== "paused") return 'state must be "active", "none" or "paused"';
-  const report: GoalReport = { state, at };
-  if (until !== undefined) {
-    if (
-      typeof until !== "string" ||
-      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(until)
-    ) {
-      return "until must be a UTC RFC 3339 time";
-    }
-    report.until = until;
+  if (until === undefined) return "until is required on a paused report: when the pause ends";
+  if (
+    typeof until !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(until) ||
+    Number.isNaN(Date.parse(until))
+  ) {
+    return "until must be a UTC RFC 3339 time";
   }
+  const report: GoalReport = { state, at, until };
   if (typeof reason === "string" && reason !== "") report.reason = reason.slice(0, 200);
   return report;
 }
@@ -257,13 +257,10 @@ export function parseGoalReport(body: unknown, at: string): GoalReport | string 
 export function goalHold(
   report: GoalReport | undefined,
   now: string,
-): { held: false } | { held: true; reason: typeof GOAL_PAUSED; until?: string } {
+): { held: false } | { held: true; reason: typeof GOAL_PAUSED; until: string } {
   if (report?.state !== "paused") return { held: false };
-  if (report.until !== undefined && Date.parse(report.until) <= Date.parse(now))
-    return { held: false };
-  return report.until === undefined
-    ? { held: true, reason: GOAL_PAUSED }
-    : { held: true, reason: GOAL_PAUSED, until: report.until };
+  if (Date.parse(report.until) <= Date.parse(now)) return { held: false };
+  return { held: true, reason: GOAL_PAUSED, until: report.until };
 }
 
 /** What a carrier, the injected line and the mod's submit say: dispatch ids and digests only. */

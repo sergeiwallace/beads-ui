@@ -45,9 +45,13 @@ interface Handoff {
   mode: "request" | "git-inbox";
   /** The handoff-request dispatch, for a live holder. */
   dispatch?: string;
-  /** The git-inbox message, for a holder proved gone. */
+  /** The git-inbox message, for a holder proved gone, once it was sent. */
   message?: string;
   confirmed?: { at: string; detail: string };
+  /** When the abandoned claim was force-released; it is released once, never again on a retry. */
+  released?: string;
+  /** Why the last git-inbox send failed; the retry sends it again. */
+  sendError?: string;
 }
 
 type Run =
@@ -183,6 +187,88 @@ const remember = (context: ApiContext, handoff: Handoff) =>
     await writeHandoffs(context, handoffs);
   });
 
+const forget = (context: ApiContext, repo: string, id: string) =>
+  serial.run(async () => {
+    const handoffs = await readHandoffs(context);
+    delete handoffs[keyOf(repo, id)];
+    await writeHandoffs(context, handoffs);
+  });
+
+/** A git-inbox handoff whose claim was released but whose send failed, so a retry resends it. */
+export async function failedGitInboxHandoff(
+  context: ApiContext,
+  repo: string,
+  id: string,
+): Promise<Handoff | undefined> {
+  const handoff = (await readHandoffs(context))[keyOf(repo, id)];
+  return handoff?.mode === "git-inbox" &&
+    handoff.released !== undefined &&
+    handoff.message === undefined
+    ? handoff
+    : undefined;
+}
+
+/** Drops a failed git-inbox handoff once the owner was set some other way. */
+export const forgetHandoff = forget;
+
+/**
+ * Sends the receiver the git-inbox action carrying a pointer only, and records the message or
+ * why the send failed; the claim is already released, so nothing here writes the store.
+ */
+export async function sendGitInboxHandoff(
+  context: ApiContext,
+  store: OpenStore,
+  handoff: Handoff,
+): Promise<ApiReply> {
+  const commands = await handoffCommands(context);
+  const { id } = handoff.task;
+  const sent = await run(
+    [
+      ...commands.gitInbox,
+      "send",
+      "--to",
+      address(handoff.receiver),
+      "--re",
+      `beads-ui handoff ${id}`,
+      "--body",
+      handoffPointer(store.repository, id, address(handoff.holder), address(handoff.receiver)),
+      "--action",
+      `${id}@${store.repository}`,
+      "--json",
+    ],
+    store.path,
+  );
+  let message: string | undefined;
+  if (sent.kind === "exited" && sent.exitCode === 0) {
+    try {
+      const minted = (JSON.parse(sent.stdout) as { id?: unknown }).id;
+      if (typeof minted === "string" && minted !== "") message = minted;
+    } catch {
+      message = undefined;
+    }
+  }
+  if (message === undefined) {
+    const reason =
+      sent.kind === "exited" && sent.exitCode === 0 ? "printed no message id" : said(sent);
+    await remember(context, { ...handoff, sendError: reason });
+    return failure({
+      kind: "failed",
+      source: "git-inbox send",
+      message: `git-inbox failed: ${reason}; ${address(handoff.holder)} is not running and its claim on ${id} was released, so pick ${handoff.receiver.session} again to send the action again`,
+      retry: true,
+    });
+  }
+  const { sendError: _sent, ...rest } = handoff;
+  await remember(context, { ...rest, message });
+  return {
+    status: 202,
+    body: {
+      id,
+      handoff: { state: "owner not running", source: `git-inbox send ${message}`, message },
+    },
+  };
+}
+
 export interface ClaimedChange {
   store: OpenStore;
   issue: Issue;
@@ -278,63 +364,27 @@ export async function claimedOwnerChange(
       message: `${issue.id}'s claim changed while its holder's liveness was read; nothing was written`,
     });
   }
-  const released = await store.bd.update(
-    issue.id,
-    { assignee: "", status: "open" },
-    { ifStatus: CLAIMED, force: true },
-  );
-  if (released.kind !== "ok") return bdFailure("bd update --force", released);
-  const sent = await run(
-    [
-      ...commands.gitInbox,
-      "send",
-      "--to",
-      address(receiver),
-      "--re",
-      `beads-ui handoff ${issue.id}`,
-      "--body",
-      handoffPointer(store.repository, issue.id, address(holder.value), address(receiver)),
-      "--action",
-      `${issue.id}@${store.repository}`,
-      "--json",
-    ],
-    store.path,
-  );
-  let message: string | undefined;
-  if (sent.kind === "exited" && sent.exitCode === 0) {
-    try {
-      const id = (JSON.parse(sent.stdout) as { id?: unknown }).id;
-      if (typeof id === "string" && id !== "") message = id;
-    } catch {
-      message = undefined;
-    }
-  }
-  if (message === undefined) {
-    return failure({
-      kind: "failed",
-      source: "git-inbox send",
-      message: `${address(holder.value)} is not running and its claim on ${issue.id} was released, but the git-inbox action to ${address(receiver)} was not sent (${said(sent)})`,
-    });
-  }
-  await remember(context, {
+  // The record comes first, so a release whose send then fails is never left with no record.
+  const record: Handoff = {
     task,
     holder: holder.value,
     receiver,
     at: context.now(),
     mode: "git-inbox",
-    message,
-  });
-  return {
-    status: 202,
-    body: {
-      id: issue.id,
-      handoff: {
-        state: "owner not running",
-        source: `${liveness.source}: ${liveness.reason}`,
-        message,
-      },
-    },
   };
+  await remember(context, record);
+  const released = await store.bd.update(
+    issue.id,
+    { assignee: "", status: "open" },
+    { ifStatus: CLAIMED, force: true },
+  );
+  if (released.kind !== "ok") {
+    await forget(context, task.repo, task.id);
+    return bdFailure("bd update --force", released);
+  }
+  const releasedRecord: Handoff = { ...record, released: context.now() };
+  await remember(context, releasedRecord);
+  return sendGitInboxHandoff(context, store, releasedRecord);
 }
 
 const PROGRESS_SOURCE = "progress receipt from ";
@@ -374,6 +424,16 @@ async function handoffState(
   context: ApiContext,
 ): Promise<{ state: string; source: string; final: boolean; observation?: string }> {
   if (handoff.mode === "git-inbox") {
+    if (handoff.message === undefined) {
+      return {
+        state:
+          handoff.sendError === undefined
+            ? "owner not running"
+            : `git-inbox failed: ${handoff.sendError}`,
+        source: handoff.sendError === undefined ? "the handoff record" : "git-inbox send",
+        final: false,
+      };
+    }
     if (handoff.confirmed !== undefined) {
       return {
         state: "taken",

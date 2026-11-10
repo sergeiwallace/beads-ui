@@ -378,6 +378,54 @@ describe("a holder the fleet's liveness check proves gone (T-W2.2)", () => {
   });
 });
 
+describe("a git-inbox send that fails after the release (T-W2.2)", () => {
+  it("should keep the handoff visible as git-inbox failed, and resend it on the retry without releasing the claim again", async () => {
+    const { id, holder, receiver: target } = await claimed();
+    await liveness(`${holder}@${HOST}`, { liveness: "gone", reason: "ended-per-publisher 300 s" });
+    await writeFile(join(tools, "git-inbox.send.exit"), "6");
+    await writeFile(
+      join(tools, "git-inbox.send.stderr"),
+      "git-inbox: refused: the store is not published\n",
+    );
+    const first = await ownerChange(id, target, holder, "in_progress");
+    expect(first.status, first.text).toBe(502);
+    expect((first.json() as { error: { retry?: boolean } }).error.retry).toBe(true);
+    const failed = await handoff(id);
+    expect(failed).toMatchObject({
+      state: "git-inbox failed: exit 6: git-inbox: refused: the store is not published",
+      final: false,
+    });
+    const released = await show(id);
+    expect(released.assignee ?? "").toBe("");
+    expect(released.status).toBe("open");
+
+    await rm(join(tools, "git-inbox.send.exit"));
+    await rm(join(tools, "git-inbox.send.stderr"));
+    await writeFile(
+      join(tools, "git-inbox.send.stdout"),
+      JSON.stringify({ sent: true, id: "msg-2" }),
+    );
+    const retry = await ownerChange(id, target, "", "open");
+    expect(retry.status, retry.text).toBe(202);
+    const sends = (await calls("git-inbox")).filter((call) => call.args[0] === "send");
+    expect(sends).toHaveLength(2);
+    expect(flag(sends[1], "--action")).toBe(`${id}@${repoName(store.dir)}`);
+    // The retry went straight to the send: no second liveness read, so no second release.
+    expect(await calls("liveness")).toHaveLength(1);
+    const after = await show(id);
+    expect(after.assignee ?? "").toBe("");
+    expect(after.status).toBe("open");
+    await writeFile(
+      join(tools, "git-inbox.status.stdout"),
+      JSON.stringify({
+        message_id: "msg-2",
+        recipients: [{ recipient: `${target}@${HOST}`, state: "read" }],
+      }),
+    );
+    expect((await handoff(id)).state).toBe("owner not running");
+  });
+});
+
 describe("a holder whose liveness cannot be established (T-W2.2)", () => {
   it("should not reassign, show owner state unknown and offer a retry, when the reading is undetermined or the check fails", async () => {
     for (const setup of [

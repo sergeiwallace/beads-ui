@@ -174,6 +174,7 @@ const listed = async (owner: string) =>
   ).dispatches;
 
 const settle = () => server.ladder.idle();
+const inAnHour = () => new Date(Date.now() + 3_600_000).toISOString();
 const waitFor = <T>(check: () => Promise<T>) =>
   vi.waitFor(check, { timeout: 20_000, interval: 100 });
 
@@ -573,6 +574,7 @@ describe("goal arming (T-W2.3)", () => {
     const reported = await receiver("/sessions/goal", {
       session: owner,
       state: "paused",
+      until: inAnHour(),
       reason: "usage limit",
     });
     expect(reported.status).toBe(204);
@@ -587,7 +589,7 @@ describe("goal arming (T-W2.3)", () => {
 
   it("should release a dispatch waiting on a paused goal when the receiver reports the goal active", async () => {
     const { id, owner } = await ownedTask();
-    await receiver("/sessions/goal", { session: owner, state: "paused" });
+    await receiver("/sessions/goal", { session: owner, state: "paused", until: inAnHour() });
     const dispatch = await prompt(id, "Released by the goal");
     await settle();
     expect((await status(dispatch)).state).toBe("waiting");
@@ -614,7 +616,7 @@ describe("goal arming (T-W2.3)", () => {
   it("should deliver a dispatch waiting on a paused goal at once when the user presses deliver now", async () => {
     await env.write(config({ coalesce: 30 }));
     const { id, owner } = await ownedTask();
-    await receiver("/sessions/goal", { session: owner, state: "paused" });
+    await receiver("/sessions/goal", { session: owner, state: "paused", until: inAnHour() });
     const dispatch = await prompt(id, "Now, please");
     await settle();
     const reply = await post(`/api/dispatch/${dispatch}/deliver-now`, {});
@@ -630,6 +632,20 @@ describe("goal arming (T-W2.3)", () => {
     const reply = await post(`/api/dispatch/${dispatch}/deliver-now`, {});
     expect(reply.status).toBe(409);
     expect(reply.text).toMatch(/not waiting on a paused goal/);
+  });
+
+  it("should refuse a paused report with no until, and hold nothing on it", async () => {
+    const { id, owner } = await ownedTask();
+    const reported = await receiver("/sessions/goal", {
+      session: owner,
+      state: "paused",
+      reason: "usage limit",
+    });
+    expect(reported.status).toBe(404);
+    const dispatch = await prompt(id, "Not held");
+    await waitFor(async () => expect(await calls("agent-mail")).toHaveLength(1));
+    expect((await status(dispatch)).ladder.hold).toBeUndefined();
+    expect((await listed(owner)).map((one) => one.id)).toContain(dispatch);
   });
 
   it("should refuse a goal report that is not one", async () => {
