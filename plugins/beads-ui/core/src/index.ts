@@ -168,6 +168,36 @@ export {
   reduceDelivery,
 } from "./delivery-state.ts";
 export type {
+  ActiveRungName,
+  CarrierName,
+  DeliveryPlan,
+  DispatchPointer,
+  DispatchPolicy,
+  GoalReport,
+  LocalRungName,
+  PolicyRead,
+  RateCheck,
+  RungAttempt,
+  RungName,
+  WakePolicy,
+} from "./dispatch-policy.ts";
+export {
+  CARRIERS,
+  DEFAULT_DISPATCH_POLICY,
+  dispatchPointer,
+  GOAL_PAUSED,
+  goalHold,
+  HOUR_MS,
+  LOCAL_RUNGS,
+  parseGoalReport,
+  parseWakePolicy,
+  planDelivery,
+  rateCheck,
+  resolveDispatchPolicy,
+  rungSummary,
+  WAKES_OFF,
+} from "./dispatch-policy.ts";
+export type {
   CreateResult,
   DispatchEntry,
   DispatchEnvelope,
