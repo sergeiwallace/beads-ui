@@ -93,3 +93,31 @@ export const failingBd = (subcommands: readonly string[]): Promise<WrappedBd> =>
 /** A `bd` that waits `seconds` before running the named subcommands, then runs the real bd. */
 export const slowBd = (subcommands: readonly string[], seconds: number): Promise<WrappedBd> =>
   wrappedBd(subcommands, `sleep ${seconds}`);
+
+export interface LockedBd extends WrappedBd {
+  /** One line per call of a named subcommand, written once it holds the store and starts. */
+  calls: string;
+}
+
+/**
+ * A `bd` that runs the named subcommands one at a time, as an embedded store does, each `seconds`
+ * long: a call takes a lock on one file before it sleeps and runs the real bd, so calls started
+ * side by side wait inside bd's own process. Every other subcommand runs at once.
+ */
+export async function lockedBd(subcommands: readonly string[], seconds: number): Promise<LockedBd> {
+  const dir = await mkdtemp(join(tmpdir(), "beads-ui-web-locked-bd-"));
+  const lock = join(dir, "store.lock");
+  const calls = join(dir, "calls");
+  const wrapped = await wrappedBd(
+    subcommands,
+    `exec flock '${lock}' sh -c 'echo "$1" >> "${calls}"; sleep ${seconds}; exec "$0" "$@"' "$REAL" "$@"`,
+  );
+  return {
+    ...wrapped,
+    calls,
+    remove: async () => {
+      await wrapped.remove();
+      await rm(dir, { recursive: true });
+    },
+  };
+}
