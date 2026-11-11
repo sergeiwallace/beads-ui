@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { type RunningServer, startServer } from "../server/server.ts";
 import {
   type HostEnv,
@@ -427,15 +427,30 @@ describe("a git-inbox send that fails after the release (T-W2.2)", () => {
 });
 
 describe("a holder whose liveness cannot be established (T-W2.2)", () => {
-  it("should not reassign, show owner state unknown and offer a retry, when the reading is undetermined or the check fails", async () => {
-    for (const setup of [
-      async (identity: string) => liveness(identity, { liveness: "undetermined" }),
-      async (identity: string) => liveness(identity, undefined),
-      async () => {
+  afterEach(async () => {
+    await rm(join(tools, "liveness.exit"), { force: true });
+    await rm(join(tools, "liveness.stderr"), { force: true });
+  });
+
+  it.each([
+    {
+      reading: "the reading is undetermined",
+      setup: (identity: string) => liveness(identity, { liveness: "undetermined" }),
+    },
+    {
+      reading: "the check returns no reading for the holder",
+      setup: (identity: string) => liveness(identity, undefined),
+    },
+    {
+      reading: "the check fails",
+      setup: async () => {
         await writeFile(join(tools, "liveness.exit"), "1");
         await writeFile(join(tools, "liveness.stderr"), "heartbeat ref unreadable\n");
       },
-    ]) {
+    },
+  ])(
+    "should not reassign, show owner state unknown and offer a retry, when $reading",
+    async ({ setup }) => {
       const { id, holder, receiver: target } = await claimed();
       await setup(`${holder}@${HOST}`);
       const reply = await ownerChange(id, target, holder, "in_progress");
@@ -448,8 +463,6 @@ describe("a holder whose liveness cannot be established (T-W2.2)", () => {
       expect((await show(id)).assignee).toBe(holder);
       expect(await listed(holder)).toEqual([]);
       expect(await calls("git-inbox")).toEqual([]);
-      await rm(join(tools, "liveness.exit"), { force: true });
-      await rm(join(tools, "liveness.stderr"), { force: true });
-    }
-  });
+    },
+  );
 });

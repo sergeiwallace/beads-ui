@@ -1,23 +1,24 @@
 # beads-ui
 
-A task manager for [Beads](https://github.com/steveyegge/beads) issues, designed to run in three places
-from one shared core:
+A task manager for [Beads](https://github.com/steveyegge/beads) issues, with a
+[Claude Code mod](https://code.claude.com/docs/en/plugins/mods/overview) inside the terminal and a
+locally hosted web app, built on one shared core.
 
-- inside the Claude Code terminal UI, as a [Claude Code mod](https://code.claude.com/docs/en/plugins/mods/overview)
-  (implemented);
-- in a browser, as a web app you run locally (Board, Backlog and Issue detail implemented; hosting
-  from an infra-as-config template is [TODO]);
-- [TODO, not started] inside Claude Desktop and Claude on the web, as an MCP UI app.
-
-The goal is the views people expect from Jira, Linear or Todoist (board, backlog, sprints,
-roadmap, analytics), working on a Beads store, with one view of the tasks of every Claude Code
-session on a machine.
+It brings familiar task-management views (board, backlog, sprints, roadmap and analytics), session
+ownership and a review queue to Beads stores. Beads remains the task system of record; beads-ui
+provides interfaces for working with it. An MCP App for Claude Desktop and Claude on the web, and
+native clients, are planned rather than implemented.
 
 ## Status
 
-Only the Claude Code mod (the TUI plugin) is implemented. Phase 0 (the monorepo bootstrap, the
-DOM-free shared core and the public-repo hygiene) and Phase 1 (the MVP, a read-mostly board in the
-mod) have landed. The mod's pane now opens on a task panel: the session's own tasks, a nav to the
+Both the Claude Code mod and the web app are implemented. The descriptions below reflect the
+source as of 2026-11-10, not a claim that every design phase or deployment has been validated. The
+web app runs from a checkout; its npm workspace is private and versioned `0.0.0`, not a published
+web-app release.
+
+### Claude Code mod
+
+The mod's pane opens on a task panel: the session's own tasks, a nav to the
 board, backlog and settings, an options menu for every action and a Settings view
 ([docs/procedures/mod-install.md](docs/procedures/mod-install.md#the-task-panel)). Each view is
 registered once and drawn on the band and the pane alike; `[surfaces]` in `beads-ui.toml`, or a
@@ -57,18 +58,78 @@ kind or session, and `s` groups by task, epic, kind or session. A row whose issu
 current item shows `✎`, and its options menu opens the first
 ([docs/procedures/mod-install.md](docs/procedures/mod-install.md#review-items)).
 
-The web app runs locally with one command: a Board with drag and drop and a Move to menu on every
-card, manual rank, a Backlog, Issue detail and a Ctrl+K command palette, all reading and writing
-the store through guarded `bd` calls ([docs/procedures/web-run.md](docs/procedures/web-run.md)).
-Its Roadmap, Analytics, Sessions and Sprints views, the review queue and hosting are [TODO].
+### Web app
 
-The MCP UI app for Claude Desktop and claude.ai is [TODO]: it has not been started. It and the rest
-of the web app are the planned future state in
-[docs/designs/beads-ui-design.md](docs/designs/beads-ui-design.md), and the research behind the
-design is in [docs/research/](docs/research/).
+The web app has a Node server and a React client, with these implemented views:
 
-The work is tracked in this repo's own Beads store (prefix `BU`). Later sub-epics cover iOS, macOS
-and Linux.
+| View | What it provides |
+|---|---|
+| Board and Backlog | Drag-and-drop and menu-based moves, manual ordering, priority edits, owner and sprint assignment |
+| Issue detail | Markdown descriptions, links, comments, ownership and a task prompt composer |
+| Sprints | Board and list views, a sprint picker and moves between a sprint and the backlog |
+| Roadmap | A Gantt timeline for dated epics, milestones and sprints, dependency links and an undated-items list |
+| Analytics | Throughput, cycle time, cumulative flow, sprint burndown and aging; cost and token metrics from an optional configured export |
+| Sessions | Tasks grouped by Beads assignee; optional work-queue session liveness, heartbeats and claim age |
+| Review | Decisions and other held items when configured, blocked tasks, answers, unblock actions and prompt composition |
+| Queue | An ordered task list with filters; work-queue order when configured, otherwise Beads priority, rank and age |
+
+The app also has a Ctrl+K command palette, shareable view URLs, keyboard and touch controls, and
+guarded task writes with conflict handling. Board and Backlog can combine allowlisted stores;
+Roadmap, Analytics and Sessions use one selected store at a time.
+
+Authentication uses one-time login links and expiring, revocable browser sessions, with host and
+repository allowlists and checks on browser writes. Live updates use authenticated server-sent
+events when the server detects a store-head change, with polling as a fallback. The server can
+run locally, as a Linux systemd user service, or through the included Docker Compose setup.
+Start with [web setup and usage](docs/procedures/web-run.md); the
+[remote-access procedure](docs/procedures/web-access.md) covers the configured SSH and Tailscale
+access paths.
+
+Fleet integrations are optional, not bundled services. A configured work queue adds session
+liveness, lease-aware task updates and queue-backed dispatch storage; a configured held-store
+command supplies review items. Without them, the app can still work directly with Beads, and
+dispatch records can use local storage. Prompts, answers and unblock requests are signed
+dispatches exposed through a receiver API: delivery currently relies on a separately configured
+receiving session pulling at a turn end. This does not yet provide every active-delivery,
+handoff or goal-arming path in the design. See
+[work-queue integration](docs/procedures/web-run.md#the-work-queue) and
+[dispatches and the receiver API](docs/procedures/web-run.md#dispatches-and-the-receiver-api).
+
+## Roadmap
+
+This is a high-level direction, not a second task tracker. The repository's Beads store (prefix
+`BU`) is the source of truth for task status, dependencies and priorities. The timing buckets are
+tentative and relative; they are not release dates or commitments.
+
+```mermaid
+flowchart TD
+    subgraph current["Implemented in source"]
+        core["Shared task core"]
+        mod["Claude Code mod"]
+        web["Self-hosted web app"]
+        core --> mod
+        core --> web
+    end
+    web -.-> coordination["Next: delivery, handoff and goal workflows"]
+    coordination -.-> mcp["Planned: MCP App"]
+    web -.-> hosting["Later: cloud-hosting templates"]
+    core -.-> native["Later: native clients"]
+```
+
+Solid arrows show the shared foundation; dashed arrows show proposed development directions,
+not runtime connections or a guaranteed release sequence.
+
+| Timing | Direction | Status and scope |
+|---|---|---|
+| Now | Claude Code mod and web app | Implemented in source: shared core, terminal task views, web views, authentication, live updates and local/service/container run paths. See [mod installation](docs/procedures/mod-install.md) and [web setup](docs/procedures/web-run.md). |
+| Next | Complete the web coordination workflows | Event-based dispatch, policy-aware session handoff and goal arming, plus integration and deployment validation. The existing receiver-pull path is not the full delivery design. See the [web implementation phases](docs/designs/beads-ui-web-app-design.md#implementation-phases). |
+| Planned | MCP App parity | Bring the shared task views into Claude Desktop and Claude on the web. The MCP App and server are not implemented yet. See the [MCP App design](docs/designs/beads-ui-design.md#phase-4-the-mcp-app-in-claude-desktop) and [web parity phase](docs/designs/beads-ui-web-app-design.md#phase-w4-mcp-app-parity). |
+| Later | Additional clients and hosting options | Native iOS, macOS and Linux clients, and repeatable cloud-hosting templates, remain future work. Responsive web views are not native apps. See the [broader design](docs/designs/beads-ui-design.md) and [hosting phase](docs/designs/beads-ui-design.md#phase-6-hosted-web-app-and-claudeai-mcp). |
+
+The [overall design](docs/designs/beads-ui-design.md),
+[web-app design](docs/designs/beads-ui-web-app-design.md) and [research](docs/research/) provide
+the rationale and intended architecture; design requirements should not be read as a list of
+already shipped capabilities.
 
 ## Using the pane
 
@@ -107,9 +168,9 @@ layers and not their UI components: each surface draws its own views.
 |---|---|
 | `plugins/beads-ui/` | The Claude Code mod, with the shared core inside it |
 | `plugins/beads-ui/core/` | The shared core (`src/`) and its tests (`test/`); the DOM packages import it as `@beads-ui/core` |
-| `packages/` | Node and browser packages: the `bd` adapter, the web components and the MCP server, as later phases add them |
-| `packages/bd-node/` | The Node adapter that runs `bd ... --json` for the web and MCP servers and returns the core's types; it needs `bd` on `PATH` |
-| `packages/web-ui/` | The React components the web app and the MCP App share: Board, Backlog, Issue detail, the command palette and the theme tokens |
+| `packages/` | Node and browser packages; currently the `bd` adapter and web components, not an MCP server |
+| `packages/bd-node/` | The Node adapter that runs `bd ... --json` for the web server and returns the core's types; it needs `bd` on `PATH` |
+| `packages/web-ui/` | React task views and controls used by the web app, with intended reuse in the future MCP App |
 | `apps/web/` | The web app: a Node server (`server/`, every route under `/api/`) and a Vite and React 19 client (`client/`), with its Playwright specs (`e2e/`) |
 | `scripts/check-core-purity.mjs` | The purity gate `npm run lint` runs on the shared core |
 | `.claude-plugin/marketplace.json` | The marketplace that lists the mod, `./plugins/beads-ui` |
@@ -129,6 +190,12 @@ npm test
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the rules on the shared core and on secrets.
+
+To run the web app from a checkout, follow [web setup and usage](docs/procedures/web-run.md).
+It requires Node.js 24 or later, `bd` on `PATH`, and the host's authentication and repository
+allowlist configuration before starting the launcher. The procedure also covers
+[systemd](docs/procedures/web-run.md#run-it-as-a-service) and
+[Docker Compose](docs/procedures/web-run.md#docker-compose).
 
 To load the mod from a checkout, run `claude --plugin-dir plugins/beads-ui`. To install it from
 this repository's marketplace (the mod needs Claude Code 2.1.299 or later):
