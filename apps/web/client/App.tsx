@@ -496,6 +496,8 @@ interface DetailRead {
   key: string;
   payload?: IssuePayload;
   error?: ReadFailure;
+  /** The store a failed read names, so the failure does not wait on the board read to name it. */
+  failedIn?: string;
 }
 
 function useIssue(ref: IssueRef | undefined): [DetailRead | undefined, () => Promise<void>] {
@@ -526,6 +528,7 @@ function useIssue(ref: IssueRef | undefined): [DetailRead | undefined, () => Pro
               source: failure?.source ?? "bd show",
               message: failure?.message ?? String(error),
             },
+            ...(failure?.repository === undefined ? {} : { failedIn: failure.repository }),
           });
         }
         done();
@@ -1248,6 +1251,7 @@ export function App() {
             issue={detail?.payload?.issue}
             repository={
               detail?.payload?.repository ??
+              detail?.failedIn ??
               route.store ??
               (repositories.length === 1 ? repositories[0] : undefined)
             }

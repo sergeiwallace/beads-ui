@@ -33,6 +33,8 @@ export interface ApiErrorBody {
   exitCode?: number | null;
   /** The same request may succeed once the state it names changes, such as an owner's liveness. */
   retry?: boolean;
+  /** The store a failed read of one issue addressed (server/routes.ts issueRoute). */
+  repository?: string;
 }
 
 /** How one store's read went in a board read: its issue count, or the error it failed with. */

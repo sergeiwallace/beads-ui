@@ -92,6 +92,8 @@ export interface ApiError {
   exitCode?: number | null;
   /** True when the same request may succeed once the state it names changes. */
   retry?: boolean;
+  /** The store a failed read of one issue addressed, so the page can name it at once. */
+  repository?: string;
 }
 
 /**
@@ -352,8 +354,11 @@ async function issueRoute(request: ApiRequest, context: ApiContext): Promise<Api
     if (error instanceof RangeError) return invalid(error.message);
     throw error;
   }
-  if (shown.kind !== "ok") return bdFailure("bd show", shown);
   const { repository } = store;
+  if (shown.kind !== "ok") {
+    const reply = bdFailure("bd show", shown);
+    return { status: reply.status, body: { error: { ...errorOf(reply), repository } } };
+  }
   const comments = await store.bd.comments(id);
   if (comments.kind === "ok") {
     return { status: 200, body: { issue: shown.value, comments: comments.value, repository } };
