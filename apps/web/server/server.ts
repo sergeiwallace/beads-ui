@@ -4,6 +4,7 @@ import { DispatchStoreError } from "@beads-ui/core";
 import { AllowlistHealth, readAllowlist } from "./allowlist.ts";
 import { type App, createApp } from "./app.ts";
 import { AuthLayer, AuthRefused, type AuthSettings, loadAuth } from "./auth.ts";
+import { requestScope } from "./bd-queue.ts";
 import { type ConfigEnv, isLoopback, LOOPBACK, readWebConfig } from "./config.ts";
 import { releaseFollowUps } from "./dispatch.ts";
 import { DispatchLadder } from "./dispatch-ladder.ts";
@@ -66,7 +67,10 @@ export interface RunningServer {
   close(): Promise<void>;
 }
 
-/** How long a stop waits for requests in flight: past bd-node's 10-second call timeout. */
+/**
+ * How long a stop waits for requests in flight: past bd-node's 10-second call timeout. Then their
+ * connections close, so a read still waiting in its store's bd queue is dropped; a write runs.
+ */
 export const CLOSE_GRACE_MS = 15_000;
 
 /** A start the server refuses, with the reason it prints. */
@@ -103,6 +107,8 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     configEnv: options.configEnv,
     ...(options.bdEnv === undefined ? {} : { bdEnv: options.bdEnv }),
     health,
+    queueWaitMs: async () =>
+      (await readWebConfig(options.repoRoot, options.configEnv)).bdQueueWaitSeconds * 1000,
   });
   const reading = await stores.read();
   if (reading.startedIn !== undefined) {
@@ -140,8 +146,17 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
 
   let app: App | undefined;
   const server = createServer((request, response) => {
-    if (app !== undefined) app.handle(request, response);
-    else response.writeHead(503).end();
+    if (app === undefined) {
+      response.writeHead(503).end();
+      return;
+    }
+    // A read this request queued is dropped if the client goes away before it starts (bd-queue.ts).
+    const abandoned = new AbortController();
+    response.once("close", () => {
+      if (!response.writableFinished) abandoned.abort();
+    });
+    const handling = app;
+    requestScope.run(abandoned.signal, () => handling.handle(request, response));
   });
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);

@@ -5,7 +5,7 @@ import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
 import { createStore, type TestStore } from "../test/store.ts";
-import { expect, serve, signIn, test } from "./fixtures.ts";
+import { authorize, expect, serve, test, unbudgeted, unbudgetedStore } from "./fixtures.ts";
 
 // The Review view in a real browser at 1280 px and 390 px (web app design T-W1.1 to T-W1.4,
 // T-W1.6): the served command reads a held store through a stand-in tool, and every write goes
@@ -106,30 +106,41 @@ async function heldFiles(dir: string, repo: string) {
 
 const reviewTest = test.extend<{ review: ReviewApp }>({
   review: async ({ configHome, page }, use) => {
-    const store = await createStore("e2e");
-    const ids = {
-      blocked: await store.create("Blocked on the space", { status: "blocked", priority: 1 }),
-      running: await store.create("Running work", { status: "in_progress", priority: 2 }),
-    };
-    await store.bd("update", ids.blocked, "--assignee", "worker");
-    await store.bd("update", ids.running, "--assignee", "worker", "--type", "bug");
-    const repo = basename(store.dir);
-    const held = join(configHome, "held");
-    await heldFiles(held, repo);
-    const queue = await startQueue();
-    const served = await serve(store.dir, configHome, {
-      auth: { signing_key: "state:dispatch-signing-key" },
-      extra: [
-        `[hosts.host-b]\nallow_repos = ["${repo}"]`,
-        `[hosts.host-c]\nallow_repos = ["${repo}"]`,
-        `[review]\ncommand = ${JSON.stringify([process.execPath, FAKE_HELD, held])}`,
-        `[queue]\nurl = "${queue.url}"`,
-        `[dispatch]\nhost = "host-b"\nrecord = "local"`,
-      ].join("\n\n"),
+    // Seven bd processes and the server's start are the spec's setup, outside its budget.
+    const { store, ids, queue, served } = await unbudgeted(async () => {
+      const store = await createStore("e2e");
+      const ids = {
+        blocked: await store.create("Blocked on the space", { status: "blocked", priority: 1 }),
+        running: await store.create("Running work", { status: "in_progress", priority: 2 }),
+      };
+      await store.bd("update", ids.blocked, "--assignee", "worker");
+      await store.bd("update", ids.running, "--assignee", "worker", "--type", "bug");
+      const repo = basename(store.dir);
+      const held = join(configHome, "held");
+      await heldFiles(held, repo);
+      const queue = await startQueue();
+      const served = await serve(store.dir, configHome, {
+        auth: { signing_key: "state:dispatch-signing-key" },
+        extra: [
+          `[hosts.host-b]\nallow_repos = ["${repo}"]`,
+          `[hosts.host-c]\nallow_repos = ["${repo}"]`,
+          `[review]\ncommand = ${JSON.stringify([process.execPath, FAKE_HELD, held])}`,
+          `[queue]\nurl = "${queue.url}"`,
+          `[dispatch]\nhost = "host-b"\nrecord = "local"`,
+        ].join("\n\n"),
+      });
+      return { store, ids, queue, served };
     });
-    await signIn(page, served);
+    // The page opens the Review view first: a Board landing would start a read the server goes on
+    // running beside the Review view's own, on a store that runs one bd process at a time.
+    await authorize(page, served);
+    const read = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === "/api/review",
+    );
     await page.goto(new URL("review", served.url).href);
-    await use({ page, store, ids });
+    const failures = ((await (await read).json()) as { failures: unknown[] }).failures;
+    expect(failures, "the Review view's read of the store").toEqual([]);
+    await use({ page, store: unbudgetedStore(store), ids });
     await served.stop();
     await new Promise((resolve) => queue.server.close(resolve));
     await store.remove();

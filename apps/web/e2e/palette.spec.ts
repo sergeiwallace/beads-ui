@@ -23,9 +23,8 @@ test.describe("the command palette", () => {
     expect((await app.store.show(id)).status).toBe("in_progress");
   });
 
-  test("should open on Cmd+K too", async ({ app, page }) => {
-    await app.store.create("Any card");
-    await page.goto(app.url);
+  // The sign-in lands on the Board, which is all the shortcut needs: no card and no second load.
+  test("should open on Cmd+K too", async ({ app: _signedIn, page }) => {
     await expect(page.locator("section.bu-column").first()).toBeVisible();
 
     await page.keyboard.press("Meta+k");

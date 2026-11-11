@@ -5,7 +5,9 @@ import { testJobs } from "../../scripts/test-jobs.mjs";
 export default defineConfig({
   testDir: "./e2e",
   globalSetup: "./e2e/global-setup.ts",
-  // Every spec makes a real store and server; on a loaded host bd alone can take seconds.
+  // The budget for what the page and the server do. Every spec also makes a real store and server
+  // and runs bd itself; e2e/fixtures.ts runs that setup outside the budget (`unbudgeted`), since on
+  // a loaded host each bd process can take seconds.
   timeout: 90_000,
   expect: { timeout: 15_000 },
   fullyParallel: true,

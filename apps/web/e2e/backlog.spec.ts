@@ -17,7 +17,10 @@ test.describe("the Backlog", () => {
     ).toEqual([p1, rankedP2, oldP2, newP2]);
   });
 
-  test("should write a row's priority and status with guarded writes", async ({ app, page }) => {
+  test("should write a row's priority and status with guarded writes", async ({
+    signedIn: app,
+    page,
+  }) => {
     const id = await app.store.create("Edit in place", { priority: 3 });
     await page.goto(`${app.url}backlog`);
 

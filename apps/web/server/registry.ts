@@ -17,6 +17,7 @@ import {
   readAllowlist,
   StoreClosed,
 } from "./allowlist.ts";
+import { DEFAULT_QUEUE_WAIT_SECONDS, queuedBd } from "./bd-queue.ts";
 import type { ConfigEnv } from "./config.ts";
 
 const exec = promisify(execFile);
@@ -170,6 +171,8 @@ export interface RegistryOptions {
   configEnv: ConfigEnv;
   bdEnv?: NodeJS.ProcessEnv;
   health: AllowlistHealth;
+  /** How long a bd call may wait for its store's earlier calls, read at each call (bd-queue.ts). */
+  queueWaitMs?: () => Promise<number>;
 }
 
 async function readInventory(home: string | undefined) {
@@ -278,10 +281,13 @@ export function createStoreRegistry(options: RegistryOptions): StoreRegistry {
     let bd = clients.get(path);
     if (bd === undefined) {
       bd = gatedBd(
-        createBdClient({
-          cwd: path,
-          ...(options.bdEnv === undefined ? {} : { env: options.bdEnv }),
-        }),
+        queuedBd(
+          createBdClient({
+            cwd: path,
+            ...(options.bdEnv === undefined ? {} : { env: options.bdEnv }),
+          }),
+          options.queueWaitMs ?? (async () => DEFAULT_QUEUE_WAIT_SECONDS * 1000),
+        ),
         async () => {
           const reading = await read();
           if (reading.open.some((store) => store.path === path)) return undefined;
