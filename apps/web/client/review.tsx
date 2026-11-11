@@ -15,12 +15,15 @@ import {
   withQueueFilters,
 } from "@beads-ui/core";
 import {
+  HandoffStatus,
+  type HandoffView,
   type OptionsRead,
   PromptComposer,
   REVIEW_SHORTCUTS,
   type ReviewActions,
   ReviewQueue,
   readOptionsOutput,
+  type SendOptions,
   ShortcutSettings,
 } from "@sergeiwallace/beads-ui-web-ui";
 import { useCallback, useEffect, useMemo, useReducer, useState, useSyncExternalStore } from "react";
@@ -126,11 +129,12 @@ function optionsOf(payload: ReviewPayload | undefined): OptionsRead {
 export const reviewActions: ReviewActions = {
   answer: (entry, input) =>
     dispatchApi.answer({ item: entry.item?.path ?? "", ...input }).then((reply) => reply.dispatch),
-  prompt: (entry, text) =>
+  prompt: (entry, text, options) =>
     (entry.source === "held"
-      ? dispatchApi.prompt({ item: entry.item?.path ?? "", text })
-      : dispatchApi.prompt({ repo: entry.repo ?? "", task: entry.task ?? "", text })
+      ? dispatchApi.prompt({ item: entry.item?.path ?? "", text, ...options })
+      : dispatchApi.prompt({ repo: entry.repo ?? "", task: entry.task ?? "", text, ...options })
     ).then((reply) => reply.dispatch),
+  deliverNow: (id) => dispatchApi.deliverNow(id),
   unblock: (entry, resolution, followUp) =>
     dispatchApi.unblock({
       repo: entry.repo ?? "",
@@ -238,11 +242,29 @@ export function ReviewPage() {
   );
 }
 
+/** An owner change's handoff on a task's detail (T-W2.2), when one was started on this host. */
+export function TaskHandoff({ id, repository }: { id: string; repository: string }) {
+  const read = useCallback(
+    () =>
+      dispatchApi.handoff(repository, id).then(
+        (view): HandoffView | undefined => view,
+        (error: unknown) => {
+          if (error instanceof ApiFailure && error.status === 404) return undefined;
+          throw error;
+        },
+      ),
+    [id, repository],
+  );
+  return <HandoffStatus read={read} />;
+}
+
 /** The composer on a task's detail: a prompt to the task's owning session. */
 export function TaskComposer({ id, repository }: { id: string; repository: string }) {
   const send = useCallback(
-    (text: string) =>
-      dispatchApi.prompt({ repo: repository, task: id, text }).then((reply) => reply.dispatch),
+    (text: string, options?: SendOptions) =>
+      dispatchApi
+        .prompt({ repo: repository, task: id, text, ...options })
+        .then((reply) => reply.dispatch),
     [id, repository],
   );
   return (
@@ -250,6 +272,7 @@ export function TaskComposer({ id, repository }: { id: string; repository: strin
       label={`Prompt ${id}`}
       send={send}
       status={reviewActions.status}
+      deliverNow={dispatchApi.deliverNow}
       {...(reviewActions.loadSkills === undefined ? {} : { loadSkills: reviewActions.loadSkills })}
     />
   );

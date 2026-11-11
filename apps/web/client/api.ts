@@ -13,6 +13,7 @@ import type {
   CostSection,
   DispatchStatus,
   DispatchSummary,
+  HandoffView,
   // A held item's detail read failure (server/held-detail.ts); the Review read's own failure
   // shape, from server/dispatch.ts, is HeldReadFailure below.
   HeldReadFailure as HeldDetailFailure,
@@ -30,6 +31,8 @@ export interface ApiErrorBody {
   message: string;
   source?: string;
   exitCode?: number | null;
+  /** The same request may succeed once the state it names changes, such as an owner's liveness. */
+  retry?: boolean;
 }
 
 /** How one store's read went in a board read: its issue count, or the error it failed with. */
@@ -53,6 +56,20 @@ export class ApiFailure extends Error {
   get exitCode(): number | null {
     if (this.error.kind === "stale") return 13;
     return this.error.exitCode ?? null;
+  }
+}
+
+/**
+ * An owner change that started a handoff (T-W2.2): nothing is reassigned until the receiver takes
+ * the work, so the picker keeps the stored owner and says where the handoff stands.
+ */
+export class HandoffPending extends Error {
+  readonly state: string;
+  readonly source: string;
+  constructor(state: string, source: string) {
+    super(`${state} (from ${source})`);
+    this.state = state;
+    this.source = source;
   }
 }
 
@@ -201,8 +218,17 @@ export const api = {
   // Phase W1: sprint moves, the owner picker, list reorder, the Queue view and held-item detail.
   sprint: (ref: IssueRef, to: string, from: string, shown: string) =>
     post<{ id: string; sprint: string }>(issuePath(ref, "/sprint"), { to, from, shown }),
-  owner: (ref: IssueRef, to: string, shown: string, status: string) =>
-    post<{ id: string; assignee: string }>(issuePath(ref, "/owner"), { to, shown, status }),
+  /**
+   * The owner picker's write. A claimed task's change is a handoff (T-W2.2): the owner is not set
+   * yet, so it rejects with HandoffPending naming the handoff's state and its source.
+   */
+  owner: async (ref: IssueRef, to: string, shown: string, status: string) => {
+    const reply = await post<
+      { id: string; assignee: string } | { id: string; handoff: { state: string; source: string } }
+    >(issuePath(ref, "/owner"), { to, shown, status });
+    if ("handoff" in reply) throw new HandoffPending(reply.handoff.state, reply.handoff.source);
+    return reply;
+  },
   listRank: (ref: IssueRef, shown: string, priority: number, above?: IssueRef, below?: IssueRef) =>
     post<{ id: string; rank: string }>(issuePath(ref, "/list-rank"), {
       shown,
@@ -256,8 +282,13 @@ export const dispatchApi = {
   review: () => call<ReviewPayload>("review"),
   heldBody: (path: string) =>
     call<{ path: string; body: string }>(`review/body?path=${encodeURIComponent(path)}`),
-  prompt: (body: { repo: string; task: string; text: string } | { item: string; text: string }) =>
-    post<Written>("dispatch/prompt", body),
+  prompt: (
+    body: ({ repo: string; task: string; text: string } | { item: string; text: string }) & {
+      armGoal?: false;
+    },
+  ) => post<Written>("dispatch/prompt", body),
+  deliverNow: (id: string) =>
+    post<{ id: string; released: true }>(`dispatch/${encodeURIComponent(id)}/deliver-now`, {}),
   answer: (
     body: { item: string } & ({ choices: { decision: string; key: string }[] } | { text: string }),
   ) => post<Written & { answer: string }>("dispatch/answer", body),
@@ -265,6 +296,8 @@ export const dispatchApi = {
     post<UnblockResult>("dispatch/unblock", body),
   status: (id: string) => call<DispatchStatus>(`dispatch/${encodeURIComponent(id)}`),
   skills: () => call<{ skills: Skill[] }>("dispatch/skills"),
+  handoff: (store: string, id: string) =>
+    call<HandoffView>(`handoff?${new URLSearchParams({ store, id }).toString()}`),
 };
 /** The owner picker's candidates for a store (server/edits.ts OwnerCandidates). */
 export interface OwnersPayload {

@@ -5,6 +5,7 @@
 import { copyFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import {
+  type AnnotateResult,
   type CreateResult,
   type DispatchEntry,
   type DispatchRecord,
@@ -13,6 +14,9 @@ import {
   type DispatchTarget,
   foldDispatch,
   isOutstanding,
+  LADDER_OPS,
+  type LadderEntry,
+  planAnnotate,
   planExpiry,
   planReceipt,
   type ReceiptInput,
@@ -36,6 +40,7 @@ function parseLine(text: string, number: number): JournalLine {
     const line = JSON.parse(text) as JournalLine;
     if (line.op === "create") return { op: "create", record: checkSignedRecord(line.record) };
     if (line.op === "receipt" || line.op === "expired" || line.op === "tombstone") return line;
+    if (LADDER_OPS.includes(line.op)) return line;
   } catch {
     // Falls through to the refusal below.
   }
@@ -129,6 +134,18 @@ export class LocalDispatchStore implements DispatchStore {
       if (!plan.ok) return plan;
       await this.append(plan.entries);
       await this.dropBodyIfDone(id);
+      return { ok: true, dispatch: this.stored(id) as StoredDispatch };
+    });
+  }
+
+  annotate(id: string, entry: LadderEntry): Promise<AnnotateResult> {
+    return this.serial.run(async () => {
+      const held = this.held.get(id);
+      if (held === undefined)
+        return { ok: false, problem: "unknown-dispatch", detail: `no dispatch ${id}` };
+      const plan = planAnnotate(held.record, held.entries, entry);
+      if (!plan.ok) return plan;
+      await this.append(plan.entries);
       return { ok: true, dispatch: this.stored(id) as StoredDispatch };
     });
   }

@@ -12,10 +12,12 @@ import type { Allowlist, AllowlistHealth } from "./allowlist.ts";
 import type { Caller } from "./auth.ts";
 import type { WebConfig } from "./config.ts";
 import { DISPATCH_ROUTES } from "./dispatch.ts";
+import type { DispatchLadder } from "./dispatch-ladder.ts";
 import type { DispatchService } from "./dispatch-service.ts";
 import { listRankRoute, ownerRoute, ownersRoute, sprintRoute } from "./edits.ts";
 import type { HeadsFeed } from "./heads-feed.ts";
 import { heldItemRoute } from "./held-detail.ts";
+import { handoffRoute } from "./owner-handoff.ts";
 import { queueViewRoute } from "./queue-view.ts";
 import { RECEIVER_ROUTES } from "./receiver-api.ts";
 import type { OpenStore, StoreRegistry } from "./registry.ts";
@@ -41,6 +43,8 @@ export interface ApiContext {
   health: AllowlistHealth;
   /** The dispatch store the receiver API serves, with the signer and the expiry sweep. */
   dispatches: DispatchService;
+  /** How a written dispatch reaches its session (D-6, D-7, D-10). */
+  ladder: DispatchLadder;
   /** The change feed: a store's board read is kept until its Dolt head moves (D-13). */
   feed?: HeadsFeed<StoreBoard>;
   random: RandomSource;
@@ -74,7 +78,11 @@ export type ApiErrorKind =
   | "forbidden"
   | "store-closed"
   // An owner change on a claimed task, which goes through the holder's handoff (edits.ts).
-  | "handoff-required";
+  | "handoff-required"
+  // An owner change whose holder's liveness the fleet's check could not establish (T-W2.2).
+  | "owner-unknown"
+  // A dispatch action its dispatch's state does not allow, such as deliver now (T-W2.3).
+  | "not-held";
 
 /** Every error body is `{ error: ApiError }`; `source` names what failed (`bd list`, a field). */
 export interface ApiError {
@@ -82,6 +90,8 @@ export interface ApiError {
   message: string;
   source?: string;
   exitCode?: number | null;
+  /** True when the same request may succeed once the state it names changes. */
+  retry?: boolean;
 }
 
 /**
@@ -114,6 +124,8 @@ const STATUS_BY_KIND: Readonly<Record<ApiErrorKind, number>> = {
   forbidden: 403,
   "store-closed": 503,
   "handoff-required": 409,
+  "owner-unknown": 409,
+  "not-held": 409,
 };
 
 export function failure(error: ApiError): ApiReply {
@@ -548,6 +560,7 @@ export const ROUTES: readonly Route[] = [
   // (edits.ts, queue-view.ts, held-detail.ts).
   { method: "POST", path: "/api/issues/:id/sprint", handle: sprintRoute },
   { method: "POST", path: "/api/issues/:id/owner", handle: ownerRoute },
+  { method: "GET", path: "/api/handoff", handle: handoffRoute },
   { method: "POST", path: "/api/issues/:id/list-rank", handle: listRankRoute },
   { method: "GET", path: "/api/owners", handle: ownersRoute },
   { method: "GET", path: "/api/queue-view", handle: queueViewRoute },
