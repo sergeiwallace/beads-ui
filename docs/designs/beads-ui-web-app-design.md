@@ -557,10 +557,10 @@ Nothing that can make a session act ships before this phase: every later phase d
 | # | Phase | Section / Decision | Verified | Notes |
 |---|-------|--------------------|---------|-------|
 | 1 | N/A | Design Overview filled with implementation knowledge, not a stub | - [ ] | |
-| 2 | W0 | D-8, D-14, D-17, D-18, D-20 | - [ ] | |
-| 3 | W1 | D-1 to D-5, D-11, D-12, D-21 | - [ ] | |
-| 4 | W2 | D-6, D-7, D-9, D-10, D-22 | - [ ] | |
-| 5 | W3 | D-13, D-15, D-16 | - [ ] | |
+| 2 | W0 | D-8, D-14, D-17, D-18, D-20 | - [ ] | Code audit 2026-11-11 ([evidence](../research/findings/evidence/beads-ui-web-app-impl-audit-w0-w3-2026-11-11.md)): 38 of 46 criteria MET, 8 PARTIAL, 0 UNMET; three entry-point tests to add (BU-mg2.5.4.22); live run partial (Approval Log) |
+| 3 | W1 | D-1 to D-5, D-11, D-12, D-21 | - [ ] | Code audit 2026-11-11: 48 of 51 MET, 3 PARTIAL, 0 UNMET; two entry-point tests to add (BU-mg2.5.4.22); live run waits on the served instance's swap |
+| 4 | W2 | D-6, D-7, D-9, D-10, D-22 | - [ ] | Code audit 2026-11-11: 26 of 26 MET; live run waits on the swap and on automatic wakes for the test session's host |
+| 5 | W3 | D-13, D-15, D-16 | - [ ] | Code audit 2026-11-11: 8 of 11 MET, 3 PARTIAL (proved by the live runs from each laptop), 0 UNMET |
 | 6 | W4 | MCP App parity | - [ ] | |
 
 **Audit completed:** not yet
