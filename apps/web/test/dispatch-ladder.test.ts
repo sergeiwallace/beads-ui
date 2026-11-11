@@ -244,8 +244,10 @@ describe("rung 1, Agent Mail through the notifier (T-W2.1)", () => {
   it("should show every dispatch of a coalesced event, and try no rung 3 for any, when the shown receipt names only the first id", async () => {
     await env.write(config({ coalesce: 10, shownWithin: 5 }));
     const { id, owner } = await ownedTask();
-    const started = Date.now();
     const first = await prompt(id, "One");
+    // The window opens when the first is admitted, as its request returns; its own bd work
+    // before that is not inside the window.
+    const started = Date.now();
     const second = await prompt(id, "Two");
     const third = await prompt(id, "Three");
     expect(Date.now() - started).toBeLessThan(10_000);
@@ -266,8 +268,9 @@ describe("rung 1, Agent Mail through the notifier (T-W2.1)", () => {
   it("should show no dispatch of a coalesced event when the shown receipt comes from another session", async () => {
     await env.write(config({ coalesce: 10 }));
     const { id } = await ownedTask();
-    const started = Date.now();
     const first = await prompt(id, "One");
+    // The window opens when the first is admitted, as its request returns.
+    const started = Date.now();
     const second = await prompt(id, "Two");
     expect(Date.now() - started).toBeLessThan(10_000);
     await waitFor(async () => expect(await calls("agent-mail")).toHaveLength(1));
