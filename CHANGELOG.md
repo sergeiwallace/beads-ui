@@ -8,6 +8,14 @@ documentation.
 
 ## [Unreleased]
 
+### Added
+
+- `beads-ui-web install-service --enable` writes the unit, enables and starts it (restarting it
+  when it already runs), and waits until `/healthz` answers 200. It exits 1 with the last probe
+  error and the `journalctl` command when the probe times out, and refuses, before writing
+  anything, while a transient unit of the same name is live. The `[web]` keys
+  `service_probe_timeout_seconds` and `service_probe_interval_seconds` set the probe's wait.
+
 ## [0.25.0]
 
 ### Added

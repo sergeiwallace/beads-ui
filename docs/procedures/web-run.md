@@ -162,6 +162,28 @@ A user service starts at boot only when the user has lingering on; `install-serv
 it is off. `loginctl enable-linger <user>` turns it on. Follow the server with
 `journalctl --user -u beads-ui-web.service`.
 
+To install and start it in one step, add `--enable`:
+
+```sh
+beads-ui-web install-service --enable [--port <n>]
+```
+
+After writing the unit and reloading, it runs `systemctl --user enable --now beads-ui-web.service`,
+and when the service was already running it also runs `systemctl --user restart
+beads-ui-web.service`, so a re-run picks up the new unit and code. It then polls
+`http://127.0.0.1:<port>/healthz` (the probe that needs no credential; `/api/health` takes a
+browser session) until it answers 200, and prints the unit path and the answer. When the probe has
+not answered 200 within `[web] service_probe_timeout_seconds` (60 unless set), polling every
+`[web] service_probe_interval_seconds` (1 unless set), it exits 1 and prints the last probe error
+and the `journalctl` command; the unit stays enabled, so a fix and a restart recover it. Both
+settings are read when the command runs.
+
+A server started by hand with `systemd-run --user --unit beads-ui-web` is a transient unit of the
+same name, and it shadows the installed unit. `install-service --enable` checks
+`systemctl --user show -p Transient` first and, when it reads `yes`, refuses before writing or
+enabling anything; it prints `systemctl --user stop beads-ui-web.service` and the command to run
+again. Without `--enable` it writes the unit as before and prints the same warning.
+
 To reach the server from another machine, see [Reach the web app from another machine](web-access.md).
 
 ## Live updates
@@ -311,6 +333,8 @@ port = 4810            # --port overrides it
 host = "127.0.0.1"     # beyond loopback only with a valid [auth] table
 base_path = "/beads"   # the path the app is mounted under, such as behind app-portal; "/" unset
 bd_queue_wait_seconds = 60  # how long a bd call waits for its store's earlier calls; read at each call
+service_probe_timeout_seconds = 60   # how long install-service --enable waits for /healthz; read when it runs
+service_probe_interval_seconds = 1   # the wait between its probes; read when it runs
 
 [views]
 rank = true            # the web app's default; false keeps columns sorted
