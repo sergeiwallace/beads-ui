@@ -117,7 +117,9 @@ describe("the ladder across a restart (T-W2.1)", () => {
   });
 
   it("should try the next rung for a carried dispatch whose shown deadline was running when the server stopped", async () => {
-    await env.write(config(0, 2));
+    // The first server's shown deadline is far off, so it cannot try the next rung before it
+    // stops however slow the stop is; the second reads the short one at its start.
+    await env.write(config(0, 600));
     const task = await ownedTask();
     const before = (await calls("agent-mail")).length;
     const first = await start();
@@ -126,6 +128,7 @@ describe("the ladder across a restart (T-W2.1)", () => {
     await first.close();
     expect(await calls("prompt-injection")).toEqual([]);
 
+    await env.write(config(0, 2));
     const second = await start();
     try {
       // Every carried dispatch whose deadline the stop cut short is planned again, the first
