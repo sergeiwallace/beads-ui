@@ -1,6 +1,6 @@
 import type { ReviewQueueEntry } from "@beads-ui/core";
 import type { Skill } from "../composer/skills.ts";
-import type { DispatchStatus, DispatchSummary } from "../composer/types.ts";
+import type { DispatchStatus, DispatchSummary, SendOptions } from "../composer/types.ts";
 
 /** An answer to a held item: an option per decision chosen with a control, or typed text. */
 export type AnswerInput = { choices: { decision: string; key: string }[] } | { text: string };
@@ -20,8 +20,10 @@ export type UnblockResult =
 export interface ReviewActions {
   answer(entry: ReviewQueueEntry, input: AnswerInput): Promise<DispatchSummary>;
   unblock(entry: ReviewQueueEntry, resolution: string, followUp: string): Promise<UnblockResult>;
-  prompt(entry: ReviewQueueEntry, text: string): Promise<DispatchSummary>;
+  prompt(entry: ReviewQueueEntry, text: string, options?: SendOptions): Promise<DispatchSummary>;
   status(id: string): Promise<DispatchStatus>;
+  /** Releases a dispatch waiting on a paused goal at once (T-W2.3). */
+  deliverNow?: (id: string) => Promise<unknown>;
   /** A held item's Markdown body. */
   body(entry: ReviewQueueEntry): Promise<string>;
   loadSkills?: () => Promise<Skill[]>;

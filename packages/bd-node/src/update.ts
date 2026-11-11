@@ -25,6 +25,12 @@ export interface UpdateGuard {
   ifStatus?: string;
   /** `""` requires the issue to be unassigned. */
   ifAssignee?: string;
+  /**
+   * bd's `--force`: lets the write replace another actor's live in_progress claim. Only for a
+   * claim the fleet's liveness check proved abandoned (web app design T-W2.2). bd takes it with
+   * `ifStatus` but refuses it beside `ifAssignee`.
+   */
+  force?: boolean;
 }
 
 // bd reads a repeated label flag as a comma-separated list, so a comma would split one label.
@@ -52,7 +58,11 @@ export function updateArgv(id: string, fields: UpdateFields, guard: UpdateGuard 
   }
   // bd refuses a guard with no field update ("Requires a field update").
   if (flags.length === 0) throw new RangeError("bd update needs at least one field to write");
+  if (guard.force === true && guard.ifAssignee !== undefined) {
+    throw new RangeError("bd update refuses --force together with --if-assignee");
+  }
   if (guard.ifStatus !== undefined) flags.push("--if-status", statusArg(guard.ifStatus));
   if (guard.ifAssignee !== undefined) flags.push(`--if-assignee=${guard.ifAssignee}`);
+  if (guard.force === true) flags.push("--force");
   return ["bd", "update", issueIdArg(id), ...flags, "--json"];
 }

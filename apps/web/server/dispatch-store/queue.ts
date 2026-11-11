@@ -8,6 +8,7 @@
 import { copyFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import {
+  type AnnotateResult,
   type CreateResult,
   type DispatchEntry,
   type DispatchKind,
@@ -17,6 +18,8 @@ import {
   type DispatchTarget,
   foldDispatch,
   isOutstanding,
+  type LadderEntry,
+  planAnnotate,
   planExpiry,
   planReceipt,
   type ReceiptInput,
@@ -302,6 +305,18 @@ export class QueueDispatchStore implements DispatchStore {
       else await this.post(`/api/queue/prompts/${found.promptId}/consumed`, {});
       await this.appendEntries(found, plan.entries);
       return { ok: true, dispatch: await this.finish(found) };
+    });
+  }
+
+  annotate(id: string, entry: LadderEntry): Promise<AnnotateResult> {
+    return this.serial.run(async () => {
+      const found = await this.load(id);
+      if (found === undefined)
+        return { ok: false, problem: "unknown-dispatch", detail: `no dispatch ${id}` };
+      const plan = planAnnotate(found.record, found.entries, entry);
+      if (!plan.ok) return plan;
+      await this.appendEntries(found, plan.entries);
+      return { ok: true, dispatch: this.fold(found) };
     });
   }
 
