@@ -1,0 +1,64 @@
+digraph roadmap {
+    graph [
+        rankdir=TB,
+        bgcolor="white",
+        pad=0.25,
+        nodesep=0.4,
+        ranksep=0.45,
+        fontname="DejaVu Sans",
+        fontsize=16,
+        compound=true
+    ];
+    node [
+        shape=box,
+        style="rounded,filled",
+        fillcolor="#eff6ff",
+        color="#2563eb",
+        fontcolor="#172554",
+        fontname="DejaVu Sans",
+        fontsize=15,
+        margin="0.18,0.12",
+        penwidth=1.4
+    ];
+    edge [color="#475569", penwidth=1.4, arrowsize=0.75];
+
+    subgraph cluster_current {
+        label="Implemented in source";
+        style="rounded,filled";
+        fillcolor="#f8fafc";
+        color="#cbd5e1";
+        fontcolor="#334155";
+        margin=18;
+
+        core [label="Shared task core"];
+        mod [label="Claude Code mod"];
+        web [label="Self-hosted web app"];
+        { rank=same; mod; web; }
+
+        core -> mod;
+        core -> web;
+    }
+
+    subgraph cluster_proposed {
+        label="Proposed directions - not released";
+        labelloc=b;
+        style="rounded,filled";
+        fillcolor="#fffbeb";
+        color="#d6b77a";
+        fontcolor="#713f12";
+        margin=18;
+        node [fillcolor="#fff7ed", color="#b45309", fontcolor="#713f12"];
+
+        native [label="Later: Native clients"];
+        coordination [label="Next: Coordination\nDelivery, handoff, goals"];
+        hosting [label="Later: Cloud hosting\nDeployment templates"];
+        mcp [label="Planned: MCP App"];
+        { rank=same; native; coordination; hosting; }
+
+        coordination -> mcp [style=dashed, color="#a16207"];
+    }
+
+    core -> native [style=dashed, color="#a16207"];
+    web -> coordination [style=dashed, color="#a16207"];
+    web -> hosting [style=dashed, color="#a16207"];
+}

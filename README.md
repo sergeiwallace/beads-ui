@@ -101,20 +101,9 @@ This is a high-level direction, not a second task tracker. The repository's Bead
 `BU`) is the source of truth for task status, dependencies and priorities. The timing buckets are
 tentative and relative; they are not release dates or commitments.
 
-```mermaid
-flowchart TD
-    subgraph current["Implemented in source"]
-        core["Shared task core"]
-        mod["Claude Code mod"]
-        web["Self-hosted web app"]
-        core --> mod
-        core --> web
-    end
-    web -.-> coordination["Next: delivery, handoff and goal workflows"]
-    coordination -.-> mcp["Planned: MCP App"]
-    web -.-> hosting["Later: cloud-hosting templates"]
-    core -.-> native["Later: native clients"]
-```
+![Roadmap: the shared core powers the implemented Claude Code mod and web app; dashed paths lead to proposed coordination, MCP App, hosting and native clients.](docs/diagrams/roadmap.png)
+
+[Scalable diagram](docs/diagrams/roadmap.svg) · [Editable source and regeneration](docs/diagrams/README.md)
 
 Solid arrows show the shared foundation; dashed arrows show proposed development directions,
 not runtime connections or a guaranteed release sequence.
