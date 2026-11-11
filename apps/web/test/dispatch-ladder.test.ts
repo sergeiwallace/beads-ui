@@ -606,11 +606,16 @@ describe("goal arming (T-W2.3)", () => {
 
   it("should release a dispatch waiting on a paused goal when the recorded pause window ends", async () => {
     const { id, owner } = await ownedTask();
-    const until = new Date(Date.now() + 1_500).toISOString();
-    await receiver("/sessions/goal", { session: owner, state: "paused", until });
+    await receiver("/sessions/goal", { session: owner, state: "paused", until: inAnHour() });
     const dispatch = await prompt(id, "Released by the clock");
     await settle();
     expect((await status(dispatch)).state).toBe("waiting");
+    // The window ends only once the dispatch is seen waiting: a window set before the prompt can
+    // end before a loaded host has made and held the dispatch.
+    const until = new Date(Date.now() + 500).toISOString();
+    expect(
+      (await receiver("/sessions/goal", { session: owner, state: "paused", until })).status,
+    ).toBe(204);
     await waitFor(async () => expect(await calls("agent-mail")).toHaveLength(1));
     const read = await status(dispatch);
     expect(read.ladder.hold).toBeUndefined();

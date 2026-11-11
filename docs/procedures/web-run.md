@@ -310,6 +310,7 @@ once, at start. `[auth]`, `[hosts]` and `[queue]` come from the user's file alon
 port = 4810            # --port overrides it
 host = "127.0.0.1"     # beyond loopback only with a valid [auth] table
 base_path = "/beads"   # the path the app is mounted under, such as behind app-portal; "/" unset
+bd_queue_wait_seconds = 60  # how long a bd call waits for its store's earlier calls; read at each call
 
 [views]
 rank = true            # the web app's default; false keeps columns sorted

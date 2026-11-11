@@ -13,6 +13,7 @@ import {
   userConfigPath,
   WEB_RANK_DEFAULT,
 } from "@beads-ui/core";
+import { DEFAULT_QUEUE_WAIT_SECONDS } from "./bd-queue.ts";
 
 /** The address the server binds unless `[web] host` names another, which needs `[auth]`. */
 export const LOOPBACK = "127.0.0.1";
@@ -40,6 +41,11 @@ export interface WebConfig extends BeadsUiConfig {
   handoffReceivers?: string[];
   /** `[review] command`, from the user's file alone: the held store's tool, for held items' detail. */
   reviewCommand?: string[];
+  /**
+   * `[web] bd_queue_wait_seconds`: how long a bd call may wait for its store's earlier calls before
+   * it answers a failure naming the wait (bd-queue.ts); DEFAULT_QUEUE_WAIT_SECONDS when unset.
+   */
+  bdQueueWaitSeconds: number;
   /** The file the settings came from, or undefined when no candidate exists. */
   source?: string;
   /** One line per setting the file got wrong; the default stands for each. */
@@ -109,6 +115,7 @@ export async function readWebConfig(repoRoot: string, env: ConfigEnv): Promise<W
   const config: WebConfig = {
     ...base.config,
     rank: rank.rank,
+    bdQueueWaitSeconds: DEFAULT_QUEUE_WAIT_SECONDS,
     problems: [
       ...base.problems,
       ...rank.problems,
@@ -123,6 +130,9 @@ export async function readWebConfig(repoRoot: string, env: ConfigEnv): Promise<W
   if (queue.url !== undefined) config.queueUrl = queue.url;
   if (queue.repo !== undefined) config.queueRepo = queue.repo;
   if (analytics.costExport !== undefined) config.costExport = analytics.costExport;
+  const queueWait = resolveBdQueueWait(text);
+  config.problems.push(...queueWait.problems);
+  if (queueWait.seconds !== undefined) config.bdQueueWaitSeconds = queueWait.seconds;
   // The owner picker's rule and the held tool come from the user's file, as `[queue]` does: a
   // repository's own file must not widen who may receive its tasks or name a command to run.
   const userText = user.kind === "file" ? user.text : undefined;
@@ -134,6 +144,28 @@ export async function readWebConfig(repoRoot: string, env: ConfigEnv): Promise<W
   if (review.command !== undefined) config.reviewCommand = review.command;
   if (found !== undefined) config.source = found[0];
   return config;
+}
+
+/** `[web] bd_queue_wait_seconds`: a positive number of seconds, or nothing when unset. */
+export function resolveBdQueueWait(text: string | undefined): {
+  seconds?: number;
+  problems: string[];
+} {
+  const problems: string[] = [];
+  if (text === undefined) return { problems };
+  const parsed = parseToml(text);
+  if (!parsed.ok) return { problems };
+  const table = parsed.value.web;
+  if (typeof table !== "object" || table === null || Array.isArray(table)) return { problems };
+  const value = (table as Record<string, unknown>).bd_queue_wait_seconds;
+  if (value === undefined) return { problems };
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    problems.push(
+      `web.bd_queue_wait_seconds must be a positive number of seconds, not ${JSON.stringify(value)}; using ${DEFAULT_QUEUE_WAIT_SECONDS}`,
+    );
+    return { problems };
+  }
+  return { seconds: value, problems };
 }
 
 /** The `beads-ui.toml` table of the owner picker's handoff rule (web app design T-W1.0). */

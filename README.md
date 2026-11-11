@@ -110,9 +110,9 @@ flowchart TD
         core --> mod
         core --> web
     end
-    web -.-> coordination["Next: delivery, handoff and goal workflows"]
+    web -.-> coordination["Next: web coordination"]
     coordination -.-> mcp["Planned: MCP App"]
-    web -.-> hosting["Later: cloud-hosting templates"]
+    web -.-> hosting["Later: hosting templates"]
     core -.-> native["Later: native clients"]
 ```
 

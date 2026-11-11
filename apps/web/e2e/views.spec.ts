@@ -14,6 +14,26 @@ const sent = (page: Page, id: string, kind: "sprint" | "owner" | "list-rank") =>
       new URL(response.url()).pathname === `/api/issues/${id}/${kind}`,
   );
 
+/**
+ * The page's next Queue read, with whether each store was read. The view draws its rows once this
+ * lands, so a spec waits for it instead of an expectation's 15 seconds racing a loaded host's bd.
+ */
+const queueRead = async (page: Page) => {
+  const response = await page.waitForResponse(
+    (response) => new URL(response.url()).pathname === "/api/queue-view",
+  );
+  const body = (await response.json()) as {
+    reads: { repository: string; ok: boolean; error?: { message: string } }[];
+  };
+  return {
+    status: response.status(),
+    // A failed read keeps its message, so the assertion's diff says what bd answered.
+    reads: body.reads.map(({ repository, ok, error }) =>
+      error === undefined ? { repository, ok } : { repository, ok, error: error.message },
+    ),
+  };
+};
+
 const press = (target: Locator, touch: boolean) => (touch ? target.tap() : target.click());
 
 const labelsOf = async (app: { store: { bd(...args: string[]): Promise<string> } }, id: string) =>
@@ -256,7 +276,7 @@ test.describe("the Queue view", () => {
   });
 
   test("should encode a filter in the URL and show the same list when that URL is opened", async ({
-    app,
+    signedIn: app,
     page,
   }) => {
     const repo = basename(app.store.dir);
@@ -270,7 +290,9 @@ test.describe("the Queue view", () => {
     await expect(page).toHaveURL(/[?&]type=bug/);
     const url = page.url();
 
+    const reopened = queueRead(page);
     await page.goto(url);
+    expect(await reopened).toEqual({ status: 200, reads: [{ repository: repo, ok: true }] });
     const keys = () =>
       page
         .locator(".bu-queue-row")
