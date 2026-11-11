@@ -675,7 +675,11 @@ Build legs. Each is one Opus `engineer` leaf in its own worktree; beads-ui legs 
 | H1 | W2 dispatch ladder, receiver-first owner handoff, goal arming (T-W2.1 to T-W2.3) | beads-ui | running |
 | B | The held store's structured-options command (D-2) | ai-harness | merged |
 | C | The envelope verifier and golden vectors (T-W0.4, D-20) | ai-harness | merged |
-| E | The receiving-side client and the trusted-keys install step (T-W0.3, T-W0.4) | ai-harness | built, waiting for its push slot |
+| E | The receiving-side client and the trusted-keys install step (T-W0.3, T-W0.4) | ai-harness | merged; ai-harness PR #9016 |
+| G3 | The receiver's `answer` and `unblock` handlers on the receiving host (T-W1.2, T-W1.6) | ai-harness | merged; ai-harness PR #9050 |
+| H2 | The notifier's `web-dispatch` typed source, and `arm_goal` and goal-state reporting in the receiving client (T-W2.1, T-W2.3) | ai-harness | merged; ai-harness PR #9066 |
+| H3 | The holder's side of a handoff request: run the receiver-first handoff and post each progress step (T-W2.2) | ai-harness | merged; ai-harness PR #9125 |
+| J | W4 MCP server and dispatch tool, with the MCP App view's draft confirm (W4, T-4.1), and three fixes found during the build | beads-ui | running |
 | I2 | The work pair's forward entry for the web port (D-16, T-W3.2) | ai-harness | merged |
 | I3 | app-portal admits the Node member and registers `/beads` (D-15) | app-portal | merged |
 
