@@ -655,7 +655,7 @@ The build stage's ledger, written by the Opus coordinator for ops-vm-3 under run
 | integration | parent: each leaf's branch is read by content and merged into the coordinator's consolidated branch, which lands at each phase boundary |
 | scope | Phase 3 of the beads-ui design is built first in this run. Every phase here extends it ("which they assume built first or alongside", Implementation Phases), the ask names kanban and backlog views, and none of it existed when the build started: beads-ui `origin/main` `bebf2b7` had no `apps/` directory and `packages/` held only `bd-node`. Phase W4 needs the MCP server of the beads-ui design's Phase 4, so that server is built with W4. Both phases are approved parts of the parent design, so building them adds no new design |
 | interface contracts | the [Envelope wire format](#envelope-wire-format) and the [Receiver API](#receiver-api), fixed by the coordinator on 2026-11-09 before the first legs, as contained interface calls inside D-8, D-17, D-20 and T-W0.3 |
-| stage cursor | `implement`: Phase 3, W0's server side, W1 and W3's server side are on main (PRs #88 to #92); W2's beads-ui leg is running; see Build legs below |
+| stage cursor | `implement`: Phase 3, W0, W1, W2 and W3's server sides are on beads-ui main (PRs #88 to #93) and every ai-harness leg is merged; W4's leg J is running; the live W1, W2 and W4 runs wait for the served instance to be swapped to the new code, which is held for Sergei; see Build legs below |
 
 Build legs. Each is one Opus `engineer` leaf in its own worktree; beads-ui legs merge into the coordinator's consolidated branch, and each ai-harness or app-portal leg lands as its own pull request.
 
@@ -672,7 +672,7 @@ Build legs. Each is one Opus `engineer` leaf in its own worktree; beads-ui legs 
 | G2a | W1 Review queue, option cards, one-key answers, composer, unblock, dispatch routes, signing key generated at first start (T-W1.1 to T-W1.4, T-W1.6) | beads-ui | merged; on main in PR #92 |
 | G2b | W1 Sprint view, inline edits, owner picker, Queue view, detail views, Markdown contract and CSP (T-W1.0, T-W1.5, T-W1.7) | beads-ui | merged; on main in PR #92 |
 | I1 | W3 heads feed, shared SSE, the member duties with a public `/healthz`, the access procedure and a supervised user service (T-W3.1, T-W3.2); then the integration of G2a and G2b and the cross-family review's three fixes | beads-ui | merged; on main in PR #92 |
-| H1 | W2 dispatch ladder, receiver-first owner handoff, goal arming (T-W2.1 to T-W2.3) | beads-ui | running |
+| H1 | W2 dispatch ladder, receiver-first owner handoff, goal arming (T-W2.1 to T-W2.3) | beads-ui | merged; on main in PR #93, released as v0.25.0 |
 | B | The held store's structured-options command (D-2) | ai-harness | merged |
 | C | The envelope verifier and golden vectors (T-W0.4, D-20) | ai-harness | merged |
 | E | The receiving-side client and the trusted-keys install step (T-W0.3, T-W0.4) | ai-harness | merged; ai-harness PR #9016 |
