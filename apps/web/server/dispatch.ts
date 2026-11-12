@@ -656,14 +656,24 @@ export async function writeDispatch(
 }
 
 /** The issue a write names by `repo` and `task` in the body, read from its open store. */
-async function taskIn(
+function taskIn(
   request: ApiRequest,
   context: ApiContext,
 ): Promise<{ store: OpenStore; issue: Issue } | ApiReply> {
   const repo = textOf(request.body, "repo");
   const id = textOf(request.body, "task");
-  if (repo === undefined || id === undefined)
-    return invalid("name the task with `repo` and `task`");
+  if (repo === undefined || id === undefined) {
+    return Promise.resolve(invalid("name the task with `repo` and `task`"));
+  }
+  return issueIn(context, repo, id);
+}
+
+/** The issue `id` in the open store `repo`. */
+async function issueIn(
+  context: ApiContext,
+  repo: string,
+  id: string,
+): Promise<{ store: OpenStore; issue: Issue } | ApiReply> {
   const store = await storeNamed(context, repo);
   if (!isStore(store)) return store;
   let shown: Awaited<ReturnType<OpenStore["bd"]["show"]>>;
@@ -707,7 +717,23 @@ async function promptRoute(request: ApiRequest, context: ApiContext): Promise<Ap
       ...(joinedStore === undefined || row.joined === undefined ? {} : { mirrorIn: joinedStore }),
     });
   }
-  const found = await taskIn(request, context);
+  const repo = textOf(request.body, "repo");
+  const task = textOf(request.body, "task");
+  if (repo === undefined || task === undefined) {
+    return invalid("name the task with `repo` and `task`");
+  }
+  return promptTask(context, { repo, task, text, armGoal });
+}
+
+/**
+ * A prompt on the issue `task` in the open store `repo`, to the session that owns it, written
+ * through writeDispatch: the composer's and the MCP server's prompts take this one path (W4).
+ */
+export async function promptTask(
+  context: ApiContext,
+  input: { repo: string; task: string; text: string; armGoal: boolean },
+): Promise<ApiReply> {
+  const found = await issueIn(context, input.repo, input.task);
   if (isReply(found)) return found;
   const settings = await readDispatchSettings(context);
   const target = await ownerOf(found.issue, context, settings);
@@ -716,9 +742,9 @@ async function promptRoute(request: ApiRequest, context: ApiContext): Promise<Ap
     task: { repo: found.store.repository, id: found.issue.id },
     target: target.value,
     kind: "prompt",
-    body: text,
-    armGoal,
-    armGoalCleared: !armGoal,
+    body: input.text,
+    armGoal: input.armGoal,
+    armGoalCleared: !input.armGoal,
     mirrorIn: found.store,
   });
 }

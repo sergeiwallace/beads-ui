@@ -17,6 +17,7 @@ import type { DispatchService } from "./dispatch-service.ts";
 import { listRankRoute, ownerRoute, ownersRoute, sprintRoute } from "./edits.ts";
 import type { HeadsFeed } from "./heads-feed.ts";
 import { heldItemRoute } from "./held-detail.ts";
+import { MCP_ROUTES } from "./mcp.ts";
 import { handoffRoute } from "./owner-handoff.ts";
 import { queueViewRoute } from "./queue-view.ts";
 import { RECEIVER_ROUTES } from "./receiver-api.ts";
@@ -549,6 +550,88 @@ async function rankRoute(request: ApiRequest, context: ApiContext): Promise<ApiR
   return { status: 200, body: { id, rank: key.value } };
 }
 
+/** The stores a read addresses: the one `?store=` names, or every open store. */
+async function storesOf(request: ApiRequest, context: ApiContext): Promise<OpenStore[] | ApiReply> {
+  const named = request.query.get(STORE_PARAM);
+  if (named === null || named === "") return context.stores.open();
+  const chosen = await storeOf(request, context, named);
+  return isStore(chosen) ? [chosen] : chosen;
+}
+
+/** `bd ready` in each addressed store: the tasks with no open blocker (T-4.1, beads_ready). */
+async function readyRoute(request: ApiRequest, context: ApiContext): Promise<ApiReply> {
+  const stores = await storesOf(request, context);
+  if (!Array.isArray(stores)) return stores;
+  const reads: { repository: string; ok: boolean; error?: ApiError }[] = [];
+  const issues: (Issue & { repository: string })[] = [];
+  for (const store of stores) {
+    const ready = await store.bd.ready();
+    if (ready.kind !== "ok") {
+      reads.push({
+        repository: store.repository,
+        ok: false,
+        error: errorOf(bdFailure("bd ready", ready)),
+      });
+      continue;
+    }
+    reads.push({ repository: store.repository, ok: true });
+    for (const issue of ready.value) issues.push({ ...issue, repository: store.repository });
+  }
+  return { status: 200, body: { issues, reads, asOf: context.now() } };
+}
+
+/** A new task in the store `?store=` names, or the only open one (T-4.1, beads_create). */
+async function createRoute(request: ApiRequest, context: ApiContext): Promise<ApiReply> {
+  const title = text(request.body, "title");
+  if (title === undefined) return invalid("a new task needs a `title`");
+  const type = text(request.body, "type");
+  const priority = isObject(request.body) ? request.body.priority : undefined;
+  if (priority !== undefined && !isPriority(priority)) {
+    return invalid("`priority` is a whole number from 0 to 4");
+  }
+  const store = await storeOf(request, context);
+  if (!isStore(store)) return store;
+  let created: BdResult<string>;
+  try {
+    created = await store.bd.create({
+      title,
+      labels: [],
+      ...(type === undefined ? {} : { type }),
+      ...(priority === undefined ? {} : { priority }),
+    });
+  } catch (error) {
+    if (error instanceof RangeError) return invalid(error.message);
+    throw error;
+  }
+  if (created.kind !== "ok") return bdFailure("bd create", created);
+  return { status: 201, body: { id: created.value, repository: store.repository } };
+}
+
+/** `bd close` on a task (T-4.1, beads_close). */
+async function closeRoute(request: ApiRequest, context: ApiContext): Promise<ApiReply> {
+  const id = request.params.id ?? "";
+  const store = await storeOf(request, context);
+  if (!isStore(store)) return store;
+  const result = await guardedWrite(() => store.bd.close(id));
+  if (isReply(result)) return result;
+  if (result.kind !== "ok") return bdFailure("bd close", result);
+  return { status: 200, body: { id, status: "closed" } };
+}
+
+/**
+ * The MCP server's task routes (T-4.1), under `/api/mcp/v1/` so they take the MCP token alone
+ * (D-17): the same reads and writes the web app's own routes make, through the same allowlisted
+ * store registry (D-18).
+ */
+const MCP_TASK_ROUTES: readonly Route[] = [
+  { method: "GET", path: "/api/mcp/v1/board", handle: boardRoute },
+  { method: "GET", path: "/api/mcp/v1/ready", handle: readyRoute },
+  { method: "GET", path: "/api/mcp/v1/issues/:id", handle: issueRoute },
+  { method: "POST", path: "/api/mcp/v1/issues", handle: createRoute },
+  { method: "POST", path: "/api/mcp/v1/issues/:id/status", handle: statusRoute },
+  { method: "POST", path: "/api/mcp/v1/issues/:id/close", handle: closeRoute },
+];
+
 /** Every API route, in one table, so a later layer can stand in front of all of them. */
 export const ROUTES: readonly Route[] = [
   { method: "GET", path: "/api/board", handle: boardRoute },
@@ -574,6 +657,9 @@ export const ROUTES: readonly Route[] = [
   ...RECEIVER_ROUTES,
   // The Review queue and the composer's dispatches (dispatch.ts).
   ...DISPATCH_ROUTES,
+  // The MCP server's task routes, its dispatch routes and the web app's drafts (mcp.ts, W4).
+  ...MCP_TASK_ROUTES,
+  ...MCP_ROUTES,
 ];
 
 export interface RouteMatch {
