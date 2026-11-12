@@ -196,6 +196,27 @@ test.describe("inline edits", () => {
     ).toBeVisible();
   });
 
+  test("should write an unclaimed task's owner from a list row's owner picker", async ({
+    app,
+    page,
+    isMobile,
+  }) => {
+    const known = await app.store.create("Owned already");
+    await app.store.bd("update", known, "--assignee=session-a");
+    const id = await app.store.create("Needs an owner from the list");
+    await page.goto(`${app.url}backlog`);
+
+    const row = page.locator(`tr[data-row-id="${id}"]`);
+    await press(row.getByRole("button", { name: /Owner of .*: none/ }), isMobile);
+    await expect(page.getByText("From the store's assignees")).toBeVisible();
+    const write = sent(page, id, "owner");
+    await press(page.getByRole("menuitem", { name: "session-a" }), isMobile);
+
+    expect((await write).status()).toBe(200);
+    expect(await assigneeOf(app, id)).toBe("session-a");
+    await expect(row.getByRole("button", { name: /Owner of .*: session-a/ })).toBeVisible();
+  });
+
   test("should reorder a backlog row by its Down button, writing a key between its neighbours", async ({
     app,
     page,
