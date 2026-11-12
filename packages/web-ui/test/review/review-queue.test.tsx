@@ -90,6 +90,27 @@ describe("the Review queue", () => {
     expect(screen.getByText("nothing shown: 1 read(s) failed")).toBeTruthy();
     expect(screen.queryByText("nothing to review")).toBeNull();
   });
+
+  it("should draw an item with no priority after every prioritised item, marked P-, without throwing", () => {
+    const unprioritised = { priority: null } as unknown as Partial<Parameters<typeof issue>[1]>;
+    renderReview({
+      state: loaded([
+        taskOf(issue("w-none", { status: "in_progress", ...unprioritised })),
+        taskOf(issue("w-p4", { status: "in_progress", priority: 4 })),
+        taskOf(issue("w-p1", { status: "in_progress", priority: 1 })),
+      ]),
+    });
+    expect(sectionRows("Prompt")).toEqual([
+      "task:work-repo:w-p1",
+      "task:work-repo:w-p4",
+      "task:work-repo:w-none",
+    ]);
+    const prompt = within(screen.getByRole("region", { name: "Prompt" }));
+    const priorities = prompt
+      .getAllByRole("button")
+      .map((row) => row.querySelector(".bu-review-priority")?.textContent);
+    expect(priorities).toEqual(["P1", "P4", "P-"]);
+  });
 });
 
 describe("unblocking from the Review queue", () => {
