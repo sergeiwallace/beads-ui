@@ -8,6 +8,15 @@ documentation.
 
 ## [Unreleased]
 
+## [0.26.2]
+
+### Changed
+
+- The plugin's display name is now "beads-ui for Claude Code", in the plugin manifest and in its
+  marketplace entry, so a listing tells it apart from the separate beads-ui web UI for Beads.
+- The plugin has its own README, `plugins/beads-ui/README.md`: what it does, how to install and
+  use it, and the output of `claude plugin validate`.
+
 ## [0.26.1]
 
 ### Fixed

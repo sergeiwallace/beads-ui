@@ -2,7 +2,12 @@
 
 A task manager for [Beads](https://github.com/steveyegge/beads) issues, with a
 [Claude Code mod](https://code.claude.com/docs/en/plugins/mods/overview) inside the terminal and a
-locally hosted web app, built on one shared core.
+locally hosted web app, built on one shared core. Its Claude Code plugin is listed as "beads-ui for
+Claude Code".
+
+This project is not [mantoni/beads-ui](https://github.com/mantoni/beads-ui), the separate web UI
+for Beads that runs with `npx beads-ui start`: this one centres on a Claude Code plugin whose task
+counts follow the session that owns the work.
 
 It brings familiar task-management views (board, backlog, sprints, roadmap and analytics), session
 ownership and a review queue to Beads stores. Beads remains the task system of record; beads-ui
