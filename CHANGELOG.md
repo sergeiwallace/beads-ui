@@ -8,6 +8,14 @@ documentation.
 
 ## [Unreleased]
 
+## [0.26.3]
+
+### Added
+
+- `docs/worked-uses.md`: three walk-throughs of real tasks, two in the plugin (unblocking a task
+  from the band, and filing, fixing and closing a bug from the pane) and one in the web app
+  (planning a sprint). The plugin README and the project README link to it.
+
 ## [0.26.2]
 
 ### Changed
