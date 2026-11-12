@@ -35,7 +35,9 @@ store (`bd list` works there). Start the session in that repository.
   control also has a key.
 
 The full guide, with keys, configuration and the host refresher, is
-[docs/procedures/mod-install.md](../../docs/procedures/mod-install.md).
+[docs/procedures/mod-install.md](../../docs/procedures/mod-install.md). Three walk-throughs of real
+tasks, from unblocking a task to planning a sprint, are in
+[docs/worked-uses.md](../../docs/worked-uses.md).
 
 ## Validation
 

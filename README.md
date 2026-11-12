@@ -22,6 +22,9 @@ source as of 2026-11-10, not a claim that every design phase or deployment has b
 web app runs from a checkout; its npm workspace is private and versioned `0.0.0`, not a published
 web-app release.
 
+[Three worked uses](docs/worked-uses.md) walk through real tasks, two in the mod and one in the
+web app.
+
 ### Claude Code mod
 
 The mod's pane opens on a task panel: the session's own tasks, a nav to the
