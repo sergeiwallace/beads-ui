@@ -592,6 +592,28 @@ describe("POST /api/dispatch/unblock (T-W1.6)", () => {
     ]);
   });
 
+  it("should keep a multi-line resolution whole in the comment and pass it to the unblock command as one line", async () => {
+    const id = await store.create("Unowned blocker with a long resolution", { status: "blocked" });
+    const resolution = "The upstream fix landed.\n\n  Retry the import,\tthen close it.";
+    const reply = await post("/api/dispatch/unblock", {
+      repo: repoName(store.dir),
+      task: id,
+      resolution,
+    });
+    expect(reply.status).toBe(200);
+    expect((await store.show(id)).status).toBe("in_progress");
+    const texts = (await comments(id)).map((comment) => comment.text);
+    expect(texts.some((text) => text.includes(resolution))).toBe(true);
+    const calls = (await readFile(join(heldDir, "unblock.jsonl"), "utf8")).trim().split("\n");
+    expect(JSON.parse(calls.at(-1) ?? "[]")).toEqual([
+      id,
+      "--to",
+      "in_progress",
+      "--why",
+      "The upstream fix landed. Retry the import, then close it.",
+    ]);
+  });
+
   it("should name the unblock command's refusal and exit code and leave the task blocked", async () => {
     const id = await store.create("Another unowned blocker", { status: "blocked" });
     await writeFile(join(heldDir, "unblock.exit"), "1");

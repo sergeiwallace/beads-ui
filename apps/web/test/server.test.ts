@@ -168,6 +168,12 @@ describe("GET /api/issues/:id", () => {
     expect(reply.body.error).toMatchObject({ kind: "not-found", source: "bd show" });
   });
 
+  it("should name the store it read in the 404 for an id the store does not hold", async () => {
+    const reply = await get("/api/issues/web-nothere");
+    expect(reply.status).toBe(404);
+    expect(reply.body.error.repository).toBe(repoName(store.dir));
+  });
+
   it("should still show the issue and name bd comments as the source when its comments cannot be read", async () => {
     const id = await store.create("Comments fail");
     const failing = await failingBd(["comments"]);

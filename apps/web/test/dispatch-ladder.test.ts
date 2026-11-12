@@ -244,8 +244,10 @@ describe("rung 1, Agent Mail through the notifier (T-W2.1)", () => {
   it("should show every dispatch of a coalesced event, and try no rung 3 for any, when the shown receipt names only the first id", async () => {
     await env.write(config({ coalesce: 10, shownWithin: 5 }));
     const { id, owner } = await ownedTask();
-    const started = Date.now();
     const first = await prompt(id, "One");
+    // The window opens when the first is admitted, as its request returns; its own bd work
+    // before that is not inside the window.
+    const started = Date.now();
     const second = await prompt(id, "Two");
     const third = await prompt(id, "Three");
     expect(Date.now() - started).toBeLessThan(10_000);
@@ -263,11 +265,29 @@ describe("rung 1, Agent Mail through the notifier (T-W2.1)", () => {
     expect(await calls("mod-submit")).toEqual([]);
   });
 
+  it("should show every dispatch of a coalesced event when the shown receipt arrives while its carrier is still running", async () => {
+    await env.write(config({ coalesce: 10, shownWithin: 5 }));
+    // The carrier has delivered and records its call, then takes 3 s to exit.
+    await writeFile(join(tools, "agent-mail.delay-ms"), "3000");
+    const { id, owner } = await ownedTask();
+    const first = await prompt(id, "One");
+    const started = Date.now();
+    const second = await prompt(id, "Two");
+    expect(Date.now() - started).toBeLessThan(10_000);
+    await waitFor(async () => expect(await calls("agent-mail")).toHaveLength(1));
+    const reply = await receiver(`/dispatches/${first}/shown`, { session: owner });
+    expect(reply.status).toBe(204);
+    await settle();
+    for (const one of [first, second]) expect((await status(one)).state, one).toBe("shown");
+    expect(await calls("prompt-injection")).toEqual([]);
+  });
+
   it("should show no dispatch of a coalesced event when the shown receipt comes from another session", async () => {
     await env.write(config({ coalesce: 10 }));
     const { id } = await ownedTask();
-    const started = Date.now();
     const first = await prompt(id, "One");
+    // The window opens when the first is admitted, as its request returns.
+    const started = Date.now();
     const second = await prompt(id, "Two");
     expect(Date.now() - started).toBeLessThan(10_000);
     await waitFor(async () => expect(await calls("agent-mail")).toHaveLength(1));
@@ -639,17 +659,27 @@ describe("goal arming (T-W2.3)", () => {
     expect(reply.text).toMatch(/not waiting on a paused goal/);
   });
 
-  it("should refuse a paused report with no until, and hold nothing on it", async () => {
+  it("should hold a dispatch on a paused report with no until, then release it when the receiver reports the goal active", async () => {
     const { id, owner } = await ownedTask();
     const reported = await receiver("/sessions/goal", {
       session: owner,
       state: "paused",
       reason: "usage limit",
     });
-    expect(reported.status).toBe(404);
-    const dispatch = await prompt(id, "Not held");
+    expect(reported.status).toBe(204);
+    const dispatch = await prompt(id, "After a pause with no known end");
+    await settle();
+    const read = await status(dispatch);
+    expect(read.delivery.text).toBe("waiting: goal paused");
+    expect(read.deliverNow).toBe(true);
+    expect(read.ladder.hold?.until).toBeUndefined();
+    expect((await listed(owner)).map((one) => one.id)).not.toContain(dispatch);
+    expect(await calls("agent-mail")).toEqual([]);
+    expect((await receiver("/sessions/goal", { session: owner, state: "active" })).status).toBe(
+      204,
+    );
     await waitFor(async () => expect(await calls("agent-mail")).toHaveLength(1));
-    expect((await status(dispatch)).ladder.hold).toBeUndefined();
+    expect(flag((await calls("agent-mail"))[0], "--subject")).toBe(`beads-ui dispatch ${dispatch}`);
     expect((await listed(owner)).map((one) => one.id)).toContain(dispatch);
   });
 

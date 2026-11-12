@@ -232,7 +232,14 @@ describe("Vitest's worker cap", () => {
 const vitest = await createVitest("test", { root: process.argv[1], watch: false }, {}, {});
 console.log(JSON.stringify(vitest.config.maxWorkers));
 await vitest.close();`;
-  const CONFIGS = ["", "plugins/beads-ui", "packages/bd-node", "packages/web-ui", "apps/web"];
+  const CONFIGS = [
+    "",
+    "plugins/beads-ui",
+    "packages/bd-node",
+    "packages/mcp-server",
+    "packages/web-ui",
+    "apps/web",
+  ];
 
   const maxWorkers = (dir, jobs) =>
     run(process.execPath, ["--input-type=module", "-e", PROBE, join(ROOT, dir)], { jobs });

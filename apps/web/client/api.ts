@@ -18,6 +18,7 @@ import type {
   // shape, from server/dispatch.ts, is HeldReadFailure below.
   HeldReadFailure as HeldDetailFailure,
   HeldItemSummary,
+  PromptDraft,
   QueueOrderView,
   QueueRowView,
   Skill,
@@ -33,6 +34,8 @@ export interface ApiErrorBody {
   exitCode?: number | null;
   /** The same request may succeed once the state it names changes, such as an owner's liveness. */
   retry?: boolean;
+  /** The store a failed read of one issue addressed (server/routes.ts issueRoute). */
+  repository?: string;
 }
 
 /** How one store's read went in a board read: its issue count, or the error it failed with. */
@@ -298,6 +301,9 @@ export const dispatchApi = {
   skills: () => call<{ skills: Skill[] }>("dispatch/skills"),
   handoff: (store: string, id: string) =>
     call<HandoffView>(`handoff?${new URLSearchParams({ store, id }).toString()}`),
+  /** The prompts a model drafted through the MCP server, waiting for the user (server/mcp.ts). */
+  drafts: () => call<{ drafts: PromptDraft[] }>("drafts"),
+  confirmDraft: (id: string) => post<Written>(`drafts/${encodeURIComponent(id)}/confirm`, {}),
 };
 /** The owner picker's candidates for a store (server/edits.ts OwnerCandidates). */
 export interface OwnersPayload {

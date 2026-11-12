@@ -112,7 +112,21 @@ test.describe("Analytics", () => {
         `[analytics]\ncost_export = "${join(dir, "metrics.jsonl")}"\n`,
       );
 
-      const read = viewRead(page, "/api/analytics");
+      // The read that carries this issue's cost row, not merely the first analytics read: on a
+      // loaded host an earlier read can land first, from before the export was configured or
+      // before the closed issue was listed, and the page draws its rows only from the later one.
+      const read = page.waitForResponse(
+        async (response) => {
+          if (new URL(response.url()).pathname !== "/api/analytics" || !response.ok()) {
+            return false;
+          }
+          const body = (await response.json()) as {
+            cost?: { configured?: boolean; rows?: { id?: string }[] };
+          };
+          return body.cost?.configured === true && (body.cost.rows ?? []).some((r) => r.id === id);
+        },
+        { timeout: 60_000 },
+      );
       await page.goto(`${app.url}analytics`);
       await read;
 
