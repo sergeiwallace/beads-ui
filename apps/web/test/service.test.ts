@@ -255,6 +255,21 @@ describe("beads-ui-web install-service --enable", () => {
     );
   });
 
+  it("should name a probe setting above the Node timer limit and use the default", async () => {
+    await writeFile(
+      join(configHome, "beads-ui", "beads-ui.toml"),
+      hostConfig({
+        allowRepos: ["repo"],
+        extra: "[web]\nservice_probe_interval_seconds = 3000000\n",
+      }),
+    );
+    const result = await install(["--enable", "--port", String(port)]);
+    expect(result.code).toBe(0);
+    expect(result.stderr).toContain(
+      "web.service_probe_interval_seconds must be at most 2147483.647 seconds (the Node timer limit), not 3000000; using 1",
+    );
+  });
+
   it("should rewrite the unit, restart the running service and probe again on a re-run", async () => {
     expect((await install(["--enable", "--port", String(port)])).code).toBe(0);
     await writeFile(calls, "");

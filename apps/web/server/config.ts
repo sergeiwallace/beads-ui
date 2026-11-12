@@ -181,7 +181,13 @@ export function resolveBdQueueWait(text: string | undefined): {
   return resolveWebSeconds(text, "bd_queue_wait_seconds", DEFAULT_QUEUE_WAIT_SECONDS);
 }
 
-/** A `[web]` key that holds a positive number of seconds, or nothing when unset. */
+/**
+ * The longest delay a Node timer holds: setTimeout and AbortSignal.timeout take a 32-bit
+ * millisecond count, and a longer one fires after about 1 ms instead of waiting.
+ */
+export const MAX_TIMER_SECONDS = 2_147_483.647;
+
+/** A `[web]` key that holds a positive number of seconds, at most MAX_TIMER_SECONDS, or nothing when unset. */
 function resolveWebSeconds(
   text: string | undefined,
   key: string,
@@ -198,6 +204,12 @@ function resolveWebSeconds(
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
     problems.push(
       `web.${key} must be a positive number of seconds, not ${JSON.stringify(value)}; using ${fallback}`,
+    );
+    return { problems };
+  }
+  if (value > MAX_TIMER_SECONDS) {
+    problems.push(
+      `web.${key} must be at most ${MAX_TIMER_SECONDS} seconds (the Node timer limit), not ${value}; using ${fallback}`,
     );
     return { problems };
   }

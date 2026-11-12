@@ -8,6 +8,15 @@ documentation.
 
 ## [Unreleased]
 
+## [0.26.1]
+
+### Fixed
+
+- A `[web]` seconds setting above 2147483.647 (the longest delay a Node timer holds) is now named
+  on stderr and its default is used. Before, such a value fired after about 1 ms, so a large
+  `service_probe_interval_seconds` made `install-service --enable` poll `/healthz` in a tight
+  loop.
+
 ## [0.26.0]
 
 ### Added

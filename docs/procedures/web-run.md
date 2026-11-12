@@ -325,7 +325,9 @@ entry that opened the store (`name`, `owner/name` and a path all give `name`), u
 The server reads `beads-ui.toml` on every request: the repository's own file first, else
 `$XDG_CONFIG_HOME/beads-ui/beads-ui.toml` (or `~/.config/beads-ui/beads-ui.toml`). The port is read
 once, at start. `[auth]`, `[hosts]` and `[queue]` come from the user's file alone (Set up once);
-`[auth]` is read at start, `[hosts]` and `[queue]` on every request.
+`[auth]` is read at start, `[hosts]` and `[queue]` on every request. A `[web]` key in seconds takes
+a positive number up to 2147483.647, the longest delay a Node timer holds; a value outside that
+range is named on stderr and the default is used.
 
 ```toml
 [web]
