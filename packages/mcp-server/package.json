@@ -3,6 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "bin": {
+    "beads-ui-mcp": "./bin/beads-ui-mcp.mjs"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
   "devDependencies": {
     "@modelcontextprotocol/client": "2.4.0"
   },
