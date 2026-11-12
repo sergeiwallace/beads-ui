@@ -315,6 +315,9 @@ Version 1. Every receiver route is under `/api/receiver/v1/` and is authorised o
 | `GET /api/receiver/v1/dispatches?session=<s>` | `Authorization: Bearer <token>` | 200 `{"dispatches": [...]}`: the outstanding records, without bodies, whose target is the token's host and session `s` |
 | `GET /api/receiver/v1/dispatches/<id>/body?session=<s>` | the same | 200 with the body as `text/plain; charset=utf-8`, only when the host and session match the target and the task's repository is on the requesting host's allowlist |
 | `POST /api/receiver/v1/dispatches/<id>/receipts` | the same, JSON `{"session": "<s>", "state": "taken" or "acted" or "failed", "reason": "<optional>"}` | 204 once recorded |
+| `POST /api/receiver/v1/dispatches/<id>/shown` | the same, JSON `{"session": "<s>"}` | 204 once the dispatch is recorded as shown, with this receipt as its source (T-W2.1); for a coalesced event, every dispatch the event carried is marked shown |
+| `POST /api/receiver/v1/dispatches/<id>/progress` | the same, JSON `{"session": "<s>", "step": "sent" or "taken" or "verified", "reason": "<optional>", "exit_code": <integer>}`; `exit_code` is required on `verified` and refused on any other step | 204 once recorded as a note on an outstanding handoff request whose target is this host and session (T-W2.2); "handoff complete" shows only for `verified` with exit code 0 |
+| `POST /api/receiver/v1/sessions/goal` | the same, JSON `{"session": "<s>", "state": "active" or "none" or "paused", "until": "<UTC RFC 3339 time, optional on paused>", "reason": "<optional>"}` | 204 once recorded (D-10, T-W2.3); a paused report holds the session's new dispatches until the pause window ends, an `active` or `none` report arrives, the user presses "deliver now", or the dispatch expires |
 
 Every refusal is a 404 with an empty body, whatever its cause (a bad token, another host's dispatch, another session's, an unknown id), so a caller learns nothing about whether a dispatch exists. The receiving client lists at each natural boundary, fetches the body, verifies it as above, posts `taken` before the session acts, and posts `acted`, or `failed` with the verifier's reason, afterwards.
 
@@ -554,10 +557,10 @@ Nothing that can make a session act ships before this phase: every later phase d
 | # | Phase | Section / Decision | Verified | Notes |
 |---|-------|--------------------|---------|-------|
 | 1 | N/A | Design Overview filled with implementation knowledge, not a stub | - [ ] | |
-| 2 | W0 | D-8, D-14, D-17, D-18, D-20 | - [ ] | |
-| 3 | W1 | D-1 to D-5, D-11, D-12, D-21 | - [ ] | |
-| 4 | W2 | D-6, D-7, D-9, D-10, D-22 | - [ ] | |
-| 5 | W3 | D-13, D-15, D-16 | - [ ] | |
+| 2 | W0 | D-8, D-14, D-17, D-18, D-20 | - [ ] | Code audit 2026-11-11 ([evidence](../research/findings/evidence/beads-ui-web-app-impl-audit-w0-w3-2026-11-11.md)): 38 of 46 criteria MET, 8 PARTIAL, 0 UNMET; three entry-point tests to add (BU-mg2.5.4.22); live run partial (Approval Log) |
+| 3 | W1 | D-1 to D-5, D-11, D-12, D-21 | - [ ] | Code audit 2026-11-11: 48 of 51 MET, 3 PARTIAL, 0 UNMET; two entry-point tests to add (BU-mg2.5.4.22); live run waits on the served instance's swap |
+| 4 | W2 | D-6, D-7, D-9, D-10, D-22 | - [ ] | Code audit 2026-11-11: 26 of 26 MET; live run waits on the swap and on automatic wakes for the test session's host |
+| 5 | W3 | D-13, D-15, D-16 | - [ ] | Code audit 2026-11-11: 8 of 11 MET, 3 PARTIAL (proved by the live runs from each laptop), 0 UNMET |
 | 6 | W4 | MCP App parity | - [ ] | |
 
 **Audit completed:** not yet
@@ -652,7 +655,7 @@ The build stage's ledger, written by the Opus coordinator for ops-vm-3 under run
 | integration | parent: each leaf's branch is read by content and merged into the coordinator's consolidated branch, which lands at each phase boundary |
 | scope | Phase 3 of the beads-ui design is built first in this run. Every phase here extends it ("which they assume built first or alongside", Implementation Phases), the ask names kanban and backlog views, and none of it existed when the build started: beads-ui `origin/main` `bebf2b7` had no `apps/` directory and `packages/` held only `bd-node`. Phase W4 needs the MCP server of the beads-ui design's Phase 4, so that server is built with W4. Both phases are approved parts of the parent design, so building them adds no new design |
 | interface contracts | the [Envelope wire format](#envelope-wire-format) and the [Receiver API](#receiver-api), fixed by the coordinator on 2026-11-09 before the first legs, as contained interface calls inside D-8, D-17, D-20 and T-W0.3 |
-| stage cursor | `implement`: the Phase 3 foundation, the D-2 options command and the envelope verifier legs launched; see Build legs below |
+| stage cursor | `implement`: Phase 3, W0, W1, W2 and W3's server sides are on beads-ui main (PRs #88 to #93) and every ai-harness leg is merged; W4's leg J is running; the live W1, W2 and W4 runs wait for the served instance to be swapped to the new code, which is held for Sergei; see Build legs below |
 
 Build legs. Each is one Opus `engineer` leaf in its own worktree; beads-ui legs merge into the coordinator's consolidated branch, and each ai-harness or app-portal leg lands as its own pull request.
 
@@ -663,13 +666,22 @@ Build legs. Each is one Opus `engineer` leaf in its own worktree; beads-ui legs 
 | D1 | W0 authentication and the per-host allowlist (T-W0.1, T-W0.2) | beads-ui | merged; Vitest 694 passed, e2e 36 passed; 18 behaviours each broken once and caught |
 | D2 | W0 envelope signer and dispatch stores (T-W0.4 signing side, T-W0.5) | beads-ui | merged; Vitest 689 passed; the golden vectors match byte for byte |
 | D3 | W0 receiver API (T-W0.3) | beads-ui | merged; 185 passed in `apps/web`, 14 mutants caught |
-| K | Store registry over every allowlisted store, and four review findings | beads-ui | running |
-| F | Phase 3's Roadmap, Analytics, Sessions with the queue adapter, Docker Compose | beads-ui | running |
-| B | The held store's structured-options command (D-2) | ai-harness | pull request open, in the host's merge lane |
+| K | Store registry over every allowlisted store, and four review findings | beads-ui | merged; on main in PR #88 |
+| F | Phase 3's Roadmap, Analytics, Sessions with the queue adapter, Docker Compose | beads-ui | merged; on main in PR #90 |
+| B37 | Bound the test gate's parallelism and skip it on docs-only commits (BU-b37) | beads-ui | merged; on main in PR #91 |
+| G2a | W1 Review queue, option cards, one-key answers, composer, unblock, dispatch routes, signing key generated at first start (T-W1.1 to T-W1.4, T-W1.6) | beads-ui | merged; on main in PR #92 |
+| G2b | W1 Sprint view, inline edits, owner picker, Queue view, detail views, Markdown contract and CSP (T-W1.0, T-W1.5, T-W1.7) | beads-ui | merged; on main in PR #92 |
+| I1 | W3 heads feed, shared SSE, the member duties with a public `/healthz`, the access procedure and a supervised user service (T-W3.1, T-W3.2); then the integration of G2a and G2b and the cross-family review's three fixes | beads-ui | merged; on main in PR #92 |
+| H1 | W2 dispatch ladder, receiver-first owner handoff, goal arming (T-W2.1 to T-W2.3) | beads-ui | merged; on main in PR #93, released as v0.25.0 |
+| B | The held store's structured-options command (D-2) | ai-harness | merged |
 | C | The envelope verifier and golden vectors (T-W0.4, D-20) | ai-harness | merged |
-| E | The receiving-side client and the trusted-keys install step (T-W0.3, T-W0.4) | ai-harness | built, waiting for its push slot |
-| I2 | The work pair's forward entry for the web port (D-16, T-W3.2) | ai-harness | pull request open, in the host's merge lane |
-| I3 | app-portal admits the Node member and registers `/beads` (D-15) | app-portal | running |
+| E | The receiving-side client and the trusted-keys install step (T-W0.3, T-W0.4) | ai-harness | merged; ai-harness PR #9016 |
+| G3 | The receiver's `answer` and `unblock` handlers on the receiving host (T-W1.2, T-W1.6) | ai-harness | merged; ai-harness PR #9050 |
+| H2 | The notifier's `web-dispatch` typed source, and `arm_goal` and goal-state reporting in the receiving client (T-W2.1, T-W2.3) | ai-harness | merged; ai-harness PR #9066 |
+| H3 | The holder's side of a handoff request: run the receiver-first handoff and post each progress step (T-W2.2) | ai-harness | merged; ai-harness PR #9125 |
+| J | W4 MCP server and dispatch tool, with the MCP App view's draft confirm (W4, T-4.1), and three fixes found during the build | beads-ui | running |
+| I2 | The work pair's forward entry for the web port (D-16, T-W3.2) | ai-harness | merged |
+| I3 | app-portal admits the Node member and registers `/beads` (D-15) | app-portal | merged |
 
 Build decisions, each a contained call inside an approved decision, made by the Opus coordinator unless a leg is named:
 
@@ -682,6 +694,31 @@ Build decisions, each a contained call inside an approved decision, made by the 
 | Dispatch bodies with the work queue (leg D2) | Queue rows carry a pointer; bodies stay in the host's body store | The queue cannot delete a prompt's text, and T-W0.3 and T-W0.5 require deleting bodies and keeping them out of backups |
 | Signing key source | `state:dispatch-signing-key`, a mode-0600 file in the server's state directory, generated at first start | D-20's intent is a key on the serving host only, read at call time, never in a repository; the file meets it with no human handoff of a machine-generated key |
 | Live work queue in tests (leg D2) | The queue store's contract suite runs against a fake built from the live API's shapes, not the live queue | The queue answering on this host is the production instance; writing test prompts there would serve them to live sessions |
+| Dispatch bodies (leg G2a) | An `answer` body is `{"version":1,"item":{"store","relpath","path"},"answer"}`, an `unblock` body is `{"version":1,"resolution","to":"in_progress"}`, and a `prompt` body is its text | The server and the ai-harness receiver are built in two repositories; one fixed shape per kind lets the receiver refuse anything else with a named field |
+| When a one-key answer is sent (leg G2a) | An answer dispatch is written once every decision on the held item has a choice | A held item with several decisions is answered by one call of the held store's answer verb on the owning host, so a partial answer would land half a decision |
+| A task awaiting a prompt (leg G2a) | A task counts as awaiting a prompt while it is `in_progress` | The Review queue needs a test it can apply to every store's tasks without a new field; `in_progress` with an owner is the state in which a session acts on a prompt |
+| Same-page links in Markdown (leg G2b) | Rendered Markdown keeps `#anchor` links as well as http, https and mailto; a heading's id comes from the anchor line above it only when it is a lowercase slug, otherwise from the heading's own slug | An option card links to its decision's heading in the item body; a fragment link names no scheme and loads nothing, and the slug limit keeps document content from clobbering page globals |
+| Owner change on a claimed task before W2 (leg G2b) | The owner picker writes the assignee for an unclaimed task and, for a claimed one, calls the one server function W2's handoff replaces, which answers that a handoff is required | T-W1.5 ships before T-W2.2; a claimed task's owner never changes without the receiver-first handoff |
+| The heads feed's polling (leg I1) | The server polls the Dolt heads only while at least one browser event stream is open | Polling every store with no viewer cost CPU for nothing and slowed other suites; an opened stream starts the poll and gets the current heads at once |
+| `/healthz` with no page open (leg I1) | Answers from the allowlist and the open stores without reading the Dolt heads | The portal's probe runs every few seconds; reading heads for it would keep the poll alive with no viewer |
+| CSP `base-uri` (integration) | `base-uri 'self'`, set beside the member headers on every response | `base-uri 'none'` makes a browser ignore the `<base href>` the shell carries under a base path, so the app broke under `/beads`; `'self'` is what app-portal sends its members (D-15) |
+| Held options that do not parse (cross-family review) | The Review read reports the options read as failed and passes none of the command's output on | Returning the raw output would let text from a store off the allowlist reach the browser (D-18) |
+| Test gate bound (BU-b37) | `BEADS_UI_TEST_JOBS`, default 1 and at most 2, bounds turbo, Playwright, Vitest and the plugin-test loop; a docs-only commit skips the suite | The commit hook ran the whole suite in parallel on every commit and starved a shared host; bounds multiply, so 1 keeps a commit to one test process |
+| Base path on the work pair (served host) | Unset: the server answers at the root of the forwarded port | D-16's work-pair route is a port forward with no path prefix; `/beads` is the personal pair's `tailscale serve` and portal path |
+| Where the receiver acts on an answer or unblock (leg G3) | After the `taken` receipt the notice hook stages the dispatch and starts a detached `act` process, which holds a per-dispatch lock, writes `.started` before it changes anything and `.done` only after the terminal receipt is queued; a started dispatch with no `.done` and a free lock is receipted `failed: interrupted` and never acted on twice | The hook's pull runs under a 3 s bound and a held answer or `bd-unblock` can outlast it, and a serving host can stop mid-act, so a kill must end in a visible failed receipt, not a dispatch stuck at `taken` |
+| `--why` for an unblock (leg G3, and BU-k71 on the server) | `bd-unblock --why` gets the resolution with its whitespace collapsed to one line; the bd comment keeps the full text | The fleet's `bd-unblock` refuses a multi-line `--why`, and the Review form accepts multi-line text |
+| How "waiting: goal paused" reaches the server (leg H2) | As a `sessions/goal` report with state `paused` and, when it is known, the recorded `until`; not as a receipt kind. The server holds new dispatches on it, and the client holds what it has already fetched | The receipts route takes only `taken`, `acted` and `failed`; a goal state is a session's, not one dispatch's |
+| A paused report with no recorded window (BU-mg2.5.4.18) | Accepted without `until`; the hold then ends on an `active` or `none` report, "deliver now" or the dispatch's own expiry | The client knows no end time when the limit controller recorded none, and T-W2.3 still requires "waiting: goal paused"; the dispatch's expiry bounds the hold, so it cannot outlive the dispatch |
+| Shown receipts for a coalesced event (H1, BU-mg2.5.4.11.1) | A shown receipt from the event's target for any id of a carried event records "shown" on every dispatch of that event | The agent-mail board cuts a subject at 60 characters and the notifier never fetches board bodies, by design, so the receiving host can name only the first id |
+| An unreadable goal-pause source (leg H2) | The session is told the reason and to start no new goal; the transcript's own state is still reported, so a stale `paused` report cannot hold dispatches forever | Starting a goal during a limit pause and holding dispatches silently forever are both wrong; delivering during a pause is the harmless one |
+| The local rungs on a host (leg H1) | `[dispatch.local]` has no default command; a host names the prompt-injection and mod-submit commands, and the prompt-injection one includes an existing `--use-case` | The library refuses an inject without a use case and has none for web dispatch; a host without the settings skips both rungs with the reason, and turn-end pickup stays the floor |
+| The goal instruction in a public ai-harness build (leg H2) | The private source tells a session to run `/start-goal`; the public export rewrites it to the native `/goal` through one pinned release-policy rewrite rule | The public release does not ship the `start-goal` skill, and the ask names `/start-goal` for the private harness; a pinned match count makes any drift a build failure |
+| The handoff instruction in a public ai-harness build (leg H3) | The private source tells the holder to run `/handoff`; the public export replaces that one line, through a pinned release-policy rewrite rule, with the receiver-first steps written out | The public release ships neither the handoff skill nor its procedure; writing the steps out keeps the receiver-first order for public users instead of dropping handoff requests there |
+| The holder's progress steps (H1 and H3) | The holder posts `sent`, `taken` (relaying the receiver's reply, as the fleet's handoff protocol has the receiver reply to the sender) and `verified` with the verify exit code; "handoff complete" shows only for exit code 0 | T-W2.2 names each step's source; one poster per dispatch keeps the route's target check unchanged |
+| Carrier sends across a restart (H1, cross-family review) | A carrier send is recorded after it succeeds, and the ladder re-plans outstanding dispatches at start, so a crash between the two can send the pointer mail twice | The mail carries only the dispatch id and digest and the receiver claims each id once, so a repeat is a second notice, never a second action; recording before sending would instead risk a lost wake |
+| Sender of `web-dispatch` mail (leg H2; follow-up BU-mg2.5.4.15.1) | Typed only for direct mail to a session's own identity; the sender is not yet pinned | No configuration names the server's mail identity until the served host's live identity is measured; a lookalike can only delay a wake to turn end, since nothing is acted on without the signed envelope |
+
+The composer's parity inventory (T-W1.3) gained these behaviours from the port, each with a test: token marks are valid, invalid or unknown and are re-marked when the skill catalog arrives; a "skill catalog unavailable" note shows when it cannot be read; the editor empties after a send and keeps the draft when the send fails; an empty draft sends nothing; paste and undo keep the token marks; the stored prompt is the editor's Markdown text; the editor loads on first focus. The ported typeahead is a new plugin, because the source's never opened.
 
 Live evidence on the work pair so far: the Phase 3 local run from the consolidated tree answered the shell in 13 ms and the board API in 0.87 s over the real beads-ui store (9 statuses, 76 issues, rank on); the real ai-harness receiving client and installer, run against a running server, verified and receipted a good dispatch (`taken`, then `acted`) and refused a body-tampered one with `body-digest-mismatch`.
 
@@ -1562,5 +1599,6 @@ Option (b) drops ask requirements, so Gate 0 leaves (a) as the only way to keep 
 | 2026-11-09 | BU-mg2.5.3/D-21 | Sergei | "D-21: option A approved." (a) `views.rank` on by default in the web app |
 | 2026-11-09 | BU-mg2.5.3/D-15 | Sergei | "D-15: option A approved." (a) beads-ui's Node server as a `kind: portal` upstream; amends app-portal's member contract |
 | 2026-11-09 | design | Sergei | With D-15 and D-21 approved the doc is fully decided; he asked for the build end to end, all phases, live-validated and served for use |
+| 2026-11-09 | Phase W0 live run, work pair (partial) | Opus coordinator | [Evidence](evidence/web-app-live/w0-2026-11-09.md): a cross-site write, a write without the write header, a forged identity header, a foreign Host header and a revoked session each refused, with a control write reaching validation; a good dispatch verified and receipted and a body-tampered one refused with `body-digest-mismatch`. Not yet run: the `unknown-key` dispatch, the restart with a dispatch outstanding, the unlisted repository, and the personal pair |
 
 <!-- /doc:region name="approval_log" -->

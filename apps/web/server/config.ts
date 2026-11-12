@@ -18,6 +18,8 @@ import { DEFAULT_QUEUE_WAIT_SECONDS } from "./bd-queue.ts";
 /** The address the server binds unless `[web] host` names another, which needs `[auth]`. */
 export const LOOPBACK = "127.0.0.1";
 export const DEFAULT_PORT = 4810;
+export const DEFAULT_PROBE_TIMEOUT_SECONDS = 60;
+export const DEFAULT_PROBE_INTERVAL_SECONDS = 1;
 
 export interface WebConfig extends BeadsUiConfig {
   /** `[web] host`, when the file sets one; beyond loopback only with a valid `[auth]` table. */
@@ -46,6 +48,13 @@ export interface WebConfig extends BeadsUiConfig {
    * it answers a failure naming the wait (bd-queue.ts); DEFAULT_QUEUE_WAIT_SECONDS when unset.
    */
   bdQueueWaitSeconds: number;
+  /**
+   * `[web] service_probe_timeout_seconds`: how long `install-service --enable` waits for the
+   * started service to answer its health probe; DEFAULT_PROBE_TIMEOUT_SECONDS when unset.
+   */
+  serviceProbeTimeoutSeconds: number;
+  /** `[web] service_probe_interval_seconds`: the wait between probes; DEFAULT_PROBE_INTERVAL_SECONDS when unset. */
+  serviceProbeIntervalSeconds: number;
   /** The file the settings came from, or undefined when no candidate exists. */
   source?: string;
   /** One line per setting the file got wrong; the default stands for each. */
@@ -116,6 +125,8 @@ export async function readWebConfig(repoRoot: string, env: ConfigEnv): Promise<W
     ...base.config,
     rank: rank.rank,
     bdQueueWaitSeconds: DEFAULT_QUEUE_WAIT_SECONDS,
+    serviceProbeTimeoutSeconds: DEFAULT_PROBE_TIMEOUT_SECONDS,
+    serviceProbeIntervalSeconds: DEFAULT_PROBE_INTERVAL_SECONDS,
     problems: [
       ...base.problems,
       ...rank.problems,
@@ -133,6 +144,22 @@ export async function readWebConfig(repoRoot: string, env: ConfigEnv): Promise<W
   const queueWait = resolveBdQueueWait(text);
   config.problems.push(...queueWait.problems);
   if (queueWait.seconds !== undefined) config.bdQueueWaitSeconds = queueWait.seconds;
+  const probeTimeout = resolveWebSeconds(
+    text,
+    "service_probe_timeout_seconds",
+    DEFAULT_PROBE_TIMEOUT_SECONDS,
+  );
+  config.problems.push(...probeTimeout.problems);
+  if (probeTimeout.seconds !== undefined) config.serviceProbeTimeoutSeconds = probeTimeout.seconds;
+  const probeInterval = resolveWebSeconds(
+    text,
+    "service_probe_interval_seconds",
+    DEFAULT_PROBE_INTERVAL_SECONDS,
+  );
+  config.problems.push(...probeInterval.problems);
+  if (probeInterval.seconds !== undefined) {
+    config.serviceProbeIntervalSeconds = probeInterval.seconds;
+  }
   // The owner picker's rule and the held tool come from the user's file, as `[queue]` does: a
   // repository's own file must not widen who may receive its tasks or name a command to run.
   const userText = user.kind === "file" ? user.text : undefined;
@@ -151,17 +178,26 @@ export function resolveBdQueueWait(text: string | undefined): {
   seconds?: number;
   problems: string[];
 } {
+  return resolveWebSeconds(text, "bd_queue_wait_seconds", DEFAULT_QUEUE_WAIT_SECONDS);
+}
+
+/** A `[web]` key that holds a positive number of seconds, or nothing when unset. */
+function resolveWebSeconds(
+  text: string | undefined,
+  key: string,
+  fallback: number,
+): { seconds?: number; problems: string[] } {
   const problems: string[] = [];
   if (text === undefined) return { problems };
   const parsed = parseToml(text);
   if (!parsed.ok) return { problems };
   const table = parsed.value.web;
   if (typeof table !== "object" || table === null || Array.isArray(table)) return { problems };
-  const value = (table as Record<string, unknown>).bd_queue_wait_seconds;
+  const value = (table as Record<string, unknown>)[key];
   if (value === undefined) return { problems };
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
     problems.push(
-      `web.bd_queue_wait_seconds must be a positive number of seconds, not ${JSON.stringify(value)}; using ${DEFAULT_QUEUE_WAIT_SECONDS}`,
+      `web.${key} must be a positive number of seconds, not ${JSON.stringify(value)}; using ${fallback}`,
     );
     return { problems };
   }
