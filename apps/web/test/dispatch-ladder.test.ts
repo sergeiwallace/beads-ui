@@ -265,6 +265,23 @@ describe("rung 1, Agent Mail through the notifier (T-W2.1)", () => {
     expect(await calls("mod-submit")).toEqual([]);
   });
 
+  it("should show every dispatch of a coalesced event when the shown receipt arrives while its carrier is still running", async () => {
+    await env.write(config({ coalesce: 10, shownWithin: 5 }));
+    // The carrier has delivered and records its call, then takes 3 s to exit.
+    await writeFile(join(tools, "agent-mail.delay-ms"), "3000");
+    const { id, owner } = await ownedTask();
+    const first = await prompt(id, "One");
+    const started = Date.now();
+    const second = await prompt(id, "Two");
+    expect(Date.now() - started).toBeLessThan(10_000);
+    await waitFor(async () => expect(await calls("agent-mail")).toHaveLength(1));
+    const reply = await receiver(`/dispatches/${first}/shown`, { session: owner });
+    expect(reply.status).toBe(204);
+    await settle();
+    for (const one of [first, second]) expect((await status(one)).state, one).toBe("shown");
+    expect(await calls("prompt-injection")).toEqual([]);
+  });
+
   it("should show no dispatch of a coalesced event when the shown receipt comes from another session", async () => {
     await env.write(config({ coalesce: 10 }));
     const { id } = await ownedTask();

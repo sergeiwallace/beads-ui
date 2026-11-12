@@ -5,8 +5,9 @@
 // so a test passes only when the server calls the tool the way the tool reads its arguments.
 // It records each call as one JSON line in `<dir>/<tool>.jsonl`, a --text-file's content included
 // (the server deletes that file once the call returns), prints `<dir>/<tool>.stdout` when present,
-// and exits with `<dir>/<tool>.exit` (0 when absent) after printing `<dir>/<tool>.stderr`; each
-// file may be named per subcommand, `<tool>.<subcommand>.<suffix>`, which wins.
+// and exits with `<dir>/<tool>.exit` (0 when absent) after printing `<dir>/<tool>.stderr`, first
+// waiting `<dir>/<tool>.delay-ms` milliseconds after recording the call when that file is present;
+// each file may be named per subcommand, `<tool>.<subcommand>.<suffix>`, which wins.
 
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -57,6 +58,8 @@ const read = (suffix) => {
   }
   return undefined;
 };
+const delay = Number(read("delay-ms") ?? "0");
+if (delay > 0) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delay);
 const stdout = read("stdout");
 if (stdout !== undefined) process.stdout.write(stdout);
 const stderr = read("stderr");

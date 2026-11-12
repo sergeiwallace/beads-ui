@@ -338,6 +338,8 @@ export class DispatchLadder {
   readonly #schedule: Schedule;
   readonly #serial = new Serial();
   readonly #pending = new Map<string, string[]>();
+  /** The event of each dispatch being carried, until its carrier's rung is written (shown). */
+  readonly #carrying = new Map<string, readonly string[]>();
   readonly #timers = new Set<() => void>();
   readonly #work = new Set<Promise<unknown>>();
   #closed = false;
@@ -556,17 +558,23 @@ export class DispatchLadder {
     // The ids that go out together: a carrier may cut the subject, so a shown receipt for any
     // one of them stands for the whole event (shown below).
     const event = open.map((dispatch) => dispatch.record.id);
-    for (const carrier of plan.carriers) {
-      const result = await tools.carry(carrier, target, pointer);
-      await each((id) =>
-        result.ok
-          ? this.#rung(id, carrier, "sent", result.detail, event)
-          : this.#rung(id, carrier, "failed", result.detail),
-      );
-      if (result.ok) {
-        carried = true;
-        break;
+    // A receipt can arrive while the carrier is still exiting, before its rung records the event.
+    for (const id of event) this.#carrying.set(id, event);
+    try {
+      for (const carrier of plan.carriers) {
+        const result = await tools.carry(carrier, target, pointer);
+        await each((id) =>
+          result.ok
+            ? this.#rung(id, carrier, "sent", result.detail, event)
+            : this.#rung(id, carrier, "failed", result.detail),
+        );
+        if (result.ok) {
+          carried = true;
+          break;
+        }
       }
+    } finally {
+      for (const id of event) this.#carrying.delete(id);
     }
     if (plan.mode === "passive") {
       await each((id) =>
@@ -640,7 +648,7 @@ export class DispatchLadder {
         const carried = dispatch.rungs.filter(
           (rung) => rung.outcome === "sent" && rung.event !== undefined,
         );
-        const event = carried.at(-1)?.event ?? [id];
+        const event = carried.at(-1)?.event ?? this.#carrying.get(id) ?? [id];
         const source = `shown receipt from ${address(from)}`;
         const mark = (one: string) =>
           store.annotate(one, { op: "delivery", id: one, at: this.#now(), to: "shown", source });
