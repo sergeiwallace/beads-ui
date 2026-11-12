@@ -18,6 +18,7 @@ import type {
   // shape, from server/dispatch.ts, is HeldReadFailure below.
   HeldReadFailure as HeldDetailFailure,
   HeldItemSummary,
+  PromptDraft,
   QueueOrderView,
   QueueRowView,
   Skill,
@@ -300,6 +301,9 @@ export const dispatchApi = {
   skills: () => call<{ skills: Skill[] }>("dispatch/skills"),
   handoff: (store: string, id: string) =>
     call<HandoffView>(`handoff?${new URLSearchParams({ store, id }).toString()}`),
+  /** The prompts a model drafted through the MCP server, waiting for the user (server/mcp.ts). */
+  drafts: () => call<{ drafts: PromptDraft[] }>("drafts"),
+  confirmDraft: (id: string) => post<Written>(`drafts/${encodeURIComponent(id)}/confirm`, {}),
 };
 /** The owner picker's candidates for a store (server/edits.ts OwnerCandidates). */
 export interface OwnersPayload {

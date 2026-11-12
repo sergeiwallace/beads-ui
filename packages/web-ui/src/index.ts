@@ -45,6 +45,8 @@ export { QUEUE_FILTER_LABELS, QueueView } from "./queue/QueueView.tsx";
 export type { RoadmapProps } from "./Roadmap.tsx";
 export { Roadmap } from "./Roadmap.tsx";
 // The Review queue (web app design D-1, D-2, D-3, D-12, T-W1.1, T-W1.2, T-W1.4, T-W1.6).
+export type { DraftListProps, PromptDraft } from "./review/DraftList.tsx";
+export { DraftList } from "./review/DraftList.tsx";
 export { HeldAnswer, UNDO_MS } from "./review/HeldAnswer.tsx";
 export type { OptionsRead, ReviewQueueProps } from "./review/ReviewQueue.tsx";
 export { REVIEW_SHORTCUTS, ReviewQueue, readOptionsOutput } from "./review/ReviewQueue.tsx";

@@ -15,10 +15,12 @@ import {
   withQueueFilters,
 } from "@beads-ui/core";
 import {
+  DraftList,
   HandoffStatus,
   type HandoffView,
   type OptionsRead,
   PromptComposer,
+  type PromptDraft,
   REVIEW_SHORTCUTS,
   type ReviewActions,
   ReviewQueue,
@@ -162,9 +164,15 @@ export function ReviewPage() {
   const [payload, setPayload] = useState<ReviewPayload | undefined>(undefined);
   const [error, setError] = useState<string | undefined>(undefined);
   const [reading, setReading] = useState(false);
+  const [drafts, setDrafts] = useState<PromptDraft[]>([]);
 
   const load = useCallback(() => {
     setReading(true);
+    dispatchApi.drafts().then(
+      (read) => setDrafts(read.drafts),
+      // The drafts read failing leaves the queue as it is; the next read tries again.
+      () => undefined,
+    );
     dispatchApi.review().then(
       (read) => {
         setPayload(read);
@@ -219,6 +227,7 @@ export function ReviewPage() {
           The review queue could not be read: {error}
         </p>
       )}
+      <DraftList drafts={drafts} confirm={dispatchApi.confirmDraft} />
       {(payload?.problems ?? []).map((problem) => (
         <p key={problem} className="app-problem">
           beads-ui.toml: {problem}
