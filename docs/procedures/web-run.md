@@ -472,7 +472,7 @@ its path, and refuses any other route's:
 | Path | Credential |
 |---|---|
 | `/api/receiver/v1/...` | `Authorization: Bearer <the receiving host's token>`; every refusal is an empty 404 |
-| `/api/mcp/v1/...` | `Authorization: Bearer <the MCP token>` |
+| `/api/mcp/v1/...` | `Authorization: Bearer <the MCP token>`; the MCP server's task reads and writes, drafts and dispatches ([mcp-app-install.md](mcp-app-install.md)) |
 | `/api/admin/v1/...` | The host's admin key, derived from the browser secret; the host commands above use it |
 | `/healthz` | None; it answers only whether the server is healthy |
 | everything else, the app's pages included | The browser session cookie |

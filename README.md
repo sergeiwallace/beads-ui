@@ -6,8 +6,9 @@ locally hosted web app, built on one shared core.
 
 It brings familiar task-management views (board, backlog, sprints, roadmap and analytics), session
 ownership and a review queue to Beads stores. Beads remains the task system of record; beads-ui
-provides interfaces for working with it. An MCP App for Claude Desktop and Claude on the web, and
-native clients, are planned rather than implemented.
+provides interfaces for working with it. An MCP server gives Claude Desktop and Claude Code the
+task tools and a session-prompt draft you confirm; the full MCP App board, Claude on the web and
+native clients are planned rather than implemented.
 
 ## Status
 
@@ -123,7 +124,7 @@ not runtime connections or a guaranteed release sequence.
 |---|---|---|
 | Now | Claude Code mod and web app | Implemented in source: shared core, terminal task views, web views, authentication, live updates and local/service/container run paths. See [mod installation](docs/procedures/mod-install.md) and [web setup](docs/procedures/web-run.md). |
 | Next | Complete the web coordination workflows | Event-based dispatch, policy-aware session handoff and goal arming, plus integration and deployment validation. The existing receiver-pull path is not the full delivery design. See the [web implementation phases](docs/designs/beads-ui-web-app-design.md#implementation-phases). |
-| Planned | MCP App parity | Bring the shared task views into Claude Desktop and Claude on the web. The MCP App and server are not implemented yet. See the [MCP App design](docs/designs/beads-ui-design.md#phase-4-the-mcp-app-in-claude-desktop) and [web parity phase](docs/designs/beads-ui-web-app-design.md#phase-w4-mcp-app-parity). |
+| Planned | MCP App parity | Bring the shared task views into Claude Desktop and Claude on the web. The MCP server runs over stdio with the six task tools and the dispatch tools, and its MCP App shows a drafted prompt with its Confirm control ([MCP server setup](docs/procedures/mcp-app-install.md)); the full-screen board view and Claude on the web are not implemented yet. See the [MCP App design](docs/designs/beads-ui-design.md#phase-4-the-mcp-app-in-claude-desktop) and [web parity phase](docs/designs/beads-ui-web-app-design.md#phase-w4-mcp-app-parity). |
 | Later | Additional clients and hosting options | Native iOS, macOS and Linux clients, and repeatable cloud-hosting templates, remain future work. Responsive web views are not native apps. See the [broader design](docs/designs/beads-ui-design.md) and [hosting phase](docs/designs/beads-ui-design.md#phase-6-hosted-web-app-and-claudeai-mcp). |
 
 The [overall design](docs/designs/beads-ui-design.md),
@@ -168,7 +169,8 @@ layers and not their UI components: each surface draws its own views.
 |---|---|
 | `plugins/beads-ui/` | The Claude Code mod, with the shared core inside it |
 | `plugins/beads-ui/core/` | The shared core (`src/`) and its tests (`test/`); the DOM packages import it as `@beads-ui/core` |
-| `packages/` | Node and browser packages; currently the `bd` adapter and web components, not an MCP server |
+| `packages/` | Node and browser packages: the `bd` adapter, the web components and the MCP server |
+| `packages/mcp-server/` | The MCP server over stdio: the task tools, the dispatch tools and the `ui://beads-ui/board` MCP App, all through the web server's `/api/mcp/v1/` routes |
 | `packages/bd-node/` | The Node adapter that runs `bd ... --json` for the web server and returns the core's types; it needs `bd` on `PATH` |
 | `packages/web-ui/` | React task views and controls used by the web app, with intended reuse in the future MCP App |
 | `apps/web/` | The web app: a Node server (`server/`, every route under `/api/`) and a Vite and React 19 client (`client/`), with its Playwright specs (`e2e/`) |
