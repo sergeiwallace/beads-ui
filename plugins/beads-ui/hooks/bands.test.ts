@@ -1040,7 +1040,13 @@ describe("the unpublished-edit count (T-2B.6)", () => {
       await w.clock.settle();
     };
     const turnEnds = async () => {
-      await $.turn.complete({ answer: "done", durationMs: 1, isAborted: false, turnId: "t" });
+      await $.turn.complete({
+        answer: "done",
+        durationMs: 1,
+        isAborted: false,
+        reason: "answer",
+        turnId: "t",
+      });
       await w.clock.settle();
     };
     return { w, write, turnEnds };

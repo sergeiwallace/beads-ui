@@ -121,13 +121,13 @@ describe("the validate allow-list gate", () => {
     );
   });
 
-  // The helper never writes `$.`, so the `$.` scan cannot see it; only the hooks module's
-  // hand-off is visible.
-  it("should fail naming the hooks module line when it passes $ to a helper with an untyped parameter", () => {
+  // The helper uses a structural type and never writes `$.`, so only the hooks module's
+  // hand-off is visible to the source scan, without an implicit-any validation warning.
+  it("should fail naming the hooks module line when it passes $ to a helper with a structural parameter type", () => {
     const dir = pluginWith((d) => {
       writeFileSync(
         join(d, "hooks/helper.ts"),
-        'export async function view(engine) {\n  return engine.ui.open({ id: "other" });\n}\n',
+        'export async function view(engine: { ui: { open(options: { id: string }): unknown } }) {\n  return engine.ui.open({ id: "other" });\n}\n',
       );
       editRegister(d, IMPORT_ANCHOR, `${IMPORT_ANCHOR}\nimport { view } from "./helper.ts";`);
       editRegister(d, SESSION_START, `${SESSION_START}\n    await view($);`);

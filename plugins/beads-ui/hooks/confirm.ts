@@ -121,6 +121,8 @@ export class DeleteConfirm {
         exitCode: -1,
         stdout: "",
         stderr: `timed out or could not start: ${messageOf(reason)}`,
+        isStdoutTruncated: false,
+        isStderrTruncated: false,
       }),
     );
     if (this.state === undefined || this.epoch !== epoch) return;

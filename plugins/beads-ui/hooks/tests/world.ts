@@ -1,4 +1,4 @@
-import type { Args, On, ProcessRunResult, RenderPropsOf } from "claude-code";
+import type { Args, On, ProcessRunResult, RenderPropsOf, UiOpenResult } from "claude-code";
 import { mock } from "claude-code/testing";
 
 import commentsMg23 from "../../core/test/fixtures/bd-comments-BU-mg2.3.json.ts";
@@ -19,17 +19,24 @@ import { UNASKED_COLUMNS } from "../pane.ts";
 
 export const CWD = "/work/beads-ui";
 export const SESSION = { surface: "terminal", isInteractive: true, cwd: CWD } as const;
-export const SHOW = { command: "show-beads-ui", args: "", origin: { kind: "composer" } } as const;
-export const BU = { command: "bu", args: "", origin: { kind: "composer" } } as const;
+export const SHOW = {
+  command: "show-beads-ui",
+  args: "",
+  origin: { kind: "composer" },
+  presentation: { isFullscreen: false, columns: 120 },
+} as const;
+export const BU = { ...SHOW, command: "bu" } as const;
 /** 2026-10-21 01:12:04 UTC, the clock's start. */
 export const START_MS = Date.UTC(2026, 9, 21, 1, 12, 4);
 export const SURFACES = ["terminal", "desktop"] as const;
 
-export const ok = (stdout: string): ProcessRunResult => ({ exitCode: 0, stdout, stderr: "" });
+export const ok = (stdout: string): ProcessRunResult => exit(0, "", stdout);
 export const exit = (exitCode: number, stderr: string, stdout = ""): ProcessRunResult => ({
   exitCode,
   stdout,
   stderr,
+  isStdoutTruncated: false,
+  isStderrTruncated: false,
 });
 
 /** bd's refusal of `bd delete BU-mg2.3 --dry-run`, captured with the dependents fixture. */
@@ -81,7 +88,7 @@ export const timelineList = (type: string) =>
 const TIMELINE_LIST = /^bd list --brief --status closed --type (\S+) --limit 0$/;
 
 /** A board read's part of a STORE_LIST answer: the open issues, or the newest closed page. */
-const boardPart = (answer: ReturnType<Script>, closed: boolean): ReturnType<Script> =>
+const boardPart = (answer: ScriptAnswer, closed: boolean): ScriptAnswer =>
   partOf(answer, (rows) => {
     const status = (row: unknown) => (row as { status?: unknown }).status;
     const at = (row: unknown) => String((row as { closed_at?: unknown }).closed_at ?? "");
@@ -93,11 +100,8 @@ const boardPart = (answer: ReturnType<Script>, closed: boolean): ReturnType<Scri
       : rows.filter((row) => status(row) !== "closed");
   });
 
-function partOf(
-  answer: ReturnType<Script>,
-  part: (rows: readonly unknown[]) => unknown[],
-): ReturnType<Script> {
-  if (answer === undefined || answer instanceof Error || answer === HANG) return answer;
+function partOf(answer: ScriptAnswer, part: (rows: readonly unknown[]) => unknown[]): ScriptAnswer {
+  if (answer instanceof Error || answer === HANG) return answer;
   if (answer instanceof Killed || answer.exitCode !== 0) return answer;
   let rows: unknown;
   try {
@@ -109,10 +113,11 @@ function partOf(
   return { ...answer, stdout: JSON.stringify(part(rows)) };
 }
 
+const STORE_READ = ok(list);
 const READS: Readonly<Record<string, ProcessRunResult>> = {
   "bd where": whereOf(CWD),
   "bd statuses": ok(statuses),
-  [STORE_LIST]: ok(list),
+  [STORE_LIST]: STORE_READ,
   "bd ready --brief --limit 0": ok(ready),
   "bd show BU-mg2.3": ok(show),
   "bd show BU-mg2.3.5": ok(show5),
@@ -135,6 +140,8 @@ export type Script = (
   argv: readonly string[],
   cwd: string | undefined,
 ) => ProcessRunResult | Error | typeof HANG | Killed | undefined;
+
+type ScriptAnswer = Exclude<ReturnType<Script>, undefined>;
 
 /** A child that writes nothing and never exits. */
 export const HANG = "hang" as const;
@@ -173,7 +180,7 @@ export interface WorldOptions {
    * as Claude Code 2.1.310 does: an open the person asked for (the mod passes `focus: true` on
    * exactly those) is placed, and one nobody asked for is held unplaced below UNASKED_COLUMNS.
    */
-  openAnswer?: unknown;
+  openAnswer?: UiOpenResult | Error;
   /** The terminal's width the engine places panes by: VIEWPORT's 120 columns when not given. */
   columns?: number;
   /** The merged settings `$.settings.read` answers: none when not given. */
@@ -253,21 +260,21 @@ export function world(on: On, options: WorldOptions = {}) {
     files.set(e.path, e.text);
     return { value: undefined };
   });
-  const answerFor = (argv: readonly string[], cwd: string | undefined) => {
+  const answerFor = (argv: readonly string[], cwd: string | undefined): ScriptAnswer => {
     runs.push([...argv]);
     cwds.push(cwd);
     const key = keyOf(argv);
     if (key === OPEN_LIST || key === CLOSED_PAGE) {
       return (
         options.script?.(key, argv, cwd) ??
-        boardPart(options.script?.(STORE_LIST, argv, cwd) ?? READS[STORE_LIST], key === CLOSED_PAGE)
+        boardPart(options.script?.(STORE_LIST, argv, cwd) ?? STORE_READ, key === CLOSED_PAGE)
       );
     }
     const typed = TIMELINE_LIST.exec(key)?.[1];
     if (typed !== undefined) {
       return (
         options.script?.(key, argv, cwd) ??
-        partOf(options.script?.(STORE_LIST, argv, cwd) ?? READS[STORE_LIST], (rows) =>
+        partOf(options.script?.(STORE_LIST, argv, cwd) ?? STORE_READ, (rows) =>
           rows.filter((row) => {
             const { status, issue_type } = row as { status?: unknown; issue_type?: unknown };
             return status === "closed" && issue_type === typed;
@@ -306,14 +313,14 @@ export function world(on: On, options: WorldOptions = {}) {
   on("ui.open", (_engine, e) => {
     opened.push(e);
     if (options.openAnswer instanceof Error) throw options.openAnswer;
-    if (options.openAnswer !== undefined) return { value: options.openAnswer as undefined };
+    if (options.openAnswer !== undefined) return { value: options.openAnswer };
     const columns = options.columns ?? VIEWPORT.columns;
     if (e.focus !== true && columns < UNASKED_COLUMNS) {
       // Claude Code 2.1.310's own answer, read from its binary.
       const reason = `unasked below ${UNASKED_COLUMNS} columns (${columns} now): placed when the person opens it, or when the terminal is widened to ${UNASKED_COLUMNS} columns`;
-      return { value: { isPlaced: false, reason } as unknown as undefined };
+      return { value: { isPlaced: false, reason } };
     }
-    return { value: undefined };
+    return { value: { isPlaced: true } };
   });
   on("ui.close", (_engine, e) => {
     closed.push(e.id);
@@ -323,7 +330,7 @@ export function world(on: On, options: WorldOptions = {}) {
     toasts.push(e.text);
     return { value: undefined };
   });
-  on("ui.focus", (_engine, e) => {
+  on("ui.focus", { plugin: "*" }, (_engine, e) => {
     focused.push(e);
     return {};
   });
@@ -380,6 +387,7 @@ export const PANE_PROPS: RenderPropsOf["Pane"] = {
 
 export const BAND_PROPS: RenderPropsOf["AbovePrompt"] = {
   hasSurvey: false,
+  isCollapsed: false,
   isWorking: false,
   maxRows: 10,
   bodyColumns: 120,

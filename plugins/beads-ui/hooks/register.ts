@@ -220,10 +220,14 @@ export function register(on: On) {
     const Raster = e.surface === "terminal" ? (await $.ui.resolve(e)).Raster : undefined;
     // A view's picture (T-2C.13): an Image only where the terminal draws one, an Svg off the
     // terminal, its alt text elsewhere.
-    const { Image, Svg } = await $.ui.resolve(e);
+    const elements = await $.ui.resolve(e);
     const form = pictureForm(e.surface, pane.images.images);
     const picture: SurfacePicture =
-      form === "image" ? { form, Image } : form === "svg" ? { form, Svg } : { form: "alt" };
+      form === "image" && "Image" in elements
+        ? { form, Image: elements.Image }
+        : form === "svg" && "Svg" in elements
+          ? { form, Svg: elements.Svg }
+          : { form: "alt" };
     const help = Client?.({ key: "hello", module: "../client/hello.ts" });
     const tasks: TasksRegion | undefined =
       Client === undefined

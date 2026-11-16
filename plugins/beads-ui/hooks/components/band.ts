@@ -48,6 +48,7 @@ export function summaryLine(
         }),
       ];
     }
+    const part = piece.segment.part;
     return present<RenderNode>([
       piece.glyph === undefined
         ? undefined
@@ -60,7 +61,7 @@ export function summaryLine(
         label: segment.text,
         ...(piece.hotkey === undefined ? {} : { hotkey: piece.hotkey }),
         plain: true,
-        onPress: () => options.press(segment.part),
+        onPress: () => options.press(part),
       }),
     ]);
   });

@@ -1,4 +1,10 @@
 {
+  "warnings": [
+    {
+      "message": "error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.",
+      "reason": "Claude Code 2.1.325's validator ignores tsconfig and omits allowImportingTsExtensions; explicit .ts imports are required by the shared core's native Node execution and enabled in tsconfig.base.json."
+    }
+  ],
   "modules": {
     "./register.ts": {
       "hooks": [

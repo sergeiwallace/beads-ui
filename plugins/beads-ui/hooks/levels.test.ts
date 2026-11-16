@@ -11,6 +11,7 @@ import {
   BAND_PROPS,
   CWD,
   countScript,
+  exit,
   INVENTORY_PATH,
   inventoryOf,
   type Listed,
@@ -249,7 +250,7 @@ describe("the band's rows level (D-36, T-2C.2)", () => {
   test("should name a store whose rows could not be read and draw the rest", async ($, on) => {
     const broken: Script = (key, _argv, cwd) =>
       key.startsWith("bd list ") && key.includes("--status=") && cwd === HARNESS
-        ? { exitCode: 1, stdout: "", stderr: "Error: database is locked\n" }
+        ? exit(1, "Error: database is locked\n")
         : undefined;
     const w = await started($, on, as(ME, { script: broken }));
 
