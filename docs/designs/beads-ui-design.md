@@ -1,5 +1,5 @@
 ---
-title: beads-ui: a Beads task manager for the Claude Code TUI, an MCP UI app and a web app from one core
+title: "beads-ui: a Beads task manager for the Claude Code TUI, an MCP UI app and a web app from one core"
 category: design
 tags: [design, beads-ui, task-manager, claude-code-mods, mcp-apps, web-app, shared-core, work-queue]
 status: approved
