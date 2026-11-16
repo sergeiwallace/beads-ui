@@ -21,7 +21,7 @@ import { test as kitTest } from "claude-code/testing";
 export const HOOKS_TIMEOUT_MS = 20_000;
 
 /** The kit's `test`, with HOOKS_TIMEOUT_MS when the test names no options of its own. */
-export const test = ((name: string, options: unknown, body?: unknown) =>
-  body === undefined
-    ? (kitTest as (...args: unknown[]) => unknown)(name, { timeoutMs: HOOKS_TIMEOUT_MS }, options)
-    : (kitTest as (...args: unknown[]) => unknown)(name, options, body)) as typeof kitTest;
+export const test: typeof kitTest = (name, ...rest) => {
+  if (rest.length === 1) kitTest(name, { timeoutMs: HOOKS_TIMEOUT_MS }, rest[0]);
+  else kitTest(name, ...rest);
+};

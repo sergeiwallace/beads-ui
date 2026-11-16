@@ -1,5 +1,5 @@
 import type { On } from "claude-code";
-import type { Engine } from "claude-code/testing";
+import type { Engine, Mounted } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
 import { hotkeyOf } from "../core/src/index.ts";
@@ -136,10 +136,10 @@ async function started($: Engine, on: On, files?: Record<string, string>) {
   return w;
 }
 
-type Mounted = Awaited<ReturnType<Engine["ui"]["mount"]>>;
+type PaneMounted = Mounted<"terminal", "Pane">;
 /** The pane mounts once a test: a second mount of the same request is refused. */
-const panes = new WeakMap<Engine, Promise<Mounted>>();
-const pane = ($: Engine): Promise<Mounted> => {
+const panes = new WeakMap<Engine, Promise<PaneMounted>>();
+const pane = ($: Engine): Promise<PaneMounted> => {
   const held = panes.get($);
   if (held !== undefined) return held;
   const mounted = $.ui.mount({

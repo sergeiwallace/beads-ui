@@ -312,10 +312,11 @@ export interface Prefs {
   sort: string;
 }
 
-type Ran = (
+type RunResult =
   | { ok: true; exitCode: 0; stdout: string; stderr: string }
-  | { ok: false; exitCode: number | null; stdout: string; stderr: string; message: string }
-) & {
+  | { ok: false; exitCode: number | null; stdout: string; stderr: string; message: string };
+
+type Ran = RunResult & {
   /** The directory bd ran in: the store a write landed in, whatever the pane reads by now. */
   dir: string;
 };
@@ -675,7 +676,7 @@ export class BeadsPane {
     argv: readonly string[],
     timeoutMs: number,
     streamed: boolean,
-  ): Promise<Omit<Ran, "dir">> {
+  ): Promise<RunResult> {
     const host = this.host;
     if (host === undefined) {
       return { ok: false, exitCode: null, stdout: "", stderr: "", message: "no session" };

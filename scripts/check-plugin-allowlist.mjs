@@ -29,6 +29,7 @@ import { extname, join, relative, resolve } from "node:path";
 const NOTE =
   /^(\.\/\S+) (hooks|calls|env reads|env writes|surface modules|gating hook with \.catch|gating hook without \.catch): (.*)$/;
 const VIA = / \(via [\w$.]+\)$/;
+const DEFAULT_MATCHER = / \(default matcher key: [\w$]+(?:, [\w$]+)*\)$/;
 const ENGINE_CALL = /(?<![\w$])\$\.[A-Za-z_]/;
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"]);
 // .claude-plugin holds the manifest and the mod types Claude Code writes there when it loads the
@@ -67,12 +68,16 @@ const PARAMETER_LIST_OPENER = /(?:\bfunction\s*[\w$]*|\basync)\s*$/;
 function splitTopLevel(values) {
   const parts = [];
   let depth = 0;
+  let parentheses = 0;
   let current = "";
   for (let i = 0; i < values.length; i++) {
     const char = values[i];
     if (char === "{") depth++;
     if (char === "}") depth--;
-    if (depth === 0 && values.startsWith(", ", i)) {
+    // Validator annotations can contain commas, independently of matcher braces.
+    if (depth === 0 && char === "(") parentheses++;
+    if (depth === 0 && char === ")") parentheses--;
+    if (depth === 0 && parentheses === 0 && values.startsWith(", ", i)) {
       parts.push(current);
       current = "";
       i++;
@@ -119,7 +124,12 @@ function reportedOf(report, problems) {
       if (values === "nothing") continue;
       const listed = splitTopLevel(values);
       modules[module][kind].push(
-        ...(kind === "calls" ? listed.map((call) => call.replace(VIA, "")) : listed),
+        ...listed.map((value) => {
+          if (kind === "calls") return value.replace(VIA, "");
+          // This suffix describes implicit matching, not another registration or matcher.
+          if (kind === "hooks") return value.replace(DEFAULT_MATCHER, "");
+          return value;
+        }),
       );
     }
   }
@@ -343,19 +353,30 @@ function main() {
   }
   const pluginDir = resolve(pluginArg);
   const allowlistPath = resolve(allowlistArg);
-  const allowed = JSON.parse(readFileSync(allowlistPath, "utf8")).modules ?? {};
+  const allowlist = JSON.parse(readFileSync(allowlistPath, "utf8"));
+  const allowed = allowlist.modules ?? {};
+  // Exact messages only, each with a reason. Errors never use the warning allow-list.
+  const allowedWarnings = new Set(
+    (allowlist.warnings ?? [])
+      .filter(({ reason }) => typeof reason === "string" && reason.trim() !== "")
+      .map(({ message }) => message),
+  );
   const report = validate(pluginDir);
   const problems = [];
 
   if (report.success !== true) {
+    let acceptedWarnings = 0;
     for (const part of [report.manifest, ...(report.contents ?? [])]) {
       for (const error of part?.errors ?? []) problems.push(`validate error: ${error.message}`);
       for (const warning of part?.warnings ?? []) {
-        problems.push(`validate warning: ${warning.message}`);
+        if (allowedWarnings.has(warning.message)) acceptedWarnings++;
+        else problems.push(`validate warning: ${warning.message}`);
       }
     }
-    if (problems.length === 0) problems.push("claude plugin validate reported failure");
-    fail(problems, pluginDir, allowlistPath);
+    if (problems.length === 0 && acceptedWarnings === 0) {
+      problems.push("claude plugin validate reported failure");
+    }
+    if (problems.length > 0) fail(problems, pluginDir, allowlistPath);
   }
 
   compare(reportedOf(report, problems), allowed, problems);

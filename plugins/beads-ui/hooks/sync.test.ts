@@ -1,5 +1,5 @@
 import type { On } from "claude-code";
-import type { Engine } from "claude-code/testing";
+import type { Engine, Mounted } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
 import { wakeFileName } from "../core/src/index.ts";
@@ -36,7 +36,7 @@ const publishes: (answer: () => ReturnType<Script>) => Script = (answer) => (_ke
 
 interface Session {
   w: ReturnType<typeof world>;
-  ui: Awaited<ReturnType<Engine["ui"]["mount"]>>;
+  ui: Mounted<"terminal", "Pane">;
   /** The engine calls the mod made, in order: `notify:<text>` and `submit:<text>`. */
   calls: string[];
   notified: string[];
@@ -111,7 +111,13 @@ async function move(s: Session): Promise<void> {
 const publishRuns = (s: Session) => s.w.runs.filter(isPublish);
 
 const turnComplete = async ($: Engine, s: Session) => {
-  await $.turn.complete({ answer: "done", durationMs: 1, isAborted: false, turnId: "turn-1" });
+  await $.turn.complete({
+    answer: "done",
+    durationMs: 1,
+    isAborted: false,
+    reason: "answer",
+    turnId: "turn-1",
+  });
   await s.w.clock.settle();
 };
 

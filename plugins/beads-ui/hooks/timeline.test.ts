@@ -9,6 +9,7 @@ import { test } from "./tests/kit.ts";
 import { ME, MINE } from "./tests/mine.ts";
 import { overflows } from "./tests/width.ts";
 import {
+  exit,
   ok,
   PANE_PROPS,
   SESSION,
@@ -384,7 +385,7 @@ describe("the Timeline's own read (BU-beads-ui-timeline-dety N-2)", () => {
       ...failing,
       script: (key, argv, cwd) =>
         key === timelineList("epic")
-          ? { exitCode: 1, stdout: "", stderr: "Error: database locked" }
+          ? exit(1, "Error: database locked")
           : failing.script?.(key, argv, cwd),
     });
 
