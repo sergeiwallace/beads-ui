@@ -39,7 +39,7 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 | A001 | the goal views inside the web app, app-portal and the shared core | [the web app design](beads-ui-web-app-design.md); [Goal views](#goal-views) |
 | A001 | the process clauses | Process, not content: the [Run Ledger](#run-ledger) |
 
-**Status:** DRAFT, held for Sergei's review
+**Status:** DRAFT; every decision settled. Sergei ruled D-8, D-13, D-14, D-17 and D-20 and open question 2 on 2026-11-14
 
 **Created:** 2026-10-28
 
@@ -489,15 +489,16 @@ Phase G1 starts once Sergei has ruled [D-13](#d-13) and [D-20](#d-20); the crite
 
 1. **[RESOLVED]** Which edge kind should carry goal membership: an overloaded `relates-to`, a new custom kind, or membership held in the goal's metadata, given that `tracks` already means sprint membership under D-5 of the beads-ui design?
    - **Resolution:** framed as a choice and decided in [D-2](#d-2): `relates-to` from member to goal, read by endpoint type, with a `contributes-to` kind requested upstream.
-2. Does Sergei's ruling on the prior-work compile ("don't worry about commit history ... just focus on files") also cover the ai-harness store's Dolt history and git-inbox ref history, both of which keep old content once published? This is about cleaning up content already published by the first goals system; nothing in this design depends on the answer, because the guard is forward-looking and refuses new marked records at every write and publish path. It is his ruling to scope, so it stays open for him.
-3. Where do employer-domain goals live: in the employer workspace's own store on the work pair, or in a separate store?
-   - Framed as a choice in [D-14](#d-14) and pending Sergei's ruling, with a recommendation.
-4. Should the alignment boost change the fleet-wide WSJF rubric's derived priority, or stay a separate ordering?
-   - Framed as a choice in [D-8](#d-8) and pending Sergei's ruling, with a recommendation.
-5. What from the first goals system's scoring and narrative layers should return?
-   - Framed as a choice in [D-17](#d-17), recommended none in the first release, pending Sergei's ruling because it departs from a design he approved.
+2. **[RESOLVED]** Does Sergei's ruling on the prior-work compile ("don't worry about commit history ... just focus on files") also cover the ai-harness store's Dolt history and git-inbox ref history, both of which keep old content once published? This is about cleaning up content already published by the first goals system; nothing in this design depends on the answer, because the guard is forward-looking and refuses new marked records at every write and publish path. It is his ruling to scope, so it stays open for him.
+   - **Resolution:** answered by Sergei on 2026-11-14, (a) for now: the guard stays forward-looking, and the follow-up BU-yyi (P2) reviews the git, Dolt and git-inbox history for what may need scrubbing and how. Sergei: "option A is fine for now. add a follow-up p2 /beads-task to review the commit and dolt etc history and see what all we may want to scrub and how to go asbout that. link it to this /beads-task(S) and ship changes. we'll follow-up on that later"
+3. **[RESOLVED]** Where do employer-domain goals live: in the employer workspace's own store on the work pair, or in a separate store?
+   - **Resolution:** decided in [D-14](#d-14), approved by Sergei on 2026-11-14 with his clarification.
+4. **[RESOLVED]** Should the alignment boost change the fleet-wide WSJF rubric's derived priority, or stay a separate ordering?
+   - **Resolution:** decided in [D-8](#d-8), (a) approved by Sergei on 2026-11-14; the fleet rubric change is the follow-up BU-b7l.
+5. **[RESOLVED]** What from the first goals system's scoring and narrative layers should return?
+   - **Resolution:** decided in [D-17](#d-17), (a) approved by Sergei on 2026-11-14: none in the first release, with the follow-up epic BU-5m2.
 6. **[RESOLVED]** Can a server-side guard back up the client-side guards on these repositories?
-   - **Resolution:** by probe, read-only (2026-10-28): the repository rulesets endpoint answers for ai-harness, which has no rulesets, and the token does not expose the account's plan. Whether a push ruleset can be created is not proven without a write. Push rulesets match paths, extensions and sizes only, so they could not recognise a marked record anyway. So no native GitHub feature can serve as a server-side content guard here. Whether a self-hosted push gateway is needed in its place is a separate choice, [D-20](#d-20), pending Sergei; a path ruleset for private store directories is a possible later addition and is not required by any phase.
+   - **Resolution:** by probe, read-only (2026-10-28): the repository rulesets endpoint answers for ai-harness, which has no rulesets, and the token does not expose the account's plan. Whether a push ruleset can be created is not proven without a write. Push rulesets match paths, extensions and sizes only, so they could not recognise a marked record anyway. So no native GitHub feature can serve as a server-side content guard here. Whether a self-hosted push gateway is needed in its place is a separate choice, [D-20](#d-20), which Sergei settled on 2026-11-14 as client-side guards for now with the gateway as the follow-up BU-pdu; a path ruleset for private store directories is a possible later addition and is not required by any phase.
 
 > **Feedback Round 1:** Your thoughts on the open questions:
 > 1. <!-- Response to question 2 -->
@@ -553,7 +554,7 @@ This design doc hosts the `/auto-flow` Run Ledger for the goals system's design 
 
 ## Design Decisions
 
-Every decision below was taken through the decision framework (`ai-harness/docs/procedures/decision-framework.md`): Gate 0 first, then the Authority test, then the five criteria, and each chosen option's Cons carry a mitigation. `✅ Resolved by Opus orchestrator` decisions are final for this run and go to Sergei's review with the rest of the doc, as he asked; D-8, D-13, D-14, D-17 and D-20 are left `⏳ PENDING (human)` because a gate fires on each.
+Every decision below was taken through the decision framework (`ai-harness/docs/procedures/decision-framework.md`): Gate 0 first, then the Authority test, then the five criteria, and each chosen option's Cons carry a mitigation. `✅ Resolved by Opus orchestrator` decisions are final for this run and go to Sergei's review with the rest of the doc, as he asked; D-8, D-13, D-14, D-17 and D-20 were left for Sergei because a gate fires on each, and he settled all five on 2026-11-14 (`✅ Approved by Sergei (human)`).
 
 ### Decision Summary
 
@@ -566,19 +567,19 @@ Every decision below was taken through the decision framework (`ai-harness/docs/
 | D-5 | Progress | (a) typed sources, estimates by default with a count fallback, descendant inclusion; (b) counts only; (c) manual only | (a) | | | Progress must move when work closes; Atlassian's gap | `✅ Resolved by Opus orchestrator` |
 | D-6 | Health, check-ins and the lifecycle | (a) check-ins set health, paused and dropped states, no streaks or points; (b) the first system's daily score; (c) health derived from progress | (a) | | | Monitoring helps; rewards and streaks harm; health is a judgment | `✅ Resolved by Opus orchestrator` |
 | D-7 | The alignment score | (a) noisy-OR of strength and weight, multiplying WSJF; (b) a weighted sum; (c) goal priority as a tiebreaker only | (a) | | | Keeps WSJF's structure; caps inflation | `✅ Resolved by Opus orchestrator` |
-| D-8 | Where alignment changes ordering | (a) beads-ui views and both queues, the agents' queue ordering in ai-core; (b) a new fleet-wide WSJF rubric | (a) | | | Changes how every agent's work is ordered across repositories | `⏳ PENDING (human)` |
+| D-8 | Where alignment changes ordering | (a) beads-ui views and both queues, the agents' queue ordering in ai-core; (b) a new fleet-wide WSJF rubric | (a) | (a) | no | Changes how every agent's work is ordered across repositories | `✅ Approved by Sergei (human)` |
 | D-9 | Views and libraries | (a) React Flow with ELK, a custom SVG timeline, Recharts; (b) Cytoscape and vis-timeline; (c) a commercial Gantt | (a) | | | Accessible DOM nodes; no permissive Gantt has a critical path | `✅ Resolved by Opus orchestrator` |
 | D-10 | Critical path | (a) computed in core from dependency edges and dates; (b) none | (a) | | | The ask names dependency and blocker views on a Gantt | `✅ Resolved by Opus orchestrator` |
 | D-11 | Marking and default | (a) a marking field plus the store's class, new goals default to private; (b) the store alone; (c) a label | (a) | | | The guard must detect a record in the wrong store | `✅ Resolved by Opus orchestrator` |
 | D-12 | What a shared store may know of a private goal | (a) nothing; (b) an opaque id; (c) a digest | (a) | | | "Never make their way into" admits no trace | `✅ Resolved by Opus orchestrator` |
-| D-13 | The enforcement core | (a) structure first, scanning as backstop, six client-side guard points and a wrapper for the raw Dolt push; (b) scanning only; (c) encryption in the shared repositories | (a) | | | Leak paths include stores and free text; no server-side guard can see this content | `⏳ PENDING (human)` |
-| D-14 | Where employer-domain goals live | (a) the employer workspace store on the work pair, marked domain; (b) a private store on the personal pair; (c) not supported | (a) | | | An employer-data boundary, Sergei's call | `⏳ PENDING (human)` |
+| D-13 | The enforcement core | (a) structure first, scanning as backstop, six client-side guard points and a wrapper for the raw Dolt push; (b) scanning only; (c) encryption in the shared repositories | (a) | (a) | no | Leak paths include stores and free text; no server-side guard can see this content | `✅ Approved by Sergei (human)` |
+| D-14 | Where employer-domain goals live | (a) the employer workspace store on the work pair, marked domain; (b) a private store on the personal pair; (c) not supported | (a) | (a) | no | An employer-data boundary, Sergei's call | `✅ Approved by Sergei (human)` |
 | D-15 | Where the private term list lives | (a) a personal-host-only file, never tracked; (b) tracked and encrypted | (a) | | | The employer host should hold no private content, the list included | `✅ Resolved by Opus orchestrator` |
 | D-16 | Reuse of the first goals system | (a) map selected concepts onto Beads, scoring optional and derived; (b) design from scratch; (c) adapt the archived services | (a) | | | The compile's own recommendation; Beads stays authoritative | `✅ Resolved by Opus orchestrator` |
-| D-17 | Scoring in the first release | (a) no daily score, achievements or coach, intents served directly; (b) rebuild the daily score; (c) an opt-in score | (a) | | | Evidence against gamification; departs from the April design, called out for review | `⏳ PENDING (human)` |
+| D-17 | Scoring in the first release | (a) no daily score, achievements or coach, intents served directly; (b) rebuild the daily score; (c) an opt-in score | (a) | (a) | no | Evidence against gamification; departs from the April design, called out for review | `✅ Approved by Sergei (human)` |
 | D-18 | An order among goals | (a) an optional order beside priority; (b) a strict rank replacing priority; (c) priority only | (a) | | | Breaks the "everything is P0" failure without a strict ranking | `✅ Resolved by Opus orchestrator` |
 | D-19 | Private goals over shared work | (a) join at read time on the personal pair, checks in core, "no data" for an unreadable store; (b) copy shared work into the private store; (c) private goals link only private work | (a) | | | (c) narrows the ask; the join failure becomes visible | `✅ Resolved by Opus orchestrator` |
-| D-20 | How strong "never" is | (a) client-side guards, verified, with detection; (b) a server-side push gateway; (c) (a) now, (b) after a leak | (a) | | | Only (b) prevents a bypassing tool; choosing (a) alone would narrow the ask | `⏳ PENDING (human)` |
+| D-20 | How strong "never" is | (a) client-side guards, verified, with detection; (b) a server-side push gateway; (c) (a) now, (b) after a leak | (a) | (a) | no | Only (b) prevents a bypassing tool; choosing (a) alone would narrow the ask | `✅ Approved by Sergei (human)` |
 
 ### Decision Details
 
@@ -603,7 +604,8 @@ Every decision below was taken through the decision framework (`ai-harness/docs/
 - No type change.
 
 **Cons:**
-- An epic has one parent and its own meaning; goals would be indistinguishable in tools that ignore labels.
+- An epic has one parent and its own meaning.
+- Goals would be indistinguishable in tools that ignore labels.
 
 ##### (c) A separate goals store outside Beads
 
@@ -632,7 +634,9 @@ Criterion 1: the representation becomes one-way fast as goals accumulate, and (a
 ##### (a) `relates-to` from the member to the goal, read as membership by endpoint type
 
 **Pros:**
-- Native today; visible in `bd graph` and `bd dep tree`; does not affect `bd ready`.
+- Native today.
+- Visible in `bd graph` and `bd dep tree`.
+- Does not affect `bd ready`.
 
 **Cons:**
 - `relates-to` also carries goal-to-goal relations, so the meaning depends on the endpoints.
@@ -643,7 +647,8 @@ Criterion 1: the representation becomes one-way fast as goals accumulate, and (a
 - No edge overload.
 
 **Cons:**
-- Invisible to every Beads graph tool; the first system's "links nobody reads" problem.
+- Invisible to every Beads graph tool.
+- Repeats the first system's "links nobody reads" problem.
 
 ##### (c) `tracks`, told apart from sprint membership by its target's type
 
@@ -680,7 +685,8 @@ Criterion 1: the representation becomes one-way fast as goals accumulate, and (a
 ##### (a) The goal's `contributions` map, keyed by member id
 
 **Pros:**
-- Written with the ordinary `bd update --metadata`; one record per goal.
+- Written with the ordinary `bd update --metadata`.
+- One record per goal.
 
 **Cons:**
 - Strength lives apart from the edge, so the two can disagree.
@@ -720,7 +726,8 @@ A milestone is not a third strength: it is a member issue of Beads' built-in `mi
 ##### (a) `parent-child` for refinement, `blocks`, `relates-to`; conflict recorded in metadata
 
 **Pros:**
-- Every named link is a native edge; the hierarchy shows in every Beads tree.
+- Every named link is a native edge.
+- The hierarchy shows in every Beads tree.
 
 **Cons:**
 - Conflict is not an edge, so `bd` tools do not see it.
@@ -832,7 +839,8 @@ Mitigation for the nudge: check-ins due appear in the web app's Review queue at 
 ##### (a) A noisy-OR of strength times goal weight, capped at 1, multiplying the WSJF composite
 
 **Pros:**
-- WSJF's structure and inputs are untouched; unaligned work keeps its score, though aligned work can overtake it.
+- WSJF's structure and inputs are untouched.
+- Unaligned work keeps its score, though aligned work can overtake it.
 - The cap stops many weak links from outweighing one strong one.
 
 **Cons:**
@@ -866,7 +874,7 @@ The fold-in adds one extension: alignment flows backwards along `blocks` edges, 
 
 <a id="d-8"></a>
 
-#### D-8: Where alignment changes ordering — `⏳ PENDING (human)`
+#### D-8: Where alignment changes ordering — `✅ Approved by Sergei (human)`
 
 **Context.** Gate 0: the ask's "prioritising my take and agentic ai work towards them" is explicit, so agent work must be reordered by goal alignment somewhere; an option that leaves agents' ordering unchanged would drop it and is not offered. The ordering of agents' work lives in the ai-core work queue and the fleet's WSJF rubric, which other repositories build on, so the blast radius crosses repository and contract boundaries (the Authority test's architectural category).
 
@@ -874,7 +882,8 @@ The fold-in adds one extension: alignment flows backwards along `blocks` edges, 
 
 **Pros:**
 - Meets the ask for both the person's and the agents' work with one score.
-- WSJF's rubric and inputs are untouched; stores without goals order exactly as today.
+- WSJF's rubric and inputs are untouched.
+- Stores without goals order exactly as today.
 
 **Cons:**
 - A change to ai-core's claim ordering.
@@ -889,8 +898,10 @@ The fold-in adds one extension: alignment flows backwards along `blocks` edges, 
 
 ##### Recommendation
 
-> **Decision:** `PENDING` — recommended (a) beads-ui views and the ai-core queue order by $S_i$ where goals exist.
-<!-- decision-record: chosen-option=PENDING; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
+> **Decision:** `✅ Approved by Sergei (human)` — (a), 2026-11-14: beads-ui views and the ai-core queue order by the alignment-scaled score where goals exist; the fleet WSJF rubric is unchanged. Option (b) is the follow-up BU-b7l, for the later scoring and prioritisation review. Sergei: "option A is approved for now. add a follow-up /beads-task for option B. we can review the scoring and prioritization etc system later for how to incorporate goals and whatnot."
+>
+> Sergei also asked whether goals are a Beads issue type that parents epics and tasks. They are a custom `goal` issue type ([D-1](#d-1)). Epics and tasks join a goal through a `relates-to` edge from the member to the goal ([D-2](#d-2)), not as parent-child children, so one task can serve several goals and keeps its own epic. Goals refine each other through `parent-child` ([D-4](#d-4)).
+<!-- decision-record: chosen-option=(a); ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
 <!-- decision-lineage: decision-id=BU-ylx.11.2/D-8; decision-topic=where goal alignment changes work ordering; governs=integration:work-queue,rubric:wsjf; normalized-proposition=the ai-core queue orders agents' claims by the alignment-scaled WSJF score where goals exist; applicability=phase:G4; outcome-id=; relation=different-question; related-decision-id=BU-ylx.11.2/D-7; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
 The recommendation keeps the requirement for both queues while leaving the rubric alone until outcomes are measured. Its Con would be mitigated by a single ordering function the queue imports from beads-ui core's published package, a switch read at call time that defaults on once live-verified, and Phase G4's before-and-after comparison. Phases G1 to G3 do not depend on this ruling.
@@ -906,10 +917,13 @@ The recommendation keeps the requirement for both queues while leaving the rubri
 ##### (a) React Flow with ELK, a custom SVG timeline on visx, Recharts
 
 **Pros:**
-- Accessible graph nodes; a timeline shared with the Roadmap; no new chart library.
+- Accessible graph nodes.
+- A timeline shared with the Roadmap.
+- No new chart library.
 
 **Cons:**
-- ELK's bundle is large; React Flow's expand and auto-layout examples are paid.
+- ELK's bundle is large.
+- React Flow's expand and auto-layout examples are paid.
 
 ##### (b) Cytoscape.js and vis-timeline
 
@@ -917,7 +931,8 @@ The recommendation keeps the requirement for both queues while leaving the rubri
 - Mature, free.
 
 **Cons:**
-- Canvas rendering without accessible nodes; a second visual language.
+- Canvas rendering without accessible nodes.
+- A second visual language.
 
 ##### (c) A commercial Gantt (Bryntum or a PRO edition)
 
@@ -946,7 +961,8 @@ The timeline choice refines D-10 of the beads-ui design, an AI-resolved decision
 ##### (a) Computed in core from `blocks` edges and dates
 
 **Pros:**
-- One implementation for the web app and the mod; testable without a DOM.
+- One implementation for the web app and the mod.
+- Testable without a DOM.
 
 **Cons:**
 - Members without dates or estimates weaken it.
@@ -1052,14 +1068,16 @@ Mitigation: the web app on the personal pair joins private and shared stores at 
 
 <a id="d-13"></a>
 
-#### D-13: The enforcement core — `⏳ PENDING (human)`
+#### D-13: The enforcement core — `✅ Approved by Sergei (human)`
 
 **Context.** The ask requires "an enforcement / validation etc system", not a convention. The research found the Beads store's publication path is the main leak route and that some writers bypass pre-commit. "Goal" already names the fleet's session-goal feature in hundreds of tracked paths, and no server-side guard is available on these repositories.
 
 ##### (a) Structure first (store class and marking), scanning as a backstop, at six client-side guard points
 
 **Pros:**
-- Covers stores and free text; fails closed; installs through the existing path.
+- Covers stores and free text.
+- Fails closed.
+- Installs through the existing path.
 
 **Cons:**
 - Client-side guards can be skipped on a machine that lacks them.
@@ -1078,12 +1096,13 @@ Mitigation: the web app on the personal pair joins private and shared stores at 
 - Content unreadable without a key.
 
 **Cons:**
-- File names, messages and change patterns stay visible, keys cannot be revoked, and the ciphertext is still cloned onto the employer host; the ask says such content never goes into those repositories.
+- File names, messages and change patterns stay visible, keys cannot be revoked, and the ciphertext is still cloned onto the employer host.
+- The ask says such content never goes into those repositories.
 
 ##### Recommendation
 
-> **Decision:** `PENDING` — recommended (a) Structure first, scanning as a backstop, six client-side guard points.
-<!-- decision-record: chosen-option=PENDING; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
+> **Decision:** `✅ Approved by Sergei (human)` — (a), 2026-11-14: structure first (the store class and the marking), scanning as a backstop, at six client-side guard points. Option (c), an encrypted or otherwise stronger privacy and access enforcement layer, is the follow-up BU-lqa (P2). Sergei: "option A approved. add a follow-up /beads-task for option C (some sort of encrypted or more robust system for privacy / access enforcement, whatever that would look like) and link it and mark it p2 and ship changes."
+<!-- decision-record: chosen-option=(a); ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
 <!-- decision-lineage: decision-id=BU-ylx.11.2/D-13; decision-topic=how the private-goal rule is enforced; governs=privacy:guard; normalized-proposition=enforcement is structural at six client-side guard points with content scanning as a backstop; applicability=phase:G1; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
 The ask's enforcement requirement stands whatever is chosen; what Sergei rules is the mechanism, because every option installs guard and installer contracts in ai-harness and on every machine profile, which crosses repositories (audit round 3). The design has three limits. The store publisher is not the only publication path: Beads ships a raw `bd dolt push`, so G1 wraps it for shared stores and measures whether git pre-push sees a Dolt push (T-G1.2). The content scan cannot run on the employer host, where the term list never exists, so it reports `not-declared` there while the structural rules still refuse (T-G1.5). And unmarked private text, typed by hand or derived by an agent from a private goal, is seen only by the term-list scan on personal hosts and in the web app's write API. Mitigation for skipped guards: doctor reports each guard point per machine, the installer deploys them on every profile, and the periodic scan from a personal host catches a regression that slipped past a machine without them (T-G1.5, T-G1.6). Confidence: high on the structural rules, medium on the free-text backstop.
@@ -1092,14 +1111,15 @@ The ask's enforcement requirement stands whatever is chosen; what Sergei rules i
 
 <a id="d-14"></a>
 
-#### D-14: Where employer-domain goals live — `⏳ PENDING (human)`
+#### D-14: Where employer-domain goals live — `✅ Approved by Sergei (human)`
 
 **Context.** The ask's privacy rule covers "personal / private / sensitive or in a domain-specific repo" goals and says they "can go in sergei repo or another domain-specific repo that is on my personal machine pair". Goals about employer work are domain-specific but are employer content, which the employer's own rules may not allow on personal machines. The ask's requirement, that such goals never reach a shared harness repository, holds under every option below; what is open is an employer-data boundary, which only Sergei can set.
 
 ##### (a) The employer workspace's own store on the work pair, marked `domain`, guarded like private
 
 **Pros:**
-- Employer content stays on employer machines; never in a shared harness repository.
+- Employer content stays on employer machines.
+- It never enters a shared harness repository.
 
 **Cons:**
 - Not "on my personal machine pair", which the ask names as an allowed home.
@@ -1122,8 +1142,8 @@ The ask's enforcement requirement stands whatever is chosen; what Sergei rules i
 
 ##### Recommendation
 
-> **Decision:** `PENDING` — recommended (a) The employer workspace's own store on the work pair, marked `domain`.
-<!-- decision-record: chosen-option=PENDING; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
+> **Decision:** `✅ Approved by Sergei (human)` — (a) with Sergei's clarification, 2026-11-14: employer-domain goals live in the employer's or client's own workspace store, marked `domain` and guarded like private goals. A client's workspace store stays on that client's machines. An employer workspace repository that already sits on his personal account may also sync to his personal machines. His verbatim ruling names the employers, repositories and hosts, so it is kept in the private decision record rather than quoted in this public document.
+<!-- decision-record: chosen-option=(a); ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
 <!-- decision-lineage: decision-id=BU-ylx.11.2/D-14; decision-topic=home of employer-domain goals; governs=privacy:placement; normalized-proposition=employer-domain goals live in the employer workspace store on the work pair, marked domain; applicability=phase:G1; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
 The recommendation keeps the ask's requirement (no shared harness repository) and respects the employer boundary. Its Con would be mitigated by treating the employer workspace repository as a domain-specific repository under the same guards, so the only difference from the ask's wording is which pair holds it. Phase G1 builds the guard either way.
@@ -1139,7 +1159,8 @@ The recommendation keeps the ask's requirement (no shared harness repository) an
 ##### (a) A personal-host-only file, never tracked, read by the scanner at call time
 
 **Pros:**
-- The employer host never holds it; nothing private is committed.
+- The employer host never holds it.
+- Nothing private is committed.
 
 **Cons:**
 - The scanner on the employer host runs without the term rule.
@@ -1190,7 +1211,8 @@ Mitigation: on the employer host the structural rules and the private-id rule st
 - Concrete algorithms to start from.
 
 **Cons:**
-- Raw SQL against retired tables; behaviour that differs from its own design.
+- Raw SQL against retired tables.
+- Behaviour that differs from its own design.
 
 ##### Recommendation
 
@@ -1202,7 +1224,7 @@ Mitigation: [Prior work](#prior-work) lists each reused concept with its new hom
 
 <a id="d-17"></a>
 
-#### D-17: Scoring in the first release — `⏳ PENDING (human)`
+#### D-17: Scoring in the first release — `✅ Approved by Sergei (human)`
 
 **Context.** The first goals system had an owner-approved design (April 2026) for a daily score of alignment, effort and consistency, plus achievements and a narrative coach. Its code diverged from that design in three measured places, its own research found no productivity system that sustained gamified engagement past one to two years, and this run's goal science finds reward-contingent tasks lower intrinsic motivation. The founding ask asks for prioritising work toward goals, not for a score. This departs from a design Sergei approved for the old system, so it is called out here for his review.
 
@@ -1233,8 +1255,8 @@ Mitigation: [Prior work](#prior-work) lists each reused concept with its new hom
 
 ##### Recommendation
 
-> **Decision:** `PENDING` — recommended (a) No daily score, achievements or coach in the first release.
-<!-- decision-record: chosen-option=PENDING; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
+> **Decision:** `✅ Approved by Sergei (human)` — (a), 2026-11-14: no daily score, achievements or coach in the first release. Option (b) and the systems around it are the follow-up epic BU-5m2 (P1), details worked out when it starts. Sergei: "option A is fine. we can follow-up on option B or whatever additional systems around it as a follow-up epic /beads-task linked to this one and mark that p1. we'll figure out details when we get to it"
+<!-- decision-record: chosen-option=(a); ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
 <!-- decision-lineage: decision-id=BU-ylx.11.2/D-17; decision-topic=scoring and gamification in the first goals release; governs=core:goals,apps:web; normalized-proposition=the first goals release has no daily score, achievements or narrative coach and serves their intents directly; applicability=phase:G2; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
 No founding-ask requirement names a score, so Gate 0 does not fire, but the daily score, achievements and coach were in a design Sergei approved in April 2026, so option (a) would reverse content he approved and the Authority test returns it to him (Gate B). Mitigation for the dropped design: its intents are each met by a named mechanism above, and a later release can add an optional score on top of the same goal model without migration. Confidence: medium-high.
@@ -1324,7 +1346,7 @@ Gate 0 rules out (c). Mitigation for the Con: core's goal-graph module runs one 
 
 <a id="d-20"></a>
 
-#### D-20: How strong "never" is — `⏳ PENDING (human)`
+#### D-20: How strong "never" is — `✅ Approved by Sergei (human)`
 
 **Context.** The ask says marked goals and their tasks must "never" be committed, pushed or merged into a shared repository, through "an enforcement / validation etc system". [D-13](#d-13)'s guards run on the client. They prevent every write through a guarded path on a machine where they are installed and verified, but a tool that bypasses those paths, such as a raw `dolt` binary or a machine without the guards, can still publish, and the periodic scan finds it only afterwards. GitHub offers no content-aware server-side check on these repositories: pre-receive hooks exist only on GitHub Enterprise Server, and push rulesets match paths, not content. Audit round 1 found that the AI resolving this as sufficient would narrow the ask's "never", so it is Sergei's (Gate 0).
 
@@ -1335,7 +1357,8 @@ Gate 0 rules out (c). Mitigation for the Con: core's goal-graph module runs one 
 - Covers every path the fleet's own tools use.
 
 **Cons:**
-- A bypassing tool or an unguarded machine can still publish; that case is detected, not prevented.
+- A bypassing tool or an unguarded machine can still publish.
+- That case is detected, not prevented.
 
 ##### (b) A server-side push gateway: shared remotes accept pushes only from a self-hosted mirror that runs the content checks before forwarding
 
@@ -1355,8 +1378,8 @@ Gate 0 rules out (c). Mitigation for the Con: core's goal-graph module runs one 
 
 ##### Recommendation
 
-> **Decision:** `PENDING` — recommended (a), with the bypass stated in the guard's own documentation.
-<!-- decision-record: chosen-option=PENDING; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
+> **Decision:** `✅ Approved by Sergei (human)` — (a) for now, 2026-11-14: client-side guards enforce the never rule. Option (b), a push gateway or any other stronger enforcement, is the follow-up BU-pdu. Sergei: "option A for now is approved. option B as follow-up /beads-task for whatever additioanl stuff we want to do to enforce it or more it more rigorous or whatever."
+<!-- decision-record: chosen-option=(a); ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
 <!-- decision-lineage: decision-id=BU-ylx.11.2/D-20; decision-topic=strength of the never guarantee; governs=privacy:guard; normalized-proposition=client-side guards with verification and detection are the enforcement for the private-goal rule; applicability=phase:G1; outcome-id=; relation=refines; related-decision-id=BU-ylx.11.2/D-13; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
 The recommendation rests on where the leak routes are: every route the research found goes through a fleet tool, and each of those is guarded, so the residual is a person or agent deliberately running an unguarded tool. Its Con would be mitigated by the wrapper refusing the raw Dolt push for shared stores, doctor reporting any machine without the guards, and the periodic scan from a personal host. If Sergei wants prevention with no bypass, (b) is the only option that gives it, and Phase G1 is written so that (b) adds a gateway without changing the guard module.
@@ -1387,5 +1410,6 @@ The recommendation rests on where the leak routes are: every route the research 
 
 | Date | Decision | Actor | Notes |
 |------|----------|-------|-------|
+| 2026-11-14 | D-8 (a), D-13 (a), D-14 (a) with clarification, D-17 (a), D-20 (a), open question 2 (a) | Sergei | Rulings given in chat and recorded in each decision above. Follow-ups: BU-b7l (D-8 b), BU-lqa (D-13 c, P2), BU-5m2 (D-17 b, P1 epic), BU-pdu (D-20 b), BU-yyi (history review, P2). Recorded in this document on 2026-11-17 by the Opus 5.5 session that held the decisions |
 
 <!-- /doc:region name="approval_log" -->
