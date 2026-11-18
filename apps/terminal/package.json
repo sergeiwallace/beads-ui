@@ -1,0 +1,14 @@
+{
+  "name": "@sergeiwallace/beads-ui-terminal",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "bin": {
+    "beads-ui-terminal": "./bin/beads-ui-terminal.mjs",
+    "beads-ui-terminal-launch": "./bin/launch.mjs"
+  }
+}
