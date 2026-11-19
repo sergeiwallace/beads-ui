@@ -10,8 +10,8 @@ import {
   type SurfaceSetting,
   surfaceOverridesOf,
   withPanelOverrides,
-} from "../core/src/index.ts";
-import type { Host } from "./host.ts";
+} from "../core/src/index.js";
+import type { Host } from "./host.js";
 
 // The task panel's settings state (T-2B.2, T-2B.8, D-35). Every view the panel draws is a view
 // registry entry drawn through the components in ./components on the band and the pane (T-2C.8);
@@ -24,7 +24,7 @@ export {
   TASKS_CLIENT_KEY,
   type TaskListClient,
   type TaskListHandlers,
-} from "./components/tasks.ts";
+} from "./components/tasks.js";
 
 /** Where the pane keeps panel settings changed in it until Save to file writes them. */
 export const PANEL_SETTINGS_KEY = "panel-settings";

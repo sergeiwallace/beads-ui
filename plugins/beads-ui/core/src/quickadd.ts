@@ -1,5 +1,5 @@
-import { issueIdArg } from "./argv.ts";
-import type { BdArgv, Priority, Result } from "./model.ts";
+import { issueIdArg } from "./argv.js";
+import type { BdArgv, Priority, Result } from "./model.js";
 
 /** A parsed quick-add line (D-23). `sprint` also appears in `labels` as `sprint:<name>`. */
 export interface QuickAdd {

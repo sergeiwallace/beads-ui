@@ -29,8 +29,8 @@ import {
   summaryPieces,
   taskRowView,
   truncate,
-} from "../core/src/index.ts";
-import { bandSurface, type Surface, type SurfaceUi } from "./components/adapters.ts";
+} from "../core/src/index.js";
+import { bandSurface, type Surface, type SurfaceUi } from "./components/adapters.js";
 import {
   aboveNote,
   controlsRow,
@@ -39,14 +39,14 @@ import {
   moreLabel,
   ROW_INDENT,
   summaryLine,
-} from "./components/band.ts";
-import { enabledIndicators, gutterFor } from "./components/indicators.ts";
-import { colorOf } from "./components/look.ts";
-import { bandNav, navBar } from "./components/nav.ts";
-import { textLine } from "./components/window.ts";
-import type { Host } from "./host.ts";
-import type { BeadsPane } from "./pane.ts";
-import type { BandTally } from "./tally.ts";
+} from "./components/band.js";
+import { enabledIndicators, gutterFor } from "./components/indicators.js";
+import { colorOf } from "./components/look.js";
+import { bandNav, navBar } from "./components/nav.js";
+import { textLine } from "./components/window.js";
+import type { Host } from "./host.js";
+import type { BeadsPane } from "./pane.js";
+import type { BandTally } from "./tally.js";
 
 /** Where each session's chosen level lives in `$.store`, by session name (D-36). */
 export const BAND_LEVEL_KEY = "band-level";

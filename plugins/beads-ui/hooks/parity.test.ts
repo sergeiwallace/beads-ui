@@ -2,13 +2,13 @@ import type { On } from "claude-code";
 import type { Engine, Mounted } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
-import { hotkeyOf } from "../core/src/index.ts";
-import { BAND_MENU_KEY } from "./components/band.ts";
-import { OVERVIEW_KEY } from "./levels.ts";
-import { PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
-import { MINE, ownStore } from "./tests/mine.ts";
-import { render } from "./tests/render.ts";
+import { hotkeyOf } from "../core/src/index.js";
+import { BAND_MENU_KEY } from "./components/band.js";
+import { OVERVIEW_KEY } from "./levels.js";
+import { PANE_ID, PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
+import { MINE, ownStore } from "./tests/mine.js";
+import { render } from "./tests/render.js";
 import {
   BAND_PROPS,
   type Counted,
@@ -20,7 +20,7 @@ import {
   VIEWPORT,
   type WorldOptions,
   world,
-} from "./tests/world.ts";
+} from "./tests/world.js";
 
 // T-2C.8, D-35: every view the pane draws is drawn by both adapters, and every action a view
 // offers in the pane is reachable in the band's overview, by a button or a menu. For each view

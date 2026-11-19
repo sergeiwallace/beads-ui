@@ -14,7 +14,7 @@ import {
   reopenArgv,
   showArgv,
   statusesArgv,
-} from "../src/index.ts";
+} from "../src/index.js";
 
 describe("bd argv builders", () => {
   test("should build the read commands with --json when asked for the board's inputs", () => {

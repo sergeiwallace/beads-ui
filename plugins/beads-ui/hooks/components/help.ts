@@ -1,7 +1,7 @@
 import type { RenderElement, RenderNode } from "claude-code";
 
-import type { Surface } from "./adapters.ts";
-import { lineWindow, textLine, textLines, windowed } from "./window.ts";
+import type { Surface } from "./adapters.js";
+import { lineWindow, textLine, textLines, windowed } from "./window.js";
 
 // The help (T-1.1, D-35, T-2C.8): the keys, the quick-add and filter grammars, the indicators'
 // legend and how to focus the pane, drawn from one list of parts on either surface: framed on

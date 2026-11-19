@@ -2,11 +2,11 @@ import type { On } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
-import list from "../core/test/fixtures/bd-list-all-brief.json.ts";
-import { PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
-import { ME, MINE } from "./tests/mine.ts";
-import { render } from "./tests/render.ts";
+import list from "../core/test/fixtures/bd-list-all-brief.json.js";
+import { PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
+import { ME, MINE } from "./tests/mine.js";
+import { render } from "./tests/render.js";
 import {
   BAND_PROPS,
   CWD,
@@ -23,7 +23,7 @@ import {
   VIEWPORT,
   type WorldOptions,
   world,
-} from "./tests/world.ts";
+} from "./tests/world.js";
 
 // The band's figures row (T-2C.11) was removed on 2026-10-27 at Sergei's request; its code is in
 // docs/archive/figures-row/. A session owning tasks in two stores, four of them done in the

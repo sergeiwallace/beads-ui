@@ -1,14 +1,14 @@
-import { DEFAULT_ID_POLICY, type IdPolicy, parseIdPolicy } from "./mint.ts";
-import type { Result } from "./model.ts";
-import { windowMs } from "./snapshot.ts";
+import { DEFAULT_ID_POLICY, type IdPolicy, parseIdPolicy } from "./mint.js";
+import type { Result } from "./model.js";
+import { windowMs } from "./snapshot.js";
 import {
   DEFAULT_QUIET_SECONDS,
   DEFAULT_SYNC_TIMEOUT_SECONDS,
   MAX_SYNC_TIMEOUT_SECONDS,
   STORE_TOKEN,
   type SyncSettings,
-} from "./sync.ts";
-import { isToken, TOKENS, type Token } from "./tokens.ts";
+} from "./sync.js";
+import { isToken, TOKENS, type Token } from "./tokens.js";
 import {
   BAND_LEVELS,
   BAND_PARTS,
@@ -20,7 +20,7 @@ import {
   isBandPart,
   isBandRows,
   MAX_BAND_ROWS,
-} from "./views/band.ts";
+} from "./views/band.js";
 import {
   COLLAPSE_RULES,
   DEFAULT_PANEL_SETTINGS,
@@ -30,8 +30,8 @@ import {
   MAX_SHOWN,
   PANEL_MODES,
   type PanelSettings,
-} from "./views/panel.ts";
-import { isSurfaceSetting, SURFACE_SETTINGS, type SurfaceSetting } from "./views/surfaces.ts";
+} from "./views/panel.js";
+import { isSurfaceSetting, SURFACE_SETTINGS, type SurfaceSetting } from "./views/surfaces.js";
 
 /** The settings the mod reads from `beads-ui.toml` (design, Configuration), at call time. */
 export interface BeadsUiConfig {

@@ -9,11 +9,11 @@ import {
   type TaskRowView,
   type Token,
   truncate,
-} from "../../core/src/index.ts";
-import type { Surface } from "./adapters.ts";
-import { emptyState } from "./frame.ts";
-import { gutter } from "./indicators.ts";
-import { rowHover, weight } from "./look.ts";
+} from "../../core/src/index.js";
+import type { Surface } from "./adapters.js";
+import { emptyState } from "./frame.js";
+import { gutter } from "./indicators.js";
+import { rowHover, weight } from "./look.js";
 
 // The task row and the task list (T-2B.2, D-35): drawn from core's TaskListView on any surface.
 

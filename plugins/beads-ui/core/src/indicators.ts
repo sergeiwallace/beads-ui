@@ -4,11 +4,11 @@
 // help and Settings draw their legend and switches from the same list, so a new indicator is one
 // entry here and one glyph in glyphs.ts.
 
-import { type GlyphId, glyphOf } from "./glyphs.ts";
-import type { Issue } from "./model.ts";
-import type { ReviewItem } from "./review.ts";
-import { openItemsOf } from "./reviewList.ts";
-import type { Token } from "./tokens.ts";
+import { type GlyphId, glyphOf } from "./glyphs.js";
+import type { Issue } from "./model.js";
+import type { ReviewItem } from "./review.js";
+import { openItemsOf } from "./reviewList.js";
+import type { Token } from "./tokens.js";
 
 /** The issues of the read a row comes from, by id and by parent. */
 export interface IndicatorRead {

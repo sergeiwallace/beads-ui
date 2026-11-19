@@ -1,8 +1,8 @@
 // Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
 // claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
-import { type Issue, roadmapView } from "../src/index.ts";
-import { storeStatuses } from "./helpers.ts";
+import { type Issue, roadmapView } from "../src/index.js";
+import { storeStatuses } from "./helpers.js";
 
 // T-3.2: "When the Roadmap renders, the system shall place epics and milestones by due date and
 // shall draw blocks and parent-child dependencies as lines." The web app draws this model with

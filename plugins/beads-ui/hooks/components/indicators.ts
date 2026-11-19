@@ -12,9 +12,9 @@ import {
   openItemsOf,
   type ReviewItem,
   type TaskClientSpan,
-} from "../../core/src/index.ts";
-import type { Surface } from "./adapters.ts";
-import { colorOf } from "./look.ts";
+} from "../../core/src/index.js";
+import type { Surface } from "./adapters.js";
+import { colorOf } from "./look.js";
 
 // The row indicators both surfaces draw (D-41, D-42, T-2C.3): the switches `[indicators]` and
 // Settings set, the sessions the host's registry holds live, the gutter every task row starts

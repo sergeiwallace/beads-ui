@@ -6,10 +6,10 @@ import {
   PRESS_FRAME_COLUMNS,
   textWidth,
   truncate,
-} from "../../core/src/index.ts";
-import type { Surface } from "./adapters.ts";
-import { weight } from "./look.ts";
-import { lineWindow, textLine, windowed } from "./window.ts";
+} from "../../core/src/index.js";
+import type { Surface } from "./adapters.js";
+import { weight } from "./look.js";
+import { lineWindow, textLine, windowed } from "./window.js";
 
 // The options menu (T-2B.4, D-35, T-2C.8): every action a view offers, drawn from core's
 // MenuView on either surface.

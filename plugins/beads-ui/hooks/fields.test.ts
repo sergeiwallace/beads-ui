@@ -2,9 +2,9 @@ import type { RenderPropsOf } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
-import list from "../core/test/fixtures/bd-list-all-brief.json.ts";
-import { PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
+import list from "../core/test/fixtures/bd-list-all-brief.json.js";
+import { PANE_ID, PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
 import {
   ok,
   onBoard,
@@ -15,7 +15,7 @@ import {
   VIEWPORT,
   type WorldOptions,
   world,
-} from "./tests/world.ts";
+} from "./tests/world.js";
 
 // BU-mg2.3.14: a field shows its whole text whenever the pane has the room for it, and only a
 // value that cannot fit is cut, with an ellipsis. Frozen at fixed body widths, so a layout

@@ -1,13 +1,13 @@
-import { CLOSED_PAGE_SIZE, moveArgv } from "../argv.ts";
-import { buildColumns, buildSwimlanes, type SwimlaneMode } from "../columns.ts";
-import { applyFilter, type Filter } from "../filter.ts";
-import { GUTTER_TREE_CHARS } from "../indicators.ts";
-import { CARD_FRAME_TREE_CHARS, PRESS_TREE_CHARS } from "../layout.ts";
-import type { BdArgv, Issue, RandomSource, Result, Status, StatusCategory } from "../model.ts";
-import { keyBetween, RANK_KEY, type RankError, rankNeighbours, readRank } from "../rank.ts";
-import type { SortSpec } from "../sort.ts";
-import { priorityToken, statusToken, type Token } from "../tokens.ts";
-import { asOf, priorityBadge, truncate } from "./text.ts";
+import { CLOSED_PAGE_SIZE, moveArgv } from "../argv.js";
+import { buildColumns, buildSwimlanes, type SwimlaneMode } from "../columns.js";
+import { applyFilter, type Filter } from "../filter.js";
+import { GUTTER_TREE_CHARS } from "../indicators.js";
+import { CARD_FRAME_TREE_CHARS, PRESS_TREE_CHARS } from "../layout.js";
+import type { BdArgv, Issue, RandomSource, Result, Status, StatusCategory } from "../model.js";
+import { keyBetween, RANK_KEY, type RankError, rankNeighbours, readRank } from "../rank.js";
+import type { SortSpec } from "../sort.js";
+import { priorityToken, statusToken, type Token } from "../tokens.js";
+import { asOf, priorityBadge, truncate } from "./text.js";
 
 /** bd's exit status for a refused `--if-status` guard: the shown status was stale. */
 export const STALE_WRITE_EXIT = 13;

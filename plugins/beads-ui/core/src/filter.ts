@@ -1,4 +1,4 @@
-import type { Issue, Result } from "./model.ts";
+import type { Issue, Result } from "./model.js";
 
 export const FILTER_KEYS = ["type", "label", "assignee", "sprint", "ready"] as const;
 export type FilterKey = (typeof FILTER_KEYS)[number];

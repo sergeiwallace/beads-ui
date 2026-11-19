@@ -2,16 +2,16 @@
 // its start to its due date, and the blocks and parent-child dependencies between them as lines.
 // Pure: the web app draws it with Frappe Gantt (D-10); the placement is the Timeline's (T-2B.9).
 
-import type { Issue, Status, StatusCategory } from "./model.ts";
-import { milestoneSprintOf, sprintLabelsOf, startsAtOf } from "./sprint-view.ts";
-import { statusToken, type Token } from "./tokens.ts";
+import type { Issue, Status, StatusCategory } from "./model.js";
+import { milestoneSprintOf, sprintLabelsOf, startsAtOf } from "./sprint-view.js";
+import { statusToken, type Token } from "./tokens.js";
 import {
   dayOf,
   isTimelineIssue,
   statusCategory,
   type TimelineAxis,
   timelineView,
-} from "./views/timeline.ts";
+} from "./views/timeline.js";
 
 /** The dependency types the Roadmap draws as lines, as bd names them. */
 export type RoadmapLinkKind = "blocks" | "parent-child";

@@ -1,12 +1,12 @@
 import type { On } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
-import { wakeFileName } from "../core/src/index.ts";
-import cascadePreview from "../core/test/fixtures/bd-delete-cascade-dry-run.json.ts";
-import leafText from "../core/test/fixtures/bd-delete-dry-run-leaf.txt.ts";
-import listText from "../core/test/fixtures/bd-list-all-brief.json.ts";
-import { CONFIRM_ID, PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
+import { wakeFileName } from "../core/src/index.js";
+import cascadePreview from "../core/test/fixtures/bd-delete-cascade-dry-run.json.js";
+import leafText from "../core/test/fixtures/bd-delete-dry-run-leaf.txt.js";
+import listText from "../core/test/fixtures/bd-list-all-brief.json.js";
+import { CONFIRM_ID, PANE_ID, PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
 import {
   CWD,
   DEPENDENTS_STDERR,
@@ -21,7 +21,7 @@ import {
   VIEWPORT,
   type WorldOptions,
   world,
-} from "./tests/world.ts";
+} from "./tests/world.js";
 
 const mount = ($: Engine, requestId: string, surface: "terminal" | "desktop" = "terminal") =>
   $.ui

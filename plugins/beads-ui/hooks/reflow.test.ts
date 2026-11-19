@@ -2,10 +2,10 @@ import type { RenderPropsOf } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
-import { SHORT_HELP_TEXT } from "./pane.ts";
-import { PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
-import { overflows } from "./tests/width.ts";
+import { SHORT_HELP_TEXT } from "./pane.js";
+import { PANE_ID, PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
+import { overflows } from "./tests/width.js";
 import {
   BAND_PROPS,
   onBoard,
@@ -15,7 +15,7 @@ import {
   VIEWPORT,
   type WorldOptions,
   world,
-} from "./tests/world.ts";
+} from "./tests/world.js";
 
 // T-1B.9: the pane reflows to its body's width and height. The kit hands back the element
 // tree, so tests/width.ts measures it as Claude Code lays it out.

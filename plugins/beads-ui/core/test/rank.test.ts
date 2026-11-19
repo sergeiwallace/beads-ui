@@ -19,8 +19,8 @@ import {
   resolveRank,
   type Status,
   WEB_RANK_DEFAULT,
-} from "../src/index.ts";
-import { unwrap } from "./helpers.ts";
+} from "../src/index.js";
+import { unwrap } from "./helpers.js";
 
 const STATUSES: Status[] = [
   { name: "open", category: "active", builtin: true },

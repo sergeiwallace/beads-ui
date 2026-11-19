@@ -13,9 +13,9 @@ import {
   slugifyTitle,
   storeUsesDisplayIds,
   takenDisplayIds,
-} from "../src/index.ts";
-import minted from "./fixtures/bd-show-minted.json.ts";
-import { allIssues, byId, unwrap } from "./helpers.ts";
+} from "../src/index.js";
+import minted from "./fixtures/bd-show-minted.json.js";
+import { allIssues, byId, unwrap } from "./helpers.js";
 
 const SUFFIX = /^[abcdefghjkmnpqrstuvwxyz]{4}$/;
 // A fixed random source: the surface passes its own, tests pass a sequence.

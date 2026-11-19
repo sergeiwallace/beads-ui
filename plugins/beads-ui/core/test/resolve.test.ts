@@ -8,7 +8,7 @@ import {
   resolveStore,
   type StoreFacts,
   sessionPrefix,
-} from "../src/index.ts";
+} from "../src/index.js";
 
 const FACTS: StoreFacts = {
   cwd: "/work/bms-semantic-knowledge-graph",

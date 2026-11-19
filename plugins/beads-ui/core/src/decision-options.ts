@@ -1,4 +1,4 @@
-import type { Result } from "./model.ts";
+import type { Result } from "./model.js";
 
 // Option cards (web app design D-2, T-W1.2): the held store's structured-options command
 // (`held_cli.py options`) prints each review item's decisions as JSON, and this reads it into

@@ -10,14 +10,14 @@ import {
   parseBdList,
   parseBdShow,
   sortIssues,
-} from "../core/src/index.ts";
-import historyMg23 from "../core/test/fixtures/bd-history-BU-mg2.3.json.ts";
-import list from "../core/test/fixtures/bd-list-all-brief.json.ts";
-import show from "../core/test/fixtures/bd-show.json.ts";
-import minted from "../core/test/fixtures/bd-show-minted.json.ts";
-import statusesFixture from "../core/test/fixtures/bd-statuses.json.ts";
-import { PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
+} from "../core/src/index.js";
+import historyMg23 from "../core/test/fixtures/bd-history-BU-mg2.3.json.js";
+import list from "../core/test/fixtures/bd-list-all-brief.json.js";
+import show from "../core/test/fixtures/bd-show.json.js";
+import minted from "../core/test/fixtures/bd-show-minted.json.js";
+import statusesFixture from "../core/test/fixtures/bd-statuses.json.js";
+import { PANE_ID, PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
 import {
   CWD,
   exit,
@@ -34,7 +34,7 @@ import {
   VIEWPORT,
   type WorldOptions,
   world,
-} from "./tests/world.ts";
+} from "./tests/world.js";
 
 const issues = (): Issue[] => {
   const parsed = parseBdList(list);

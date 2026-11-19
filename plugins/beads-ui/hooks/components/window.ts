@@ -1,8 +1,8 @@
 import type { RenderElement, RenderNode } from "claude-code";
 
-import { glyphOf, type Token, truncate } from "../../core/src/index.ts";
-import type { Surface } from "./adapters.ts";
-import { colorOf, weight } from "./look.ts";
+import { glyphOf, type Token, truncate } from "../../core/src/index.js";
+import type { Surface } from "./adapters.js";
+import { colorOf, weight } from "./look.js";
 
 // The band's form of a view (D-35, T-2C.8): where a surface scrolls a view by its own controls
 // (the band's overview, D-36), a view draws as lines of one row each, and the surface's rows

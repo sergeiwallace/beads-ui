@@ -1,6 +1,6 @@
 import type { RenderElement } from "claude-code";
 
-import { has, type Surface } from "./adapters.ts";
+import { has, type Surface } from "./adapters.js";
 
 // One function per element a surface can lack (D-35): the element where the surface draws it,
 // else its button form, so a component never asks which surface it is on.

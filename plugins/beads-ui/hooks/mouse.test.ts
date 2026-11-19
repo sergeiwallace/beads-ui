@@ -7,17 +7,17 @@ import {
   INITIAL_BOARD_STATE,
   reduceBoard,
   type TaskClientProps,
-} from "../core/src/index.ts";
-import { allIssues, storeStatuses } from "../core/test/helpers.ts";
-import type { Host } from "./host.ts";
-import { BeadsPane, type PaneUi, type TasksRegion } from "./pane.ts";
-import { ROW_OPEN_LABEL, TASKS_CLIENT_KEY } from "./panel.ts";
-import { PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { StoreResolver } from "./store.ts";
-import { test } from "./tests/kit.ts";
-import { MINE, MINE_ORDER } from "./tests/mine.ts";
-import { overflows } from "./tests/width.ts";
-import { CWD, PANE_PROPS, SESSION, SHOW, VIEWPORT, world } from "./tests/world.ts";
+} from "../core/src/index.js";
+import { allIssues, storeStatuses } from "../core/test/helpers.js";
+import type { Host } from "./host.js";
+import { BeadsPane, type PaneUi, type TasksRegion } from "./pane.js";
+import { ROW_OPEN_LABEL, TASKS_CLIENT_KEY } from "./panel.js";
+import { PANE_ID, PLUGIN_NAME } from "./register.js";
+import { StoreResolver } from "./store.js";
+import { test } from "./tests/kit.js";
+import { MINE, MINE_ORDER } from "./tests/mine.js";
+import { overflows } from "./tests/width.js";
+import { CWD, PANE_PROPS, SESSION, SHOW, VIEWPORT, world } from "./tests/world.js";
 
 // Phase 2B's task panel, slice 2 (T-2B.5, D-31): the mouse. In the terminal and the desktop a
 // Client draws the Tasks view's rows and posts what a click or a key did; the hooks run the

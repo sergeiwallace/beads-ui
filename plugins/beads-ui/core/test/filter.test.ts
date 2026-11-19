@@ -9,9 +9,9 @@ import {
   parseBdReady,
   parseFilter,
   submitFilter,
-} from "../src/index.ts";
-import ready from "./fixtures/bd-ready.json.ts";
-import { allIssues, ids, unwrap } from "./helpers.ts";
+} from "../src/index.js";
+import ready from "./fixtures/bd-ready.json.js";
+import { allIssues, ids, unwrap } from "./helpers.js";
 
 const readyIds = new Set(ids(unwrap(parseBdReady(ready))));
 const filterOf = (text: string): Filter => unwrap(parseFilter(text));

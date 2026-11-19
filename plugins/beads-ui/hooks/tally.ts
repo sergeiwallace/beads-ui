@@ -52,11 +52,11 @@ import {
   wakeFileName,
   wakeText,
   windowMs,
-} from "../core/src/index.ts";
-import type { BandSettingsPanel } from "./bandSettings.ts";
-import { setLiveSessions } from "./components/indicators.ts";
-import type { Host } from "./host.ts";
-import type { StoreResolver } from "./store.ts";
+} from "../core/src/index.js";
+import type { BandSettingsPanel } from "./bandSettings.js";
+import { setLiveSessions } from "./components/indicators.js";
+import type { Host } from "./host.js";
+import type { StoreResolver } from "./store.js";
 
 const COUNT_TIMEOUT_MS = 8_000;
 const START_TIMEOUT_MS = 15_000;

@@ -2,13 +2,13 @@ import type { On, RenderPropsOf } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
-import { NAV_ENTRIES, priorityToken, SPACE } from "../core/src/index.ts";
-import list from "../core/test/fixtures/bd-list-all-brief.json.ts";
-import { colorOf } from "./components/look.ts";
-import { REVIEW_FILTER_KEY } from "./components/review.ts";
-import { PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
-import { overflows } from "./tests/width.ts";
+import { NAV_ENTRIES, priorityToken, SPACE } from "../core/src/index.js";
+import list from "../core/test/fixtures/bd-list-all-brief.json.js";
+import { colorOf } from "./components/look.js";
+import { REVIEW_FILTER_KEY } from "./components/review.js";
+import { PANE_ID, PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
+import { overflows } from "./tests/width.js";
 import {
   exit,
   ok,
@@ -19,7 +19,7 @@ import {
   VIEWPORT,
   type WorldOptions,
   world,
-} from "./tests/world.ts";
+} from "./tests/world.js";
 
 // T-2C.12, the pane's visual pass (D-43): framed sections, the header bar, accented Board cards,
 // one spacing scale and one weight scale, hover on pressable rows, and an empty and an error

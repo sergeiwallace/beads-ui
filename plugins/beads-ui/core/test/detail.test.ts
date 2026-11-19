@@ -11,12 +11,12 @@ import {
   parseBdShow,
   parseFieldEdit,
   reduceDetail,
-} from "../src/index.ts";
-import historyMg22 from "./fixtures/bd-history-BU-mg2.2.json.ts";
-import historyMg23 from "./fixtures/bd-history-BU-mg2.3.json.ts";
-import historyMg2 from "./fixtures/bd-history-BU-mg2.json.ts";
-import show from "./fixtures/bd-show.json.ts";
-import { allIssues, byId, unwrap } from "./helpers.ts";
+} from "../src/index.js";
+import historyMg22 from "./fixtures/bd-history-BU-mg2.2.json.js";
+import historyMg23 from "./fixtures/bd-history-BU-mg2.3.json.js";
+import historyMg2 from "./fixtures/bd-history-BU-mg2.json.js";
+import show from "./fixtures/bd-show.json.js";
+import { allIssues, byId, unwrap } from "./helpers.js";
 
 // `bd show BU-mg2.3 --json` and `bd history BU-mg2.3 --events --json`.
 const epic = (): Issue => {

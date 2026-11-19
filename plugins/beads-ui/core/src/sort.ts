@@ -1,4 +1,4 @@
-import type { Issue, Result } from "./model.ts";
+import type { Issue, Result } from "./model.js";
 
 export const SORT_KEYS = ["priority", "created", "updated", "due", "assignee"] as const;
 export type SortKey = (typeof SORT_KEYS)[number];

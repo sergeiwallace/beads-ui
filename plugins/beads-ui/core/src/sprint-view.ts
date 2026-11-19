@@ -1,6 +1,6 @@
-import { buildColumns, type ColumnsResult } from "./columns.ts";
-import type { Issue, Sprint, Status } from "./model.ts";
-import { DEFAULT_SORT, sortIssues } from "./sort.ts";
+import { buildColumns, type ColumnsResult } from "./columns.js";
+import type { Issue, Sprint, Status } from "./model.js";
+import { DEFAULT_SORT, sortIssues } from "./sort.js";
 
 // The Sprint view (web app design T-W1.0, over D-5 of the beads-ui design): a sprint's members are
 // the issues labelled `sprint:<name>`, and its dates come from the `milestone` issue titled

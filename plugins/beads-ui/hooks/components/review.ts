@@ -7,12 +7,12 @@ import {
   SPACE,
   stampText,
   truncate,
-} from "../../core/src/index.ts";
-import type { ReaderState } from "../review.ts";
-import { has, type Surface } from "./adapters.ts";
-import { field, markdown } from "./elements.ts";
-import { emptyState, errorState, stateBox } from "./frame.ts";
-import { colorOf, rowHover, weight } from "./look.ts";
+} from "../../core/src/index.js";
+import type { ReaderState } from "../review.js";
+import { has, type Surface } from "./adapters.js";
+import { field, markdown } from "./elements.js";
+import { emptyState, errorState, stateBox } from "./frame.js";
+import { colorOf, rowHover, weight } from "./look.js";
 
 // The Review section of a Detail and the reader of one held item (D-40, T-2C.5), drawn once for
 // both surfaces: the pane's Detail draws the section and the reader, the band's overview the

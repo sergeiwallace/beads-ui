@@ -1,7 +1,7 @@
 // Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
 // claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
-import { colorFor, resolveTheme, TERMINAL_THEME, TOKENS } from "../src/index.ts";
+import { colorFor, resolveTheme, TERMINAL_THEME, TOKENS } from "../src/index.js";
 
 // D-43 and T-2C.9: every token on a Claude Code theme key, and `[theme]` hex values over them.
 

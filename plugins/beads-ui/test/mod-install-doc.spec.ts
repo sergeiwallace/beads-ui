@@ -5,9 +5,9 @@ import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import type { Host } from "../hooks/host.ts";
-import { BeadsPane, KEYBINDINGS_BLOCK, type PaneUi, type Tab, USAGE_LINES } from "../hooks/pane.ts";
-import { StoreResolver } from "../hooks/store.ts";
+import type { Host } from "../hooks/host.js";
+import { BeadsPane, KEYBINDINGS_BLOCK, type PaneUi, type Tab, USAGE_LINES } from "../hooks/pane.js";
+import { StoreResolver } from "../hooks/store.js";
 
 const repoRoot = resolve(import.meta.dirname, "../../..");
 const doc = () => readFileSync(join(repoRoot, "docs/procedures/mod-install.md"), "utf8");

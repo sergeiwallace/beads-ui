@@ -12,7 +12,7 @@ import {
   TERMINAL_THEME,
   TOKENS,
   terminalColor,
-} from "../src/index.ts";
+} from "../src/index.js";
 
 describe("COMMANDS", () => {
   test("should give every action a keyboard path when the catalog is read", () => {

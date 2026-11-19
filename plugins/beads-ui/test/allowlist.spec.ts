@@ -36,7 +36,7 @@ const runGate = (dir: string) =>
   spawnSync("node", [gate, dir, allowlist], { cwd: repoRoot, encoding: "utf8" });
 
 const SESSION_START = "for (const spec of COMMAND_SPECS) await $.command.register(spec);";
-const IMPORT_ANCHOR = 'import { drawBand } from "./bands.ts";';
+const IMPORT_ANCHOR = 'import { drawBand } from "./bands.js";';
 
 describe("the validate allow-list gate", () => {
   it("should pass when run on the real plugin", () => {
@@ -86,7 +86,7 @@ describe("the validate allow-list gate", () => {
         join(d, "hooks/helper.ts"),
         'import type { EngineInterface } from "claude-code";\n\nexport async function view($: EngineInterface) {\n  return $.ui.open({ id: "other" });\n}\n',
       );
-      editRegister(d, IMPORT_ANCHOR, `${IMPORT_ANCHOR}\nimport { view } from "./helper.ts";`);
+      editRegister(d, IMPORT_ANCHOR, `${IMPORT_ANCHOR}\nimport { view } from "./helper.js";`);
       editRegister(d, SESSION_START, `${SESSION_START}\n    await view($);`);
     });
 
@@ -105,7 +105,7 @@ describe("the validate allow-list gate", () => {
         join(d, "lib/extra.ts"),
         'import type { On } from "claude-code";\n\nexport function extra(on: On) {\n  on("ui.close", async ($, e, next) => {\n    await $.ui.open({ id: "other" });\n    return next(e);\n  });\n}\n',
       );
-      editRegister(d, IMPORT_ANCHOR, `${IMPORT_ANCHOR}\nimport { extra } from "../lib/extra.ts";`);
+      editRegister(d, IMPORT_ANCHOR, `${IMPORT_ANCHOR}\nimport { extra } from "../lib/extra.js";`);
       editRegister(
         d,
         "export function register(on: On) {",
@@ -129,7 +129,7 @@ describe("the validate allow-list gate", () => {
         join(d, "hooks/helper.ts"),
         'export async function view(engine: { ui: { open(options: { id: string }): unknown } }) {\n  return engine.ui.open({ id: "other" });\n}\n',
       );
-      editRegister(d, IMPORT_ANCHOR, `${IMPORT_ANCHOR}\nimport { view } from "./helper.ts";`);
+      editRegister(d, IMPORT_ANCHOR, `${IMPORT_ANCHOR}\nimport { view } from "./helper.js";`);
       editRegister(d, SESSION_START, `${SESSION_START}\n    await view($);`);
     });
 
@@ -152,7 +152,7 @@ describe("the validate allow-list gate", () => {
         join(d, "hooks/helper.ts"),
         'export async function view(engine) {\n  return engine.ui.open({ id: "other" });\n}\n',
       );
-      editRegister(d, IMPORT_ANCHOR, `${IMPORT_ANCHOR}\nimport { view } from "./helper.ts";`);
+      editRegister(d, IMPORT_ANCHOR, `${IMPORT_ANCHOR}\nimport { view } from "./helper.js";`);
       editRegister(
         d,
         SESSION_START,

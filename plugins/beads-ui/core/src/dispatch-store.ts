@@ -8,8 +8,8 @@ import {
   deliveryMachine,
   isFinalDelivery,
   reduceDelivery,
-} from "./delivery-state.ts";
-import type { RungAttempt, RungName } from "./dispatch-policy.ts";
+} from "./delivery-state.js";
+import type { RungAttempt, RungName } from "./dispatch-policy.js";
 
 export const DISPATCH_KINDS = ["prompt", "answer", "unblock", "handoff-request"] as const;
 export type DispatchKind = (typeof DISPATCH_KINDS)[number];

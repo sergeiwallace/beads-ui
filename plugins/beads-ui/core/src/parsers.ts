@@ -8,7 +8,7 @@ import {
   STATUS_CATEGORIES,
   type Status,
   type StatusCategory,
-} from "./model.ts";
+} from "./model.js";
 
 export interface ParseError {
   kind: "parse-error";

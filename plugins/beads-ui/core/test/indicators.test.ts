@@ -19,8 +19,8 @@ import {
   type ReviewItem,
   resolveGlyphs,
   withIndicatorsTable,
-} from "../src/index.ts";
-import { unwrap } from "./helpers.ts";
+} from "../src/index.js";
+import { unwrap } from "./helpers.js";
 
 // D-41, D-42 and T-2C.3: the row indicator registry, its blocked and agent entries, and the gutter.
 

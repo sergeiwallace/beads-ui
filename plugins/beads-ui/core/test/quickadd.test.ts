@@ -1,8 +1,8 @@
 // Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
 // claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
-import { createArgv, parseQuickAdd } from "../src/index.ts";
-import { unwrap } from "./helpers.ts";
+import { createArgv, parseQuickAdd } from "../src/index.js";
+import { unwrap } from "./helpers.js";
 
 describe("parseQuickAdd", () => {
   test("should parse every token and keep the rest as the title when given a full line", () => {

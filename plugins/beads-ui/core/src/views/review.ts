@@ -2,8 +2,8 @@
 // about it and its bd blockers, the reader's pages of one item's body, and the turn an answer
 // hands the session (D-39). Pure: the band's overview and the pane draw the same model.
 
-import type { Comment, Issue } from "../model.ts";
-import type { ReviewItem } from "../review.ts";
+import type { Comment, Issue } from "../model.js";
+import type { ReviewItem } from "../review.js";
 import {
   describeReviewFilterError,
   groupReviewItems,
@@ -14,8 +14,8 @@ import {
   type ReviewScope,
   type ReviewSort,
   sortReviewItems,
-} from "../reviewList.ts";
-import { fenceFor, inlineText } from "../sync.ts";
+} from "../reviewList.js";
+import { fenceFor, inlineText } from "../sync.js";
 
 /** The heading of the Detail's Review section. */
 export const REVIEW_HEADING = "Review";

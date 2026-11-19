@@ -8,9 +8,9 @@ import {
   glyphOf,
   type SummaryPiece,
   type Token,
-} from "../../core/src/index.ts";
-import type { Surface } from "./adapters.ts";
-import { gutter } from "./indicators.ts";
+} from "../../core/src/index.js";
+import type { Surface } from "./adapters.js";
+import { gutter } from "./indicators.js";
 
 // The band's disclosure levels (D-36, T-2C.2) as components: the summary line with its counts as
 // buttons, a count's rows with their controls, and the controls row every level ends with.

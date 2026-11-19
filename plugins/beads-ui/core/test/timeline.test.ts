@@ -9,8 +9,8 @@ import {
   RASTER_DEFAULT_COLOR,
   timelineLayout,
   timelineView,
-} from "../src/index.ts";
-import { storeStatuses } from "./helpers.ts";
+} from "../src/index.js";
+import { storeStatuses } from "./helpers.js";
 
 // T-2B.9: the Timeline's view model. The pane draws it as Raster bars in the terminal and Text
 // rows elsewhere; hooks/timeline.test.ts drives that through the pane.

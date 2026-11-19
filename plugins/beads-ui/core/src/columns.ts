@@ -1,6 +1,6 @@
-import { type Issue, type Result, STATUS_CATEGORIES, type Status } from "./model.ts";
-import { orderByRank } from "./rank.ts";
-import { DEFAULT_SORT, type SortSpec, sortIssues } from "./sort.ts";
+import { type Issue, type Result, STATUS_CATEGORIES, type Status } from "./model.js";
+import { orderByRank } from "./rank.js";
+import { DEFAULT_SORT, type SortSpec, sortIssues } from "./sort.js";
 
 export interface Column {
   status: Status;

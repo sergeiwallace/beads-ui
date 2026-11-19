@@ -8,7 +8,7 @@ export type {
   IssueFlow,
   StatusChange,
   ThroughputWeek,
-} from "./analytics.ts";
+} from "./analytics.js";
 export {
   ANALYTICS_DEFAULT_WEEKS,
   ANALYTICS_MAX_WEEKS,
@@ -18,7 +18,7 @@ export {
   FLOW_ORDER,
   ROLLING_WINDOW,
   statusChanges,
-} from "./analytics.ts";
+} from "./analytics.js";
 export {
   analyticsReadArgvs,
   boardReadArgvs,
@@ -43,7 +43,7 @@ export {
   statusesArgv,
   timelineReadArgvs,
   whereArgv,
-} from "./argv.ts";
+} from "./argv.js";
 export type {
   Column,
   ColumnOptions,
@@ -51,7 +51,7 @@ export type {
   Swimlane,
   SwimlaneMode,
   SwimlaneModeError,
-} from "./columns.ts";
+} from "./columns.js";
 export {
   buildColumns,
   buildSwimlanes,
@@ -60,14 +60,14 @@ export {
   parseSwimlaneMode,
   SWIMLANE_MODES,
   UNASSIGNED_LANE_LABEL,
-} from "./columns.ts";
-export type { Command, CommandScope, KeyBinding } from "./commands.ts";
+} from "./columns.js";
+export type { Command, CommandScope, KeyBinding } from "./commands.js";
 export {
   COMMANDS,
   commandById,
   commandForKey,
   footerHints,
-} from "./commands.ts";
+} from "./commands.js";
 export type {
   BandOverrides,
   BeadsUiConfig,
@@ -85,7 +85,7 @@ export type {
   TomlError,
   TomlTable,
   TomlValue,
-} from "./config.ts";
+} from "./config.js";
 export {
   ANALYTICS_TABLE,
   BAND_TABLE,
@@ -123,15 +123,15 @@ export {
   withOverrides,
   withPanelTable,
   withSurfacesTable,
-} from "./config.ts";
+} from "./config.js";
 export type {
   CostExportError,
   CostExportResult,
   IssueCost,
   SessionUsage,
   TokenCounts,
-} from "./cost.ts";
-export { COST_METRIC, costPerIssue, parseCostExport, TOKEN_METRIC } from "./cost.ts";
+} from "./cost.js";
+export { COST_METRIC, costPerIssue, parseCostExport, TOKEN_METRIC } from "./cost.js";
 export type {
   DecisionOptionsOutput,
   ItemOptions,
@@ -139,7 +139,7 @@ export type {
   OptionChoice,
   OptionsError,
   OptionsItemKind,
-} from "./decision-options.ts";
+} from "./decision-options.js";
 export {
   MAX_NUMBER_KEYS,
   OPTIONS_ERROR_FIELDS,
@@ -149,14 +149,14 @@ export {
   optionForKey,
   optionsForItem,
   parseDecisionOptions,
-} from "./decision-options.ts";
+} from "./decision-options.js";
 export type {
   AppliedTransition,
   DeliveryMachine,
   DeliveryState,
   DeliveryTransition,
   RejectedTransition,
-} from "./delivery-state.ts";
+} from "./delivery-state.js";
 export {
   allowsTransition,
   DELIVERY_STATES,
@@ -166,7 +166,7 @@ export {
   isDeliveryState,
   isFinalDelivery,
   reduceDelivery,
-} from "./delivery-state.ts";
+} from "./delivery-state.js";
 export type {
   ActiveRungName,
   CarrierName,
@@ -180,7 +180,7 @@ export type {
   RungAttempt,
   RungName,
   WakePolicy,
-} from "./dispatch-policy.ts";
+} from "./dispatch-policy.js";
 export {
   CARRIERS,
   DEFAULT_DISPATCH_POLICY,
@@ -196,7 +196,7 @@ export {
   resolveDispatchPolicy,
   rungSummary,
   WAKES_OFF,
-} from "./dispatch-policy.ts";
+} from "./dispatch-policy.js";
 export type {
   AnnotateResult,
   CreateResult,
@@ -216,7 +216,7 @@ export type {
   StoredDispatch,
   Tombstone,
   TombstoneCause,
-} from "./dispatch-store.ts";
+} from "./dispatch-store.js";
 export {
   DISPATCH_KINDS,
   DispatchStoreError,
@@ -229,7 +229,7 @@ export {
   planReceipt,
   RECEIPT_STATES,
   receiptSource,
-} from "./dispatch-store.ts";
+} from "./dispatch-store.js";
 export type {
   Filter,
   FilterError,
@@ -237,7 +237,7 @@ export type {
   FilterState,
   FilterTerm,
   ReadySetMissing,
-} from "./filter.ts";
+} from "./filter.js";
 export {
   applyFilter,
   describeFilterError,
@@ -246,9 +246,9 @@ export {
   FILTER_KEYS,
   parseFilter,
   submitFilter,
-} from "./filter.ts";
-export type { Glyph, GlyphId, GlyphKind } from "./glyphs.ts";
-export { asciiOf, GLYPHS, glyphOf, isTableGlyph } from "./glyphs.ts";
+} from "./filter.js";
+export type { Glyph, GlyphId, GlyphKind } from "./glyphs.js";
+export { asciiOf, GLYPHS, glyphOf, isTableGlyph } from "./glyphs.js";
 export type {
   GutterCell,
   Indicator,
@@ -256,7 +256,7 @@ export type {
   IndicatorRead,
   IndicatorState,
   LegendLine,
-} from "./indicators.ts";
+} from "./indicators.js";
 export {
   AGENT_LABEL,
   AGENT_TITLE,
@@ -278,7 +278,7 @@ export {
   legendOf,
   legendText,
   NARROW_GUTTER_COLUMNS,
-} from "./indicators.ts";
+} from "./indicators.js";
 export type {
   Keymap,
   KeymapBinding,
@@ -286,7 +286,7 @@ export type {
   KeymapSettings,
   KeyPress,
   Shortcut,
-} from "./keymap.ts";
+} from "./keymap.js";
 export {
   buildKeymap,
   chordOf,
@@ -296,8 +296,8 @@ export {
   parseChord,
   remapKey,
   setSingleKeys,
-} from "./keymap.ts";
-export type { Labels, Tier } from "./layout.ts";
+} from "./keymap.js";
+export type { Labels, Tier } from "./layout.js";
 export {
   buttonWidth,
   CARD_FRAME_COLUMNS,
@@ -319,7 +319,7 @@ export {
   textWidth,
   tierOf,
   WIDE_COLUMNS,
-} from "./layout.ts";
+} from "./layout.js";
 export type {
   DisplayIdPlan,
   DisplayIdPlanInput,
@@ -330,7 +330,7 @@ export type {
   PendingDisplayId,
   PendingDisplayIdStep,
   SlugBudgets,
-} from "./mint.ts";
+} from "./mint.js";
 export {
   DEFAULT_ID_POLICY,
   DEFAULT_SLUG_BUDGETS,
@@ -350,7 +350,7 @@ export {
   slugifyTitle,
   storeUsesDisplayIds,
   takenDisplayIds,
-} from "./mint.ts";
+} from "./mint.js";
 export type {
   BdArgv,
   Comment,
@@ -366,9 +366,9 @@ export type {
   Sprint,
   Status,
   StatusCategory,
-} from "./model.ts";
-export { STATUS_CATEGORIES } from "./model.ts";
-export type { ParseError, ParseResult } from "./parsers.ts";
+} from "./model.js";
+export { STATUS_CATEGORIES } from "./model.js";
+export type { ParseError, ParseResult } from "./parsers.js";
 export {
   parseBdComments,
   parseBdCount,
@@ -381,10 +381,10 @@ export {
   parseBdStatuses,
   parseIssueRows,
   parseStatusesJson,
-} from "./parsers.ts";
-export type { QuickAdd, QuickAddError } from "./quickadd.ts";
-export { createArgv, parseQuickAdd } from "./quickadd.ts";
-export type { RankError, RankNeighbours, RankRead } from "./rank.ts";
+} from "./parsers.js";
+export type { QuickAdd, QuickAddError } from "./quickadd.js";
+export { createArgv, parseQuickAdd } from "./quickadd.js";
+export type { RankError, RankNeighbours, RankRead } from "./rank.js";
 export {
   isRankKey,
   keyBetween,
@@ -394,8 +394,8 @@ export {
   RANK_KEY,
   rankNeighbours,
   readRank,
-} from "./rank.ts";
-export type { BdWhere, StoreFacts, StoreResolution, StoreSource } from "./resolve.ts";
+} from "./rank.js";
+export type { BdWhere, StoreFacts, StoreResolution, StoreSource } from "./resolve.js";
 export {
   DIRECTORY_STORES_TABLE,
   directoryStores,
@@ -403,7 +403,7 @@ export {
   resolveStore,
   sessionPrefix,
   storeLabel,
-} from "./resolve.ts";
+} from "./resolve.js";
 export type {
   JoinStore,
   ReviewIssue,
@@ -411,7 +411,7 @@ export type {
   ReviewJoin,
   ReviewOutput,
   ReviewSnapshot,
-} from "./review.ts";
+} from "./review.js";
 export {
   answerArgv,
   HELD_REVIEW_SCHEMA,
@@ -430,7 +430,7 @@ export {
   reviewFileName,
   showItemArgv,
   storeForTask,
-} from "./review.ts";
+} from "./review.js";
 export type {
   QueueFilterKey,
   QueueFilters,
@@ -442,7 +442,7 @@ export type {
   ReviewQueueSection,
   ReviewQueueState,
   ReviewQueueView,
-} from "./review-queue.ts";
+} from "./review-queue.js";
 export {
   CURATION_SCALE,
   compareQueueEntries,
@@ -462,7 +462,7 @@ export {
   sortQueueEntries,
   taskEntry,
   withQueueFilters,
-} from "./review-queue.ts";
+} from "./review-queue.js";
 export type {
   ReviewFilter,
   ReviewFilterError,
@@ -473,7 +473,7 @@ export type {
   ReviewItemGroup,
   ReviewScope,
   ReviewSort,
-} from "./reviewList.ts";
+} from "./reviewList.js";
 export {
   DEFAULT_REVIEW_FILTER,
   describeReviewFilterError,
@@ -499,15 +499,15 @@ export {
   scopedItems,
   sortReviewItems,
   submitReviewFilter,
-} from "./reviewList.ts";
+} from "./reviewList.js";
 export type {
   RoadmapBar,
   RoadmapItem,
   RoadmapLink,
   RoadmapLinkKind,
   RoadmapView,
-} from "./roadmap.ts";
-export { ROADMAP_LINK_KINDS, roadmapView } from "./roadmap.ts";
+} from "./roadmap.js";
+export { ROADMAP_LINK_KINDS, roadmapView } from "./roadmap.js";
 export type {
   QueueEvent,
   QueueParseError,
@@ -518,7 +518,7 @@ export type {
   SessionRow,
   SessionsView,
   SessionTask,
-} from "./sessions.ts";
+} from "./sessions.js";
 export {
   ageText,
   beadsSessionsView,
@@ -531,7 +531,7 @@ export {
   parseQueueTaskEvents,
   parseQueueTasks,
   queueSessionsView,
-} from "./sessions.ts";
+} from "./sessions.js";
 export type {
   BoardEntry,
   BoardSnapshot,
@@ -543,7 +543,7 @@ export type {
   StoreRead,
   StoreSnapshot,
   Supervision,
-} from "./snapshot.ts";
+} from "./snapshot.js";
 export {
   BEAT_MS,
   BOARD_MAX_BYTES,
@@ -583,8 +583,8 @@ export {
   wakeFileName,
   wakeText,
   windowMs,
-} from "./snapshot.ts";
-export type { SortDirection, SortError, SortKey, SortSpec } from "./sort.ts";
+} from "./snapshot.js";
+export type { SortDirection, SortError, SortKey, SortSpec } from "./sort.js";
 export {
   DEFAULT_SORT,
   nextSort,
@@ -593,14 +593,14 @@ export {
   SORT_KEYS,
   sortIssues,
   sortLabel,
-} from "./sort.ts";
+} from "./sort.js";
 export type {
   SprintInfo,
   SprintPickerEntry,
   SprintSelection,
   SprintView,
   SprintViewOptions,
-} from "./sprint-view.ts";
+} from "./sprint-view.js";
 export {
   BACKLOG_LABEL,
   milestoneSprintOf,
@@ -612,7 +612,7 @@ export {
   sprintsOf,
   sprintView,
   startsAtOf,
-} from "./sprint-view.ts";
+} from "./sprint-view.js";
 export type {
   Finished,
   PendingSubmit,
@@ -621,7 +621,7 @@ export type {
   SyncRun,
   SyncSettings,
   SyncStep,
-} from "./sync.ts";
+} from "./sync.js";
 export {
   cleanDetail,
   DEDUPE_WINDOW_MS,
@@ -644,8 +644,8 @@ export {
   stepOf,
   syncArgv,
   syncedText,
-} from "./sync.ts";
-export type { TerminalColor, ThemeOverrides, Token } from "./tokens.ts";
+} from "./sync.js";
+export type { TerminalColor, ThemeOverrides, Token } from "./tokens.js";
 export {
   colorFor,
   isToken,
@@ -654,9 +654,9 @@ export {
   TERMINAL_THEME,
   TOKENS,
   terminalColor,
-} from "./tokens.ts";
-export type { BacklogOptions, BacklogRow, BacklogView } from "./views/backlog.ts";
-export { BACKLOG_PAGE_SIZE, backlogView } from "./views/backlog.ts";
+} from "./tokens.js";
+export type { BacklogOptions, BacklogRow, BacklogView } from "./views/backlog.js";
+export { BACKLOG_PAGE_SIZE, backlogView } from "./views/backlog.js";
 export type {
   BandCounts,
   BandLevel,
@@ -667,7 +667,7 @@ export type {
   BandSettings,
   BandStore,
   BandTotal,
-} from "./views/band.ts";
+} from "./views/band.js";
 export {
   ALL_LABEL,
   BAND_LABEL,
@@ -693,7 +693,7 @@ export {
   STORE_INVENTORY_FILE,
   SYNC_FAILED_MARK,
   sameStore,
-} from "./views/band.ts";
+} from "./views/band.js";
 export type {
   BoardEvent,
   BoardPageLimit,
@@ -710,7 +710,7 @@ export type {
   PendingRank,
   RankPlan,
   RankPlanError,
-} from "./views/board.ts";
+} from "./views/board.js";
 export {
   BOARD_PAGE_LIMIT,
   boardView,
@@ -722,23 +722,23 @@ export {
   reduceBoard,
   STALE_WRITE_EXIT,
   stepPage,
-} from "./views/board.ts";
-export type { CommentRow, CommentsView } from "./views/comments.ts";
-export { COMMENTS_MAX_CHARS, commentsView, parseCommentDraft } from "./views/comments.ts";
+} from "./views/board.js";
+export type { CommentRow, CommentsView } from "./views/comments.js";
+export { COMMENTS_MAX_CHARS, commentsView, parseCommentDraft } from "./views/comments.js";
 export type {
   ConfirmEvent,
   ConfirmPhase,
   ConfirmState,
   ConfirmView,
   DependentView,
-} from "./views/confirm.ts";
+} from "./views/confirm.js";
 export {
   confirmView,
   deleteEnabled,
   nextCommand,
   openDeleteConfirm,
   reduceConfirm,
-} from "./views/confirm.ts";
+} from "./views/confirm.js";
 export type {
   DependencyView,
   DetailEvent,
@@ -751,7 +751,7 @@ export type {
   FieldEdit,
   FieldView,
   MarkdownView,
-} from "./views/detail.ts";
+} from "./views/detail.js";
 export {
   DESCRIPTION_EDIT_MAX_CHARS,
   DETAIL_EVENT_LIMIT,
@@ -763,7 +763,7 @@ export {
   parseFieldEdit,
   reduceDetail,
   toOneLine,
-} from "./views/detail.ts";
+} from "./views/detail.js";
 export type {
   BandRowsView,
   BandRowView,
@@ -773,7 +773,7 @@ export type {
   DisclosureSettings,
   RowGroup,
   SummaryPiece,
-} from "./views/disclosure.ts";
+} from "./views/disclosure.js";
 export {
   bandRowsView,
   CONTROL_HOTKEYS,
@@ -792,7 +792,7 @@ export {
   settleDisclosure,
   summaryPieces,
   taskRowView,
-} from "./views/disclosure.ts";
+} from "./views/disclosure.js";
 export type {
   ActionContext,
   ClientKey,
@@ -804,7 +804,7 @@ export type {
   TaskClientProps,
   TaskClientRow,
   TaskClientSpan,
-} from "./views/menu.ts";
+} from "./views/menu.js";
 export {
   clientKeys,
   menuItemText,
@@ -813,7 +813,7 @@ export {
   parseTaskMessage,
   REVIEW_MENU_COMMAND,
   taskClientProps,
-} from "./views/menu.ts";
+} from "./views/menu.js";
 export type {
   NavEntry,
   NavItem,
@@ -821,7 +821,7 @@ export type {
   NavLayout,
   PanelView,
   PlannedView,
-} from "./views/nav.ts";
+} from "./views/nav.js";
 export {
   hotkeyOf,
   isPanelView,
@@ -833,7 +833,7 @@ export {
   plannedText,
   SIDE_NAV_COLUMNS,
   SIDE_NAV_GAP,
-} from "./views/nav.ts";
+} from "./views/nav.js";
 export type {
   CollapseRule,
   PanelMode,
@@ -843,7 +843,7 @@ export type {
   TaskListOptions,
   TaskListView,
   TaskRowView,
-} from "./views/panel.ts";
+} from "./views/panel.js";
 export {
   COLLAPSE_LABELS,
   COLLAPSE_RULES,
@@ -866,21 +866,21 @@ export {
   taskGroupOf,
   taskListView,
   withPanelOverrides,
-} from "./views/panel.ts";
+} from "./views/panel.js";
 export type {
   ImageVerdict,
   PictureForm,
   TerminalFacts,
   TimelinePicture,
-} from "./views/picture.ts";
+} from "./views/picture.js";
 export {
   PICTURE_MAX_ITEMS,
   palettePng,
   pictureForm,
   terminalImages,
   timelinePicture,
-} from "./views/picture.ts";
-export type { RasterCell } from "./views/raster.ts";
+} from "./views/picture.js";
+export type { RasterCell } from "./views/raster.js";
 export {
   base64,
   decodeRasterCells,
@@ -890,7 +890,7 @@ export {
   RASTER_TRACK_COLOR,
   rasterCells,
   rasterColorFor,
-} from "./views/raster.ts";
+} from "./views/raster.js";
 export type {
   BlockedTransition,
   BlockerRow,
@@ -898,7 +898,7 @@ export type {
   ReviewListView,
   ReviewRow,
   ReviewSection,
-} from "./views/review.ts";
+} from "./views/review.js";
 export {
   answerTurn,
   blockerRows,
@@ -917,16 +917,16 @@ export {
   reviewSection,
   slugOf,
   stampText,
-} from "./views/review.ts";
+} from "./views/review.js";
 export type {
   IndicatorRow,
   SettingOption,
   SettingRow,
   SettingsView,
   SurfaceRow,
-} from "./views/settings.ts";
-export { INDICATOR_ROW_PREFIX, SURFACE_ROW_PREFIX, settingsView } from "./views/settings.ts";
-export type { SurfaceId, SurfaceOverrides, SurfaceSetting } from "./views/surfaces.ts";
+} from "./views/settings.js";
+export { INDICATOR_ROW_PREFIX, SURFACE_ROW_PREFIX, settingsView } from "./views/settings.js";
+export type { SurfaceId, SurfaceOverrides, SurfaceSetting } from "./views/surfaces.js";
 export {
   drawsOn,
   entriesOn,
@@ -936,7 +936,7 @@ export {
   SURFACE_SETTINGS,
   surfaceOf,
   surfaceOverridesOf,
-} from "./views/surfaces.ts";
+} from "./views/surfaces.js";
 export {
   asOf,
   BLOCK_MAX_CHARS,
@@ -945,7 +945,7 @@ export {
   priorityBadge,
   storeName,
   truncate,
-} from "./views/text.ts";
+} from "./views/text.js";
 export type {
   TimelineAxis,
   TimelineEntry,
@@ -955,7 +955,7 @@ export type {
   TimelineRow,
   TimelineView,
   TimelineWindow,
-} from "./views/timeline.ts";
+} from "./views/timeline.js";
 export {
   barCells,
   barRun,
@@ -969,6 +969,6 @@ export {
   timelineLayout,
   timelinePlacement,
   timelineView,
-} from "./views/timeline.ts";
-export type { UndoClose, UndoView } from "./views/undo.ts";
-export { CLOSED_STATUS, undoArgv, undoClose, undoForMove, undoView } from "./views/undo.ts";
+} from "./views/timeline.js";
+export type { UndoClose, UndoView } from "./views/undo.js";
+export { CLOSED_STATUS, undoArgv, undoClose, undoForMove, undoView } from "./views/undo.js";

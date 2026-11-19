@@ -1,10 +1,10 @@
 import type { RenderElement, RenderNode } from "claude-code";
 
-import { type BacklogView, type GutterCell, SPACE } from "../../core/src/index.ts";
-import type { Surface } from "./adapters.ts";
-import { gutter } from "./indicators.ts";
-import { colorOf, rowHover, weight } from "./look.ts";
-import { lineWindow, windowed } from "./window.ts";
+import { type BacklogView, type GutterCell, SPACE } from "../../core/src/index.js";
+import type { Surface } from "./adapters.js";
+import { gutter } from "./indicators.js";
+import { colorOf, rowHover, weight } from "./look.js";
+import { lineWindow, windowed } from "./window.js";
 
 // The Backlog (T-1.2, T-2C.12, D-35, T-2C.8), drawn from core's BacklogView on either surface:
 // its count, one row an issue, its pager. Every row is one line, so on a windowed surface (the

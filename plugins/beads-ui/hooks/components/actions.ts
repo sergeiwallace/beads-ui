@@ -1,7 +1,7 @@
 import type { RenderElement } from "claude-code";
 
-import { buttonWidth, hotkeyOf, type PanelAction, packRows, tierOf } from "../../core/src/index.ts";
-import type { Surface } from "./adapters.ts";
+import { buttonWidth, hotkeyOf, type PanelAction, packRows, tierOf } from "../../core/src/index.js";
+import type { Surface } from "./adapters.js";
 
 /**
  * The action bar (T-1B.9, D-35): `actions` as buttons labelled for the surface's tier and packed

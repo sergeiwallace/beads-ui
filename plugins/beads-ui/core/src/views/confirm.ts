@@ -1,8 +1,8 @@
-import { cascadePreviewArgv, closeArgv, deleteArgv, deletePreviewArgv } from "../argv.ts";
-import type { BdArgv, DeletePreview, Issue } from "../model.ts";
-import { parseBdDeletePreview } from "../parsers.ts";
-import { fitBlock, truncate } from "./text.ts";
-import { CLOSED_STATUS, type UndoClose, undoClose } from "./undo.ts";
+import { cascadePreviewArgv, closeArgv, deleteArgv, deletePreviewArgv } from "../argv.js";
+import type { BdArgv, DeletePreview, Issue } from "../model.js";
+import { parseBdDeletePreview } from "../parsers.js";
+import { fitBlock, truncate } from "./text.js";
+import { CLOSED_STATUS, type UndoClose, undoClose } from "./undo.js";
 
 /**
  * The delete ladder (D-13) as a state machine. `previewing` runs `bd delete <id> --dry-run`; a

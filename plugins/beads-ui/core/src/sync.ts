@@ -1,4 +1,4 @@
-import { storeName } from "./views/text.ts";
+import { storeName } from "./views/text.js";
 
 /**
  * Edits that publish themselves (D-33, T-2B.6). After a write and a quiet period with no other,

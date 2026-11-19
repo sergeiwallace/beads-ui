@@ -164,22 +164,22 @@ import {
   withIndicatorsTable,
   withPanelTable,
   withSurfacesTable,
-} from "../core/src/index.ts";
-import type { BandSettingsPanel } from "./bandSettings.ts";
-import { actionBar } from "./components/actions.ts";
+} from "../core/src/index.js";
+import type { BandSettingsPanel } from "./bandSettings.js";
+import { actionBar } from "./components/actions.js";
 import {
   paneSurface,
   type RasterElement,
   type Surface,
   type SurfacePicture,
   type TasksRegion,
-} from "./components/adapters.ts";
-import { type BacklogColumns, backlog } from "./components/backlog.ts";
-import { board } from "./components/board.ts";
-import { detail } from "./components/detail.ts";
-import { field } from "./components/elements.ts";
-import { emptyState, errorState, headerBar, readingState, section } from "./components/frame.ts";
-import { type HelpPart, help } from "./components/help.ts";
+} from "./components/adapters.js";
+import { type BacklogColumns, backlog } from "./components/backlog.js";
+import { board } from "./components/board.js";
+import { detail } from "./components/detail.js";
+import { field } from "./components/elements.js";
+import { emptyState, errorState, headerBar, readingState, section } from "./components/frame.js";
+import { type HelpPart, help } from "./components/help.js";
 import {
   enabledIndicators,
   gutterFor,
@@ -190,7 +190,7 @@ import {
   reviewItemsOf,
   setIndicatorSwitches,
   setReviewIndex,
-} from "./components/indicators.ts";
+} from "./components/indicators.js";
 import {
   colorOf,
   glyphText,
@@ -199,24 +199,24 @@ import {
   styledUi,
   themeOverrides,
   weight,
-} from "./components/look.ts";
-import { drawMenu, menuColumns, menuRows } from "./components/menu.ts";
-import { navFrame } from "./components/nav.ts";
-import { type ViewEntry, ViewRegistry } from "./components/registry.ts";
-import { ANSWER_KEY, reviewList, reviewReader } from "./components/review.ts";
-import { drawSettings, settingsOptionRoom } from "./components/settings.ts";
+} from "./components/look.js";
+import { drawMenu, menuColumns, menuRows } from "./components/menu.js";
+import { navFrame } from "./components/nav.js";
+import { type ViewEntry, ViewRegistry } from "./components/registry.js";
+import { ANSWER_KEY, reviewList, reviewReader } from "./components/review.js";
+import { drawSettings, settingsOptionRoom } from "./components/settings.js";
 import {
   rowControlColumns,
   TASKS_CLIENT_KEY,
   type TaskListClient,
   taskList,
-} from "./components/tasks.ts";
-import { timeline } from "./components/timeline.ts";
-import { fitted, windowed } from "./components/window.ts";
-import type { Host } from "./host.ts";
-import { PanelSettingsState } from "./panel.ts";
-import { ReviewFeed, ReviewReader } from "./review.ts";
-import type { StoreResolver } from "./store.ts";
+} from "./components/tasks.js";
+import { timeline } from "./components/timeline.js";
+import { fitted, windowed } from "./components/window.js";
+import type { Host } from "./host.js";
+import { PanelSettingsState } from "./panel.js";
+import { ReviewFeed, ReviewReader } from "./review.js";
+import type { StoreResolver } from "./store.js";
 
 export const PANE_ID = "beads";
 export const PANE_TITLE = "Beads";

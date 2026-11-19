@@ -2,11 +2,11 @@ import type { On } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
-import { storeReads, storeSnapshotOf } from "../core/src/index.ts";
-import { PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
-import { ME } from "./tests/mine.ts";
-import { render } from "./tests/render.ts";
+import { storeReads, storeSnapshotOf } from "../core/src/index.js";
+import { PANE_ID, PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
+import { ME } from "./tests/mine.js";
+import { render } from "./tests/render.js";
 import {
   BAND_PROPS,
   CWD,
@@ -26,7 +26,7 @@ import {
   STORE_LIST,
   VIEWPORT,
   world,
-} from "./tests/world.ts";
+} from "./tests/world.js";
 
 // D-41, D-42 and T-2C.3: the row indicator gutter on every task row, band and pane, at the hooks
 // entry point. A host refresher is played running, its snapshot naming the live sessions.

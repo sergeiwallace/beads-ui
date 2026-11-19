@@ -8,11 +8,11 @@ import {
   SPACE,
   type TimelineLayout,
   type TimelinePicture,
-} from "../../core/src/index.ts";
-import type { Surface } from "./adapters.ts";
-import { emptyState } from "./frame.ts";
-import { rowHover, weight } from "./look.ts";
-import { lineWindow, textLine, windowed } from "./window.ts";
+} from "../../core/src/index.js";
+import type { Surface } from "./adapters.js";
+import { emptyState } from "./frame.js";
+import { rowHover, weight } from "./look.js";
+import { lineWindow, textLine, windowed } from "./window.js";
 
 // The Timeline view (T-2B.9, D-35, T-2C.8), drawn from core's TimelineLayout on either surface.
 

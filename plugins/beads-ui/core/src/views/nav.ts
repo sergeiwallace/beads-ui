@@ -2,8 +2,8 @@
 // and height. A side nav from 72 columns, a top bar of short labels from 48, a bar of keys and
 // glyphs below that; above the prompt or under 12 rows the side nav becomes the top bar.
 
-import { commandById } from "../commands.ts";
-import { glyphOf } from "../glyphs.ts";
+import { commandById } from "../commands.js";
+import { glyphOf } from "../glyphs.js";
 import {
   buttonWidth,
   isShort,
@@ -12,8 +12,8 @@ import {
   packRows,
   type Tier,
   tierOf,
-} from "../layout.ts";
-import type { SurfaceSetting } from "./surfaces.ts";
+} from "../layout.js";
+import type { SurfaceSetting } from "./surfaces.js";
 
 export const PANEL_VIEWS = [
   "tasks",

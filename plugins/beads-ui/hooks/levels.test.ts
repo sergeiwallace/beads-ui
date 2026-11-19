@@ -2,11 +2,11 @@ import type { On } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
-import { BAND_LEVEL_KEY, BEADS_BUTTON_KEY, EXPAND_KEY, OVERVIEW_KEY } from "./levels.ts";
-import { PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
-import { ME, MINE } from "./tests/mine.ts";
-import { render } from "./tests/render.ts";
+import { BAND_LEVEL_KEY, BEADS_BUTTON_KEY, EXPAND_KEY, OVERVIEW_KEY } from "./levels.js";
+import { PANE_ID, PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
+import { ME, MINE } from "./tests/mine.js";
+import { render } from "./tests/render.js";
 import {
   BAND_PROPS,
   CWD,
@@ -26,7 +26,7 @@ import {
   VIEWPORT,
   type WorldOptions,
   world,
-} from "./tests/world.ts";
+} from "./tests/world.js";
 
 // D-36, T-2C.2: the band's three disclosure levels, at the hooks entry point. The band reads its
 // counts from each store itself here (no refresher runs), so each line ends with `*`.

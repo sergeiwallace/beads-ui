@@ -6,7 +6,7 @@ import {
   deliveryLabel,
   deliveryMachine,
   reduceDelivery,
-} from "../src/index.ts";
+} from "../src/index.js";
 
 // T-W1.3 of the web app design (D-5): the composer's delivery indicator over the dispatch
 // record's states, queued, shown, taken, acted, failed, expired and waiting.

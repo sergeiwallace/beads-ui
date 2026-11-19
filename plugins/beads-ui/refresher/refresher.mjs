@@ -10,7 +10,9 @@
 // `<state-dir>/lease.json` (a hard link to its own `lease-<token>.json`) under `--token`: it takes it only when no live refresher holds it,
 // or when the live one is an older plugin build (the lease records each refresher's build),
 // re-checks it before every read and write, and exits when it is not the holder. No
-// dependencies: Node runs this file and the core modules it imports with its type stripping.
+// dependencies: Node runs this file and the core modules it imports with its type stripping, and
+// resolve-core.mjs maps the core's `.js` relative imports to their `.ts` sources, so the core
+// modules are imported once that hook is registered.
 //
 // For each store a live session's pane reads, it also keeps a board snapshot in
 // `<state-dir>/boards/<token>/`, re-read only when the store's Dolt head moved (T-1B.4, D-29),
@@ -45,12 +47,14 @@ import {
   writeFileSync,
   writeSync,
 } from "node:fs";
+import { register } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { boardReadArgvs, headArgv, statusesArgv } from "../core/src/argv.ts";
-import { resolveReview } from "../core/src/config.ts";
-import {
+register("./resolve-core.mjs", import.meta.url);
+const { boardReadArgvs, headArgv, statusesArgv } = await import("../core/src/argv.ts");
+const { resolveReview } = await import("../core/src/config.ts");
+const {
   issuesByTask,
   joinArgvs,
   joinItems,
@@ -62,8 +66,8 @@ import {
   REVIEW_WAKE_FILE,
   reviewArgv,
   reviewFileName,
-} from "../core/src/review.ts";
-import {
+} = await import("../core/src/review.ts");
+const {
   BEAT_MS,
   BOARD_MAX_BYTES,
   BOARD_SCHEMA,
@@ -92,8 +96,8 @@ import {
   storeSnapshotOf,
   WAKE_DIR,
   WAKE_POLL_MS,
-} from "../core/src/snapshot.ts";
-import { parseStoreInventory, STORE_INVENTORY_FILE } from "../core/src/views/band.ts";
+} = await import("../core/src/snapshot.ts");
+const { parseStoreInventory, STORE_INVENTORY_FILE } = await import("../core/src/views/band.ts");
 
 const COUNT_TIMEOUT_MS = 8_000;
 /** A board read lists every open issue: more time and room than a count. */

@@ -5,7 +5,7 @@
 // border frames its box, and a plain Button draws `{hotkey}: {label}` (a framed one
 // `[ {label} ]`). Colour, hover and wrapping are not drawn.
 
-import { decodeRasterCells, RASTER_DEFAULT_COLOR } from "../../core/src/index.ts";
+import { decodeRasterCells, RASTER_DEFAULT_COLOR } from "../../core/src/index.js";
 
 interface DrawnNode {
   type?: string;

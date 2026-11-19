@@ -9,8 +9,8 @@ import {
   parseBdHistoryEvents,
   type SprintInfo,
   statusChanges,
-} from "../src/index.ts";
-import { storeStatuses, unwrap } from "./helpers.ts";
+} from "../src/index.js";
+import { storeStatuses, unwrap } from "./helpers.js";
 
 // T-3.3: "When Analytics renders, the system shall draw throughput, cycle time with a rolling
 // average, cumulative flow, a count-based sprint burndown and aging work in progress from bd

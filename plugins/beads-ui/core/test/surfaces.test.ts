@@ -17,7 +17,7 @@ import {
   surfaceOf,
   surfaceOverridesOf,
   withSurfacesTable,
-} from "../src/index.ts";
+} from "../src/index.js";
 
 // D-35 and T-2C.1: which surface draws each view, from the entry, `[surfaces]` and Settings.
 

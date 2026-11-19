@@ -18,9 +18,9 @@ import {
   stateDirOf,
   WAKE_DIR,
   wakeText,
-} from "../core/src/index.ts";
-import type { Host } from "./host.ts";
-import type { StoreResolver } from "./store.ts";
+} from "../core/src/index.js";
+import type { Host } from "./host.js";
+import type { StoreResolver } from "./store.js";
 
 // Review items in the session (D-37, D-39, T-2C.5): the host refresher's review snapshot, read
 // with `[review] command` from the user's own beads-ui.toml, and the reader that shows one item's

@@ -2,12 +2,12 @@
 // count's task rows under its line, band.rows at a time; and the overview of the views the band
 // draws. Pure: a reducer over the person's presses, and the layouts the band draws from it.
 
-import { glyphOf } from "../glyphs.ts";
-import type { GutterCell } from "../indicators.ts";
-import { buttonWidth, PRESS_FRAME_COLUMNS, textWidth } from "../layout.ts";
-import type { Issue } from "../model.ts";
-import { sortIssues } from "../sort.ts";
-import { priorityToken, type Token } from "../tokens.ts";
+import { glyphOf } from "../glyphs.js";
+import type { GutterCell } from "../indicators.js";
+import { buttonWidth, PRESS_FRAME_COLUMNS, textWidth } from "../layout.js";
+import type { Issue } from "../model.js";
+import { sortIssues } from "../sort.js";
+import { priorityToken, type Token } from "../tokens.js";
 import {
   type BandLevel,
   type BandLine,
@@ -15,8 +15,8 @@ import {
   type BandSegment,
   isBandLevel,
   isBandPart,
-} from "./band.ts";
-import { truncate } from "./text.ts";
+} from "./band.js";
+import { truncate } from "./text.js";
 
 /** What the band shows (D-36), kept per session in `$.store`. */
 export interface Disclosure {

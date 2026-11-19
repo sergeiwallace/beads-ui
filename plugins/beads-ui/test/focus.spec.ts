@@ -3,9 +3,9 @@
 // the test's hooks; so this drives the pane the button calls with a Host that records the call.
 import { describe, expect, it } from "vitest";
 
-import type { Host } from "../hooks/host.ts";
-import { BeadsPane, PANE_ID } from "../hooks/pane.ts";
-import { StoreResolver } from "../hooks/store.ts";
+import type { Host } from "../hooks/host.js";
+import { BeadsPane, PANE_ID } from "../hooks/pane.js";
+import { StoreResolver } from "../hooks/store.js";
 
 function recordingHost() {
   const calls: { opened: unknown[]; focused: [string, string][] } = { opened: [], focused: [] };

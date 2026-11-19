@@ -8,9 +8,9 @@ import {
   commentsView,
   parseBdComments,
   parseCommentDraft,
-} from "../src/index.ts";
-import comments from "./fixtures/bd-comments-BU-mg2.3.json.ts";
-import { unwrap } from "./helpers.ts";
+} from "../src/index.js";
+import comments from "./fixtures/bd-comments-BU-mg2.3.json.js";
+import { unwrap } from "./helpers.js";
 
 const comment = (n: number, text: string): Comment => ({
   id: `c-${n}`,

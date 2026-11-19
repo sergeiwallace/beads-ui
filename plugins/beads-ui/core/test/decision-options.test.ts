@@ -7,7 +7,7 @@ import {
   optionForKey,
   optionsForItem,
   parseDecisionOptions,
-} from "../src/index.ts";
+} from "../src/index.js";
 
 // T-W1.2 of the web app design (D-2): option cards from `held_cli.py options` stdout, in the
 // shape that command prints: version 1, one entry per review item, its decisions or its error.
