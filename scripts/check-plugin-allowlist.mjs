@@ -21,7 +21,8 @@
 // `$` (a hook may name its first parameter anything); a noun handed out, such as `helper($.ui)`;
 // an engine type rebuilt structurally or derived from a hooks module's export
 // (`Parameters<typeof register>`). `claude plugin test` and review cover those.
-// Exits 1 on any difference or validation error, 2 when validate cannot run.
+// Exits 1 on any difference or validation error, 2 when validate cannot run or its type check
+// ends without an answer on every attempt.
 import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { extname, join, relative, resolve } from "node:path";
@@ -89,7 +90,26 @@ function splitTopLevel(values) {
   return parts;
 }
 
-function validate(pluginDir) {
+// validate's type check can end without a verdict and report this warning instead, which says
+// nothing about the plugin (BU-pqm). It was seen on a loaded host and while another process
+// reinstalled the Claude Code package under the running check, so validate runs again after a
+// pause, and the gate exits 2 (could not check) rather than 1 when no attempt answers.
+const NO_ANSWER = "not type-checked: the check ended without an answer";
+const VALIDATE_ATTEMPTS = 3;
+// Pause before the second and third attempts, in ms; long enough to outlast a package reinstall.
+const RETRY_PAUSES_MS = [10_000, 20_000];
+
+function pause(ms) {
+  if (ms > 0) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+function unanswered(report) {
+  return [report.manifest, ...(report.contents ?? [])].some((part) =>
+    (part?.warnings ?? []).some((warning) => warning.message === NO_ANSWER),
+  );
+}
+
+function validateOnce(pluginDir) {
   const result = spawnSync("claude", ["plugin", "validate", "--strict", "--json", pluginDir], {
     encoding: "utf8",
   });
@@ -106,6 +126,18 @@ function validate(pluginDir) {
     console.log(result.stdout + result.stderr);
     process.exit(2);
   }
+}
+
+function validate(pluginDir) {
+  for (let attempt = 1; attempt <= VALIDATE_ATTEMPTS; attempt++) {
+    if (attempt > 1) pause(RETRY_PAUSES_MS[attempt - 2]);
+    const report = validateOnce(pluginDir);
+    if (!unanswered(report)) return report;
+  }
+  console.log(
+    `check-plugin-allowlist: claude plugin validate's type check ended without an answer on all ${VALIDATE_ATTEMPTS} attempts; nothing was checked`,
+  );
+  process.exit(2);
 }
 
 function reportedOf(report, problems) {
