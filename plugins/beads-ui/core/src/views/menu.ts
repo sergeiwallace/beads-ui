@@ -2,10 +2,10 @@
 // the nav draw their keys from it, and the options menu lists the same actions with those keys,
 // so no action is reachable only one way. A Client drawing (T-2B.5) reads the same lists.
 
-import { commandById } from "../commands.ts";
-import { type Labels, labels } from "../layout.ts";
-import { hotkeyOf, isPanelView, type NavEntry, navEntries } from "./nav.ts";
-import type { TaskListView } from "./panel.ts";
+import { commandById } from "../commands.js";
+import { type Labels, labels } from "../layout.js";
+import { hotkeyOf, isPanelView, type NavEntry, navEntries } from "./nav.js";
+import type { TaskListView } from "./panel.js";
 
 export interface PanelAction {
   /** The COMMANDS id: its hotkey and the help's line. */

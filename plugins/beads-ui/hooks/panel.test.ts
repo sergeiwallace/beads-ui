@@ -2,14 +2,14 @@ import type { On, RenderPropsOf } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
-import { COMMANDS, NAV_ENTRIES, wakeFileName } from "../core/src/index.ts";
-import list from "../core/test/fixtures/bd-list-all-brief.json.ts";
-import { SPRINT_PLANNED_TEXT } from "./pane.ts";
-import { PANEL_SETTINGS_KEY } from "./panel.ts";
-import { CONFIRM_ID, PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
-import { ME, MINE, MINE_ORDER, ownStore } from "./tests/mine.ts";
-import { overflows } from "./tests/width.ts";
+import { COMMANDS, NAV_ENTRIES, wakeFileName } from "../core/src/index.js";
+import list from "../core/test/fixtures/bd-list-all-brief.json.js";
+import { SPRINT_PLANNED_TEXT } from "./pane.js";
+import { PANEL_SETTINGS_KEY } from "./panel.js";
+import { CONFIRM_ID, PANE_ID, PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
+import { ME, MINE, MINE_ORDER, ownStore } from "./tests/mine.js";
+import { overflows } from "./tests/width.js";
 import {
   CWD,
   ok,
@@ -21,7 +21,7 @@ import {
   VIEWPORT,
   type WorldOptions,
   world,
-} from "./tests/world.ts";
+} from "./tests/world.js";
 
 // Phase 2B's task panel, slice 1 (T-2B.1 to T-2B.4 and T-2B.8): the nav and its width tiers, the
 // Tasks view's shown and collapsed tasks, opening and editing a task, the options menu, and the

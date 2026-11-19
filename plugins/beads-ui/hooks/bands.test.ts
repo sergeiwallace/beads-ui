@@ -12,11 +12,11 @@ import {
   storeReads,
   storeSnapshotOf,
   wakeFileName,
-} from "../core/src/index.ts";
-import { BAND_SETTINGS_KEY } from "./bandSettings.ts";
-import { SCOPE_KEY } from "./pane.ts";
-import { PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
+} from "../core/src/index.js";
+import { BAND_SETTINGS_KEY } from "./bandSettings.js";
+import { SCOPE_KEY } from "./pane.js";
+import { PANE_ID, PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
 import {
   BAND_PROPS,
   type Counted,
@@ -40,7 +40,7 @@ import {
   VIEWPORT,
   type WorldOptions,
   world,
-} from "./tests/world.ts";
+} from "./tests/world.js";
 
 const LIST = OPEN_LIST;
 const HOUR = 3_600_000;

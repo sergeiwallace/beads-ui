@@ -5,7 +5,7 @@ import {
   PRESS_OPEN,
   type ThemeOverrides,
   type Token,
-} from "../../core/src/index.ts";
+} from "../../core/src/index.js";
 
 // The look both surfaces draw with (D-43): the `[theme]` colours and the glyph form read at the
 // last config read, and the clickable affordance every pressable element draws. One module

@@ -1,8 +1,8 @@
 import { describe, expect } from "claude-code/testing";
 
-import { OPEN_FAILED_TEXT, PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
-import { BU, PANE_PROPS, SESSION, SHOW, VIEWPORT, world } from "./tests/world.ts";
+import { OPEN_FAILED_TEXT, PANE_ID, PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
+import { BU, PANE_PROPS, SESSION, SHOW, VIEWPORT, world } from "./tests/world.js";
 
 describe("register", () => {
   test("should register /show-beads-ui and /bu and open the beads pane when /show-beads-ui runs", async ($, on) => {

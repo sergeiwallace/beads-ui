@@ -1,6 +1,6 @@
 import type { PaneOpenArgs, ProcessRunResult, Timer } from "claude-code";
 
-import type { Streamed } from "./stream.ts";
+import type { Streamed } from "./stream.js";
 
 /** What the process environment says about which session this is. */
 export interface SessionEnv {

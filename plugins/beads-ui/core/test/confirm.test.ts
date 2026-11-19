@@ -10,12 +10,12 @@ import {
   openDeleteConfirm,
   reduceConfirm,
   undoArgv,
-} from "../src/index.ts";
-import cascadePreview from "./fixtures/bd-delete-cascade-dry-run.json.ts";
-import refusedJson from "./fixtures/bd-delete-dry-run-dependents.json.ts";
-import refusedText from "./fixtures/bd-delete-dry-run-dependents.txt.ts";
-import leafText from "./fixtures/bd-delete-dry-run-leaf.txt.ts";
-import { allIssues, byId } from "./helpers.ts";
+} from "../src/index.js";
+import cascadePreview from "./fixtures/bd-delete-cascade-dry-run.json.js";
+import refusedJson from "./fixtures/bd-delete-dry-run-dependents.json.js";
+import refusedText from "./fixtures/bd-delete-dry-run-dependents.txt.js";
+import leafText from "./fixtures/bd-delete-dry-run-leaf.txt.js";
+import { allIssues, byId } from "./helpers.js";
 
 const run = (state: ConfirmState, ...events: ConfirmEvent[]) => events.reduce(reduceConfirm, state);
 const openFor = (id: string) => openDeleteConfirm(byId(allIssues(), id), allIssues());

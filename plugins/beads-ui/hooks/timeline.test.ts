@@ -2,12 +2,12 @@ import type { On, RenderPropsOf } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
-import { clockStamp, RASTER_COLORS, RASTER_DEFAULT_COLOR } from "../core/src/index.ts";
-import list from "../core/test/fixtures/bd-list-all-brief.json.ts";
-import { PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
-import { ME, MINE } from "./tests/mine.ts";
-import { overflows } from "./tests/width.ts";
+import { clockStamp, RASTER_COLORS, RASTER_DEFAULT_COLOR } from "../core/src/index.js";
+import list from "../core/test/fixtures/bd-list-all-brief.json.js";
+import { PANE_ID, PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
+import { ME, MINE } from "./tests/mine.js";
+import { overflows } from "./tests/width.js";
 import {
   exit,
   ok,
@@ -20,7 +20,7 @@ import {
   VIEWPORT,
   type WorldOptions,
   world,
-} from "./tests/world.ts";
+} from "./tests/world.js";
 
 // T-2B.9: the Timeline view, driven through the pane as Claude Code mounts it. The store is the
 // fixture's, with due dates on three epics and one `Sprint 7` milestone (D-5); its six other

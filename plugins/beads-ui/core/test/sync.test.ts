@@ -13,7 +13,7 @@ import {
   sessionText,
   stepOf,
   syncArgv,
-} from "../src/index.ts";
+} from "../src/index.js";
 
 const STORE = "/data/projects/beads-ui";
 const COMMAND = ["/home/me/bin/bd_dolt_publish.py", "--repo", "{store}", "--attest", "--json"];

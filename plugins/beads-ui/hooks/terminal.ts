@@ -1,5 +1,5 @@
-import { type ImageVerdict, type TerminalFacts, terminalImages } from "../core/src/index.ts";
-import type { Host } from "./host.ts";
+import { type ImageVerdict, type TerminalFacts, terminalImages } from "../core/src/index.js";
+import type { Host } from "./host.js";
 
 // What the terminal can draw (D-43, T-2C.13), read once at session start: whether an Image's
 // pixels reach the screen. Inside tmux that needs allow-passthrough on, which tmux is asked for

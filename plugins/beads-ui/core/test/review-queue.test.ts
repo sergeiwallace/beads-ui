@@ -17,7 +17,7 @@ import {
   reviewQueueView,
   taskEntry,
   withQueueFilters,
-} from "../src/index.ts";
+} from "../src/index.js";
 
 // T-W1.1 of the web app design: the Review queue's model half.
 

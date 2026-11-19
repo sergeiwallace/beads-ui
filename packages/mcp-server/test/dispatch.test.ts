@@ -199,10 +199,14 @@ describe("delivery of an MCP dispatch (W4)", () => {
       );
       expect(flag(mail, "--subject")).toBe(`beads-ui dispatch ${dispatch}`);
     });
-    const status = (
-      await send(world.server, `/api/dispatch/${dispatch}`, { headers: { cookie: world.cookie } })
-    ).json() as { ladder: { rungs: { rung: string; outcome: string }[] } };
-    expect(status.ladder.rungs[0]).toMatchObject({ rung: "agent-mail", outcome: "sent" });
+    // The ladder records the rung's outcome after the Agent Mail call returns, so the status is
+    // polled too: on a loaded host the first read can land between the call and that record.
+    await waitFor(async () => {
+      const status = (
+        await send(world.server, `/api/dispatch/${dispatch}`, { headers: { cookie: world.cookie } })
+      ).json() as { ladder: { rungs: { rung: string; outcome: string }[] } };
+      expect(status.ladder.rungs[0]).toMatchObject({ rung: "agent-mail", outcome: "sent" });
+    });
   });
 });
 

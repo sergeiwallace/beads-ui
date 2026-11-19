@@ -1,8 +1,8 @@
 // Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
 // claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
-import { undoArgv, undoClose, undoForMove, undoView } from "../src/index.ts";
-import { storeStatuses } from "./helpers.ts";
+import { undoArgv, undoClose, undoForMove, undoView } from "../src/index.js";
+import { storeStatuses } from "./helpers.js";
 
 const move = (from: string, to: string) =>
   undoForMove(storeStatuses(), { id: "BU-2zw", label: "BU-npm-audit-2zw", from, to });

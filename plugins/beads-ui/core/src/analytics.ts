@@ -3,11 +3,11 @@
 // audit table (`bd history --events`, D-16). Pure: the surface supplies the issues, their events
 // and the time; the web app draws the charts.
 
-import type { HistoryEvent, Issue, Status, StatusCategory } from "./model.ts";
-import { STATUS_CATEGORIES } from "./model.ts";
-import type { SprintInfo } from "./sprint-view.ts";
-import { sprintLabelsOf } from "./sprint-view.ts";
-import { statusCategory } from "./views/timeline.ts";
+import type { HistoryEvent, Issue, Status, StatusCategory } from "./model.js";
+import { STATUS_CATEGORIES } from "./model.js";
+import type { SprintInfo } from "./sprint-view.js";
+import { sprintLabelsOf } from "./sprint-view.js";
+import { statusCategory } from "./views/timeline.js";
 
 export const DAY_MS = 86_400_000;
 const WEEK_MS = 7 * DAY_MS;

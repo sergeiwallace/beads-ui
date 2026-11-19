@@ -1,4 +1,4 @@
-import type { Result } from "./model.ts";
+import type { Result } from "./model.js";
 
 // The web app's key map (web app design D-12, T-W1.4): single-key shortcuts on by default, a
 // setting that turns them off while modified shortcuts keep working, and remaps that refuse to

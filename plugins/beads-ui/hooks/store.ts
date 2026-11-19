@@ -11,8 +11,8 @@ import {
   type StoreResolution,
   userConfigPath,
   whereArgv,
-} from "../core/src/index.ts";
-import type { Host, SessionEnv } from "./host.ts";
+} from "../core/src/index.js";
+import type { Host, SessionEnv } from "./host.js";
 
 const WHERE_TIMEOUT_MS = 8_000;
 

@@ -8,13 +8,13 @@ import {
   type ReviewSection,
   SPACE,
   textWidth,
-} from "../../core/src/index.ts";
-import type { Surface } from "./adapters.ts";
-import { choice, field, markdown } from "./elements.ts";
-import { emptyState, errorState } from "./frame.ts";
-import { colorOf, weight } from "./look.ts";
-import { reviewBlock, reviewRows, type SectionActions } from "./review.ts";
-import { fitted, lineWindow, textLine, textLines, windowed } from "./window.ts";
+} from "../../core/src/index.js";
+import type { Surface } from "./adapters.js";
+import { choice, field, markdown } from "./elements.js";
+import { emptyState, errorState } from "./frame.js";
+import { colorOf, weight } from "./look.js";
+import { reviewBlock, reviewRows, type SectionActions } from "./review.js";
+import { fitted, lineWindow, textLine, textLines, windowed } from "./window.js";
 
 // The Detail view (T-1.3, BU-mg2.3.14, BU-mg2.3.15, T-2C.5, D-35, T-2C.8), drawn from core's
 // DetailView, CommentsView and ReviewSection on either surface: its heading, the Review section

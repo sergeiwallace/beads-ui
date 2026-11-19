@@ -1,6 +1,6 @@
 import type { ClientSurface, RenderElement } from "claude-code";
 
-import { GREETING } from "./greeting.ts";
+import { GREETING } from "./greeting.js";
 
 /**
  * The help panel's Client region, a line the Phase 2 drag board replaces. It

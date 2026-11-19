@@ -1,5 +1,5 @@
-import type { Issue, RandomSource, Result } from "./model.ts";
-import { DEFAULT_SORT, sortIssues } from "./sort.ts";
+import type { Issue, RandomSource, Result } from "./model.js";
+import { DEFAULT_SORT, sortIssues } from "./sort.js";
 
 /**
  * Manual rank (D-6): `metadata.rank` holds a fractional-index key, a base-62 string that sorts

@@ -1,5 +1,5 @@
-import type { Issue } from "./model.ts";
-import type { ReviewItem } from "./review.ts";
+import type { Issue } from "./model.js";
+import type { ReviewItem } from "./review.js";
 
 // The web app's Review queue (web app design § The Review queue, D-1, T-W1.1): every held item and
 // every task that needs Sergei, grouped by next action, sorted by priority, impact, age and id, and

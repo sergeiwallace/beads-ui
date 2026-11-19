@@ -1,10 +1,10 @@
-import { applyFilter, describeFilterError, type FilterState } from "../filter.ts";
-import type { Issue, Status } from "../model.ts";
-import { orderByPriorityRank } from "../rank.ts";
-import { DEFAULT_SORT, type SortSpec, sortIssues } from "../sort.ts";
-import { priorityToken, type Token } from "../tokens.ts";
-import { type PageView, pageOf } from "./board.ts";
-import { priorityBadge, truncate } from "./text.ts";
+import { applyFilter, describeFilterError, type FilterState } from "../filter.js";
+import type { Issue, Status } from "../model.js";
+import { orderByPriorityRank } from "../rank.js";
+import { DEFAULT_SORT, type SortSpec, sortIssues } from "../sort.js";
+import { priorityToken, type Token } from "../tokens.js";
+import { type PageView, pageOf } from "./board.js";
+import { priorityBadge, truncate } from "./text.js";
 
 export interface BacklogRow {
   id: string;

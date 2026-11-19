@@ -1,7 +1,7 @@
 import type { Elements, RenderElement } from "claude-code";
 
-import type { SurfaceId, TaskClientProps } from "../../core/src/index.ts";
-import { styledUi } from "./look.ts";
+import type { SurfaceId, TaskClientProps } from "../../core/src/index.js";
+import { styledUi } from "./look.js";
 
 // The two adapters of the component layer (D-35, T-2C.1): what each surface can draw, handed to
 // every component, so one component draws a view on the band and on the pane.

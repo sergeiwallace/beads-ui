@@ -6,7 +6,7 @@ import type {
   RenderNode,
 } from "claude-code";
 
-import type { TaskClientMessage, TaskClientProps, TaskClientRow } from "../core/src/views/menu.ts";
+import type { TaskClientMessage, TaskClientProps, TaskClientRow } from "../core/src/views/menu.js";
 
 // The Tasks view's task list as a Client (T-2B.5, D-31): it draws the rows the hooks hand it and
 // posts what the pointer or a key did to a row. The hooks decide what each post does, with the

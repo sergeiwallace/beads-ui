@@ -1,9 +1,9 @@
-import { historyArgv, issueIdArg, showArgv, statusArg } from "../argv.ts";
-import { glyphOf } from "../glyphs.ts";
-import { textWidth } from "../layout.ts";
-import type { BdArgv, HistoryEvent, Issue, Result } from "../model.ts";
-import { isCalendarDate } from "../quickadd.ts";
-import { fitBlock, priorityBadge, truncate } from "./text.ts";
+import { historyArgv, issueIdArg, showArgv, statusArg } from "../argv.js";
+import { glyphOf } from "../glyphs.js";
+import { textWidth } from "../layout.js";
+import type { BdArgv, HistoryEvent, Issue, Result } from "../model.js";
+import { isCalendarDate } from "../quickadd.js";
+import { fitBlock, priorityBadge, truncate } from "./text.js";
 
 /** The fields R-7 makes editable inline. */
 export const EDITABLE_FIELDS = [

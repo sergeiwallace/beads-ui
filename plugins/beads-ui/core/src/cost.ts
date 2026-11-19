@@ -4,7 +4,7 @@
 // two gives cost and tokens per closed issue. The export is read as OTLP JSON Lines, the format an
 // OpenTelemetry Collector's file exporter writes. Pure: the server reads the file.
 
-import type { Issue } from "./model.ts";
+import type { Issue } from "./model.js";
 
 export const COST_METRIC = "claude_code.cost.usage";
 export const TOKEN_METRIC = "claude_code.token.usage";

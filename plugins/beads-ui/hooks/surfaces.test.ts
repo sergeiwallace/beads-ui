@@ -2,11 +2,11 @@ import type { On } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
-import { SURFACES_KEY } from "./panel.ts";
-import { PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
-import { MINE } from "./tests/mine.ts";
-import { PANE_PROPS, SESSION, SHOW, VIEWPORT, type WorldOptions, world } from "./tests/world.ts";
+import { SURFACES_KEY } from "./panel.js";
+import { PANE_ID, PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
+import { MINE } from "./tests/mine.js";
+import { PANE_PROPS, SESSION, SHOW, VIEWPORT, type WorldOptions, world } from "./tests/world.js";
 
 // D-35 and T-2C.1, criterion 3: `[surfaces]` in beads-ui.toml, or Settings, limits a view to the
 // band or the pane from the next redraw; both, or no setting, draws it on both. Driven through

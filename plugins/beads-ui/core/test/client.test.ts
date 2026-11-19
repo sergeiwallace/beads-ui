@@ -9,8 +9,8 @@ import {
   parseTaskMessage,
   taskClientProps,
   taskListView,
-} from "../src/index.ts";
-import { allIssues, storeStatuses } from "./helpers.ts";
+} from "../src/index.js";
+import { allIssues, storeStatuses } from "./helpers.js";
 
 // The task list's Client props and posts (T-2B.5, D-31): the same rows and keys the element tree
 // draws, and every post read as untrusted input.

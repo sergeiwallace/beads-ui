@@ -2,9 +2,9 @@ import type { On } from "claude-code";
 import type { Engine, Mounted } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
-import { wakeFileName } from "../core/src/index.ts";
-import { PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
+import { wakeFileName } from "../core/src/index.js";
+import { PANE_ID, PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
 import {
   CWD,
   exit,
@@ -17,7 +17,7 @@ import {
   STATE_DIR,
   VIEWPORT,
   world,
-} from "./tests/world.ts";
+} from "./tests/world.js";
 
 // T-2B.6 (D-33): edits that publish themselves. The publish command is a stub the world answers;
 // nothing here runs a real publish.

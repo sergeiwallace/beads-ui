@@ -3,8 +3,8 @@
 // test/mint.test.ts pins this one against ids bd-new minted in this repository's own store.
 // bd-new's per-machine budget overrides (AIH_SLUG_BODY_MAX_CHARS and _CHILD) are environment
 // reads; core does no reads, so a surface reads the two strings and passes slugBudgets' result.
-import { issueIdArg } from "./argv.ts";
-import type { BdArgv, Issue, RandomSource, Result } from "./model.ts";
+import { issueIdArg } from "./argv.js";
+import type { BdArgv, Issue, RandomSource, Result } from "./model.js";
 
 export const SLUG_SUFFIX_ALPHABET = "abcdefghjkmnpqrstuvwxyz";
 export const SLUG_SUFFIX_LENGTH = 4;

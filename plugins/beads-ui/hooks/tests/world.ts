@@ -1,17 +1,17 @@
 import type { Args, On, ProcessRunResult, RenderPropsOf, UiOpenResult } from "claude-code";
 import { mock } from "claude-code/testing";
 
-import commentsMg23 from "../../core/test/fixtures/bd-comments-BU-mg2.3.json.ts";
-import cascadePreview from "../../core/test/fixtures/bd-delete-cascade-dry-run.json.ts";
-import dependentsText from "../../core/test/fixtures/bd-delete-dry-run-dependents.txt.ts";
-import leafText from "../../core/test/fixtures/bd-delete-dry-run-leaf.txt.ts";
-import historyMg23 from "../../core/test/fixtures/bd-history-BU-mg2.3.json.ts";
-import list from "../../core/test/fixtures/bd-list-all-brief.json.ts";
-import ready from "../../core/test/fixtures/bd-ready.json.ts";
-import show from "../../core/test/fixtures/bd-show.json.ts";
-import show5 from "../../core/test/fixtures/bd-show-BU-mg2.3.5.json.ts";
-import statuses from "../../core/test/fixtures/bd-statuses.json.ts";
-import { UNASKED_COLUMNS } from "../pane.ts";
+import commentsMg23 from "../../core/test/fixtures/bd-comments-BU-mg2.3.json.js";
+import cascadePreview from "../../core/test/fixtures/bd-delete-cascade-dry-run.json.js";
+import dependentsText from "../../core/test/fixtures/bd-delete-dry-run-dependents.txt.js";
+import leafText from "../../core/test/fixtures/bd-delete-dry-run-leaf.txt.js";
+import historyMg23 from "../../core/test/fixtures/bd-history-BU-mg2.3.json.js";
+import list from "../../core/test/fixtures/bd-list-all-brief.json.js";
+import ready from "../../core/test/fixtures/bd-ready.json.js";
+import show from "../../core/test/fixtures/bd-show.json.js";
+import show5 from "../../core/test/fixtures/bd-show-BU-mg2.3.5.json.js";
+import statuses from "../../core/test/fixtures/bd-statuses.json.js";
+import { UNASKED_COLUMNS } from "../pane.js";
 
 // The world beneath the mod in the hooks tests: a session in this repository, whose bd answers
 // from the real output of its own Beads store (the core's fixtures, each captured read-only with

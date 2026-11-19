@@ -6,8 +6,8 @@ import {
   type NavEntry,
   type SurfaceId,
   type SurfaceOverrides,
-} from "../../core/src/index.ts";
-import type { Surface } from "./adapters.ts";
+} from "../../core/src/index.js";
+import type { Surface } from "./adapters.js";
 
 /**
  * A view, registered once (D-35): its nav entry (id, COMMANDS id, labels, glyph, planned and the

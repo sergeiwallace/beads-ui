@@ -1,18 +1,18 @@
 import type { On } from "claude-code";
 
-import { isTaskPanelRetired, pictureForm } from "../core/src/index.ts";
-import { BandSettingsPanel } from "./bandSettings.ts";
-import { drawBand } from "./bands.ts";
-import type { SurfacePicture } from "./components/adapters.ts";
-import { CONFIRM_ID, DeleteConfirm } from "./confirm.ts";
-import type { Host } from "./host.ts";
-import { BandLevels } from "./levels.ts";
-import { BeadsPane, PANE_ID, type TasksRegion } from "./pane.ts";
-import { TASKS_CLIENT_KEY } from "./panel.ts";
-import { StoreResolver } from "./store.ts";
-import { readStream } from "./stream.ts";
-import { BandTally, EditSync } from "./tally.ts";
-import { readTerminal } from "./terminal.ts";
+import { isTaskPanelRetired, pictureForm } from "../core/src/index.js";
+import { BandSettingsPanel } from "./bandSettings.js";
+import { drawBand } from "./bands.js";
+import type { SurfacePicture } from "./components/adapters.js";
+import { CONFIRM_ID, DeleteConfirm } from "./confirm.js";
+import type { Host } from "./host.js";
+import { BandLevels } from "./levels.js";
+import { BeadsPane, PANE_ID, type TasksRegion } from "./pane.js";
+import { TASKS_CLIENT_KEY } from "./panel.js";
+import { StoreResolver } from "./store.js";
+import { readStream } from "./stream.js";
+import { BandTally, EditSync } from "./tally.js";
+import { readTerminal } from "./terminal.js";
 
 export const PLUGIN_NAME = "beads-ui";
 export const COMMAND_NAME = "show-beads-ui";

@@ -1,8 +1,8 @@
 // Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
 // claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
-import { type Issue, parseSprintSelection, sprintSelectionText, sprintView } from "../src/index.ts";
-import { storeStatuses } from "./helpers.ts";
+import { type Issue, parseSprintSelection, sprintSelectionText, sprintView } from "../src/index.js";
+import { storeStatuses } from "./helpers.js";
 
 // T-W1.0 of the web app design, over D-5 of the beads-ui design: a sprint's members carry the
 // `sprint:<name>` label, its dates sit on the `milestone` issue titled `Sprint <name>`.

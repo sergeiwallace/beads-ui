@@ -1,4 +1,4 @@
-import type { Result } from "./model.ts";
+import type { Result } from "./model.js";
 
 // The host refresher's files and timings (D-26, T-1B.4), shared by the refresher process
 // (plugins/beads-ui/refresher/refresher.mjs, which Node loads with its type stripping, so this file

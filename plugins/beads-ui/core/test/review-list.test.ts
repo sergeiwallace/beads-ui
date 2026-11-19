@@ -19,7 +19,7 @@ import {
   scopedItems,
   sortReviewItems,
   submitReviewFilter,
-} from "../src/index.ts";
+} from "../src/index.js";
 
 // T-2C.6 and T-2C.7 (D-38, D-40, D-41): the Review view's rules, pure.
 

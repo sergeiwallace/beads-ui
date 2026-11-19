@@ -13,7 +13,7 @@ import {
   remapKey,
   type Shortcut,
   setSingleKeys,
-} from "../src/index.ts";
+} from "../src/index.js";
 
 // T-W1.4 of the web app design (D-12): single-key shortcuts on by default, an off setting that
 // keeps modified shortcuts, and remaps that refuse one key for two commands.

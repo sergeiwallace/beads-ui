@@ -1,7 +1,7 @@
-import type { Result } from "../model.ts";
-import { DEFAULT_DONE_WINDOW, type StoreSnapshot } from "../snapshot.ts";
-import type { Token } from "../tokens.ts";
-import { asOf, storeName, truncate } from "./text.ts";
+import type { Result } from "../model.js";
+import { DEFAULT_DONE_WINDOW, type StoreSnapshot } from "../snapshot.js";
+import type { Token } from "../tokens.js";
+import { asOf, storeName, truncate } from "./text.js";
 
 /** A Beads store the band reads: a repository directory holding a `.beads/` store. */
 export interface BandStore {

@@ -1,9 +1,9 @@
 import type { RenderElement } from "claude-code";
 
-import type { SurfaceUi } from "./components/adapters.ts";
-import type { BandLevels } from "./levels.ts";
+import type { SurfaceUi } from "./components/adapters.js";
+import type { BandLevels } from "./levels.js";
 
-export { BEADS_BUTTON_KEY, EXPAND_KEY, OVERVIEW_KEY, PANE_CLOSE_KEY } from "./levels.ts";
+export { BEADS_BUTTON_KEY, EXPAND_KEY, OVERVIEW_KEY, PANE_CLOSE_KEY } from "./levels.js";
 
 /** The elements the band draws with: every one the `AbovePrompt` site resolves (D-35). */
 export type BandUi = SurfaceUi;

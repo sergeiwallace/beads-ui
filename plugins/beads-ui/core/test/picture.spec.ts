@@ -1,7 +1,7 @@
 import { inflateSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 
-import { palettePng } from "../src/index.ts";
+import { palettePng } from "../src/index.js";
 
 // T-2C.13: the Timeline's Image is a PNG the core writes with no compressor. A terminal drawing
 // it reads it with a real decoder, so this suite reads it with Node's zlib: each chunk's CRC,

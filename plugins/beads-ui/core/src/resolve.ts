@@ -1,7 +1,7 @@
-import { CONFIG_FILE_NAME, parseToml } from "./config.ts";
-import type { Result } from "./model.ts";
-import type { BandStore } from "./views/band.ts";
-import { storeName } from "./views/text.ts";
+import { CONFIG_FILE_NAME, parseToml } from "./config.js";
+import type { Result } from "./model.js";
+import type { BandStore } from "./views/band.js";
+import { storeName } from "./views/text.js";
 
 /**
  * The `beads-ui.toml` table that maps a directory's name to the directory of the repository whose

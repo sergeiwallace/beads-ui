@@ -2,14 +2,14 @@ import type { On } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
-import comments from "../core/test/fixtures/bd-comments-BU-mg2.3.json.ts";
-import show from "../core/test/fixtures/bd-show.json.ts";
-import { ANSWER_KEY, CLOSE_KEY, ISSUE_KEY, SEND_KEY } from "./components/review.ts";
-import { PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { ANSWERS_DIR } from "./review.ts";
-import { test } from "./tests/kit.ts";
-import { ME, MINE } from "./tests/mine.ts";
-import { render } from "./tests/render.ts";
+import comments from "../core/test/fixtures/bd-comments-BU-mg2.3.json.js";
+import show from "../core/test/fixtures/bd-show.json.js";
+import { ANSWER_KEY, CLOSE_KEY, ISSUE_KEY, SEND_KEY } from "./components/review.js";
+import { PANE_ID, PLUGIN_NAME } from "./register.js";
+import { ANSWERS_DIR } from "./review.js";
+import { test } from "./tests/kit.js";
+import { ME, MINE } from "./tests/mine.js";
+import { render } from "./tests/render.js";
 import {
   BAND_PROPS,
   CWD,
@@ -29,7 +29,7 @@ import {
   STATE_DIR,
   VIEWPORT,
   world,
-} from "./tests/world.ts";
+} from "./tests/world.js";
 
 // T-2C.5 (D-37 to D-40): an issue's review items in its Detail, the reader and the answer, at the
 // hooks entry point. A host refresher is played running, its review snapshot written under its

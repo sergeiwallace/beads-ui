@@ -8,7 +8,7 @@ import {
   resolveConfig,
   resolveRank,
   resolveWeb,
-} from "../src/index.ts";
+} from "../src/index.js";
 
 // The example from the design's Configuration section, verbatim.
 const DESIGN_EXAMPLE = `[stores.default]

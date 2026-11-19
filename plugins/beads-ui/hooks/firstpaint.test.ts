@@ -2,12 +2,12 @@ import type { On } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
-import { asOf, type BoardEntry, boardFileName, boardRow, clockStamp } from "../core/src/index.ts";
-import list from "../core/test/fixtures/bd-list-all-brief.json.ts";
-import statuses from "../core/test/fixtures/bd-statuses.json.ts";
-import { NO_NAME_TEXT, PREFS_KEY, SCOPE_KEY } from "./pane.ts";
-import { PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
+import { asOf, type BoardEntry, boardFileName, boardRow, clockStamp } from "../core/src/index.js";
+import list from "../core/test/fixtures/bd-list-all-brief.json.js";
+import statuses from "../core/test/fixtures/bd-statuses.json.js";
+import { NO_NAME_TEXT, PREFS_KEY, SCOPE_KEY } from "./pane.js";
+import { PANE_ID, PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
 import {
   BU,
   CLOSED_PAGE,
@@ -26,7 +26,7 @@ import {
   VIEWPORT,
   type WorldOptions,
   world,
-} from "./tests/world.ts";
+} from "./tests/world.js";
 
 // T-1B.8 and D-29: the first paint from the host refresher's board snapshot, the Mine and All
 // default and its memory, and the board's bounded read.

@@ -18,10 +18,10 @@ import {
   windowMs,
   withBandTable,
   withOverrides,
-} from "../core/src/index.ts";
-import type { Host } from "./host.ts";
-import type { PaneUi } from "./pane.ts";
-import type { StoreResolver } from "./store.ts";
+} from "../core/src/index.js";
+import type { Host } from "./host.js";
+import type { PaneUi } from "./pane.js";
+import type { StoreResolver } from "./store.js";
 
 /** Where the pane keeps band settings changed in it until Save to file writes them. */
 export const BAND_SETTINGS_KEY = "band-settings";

@@ -21,8 +21,8 @@ import {
   sortLabel,
   stepPage,
   storeName,
-} from "../src/index.ts";
-import { allIssues, storeStatuses } from "./helpers.ts";
+} from "../src/index.js";
+import { allIssues, storeStatuses } from "./helpers.js";
 
 const boardOf = (issues: Issue[], statuses = storeStatuses()): BoardState =>
   reduceBoard(INITIAL_BOARD_STATE, {

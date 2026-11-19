@@ -8,15 +8,15 @@ import {
   parseBdHistoryEvents,
   parseBdReady,
   parseBdShow,
-} from "../src/index.ts";
-import countMine from "./fixtures/bd-count-assignee-by-status.json.ts";
-import countAll from "./fixtures/bd-count-by-status.json.ts";
-import cascadePreview from "./fixtures/bd-delete-cascade-dry-run.json.ts";
-import refusedPreview from "./fixtures/bd-delete-dry-run-dependents.json.ts";
-import historyMg22 from "./fixtures/bd-history-BU-mg2.2.json.ts";
-import ready from "./fixtures/bd-ready.json.ts";
-import show5 from "./fixtures/bd-show-BU-mg2.3.5.json.ts";
-import { unwrap } from "./helpers.ts";
+} from "../src/index.js";
+import countMine from "./fixtures/bd-count-assignee-by-status.json.js";
+import countAll from "./fixtures/bd-count-by-status.json.js";
+import cascadePreview from "./fixtures/bd-delete-cascade-dry-run.json.js";
+import refusedPreview from "./fixtures/bd-delete-dry-run-dependents.json.js";
+import historyMg22 from "./fixtures/bd-history-BU-mg2.2.json.js";
+import ready from "./fixtures/bd-ready.json.js";
+import show5 from "./fixtures/bd-show-BU-mg2.3.5.json.js";
+import { unwrap } from "./helpers.js";
 
 function errorOf(result: { ok: boolean; error?: { source: string; path: string } }) {
   expect(result.ok).toBe(false);

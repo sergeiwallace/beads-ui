@@ -11,8 +11,8 @@ import {
   parseQueueTaskEvents,
   parseQueueTasks,
   queueSessionsView,
-} from "../src/index.ts";
-import { storeStatuses, unwrap } from "./helpers.ts";
+} from "../src/index.js";
+import { storeStatuses, unwrap } from "./helpers.js";
 
 // T-3.4: the Sessions view from the work queue's registry where `[queue] url` is set, else from
 // the store's assignees. The rows below are ai-core's `SessionOut`, `TaskOut` and

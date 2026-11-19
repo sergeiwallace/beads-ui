@@ -7,8 +7,8 @@ import {
   nextSwimlaneMode,
   parseSwimlaneMode,
   type Status,
-} from "../src/index.ts";
-import { allIssues, byId, ids, storeStatuses } from "./helpers.ts";
+} from "../src/index.js";
+import { allIssues, byId, ids, storeStatuses } from "./helpers.js";
 
 describe("buildColumns", () => {
   test("should give one column per bd status in category order with counts when the board opens", () => {

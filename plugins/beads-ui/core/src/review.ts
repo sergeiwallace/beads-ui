@@ -1,4 +1,4 @@
-import type { BdArgv, Result } from "./model.ts";
+import type { BdArgv, Result } from "./model.js";
 
 // Review items (D-37, T-2C.5): the held store's items of this host's pair, read once a beat by the
 // host refresher through the user's `[review] command` and written, joined to their issues, into

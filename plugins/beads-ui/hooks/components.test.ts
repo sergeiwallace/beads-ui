@@ -16,22 +16,22 @@ import {
   SIDE_NAV_COLUMNS,
   settingsView,
   taskListView,
-} from "../core/src/index.ts";
-import { allIssues, storeStatuses } from "../core/test/helpers.ts";
-import { actionBar } from "./components/actions.ts";
-import { bandSurface, paneSurface, type Surface } from "./components/adapters.ts";
-import { choice, field, markdown } from "./components/elements.ts";
-import { colorOf, pressKey } from "./components/look.ts";
-import { bandNav, navBar } from "./components/nav.ts";
-import { drawSettings } from "./components/settings.ts";
-import { taskList, taskRow } from "./components/tasks.ts";
-import type { Host } from "./host.ts";
-import { BandLevels } from "./levels.ts";
-import { BeadsPane, type PaneUi } from "./pane.ts";
-import { StoreResolver } from "./store.ts";
-import type { BandTally } from "./tally.ts";
-import { test } from "./tests/kit.ts";
-import { CWD } from "./tests/world.ts";
+} from "../core/src/index.js";
+import { allIssues, storeStatuses } from "../core/test/helpers.js";
+import { actionBar } from "./components/actions.js";
+import { bandSurface, paneSurface, type Surface } from "./components/adapters.js";
+import { choice, field, markdown } from "./components/elements.js";
+import { colorOf, pressKey } from "./components/look.js";
+import { bandNav, navBar } from "./components/nav.js";
+import { drawSettings } from "./components/settings.js";
+import { taskList, taskRow } from "./components/tasks.js";
+import type { Host } from "./host.js";
+import { BandLevels } from "./levels.js";
+import { BeadsPane, type PaneUi } from "./pane.js";
+import { StoreResolver } from "./store.js";
+import type { BandTally } from "./tally.js";
+import { test } from "./tests/kit.js";
+import { CWD } from "./tests/world.js";
 
 // D-35 and T-2C.1: the component layer. A component draws a core model through a surface's
 // adapter; these draw one model through the band's and the pane's and compare what each draws.

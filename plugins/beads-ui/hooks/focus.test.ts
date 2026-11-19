@@ -1,13 +1,13 @@
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
-import { COMMANDS, glyphOf } from "../core/src/index.ts";
-import { BEADS_BUTTON_KEY, PANE_CLOSE_KEY } from "./bands.ts";
-import { KEYBINDINGS_BLOCK, USAGE_LINES } from "./pane.ts";
-import { PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
-import { render } from "./tests/render.ts";
-import { overflows } from "./tests/width.ts";
+import { COMMANDS, glyphOf } from "../core/src/index.js";
+import { BEADS_BUTTON_KEY, PANE_CLOSE_KEY } from "./bands.js";
+import { KEYBINDINGS_BLOCK, USAGE_LINES } from "./pane.js";
+import { PANE_ID, PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
+import { render } from "./tests/render.js";
+import { overflows } from "./tests/width.js";
 import {
   BAND_PROPS,
   BU,
@@ -19,7 +19,7 @@ import {
   SHOW,
   VIEWPORT,
   world,
-} from "./tests/world.ts";
+} from "./tests/world.js";
 
 // T-1B.6 and D-27: how focus enters and leaves the pane, how it is shown and hidden, and the
 // help that says so.
