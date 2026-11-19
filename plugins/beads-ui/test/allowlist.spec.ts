@@ -38,7 +38,10 @@ const runGate = (dir: string) =>
 const SESSION_START = "for (const spec of COMMAND_SPECS) await $.command.register(spec);";
 const IMPORT_ANCHOR = 'import { drawBand } from "./bands.ts";';
 
-describe("the validate allow-list gate", () => {
+// Each case runs the real `claude plugin validate`, which the gate reruns up to 3 times, with
+// 10 s and 20 s pauses, when its type check ends without an answer (BU-pqm), so a case gets
+// room for all three attempts.
+describe("the validate allow-list gate", { timeout: 180_000 }, () => {
   it("should pass when run on the real plugin", () => {
     const result = runGate(pluginDir);
 
