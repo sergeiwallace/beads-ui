@@ -8,6 +8,20 @@ documentation.
 
 ## [Unreleased]
 
+## [0.26.5]
+
+### Fixed
+
+- `claude plugin validate --strict` reports no TS5097 warning on Claude Code 2.1.323 and later.
+  Validate type-checks a mod's TypeScript with compiler options that do not allow an import path
+  ending in `.ts`, so the mod's relative imports now name the `.js` file, as Claude Code's mod
+  docs do (`import { name } from './file.js'`); Claude Code and Vitest load the `.ts` source for
+  it. The web app, the terminal app, the MCP server and the host refresher run the core under
+  Node's type stripping, which does not make that mapping, so each registers a resolve hook that
+  does.
+- The validate allow-list no longer accepts the TS5097 warning, so a `.ts` import that comes back
+  fails the commit hook instead of passing as an expected warning.
+
 ## [0.26.3]
 
 ### Added
