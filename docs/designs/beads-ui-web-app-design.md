@@ -1415,6 +1415,8 @@ Mitigation: one procedure doc covers both shapes, and the SSH local forward over
 
 Mitigation: the per-host secret is generated at first start into the host's state directory. A launch command on the host prints a one-time link whose code expires in five minutes; the server exchanges the code once for an `HttpOnly`, `SameSite=Strict` session cookie scoped to the base path, which the browser sends on every request and on the SSE stream, so no token appears in a URL after the exchange or in browser storage. Every write also needs the `X-Beads-UI` header. A session ends after 12 hours, or 2 idle hours; logout revokes it on the server; a host command revokes one session; rotating the secret ends every session. The receiver token for sessions (T-W0.3) is separate. The server refuses to start beyond loopback without the auth layer, and tests pin replay, storage, CSRF, SSE, revocation and forged headers (T-W0.1). Confidence: high.
 
+The [Beads UI web sign-in design](beads-ui-web-sign-in-design.md) extends this decision with durable sessions, verified Serve identity, authenticator recovery, and sign-in help.
+
 ---
 
 <a id="d-18"></a>
