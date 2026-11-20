@@ -145,7 +145,15 @@ function transientLines(rerun: string): string {
   );
 }
 
-/** Polls `url` until it answers 200 or `timeoutSeconds` pass; the last failure otherwise. */
+/** The least a single probe request is given to answer, whatever is left of the window. */
+const PROBE_REQUEST_MIN_MS = 1000;
+
+/**
+ * Polls `url` until it answers 200 or `timeoutSeconds` pass; the last failure otherwise. Each
+ * request gets at least `PROBE_REQUEST_MIN_MS`: the final request of a window would otherwise get
+ * only the few milliseconds left before the deadline, be cut off before the server answered, and
+ * report an abort in place of the answer it was about to give.
+ */
 async function probe(
   url: string,
   timeoutSeconds: number,
@@ -157,7 +165,9 @@ async function probe(
     const left = deadline - Date.now();
     if (left <= 0) return { ok: false, last };
     try {
-      const response = await fetch(url, { signal: AbortSignal.timeout(left) });
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(Math.max(left, PROBE_REQUEST_MIN_MS)),
+      });
       const body = (await response.text()).trim();
       if (response.status === 200) return { ok: true, body };
       last = `HTTP ${response.status} ${body.slice(0, 200)}`.trim();
