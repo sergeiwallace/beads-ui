@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Punch lanes">
-  <title>Punch lanes</title>
-  <path fill="#008d76" d="M12 4a8 8 0 0 1 8 8v36a8 8 0 0 1-16 0V12a8 8 0 0 1 8-8Zm0 8a4 4 0 1 0 0 8 4 4 0 1 0 0-8Z"/>
-  <path fill="#008f9d" d="M32 8a8 8 0 0 1 8 8v32a8 8 0 0 1-16 0V16a8 8 0 0 1 8-8Zm0 16a4 4 0 1 0 0 8 4 4 0 1 0 0-8Z"/>
-  <path fill="#7960cf" d="M52 16a8 8 0 0 1 8 8v28a8 8 0 0 1-16 0V24a8 8 0 0 1 8-8Zm0 20a4 4 0 1 0 0 8 4 4 0 1 0 0-8Z"/>
-</svg>

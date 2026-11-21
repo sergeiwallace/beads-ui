@@ -1,5 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Mirror beads">
-  <title>Mirror beads</title>
-  <path fill="#008d76" d="M4 12h8v17a13 13 0 1 1-8 12Zm13 23a6 6 0 1 0 0 12 6 6 0 0 0 0-12Z"/>
-  <path fill="#7960cf" transform="translate(64 0) scale(-1 1)" d="M4 12h8v17a13 13 0 1 1-8 12Zm13 23a6 6 0 1 0 0 12 6 6 0 0 0 0-12Z"/>
-</svg>

@@ -1,95 +1,152 @@
 # Beads UI favicon candidates
 
-The [full-size overview](overview.png) shows all six candidates and the current icon on light and dark tabs. Open the image directly to inspect the 16 and 32 px cells at their original size. The candidate panels below show native 16, 32, 48 and 64 px renders alongside a smooth 112 px render drawn directly from the same SVG.
+## Registry
 
-## What shipped in PR 113
+| ID | Slug | Version | Concept | Status | Source file |
+| --- | --- | --- | --- | --- | --- |
+| FAV-00 | current | 1.0.0 | Three outlined lanes with a bead thread | shipped · replaced by FAV-01 if confirmed | [fav-00-current.svg](fav-00-current/fav-00-current.svg) |
+| FAV-01 | dark-tile | 1.0.0 | Four beads on a dark tile, faithful redraw | picked | [fav-01-dark-tile.svg](fav-01-dark-tile/1.0.0/fav-01-dark-tile.svg) |
+| FAV-01 | dark-tile | 1.1.0 | Four beads on a dark tile, tuned for tabs | picked | [fav-01-dark-tile.svg](fav-01-dark-tile/fav-01-dark-tile.svg) |
+| FAV-02 | kanban-relay | 1.0.0 | Three lanes joined by a mint thread | candidate | [fav-02-kanban-relay.svg](fav-02-kanban-relay/fav-02-kanban-relay.svg) |
+| FAV-03 | stepped-queue | 1.0.0 | Three stepped bars with bead heads | candidate | [fav-03-stepped-queue.svg](fav-03-stepped-queue/fav-03-stepped-queue.svg) |
+| FAV-04 | punch-lanes | 1.0.0 | Three solid lanes with bead cutouts | candidate | [fav-04-punch-lanes.svg](fav-04-punch-lanes/fav-04-punch-lanes.svg) |
+| FAV-05 | mirror-beads | 1.0.0 | Mirrored forms suggesting bd | candidate | [fav-05-mirror-beads.svg](fav-05-mirror-beads/fav-05-mirror-beads.svg) |
+| FAV-06 | bead-merge | 1.0.0 | Two inputs converge on a violet bead | candidate | [fav-06-bead-merge.svg](fav-06-bead-merge/fav-06-bead-merge.svg) |
+| FAV-07 | bead-matrix | 1.0.0 | A 3–2–1 bead grid | candidate | [fav-07-bead-matrix.svg](fav-07-bead-matrix/fav-07-bead-matrix.svg) |
 
-PR 113 added an [editable SVG](../../../apps/web/client/public/icon.svg), a [32 px browser fallback](../../../apps/web/client/public/icon-32.png), a [192 px installed-app icon](../../../apps/web/client/public/icon-192.png), and tests for the root and `/beads/` mounts. The merged SVG places six beads and a connecting thread on three slate-outlined columns.
+Sergei picked the dark-tile concept for now. FAV-00 is the shipped PR 113 icon and the replacement awaits his confirmation.
 
-At 16 px, the 2-unit column outline renders at half a pixel and the 4-unit thread renders at one pixel. On a dark tab the navy columns recede into the background. On both tabs the upper dots and thread crowd the column separators. The current comparison uses the shipped PNGs at 32 and 192 px and direct SVG renders for the other sizes.
+The [full-size overview](overview.png) shows all nine versions. Each design below starts with a 256 px render drawn directly from its SVG on light and dark tabs. Open an image directly for its native pixel size on a narrow screen. Each true-size strip uses the 16, 32, 48 and 64 px PNGs at 1:1.
 
-## What the design session asked for
+## Versioning
 
-Sergei wanted the mark to “capture both the name and object beads but also that its a task management system” and asked for “just the logo with a transparent background.” He rejected the beaded checkmarks and later asked for something “simpler and more abstract” that could still suggest productivity. He also raised mirrored `bd` as a possible direction after rejecting the upstream green `bd` tile.
+The ChatGPT export paired letter IDs with descriptive names, such as `A · Linked Beads`, and used filenames such as `A-beaded-check-512.png` in a later round. The registry adds permanent, zero-padded IDs (`FAV-NN`), stable kebab-case slugs and semantic versions. Cite a particular release as `FAV-01 dark-tile@1.1.0`.
 
-He later asked to “just use the image #4.” The handoff describes “the three-column Kanban-style logo with circular teal/mint/purple beads, connected across the top to suggest task progression.” That matches export image 005, with broad navy columns, beads that nearly fill the lanes, and a bright mint connector. The fourth attachment in the latest batch is image 008, a horizontal queue. C1 redraws the mark described in the handoff and C2 redraws the horizontal queue. The source is `ChatGPT_gpt-chat-beads-web-app-favicon_20261120-1950.md`, lines 154–190, 294–356 and 376–434.
+A distinct concept gets the next unused ID. Each design revision bumps its version. Bump **major** for a substantial redraw of the same concept, **minor** for a visible refinement such as tab-size tuning, and **patch** for an asset correction with no intended change to the mark. Keep the latest release in `fav-NN-<slug>/` and archive earlier releases in subdirectories named by version.
 
-![Export image 005 shows the tall three-column board, and export image 008 shows the horizontal stepped queue](session-reference.png)
+| Release | Change |
+| --- | --- |
+| FAV-00 current@1.0.0 | Registered the icon shipped in PR 113. |
+| FAV-01 dark-tile@1.0.0 | Registered the faithful redraw of the third-row icon. |
+| FAV-01 dark-tile@1.1.0 | Snapped bead centers to the 16 px grid, increased separation and tightened the tile corners. |
+| FAV-02 through FAV-07 @1.0.0 | Registered the six existing candidates in their original order. |
 
-## C1 · Kanban relay
+## FAV-00 current@1.0.0
 
-The closest redraw of the three-column reference. It keeps the mint thread and the 3–2–1 arrangement of teal, mint and violet beads. Solid slate lanes and a wider thread give the board more presence at tab size.
+![FAV-00 current@1.0.0 at 256 px on light and dark tabs](fav-00-current/fav-00-current-large.png)
 
-![Kanban relay at 16, 32, 48 and 64 px plus an enlarged view on light and dark tabs](c1/tab-preview.png)
+![FAV-00 current@1.0.0 true size at 16, 32, 48 and 64 px on light and dark tabs](fav-00-current/fav-00-current-true-size.png)
 
-[All seven sizes on both backgrounds](c1/all-sizes.png) · [SVG master](c1/c1.svg) · [16/32/48 px ICO](c1/c1.ico)
+PR 113 shipped the [SVG](../../../apps/web/client/public/icon.svg), [32 px fallback](../../../apps/web/client/public/icon-32.png) and [192 px installed-app icon](../../../apps/web/client/public/icon-192.png). The comparison uses the shipped PNGs at those two sizes. At 16 px the lane outlines are half a pixel wide, and the thread crowds the top beads.
 
-Transparent PNGs (px) · [16](c1/c1-16.png) · [32](c1/c1-32.png) · [48](c1/c1-48.png) · [64](c1/c1-64.png) · [128](c1/c1-128.png) · [192](c1/c1-192.png) · [512](c1/c1-512.png)
+[All seven sizes on both backgrounds](fav-00-current/fav-00-current-all-sizes.png) · [SVG master](fav-00-current/fav-00-current.svg) · [16/32/48 px ICO](fav-00-current/fav-00-current.ico)
 
-## C2 · Stepped queue
+Transparent PNGs (px) · [16](fav-00-current/fav-00-current-16.png) · [32](fav-00-current/fav-00-current-32.png) · [48](fav-00-current/fav-00-current-48.png) · [64](fav-00-current/fav-00-current-64.png) · [128](fav-00-current/fav-00-current-128.png) · [192](fav-00-current/fav-00-current-192.png) · [512](fav-00-current/fav-00-current-512.png)
+
+## FAV-01 dark-tile@1.0.0
+
+![FAV-01 dark-tile@1.0.0 at 256 px on light and dark tabs](fav-01-dark-tile/1.0.0/fav-01-dark-tile-large.png)
+
+![FAV-01 dark-tile@1.0.0 true size at 16, 32, 48 and 64 px on light and dark tabs](fav-01-dark-tile/1.0.0/fav-01-dark-tile-true-size.png)
+
+The third row of the review sheet. A dark slate tile holds two teal beads at left, a mint bead in the middle and a violet bead at right. At 16 px the dots are visible, with softer edges and tighter gaps than in 1.1.0.
+
+[All seven sizes on both backgrounds](fav-01-dark-tile/1.0.0/fav-01-dark-tile-all-sizes.png) · [SVG master](fav-01-dark-tile/1.0.0/fav-01-dark-tile.svg) · [16/32/48 px ICO](fav-01-dark-tile/1.0.0/fav-01-dark-tile.ico)
+
+Transparent PNGs (px) · [16](fav-01-dark-tile/1.0.0/fav-01-dark-tile-16.png) · [32](fav-01-dark-tile/1.0.0/fav-01-dark-tile-32.png) · [48](fav-01-dark-tile/1.0.0/fav-01-dark-tile-48.png) · [64](fav-01-dark-tile/1.0.0/fav-01-dark-tile-64.png) · [128](fav-01-dark-tile/1.0.0/fav-01-dark-tile-128.png) · [192](fav-01-dark-tile/1.0.0/fav-01-dark-tile-192.png) · [512](fav-01-dark-tile/1.0.0/fav-01-dark-tile-512.png)
+
+## FAV-01 dark-tile@1.1.0
+
+![FAV-01 dark-tile@1.1.0 at 256 px on light and dark tabs](fav-01-dark-tile/fav-01-dark-tile-large.png)
+
+![FAV-01 dark-tile@1.1.0 true size at 16, 32, 48 and 64 px on light and dark tabs](fav-01-dark-tile/fav-01-dark-tile-true-size.png)
+
+This version keeps the colors and 4.5 px bead diameter at 16 px. The bead centers sit on the 16 px grid, the outer beads sit farther from the mint bead, and the corner radius is 3 px instead of 3.5 px at that size.
+
+[All seven sizes on both backgrounds](fav-01-dark-tile/fav-01-dark-tile-all-sizes.png) · [SVG master](fav-01-dark-tile/fav-01-dark-tile.svg) · [16/32/48 px ICO](fav-01-dark-tile/fav-01-dark-tile.ico)
+
+Transparent PNGs (px) · [16](fav-01-dark-tile/fav-01-dark-tile-16.png) · [32](fav-01-dark-tile/fav-01-dark-tile-32.png) · [48](fav-01-dark-tile/fav-01-dark-tile-48.png) · [64](fav-01-dark-tile/fav-01-dark-tile-64.png) · [128](fav-01-dark-tile/fav-01-dark-tile-128.png) · [192](fav-01-dark-tile/fav-01-dark-tile-192.png) · [512](fav-01-dark-tile/fav-01-dark-tile-512.png)
+
+## FAV-02 kanban-relay@1.0.0
+
+![FAV-02 kanban-relay@1.0.0 at 256 px on light and dark tabs](fav-02-kanban-relay/fav-02-kanban-relay-large.png)
+
+![FAV-02 kanban-relay@1.0.0 true size at 16, 32, 48 and 64 px on light and dark tabs](fav-02-kanban-relay/fav-02-kanban-relay-true-size.png)
+
+The closest redraw of the three-column reference. Solid slate lanes and a wider mint thread give the 3–2–1 arrangement more presence at tab size.
+
+[All seven sizes on both backgrounds](fav-02-kanban-relay/fav-02-kanban-relay-all-sizes.png) · [SVG master](fav-02-kanban-relay/fav-02-kanban-relay.svg) · [16/32/48 px ICO](fav-02-kanban-relay/fav-02-kanban-relay.ico)
+
+Transparent PNGs (px) · [16](fav-02-kanban-relay/fav-02-kanban-relay-16.png) · [32](fav-02-kanban-relay/fav-02-kanban-relay-32.png) · [48](fav-02-kanban-relay/fav-02-kanban-relay-48.png) · [64](fav-02-kanban-relay/fav-02-kanban-relay-64.png) · [128](fav-02-kanban-relay/fav-02-kanban-relay-128.png) · [192](fav-02-kanban-relay/fav-02-kanban-relay-192.png) · [512](fav-02-kanban-relay/fav-02-kanban-relay-512.png)
+
+## FAV-03 stepped-queue@1.0.0
+
+![FAV-03 stepped-queue@1.0.0 at 256 px on light and dark tabs](fav-03-stepped-queue/fav-03-stepped-queue-large.png)
+
+![FAV-03 stepped-queue@1.0.0 true size at 16, 32, 48 and 64 px on light and dark tabs](fav-03-stepped-queue/fav-03-stepped-queue-true-size.png)
 
 Three bead-headed bars shorten and step inward like a prioritized queue. This follows the horizontal mark in the fourth export attachment.
 
-![Stepped queue at 16, 32, 48 and 64 px plus an enlarged view on light and dark tabs](c2/tab-preview.png)
+[All seven sizes on both backgrounds](fav-03-stepped-queue/fav-03-stepped-queue-all-sizes.png) · [SVG master](fav-03-stepped-queue/fav-03-stepped-queue.svg) · [16/32/48 px ICO](fav-03-stepped-queue/fav-03-stepped-queue.ico)
 
-[All seven sizes on both backgrounds](c2/all-sizes.png) · [SVG master](c2/c2.svg) · [16/32/48 px ICO](c2/c2.ico)
+Transparent PNGs (px) · [16](fav-03-stepped-queue/fav-03-stepped-queue-16.png) · [32](fav-03-stepped-queue/fav-03-stepped-queue-32.png) · [48](fav-03-stepped-queue/fav-03-stepped-queue-48.png) · [64](fav-03-stepped-queue/fav-03-stepped-queue-64.png) · [128](fav-03-stepped-queue/fav-03-stepped-queue-128.png) · [192](fav-03-stepped-queue/fav-03-stepped-queue-192.png) · [512](fav-03-stepped-queue/fav-03-stepped-queue-512.png)
 
-Transparent PNGs (px) · [16](c2/c2-16.png) · [32](c2/c2-32.png) · [48](c2/c2-48.png) · [64](c2/c2-64.png) · [128](c2/c2-128.png) · [192](c2/c2-192.png) · [512](c2/c2-512.png)
+## FAV-04 punch-lanes@1.0.0
 
-## C3 · Punch lanes
+![FAV-04 punch-lanes@1.0.0 at 256 px on light and dark tabs](fav-04-punch-lanes/fav-04-punch-lanes-large.png)
 
-Three solid bands take the place of outlined columns. Round cutouts make the beads part of the shape. This is the bolder board alternative.
+![FAV-04 punch-lanes@1.0.0 true size at 16, 32, 48 and 64 px on light and dark tabs](fav-04-punch-lanes/fav-04-punch-lanes-true-size.png)
 
-![Punch lanes at 16, 32, 48 and 64 px plus an enlarged view on light and dark tabs](c3/tab-preview.png)
+Round cutouts make the beads part of the three solid bands. The lane silhouettes remain distinct at tab size.
 
-[All seven sizes on both backgrounds](c3/all-sizes.png) · [SVG master](c3/c3.svg) · [16/32/48 px ICO](c3/c3.ico)
+[All seven sizes on both backgrounds](fav-04-punch-lanes/fav-04-punch-lanes-all-sizes.png) · [SVG master](fav-04-punch-lanes/fav-04-punch-lanes.svg) · [16/32/48 px ICO](fav-04-punch-lanes/fav-04-punch-lanes.ico)
 
-Transparent PNGs (px) · [16](c3/c3-16.png) · [32](c3/c3-32.png) · [48](c3/c3-48.png) · [64](c3/c3-64.png) · [128](c3/c3-128.png) · [192](c3/c3-192.png) · [512](c3/c3-512.png)
+Transparent PNGs (px) · [16](fav-04-punch-lanes/fav-04-punch-lanes-16.png) · [32](fav-04-punch-lanes/fav-04-punch-lanes-32.png) · [48](fav-04-punch-lanes/fav-04-punch-lanes-48.png) · [64](fav-04-punch-lanes/fav-04-punch-lanes-64.png) · [128](fav-04-punch-lanes/fav-04-punch-lanes-128.png) · [192](fav-04-punch-lanes/fav-04-punch-lanes-192.png) · [512](fav-04-punch-lanes/fav-04-punch-lanes-512.png)
 
-## C4 · Mirror beads
+## FAV-05 mirror-beads@1.0.0
 
-Two mirrored forms hint at `bd`. The bead openings and outer stems give it a compact silhouette with a looser connection to task management.
+![FAV-05 mirror-beads@1.0.0 at 256 px on light and dark tabs](fav-05-mirror-beads/fav-05-mirror-beads-large.png)
 
-![Mirror beads at 16, 32, 48 and 64 px plus an enlarged view on light and dark tabs](c4/tab-preview.png)
+![FAV-05 mirror-beads@1.0.0 true size at 16, 32, 48 and 64 px on light and dark tabs](fav-05-mirror-beads/fav-05-mirror-beads-true-size.png)
 
-[All seven sizes on both backgrounds](c4/all-sizes.png) · [SVG master](c4/c4.svg) · [16/32/48 px ICO](c4/c4.ico)
+Two mirrored forms hint at `bd`. The bead openings and outer stems give it a compact silhouette.
 
-Transparent PNGs (px) · [16](c4/c4-16.png) · [32](c4/c4-32.png) · [48](c4/c4-48.png) · [64](c4/c4-64.png) · [128](c4/c4-128.png) · [192](c4/c4-192.png) · [512](c4/c4-512.png)
+[All seven sizes on both backgrounds](fav-05-mirror-beads/fav-05-mirror-beads-all-sizes.png) · [SVG master](fav-05-mirror-beads/fav-05-mirror-beads.svg) · [16/32/48 px ICO](fav-05-mirror-beads/fav-05-mirror-beads.ico)
 
-## C5 · Bead merge
+Transparent PNGs (px) · [16](fav-05-mirror-beads/fav-05-mirror-beads-16.png) · [32](fav-05-mirror-beads/fav-05-mirror-beads-32.png) · [48](fav-05-mirror-beads/fav-05-mirror-beads-48.png) · [64](fav-05-mirror-beads/fav-05-mirror-beads-64.png) · [128](fav-05-mirror-beads/fav-05-mirror-beads-128.png) · [192](fav-05-mirror-beads/fav-05-mirror-beads-192.png) · [512](fav-05-mirror-beads/fav-05-mirror-beads-512.png)
+
+## FAV-06 bead-merge@1.0.0
+
+![FAV-06 bead-merge@1.0.0 at 256 px on light and dark tabs](fav-06-bead-merge/fav-06-bead-merge-large.png)
+
+![FAV-06 bead-merge@1.0.0 true size at 16, 32, 48 and 64 px on light and dark tabs](fav-06-bead-merge/fav-06-bead-merge-true-size.png)
 
 Two inputs feed one violet bead along wide links. The fork suggests dependencies and work converging on a single task.
 
-![Bead merge at 16, 32, 48 and 64 px plus an enlarged view on light and dark tabs](c5/tab-preview.png)
+[All seven sizes on both backgrounds](fav-06-bead-merge/fav-06-bead-merge-all-sizes.png) · [SVG master](fav-06-bead-merge/fav-06-bead-merge.svg) · [16/32/48 px ICO](fav-06-bead-merge/fav-06-bead-merge.ico)
 
-[All seven sizes on both backgrounds](c5/all-sizes.png) · [SVG master](c5/c5.svg) · [16/32/48 px ICO](c5/c5.ico)
+Transparent PNGs (px) · [16](fav-06-bead-merge/fav-06-bead-merge-16.png) · [32](fav-06-bead-merge/fav-06-bead-merge-32.png) · [48](fav-06-bead-merge/fav-06-bead-merge-48.png) · [64](fav-06-bead-merge/fav-06-bead-merge-64.png) · [128](fav-06-bead-merge/fav-06-bead-merge-128.png) · [192](fav-06-bead-merge/fav-06-bead-merge-192.png) · [512](fav-06-bead-merge/fav-06-bead-merge-512.png)
 
-Transparent PNGs (px) · [16](c5/c5-16.png) · [32](c5/c5-32.png) · [48](c5/c5-48.png) · [64](c5/c5-64.png) · [128](c5/c5-128.png) · [192](c5/c5-192.png) · [512](c5/c5-512.png)
+## FAV-07 bead-matrix@1.0.0
 
-## C6 · Bead matrix
+![FAV-07 bead-matrix@1.0.0 at 256 px on light and dark tabs](fav-07-bead-matrix/fav-07-bead-matrix-large.png)
+
+![FAV-07 bead-matrix@1.0.0 true size at 16, 32, 48 and 64 px on light and dark tabs](fav-07-bead-matrix/fav-07-bead-matrix-true-size.png)
 
 A 3–2–1 arrangement of rounded beads implies a board through spacing and color. The violet bead marks the last lane.
 
-![Bead matrix at 16, 32, 48 and 64 px plus an enlarged view on light and dark tabs](c6/tab-preview.png)
+[All seven sizes on both backgrounds](fav-07-bead-matrix/fav-07-bead-matrix-all-sizes.png) · [SVG master](fav-07-bead-matrix/fav-07-bead-matrix.svg) · [16/32/48 px ICO](fav-07-bead-matrix/fav-07-bead-matrix.ico)
 
-[All seven sizes on both backgrounds](c6/all-sizes.png) · [SVG master](c6/c6.svg) · [16/32/48 px ICO](c6/c6.ico)
-
-Transparent PNGs (px) · [16](c6/c6-16.png) · [32](c6/c6-32.png) · [48](c6/c6-48.png) · [64](c6/c6-64.png) · [128](c6/c6-128.png) · [192](c6/c6-192.png) · [512](c6/c6-512.png)
-
-## Tab-size comparison
-
-Each half shows 16 px followed by 32 px. The light tab is on the left and the dark tab is on the right.
-
-| Design | Light tab · Dark tab |
-| --- | --- |
-| Current · PR 113 | ![Current icon at 16 and 32 px on light and dark tabs](current-compare.png) |
-| C1 · Kanban relay | ![Kanban relay at 16 and 32 px on light and dark tabs](c1/compare.png) |
-| C2 · Stepped queue | ![Stepped queue at 16 and 32 px on light and dark tabs](c2/compare.png) |
-| C3 · Punch lanes | ![Punch lanes at 16 and 32 px on light and dark tabs](c3/compare.png) |
-| C4 · Mirror beads | ![Mirror beads at 16 and 32 px on light and dark tabs](c4/compare.png) |
-| C5 · Bead merge | ![Bead merge at 16 and 32 px on light and dark tabs](c5/compare.png) |
-| C6 · Bead matrix | ![Bead matrix at 16 and 32 px on light and dark tabs](c6/compare.png) |
+Transparent PNGs (px) · [16](fav-07-bead-matrix/fav-07-bead-matrix-16.png) · [32](fav-07-bead-matrix/fav-07-bead-matrix-32.png) · [48](fav-07-bead-matrix/fav-07-bead-matrix-48.png) · [64](fav-07-bead-matrix/fav-07-bead-matrix-64.png) · [128](fav-07-bead-matrix/fav-07-bead-matrix-128.png) · [192](fav-07-bead-matrix/fav-07-bead-matrix-192.png) · [512](fav-07-bead-matrix/fav-07-bead-matrix-512.png)
 
 ## Recommendation
 
-C1 is the closest match to the three-column reference and keeps the board visible on the dark tab. C3 is my pick for the smallest tabs. Its three colored lanes remain distinct at 16 px, and the bead cutouts clarify the idea at 32 px.
+Use **FAV-01 dark-tile@1.1.0** for browser tabs, pending Sergei’s confirmation. At 16 px the four round dots separate more clearly on both backgrounds, and the tile corners look cleaner. At 32 px the tuned version keeps a little more dark space around the mint bead. At 48 px and above, both versions read clearly. Use 1.0.0 at those sizes when fidelity to the picked reference matters. Both sets of PNGs render directly from their own SVG master.
+
+## Design-session references
+
+Sergei wanted the mark to “capture both the name and object beads but also that its a task management system” and asked for “just the logo with a transparent background.” He rejected the beaded checkmarks and later asked for something “simpler and more abstract” that could still suggest productivity. He also raised mirrored `bd` as a possible direction after rejecting the upstream green `bd` tile.
+
+He later asked to “just use the image #4.” The handoff describes “the three-column Kanban-style logo with circular teal/mint/purple beads, connected across the top to suggest task progression.” That matches export image 005. The fourth attachment in the latest batch is image 008, a horizontal queue. FAV-02 redraws the mark described in the handoff and FAV-03 redraws the horizontal queue. The source is `ChatGPT_gpt-chat-beads-web-app-favicon_20261120-1950.md`, lines 154–190, 294–356 and 376–434.
+
+![Export image 005 shows the three-column board. Export image 008 shows the stepped queue.](session-reference.png)
