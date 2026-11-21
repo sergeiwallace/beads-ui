@@ -197,6 +197,8 @@ Changing the owner field on a task with a live claim sends a handoff request to 
 
 Board, Backlog, Sprints, Roadmap, Analytics, Sessions and Issue detail are as Phase 3 of the beads-ui design specifies, with additions. Phase 3's criteria do not cover everything the ask names, so Phase W1 adds a Sprint view, manual rank on by default in the web app so cards and backlog rows can be rearranged ([D-21](#d-21)), and inline edits of priority, status and owner. From the research come filtered views as shareable URLs (as in Linear's 2026 changes) and a setting to turn off or remap single-key shortcuts ([D-12](#d-12)).
 
+The [responsive layout and app shell design](beads-ui-responsive-app-shell-design.md) covers board sizing, navigation and unified project discovery.
+
 ### Backend and live updates
 
 The server reads task fields through the host refresher's snapshots and `bd --json`, and writes through guarded `bd` calls (D-4 and D-26 of the beads-ui design). It detects change across every allowed store with one Dolt heads query and pushes Server-Sent Events to open tabs ([D-13](#d-13)). Sessions, prompts, receipts and review items come from the ai-core work queue where it runs; elsewhere a local append-only store holds dispatch records ([D-14](#d-14)). Receiving sessions fetch a dispatch and post its receipts through the server's receiver API, over the same access route as the browser, through the host's notifier, which holds a per-host receiver token and fetches only for the session a dispatch is addressed to (T-W0.3). Every store and queue read is filtered through the host's repository allowlist ([D-18](#d-18)).
