@@ -74,6 +74,7 @@ describe("favicon assets and mount paths", () => {
     expect([...png.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
     const svg = await readFile(clientFile("public/icon.svg"), "utf8");
     expect(svg).toContain('viewBox="0 0 64 64"');
-    expect(svg).not.toMatch(/<rect[^>]+(?:width="64"|height="64")/);
+    // The shipped mark is FAV-01 dark-tile, an opaque rounded tile (docs/design-assets/favicon).
+    expect(svg).toContain('data-favicon="FAV-01 dark-tile@1.1.0"');
   });
 });
