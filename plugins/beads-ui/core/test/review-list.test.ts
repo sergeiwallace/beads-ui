@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   DEFAULT_REVIEW_FILTER,
@@ -20,8 +18,6 @@ import {
   sortReviewItems,
   submitReviewFilter,
 } from "../src/index.js";
-
-// T-2C.6 and T-2C.7 (D-38, D-40, D-41): the Review view's rules, pure.
 
 const issue = (id: string, extra: Partial<ReviewIssue> = {}): ReviewIssue => ({
   id,

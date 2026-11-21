@@ -1,16 +1,4 @@
 #!/usr/bin/env node
-// Purity gate for the shared core (design D-2, task T-0.1).
-// Usage: node scripts/check-core-purity.mjs <core-dir>
-// Prints "<file>:<line>: <identifier>" for every banned reference and exits 1;
-// exits 2 when the directory is missing or holds no source file to scan.
-// The core's test/ directory is harness code run by Node and Vitest, so it is not scanned.
-//
-// Code generation and computed imports are refused too, because each one builds a reference
-// from a string the lexer cannot read: `eval`, any `Function` reference (so `Function(...)` and
-// `new Function(...)`), `self`, a `.constructor` or `["constructor"]` access (the route from any
-// function to its Function constructor), and a dynamic `import(` whose argument is not a single
-// string literal. `globalThis` is refused outright, so a computed key on it fails as well.
-// Claude Code's mod environment refuses `eval` and `new Function` at run time; this matches it.
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -56,9 +44,6 @@ function listSources(dir, top) {
   return files.sort();
 }
 
-// Blanks comments and string contents (keeping newlines, so offsets and lines hold) and
-// records every string literal, so identifiers are matched in code only and module
-// specifiers can be read back.
 function lex(text) {
   const out = text.split("");
   const strings = [];

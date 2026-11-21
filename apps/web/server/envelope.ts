@@ -1,8 +1,3 @@
-// The dispatch envelope's signing side (web app design T-W0.4, D-8, D-20, Data Model → Envelope
-// wire format). The signing input is the RFC 8785 canonical JSON, UTF-8, of exactly SIGNED_FIELDS;
-// the signature is Ed25519 by the serving host's key, read at call time. The golden vectors the
-// receiving side's verifier ships pin these bytes for both ends.
-
 import { createHash, createPrivateKey, type KeyObject, sign } from "node:crypto";
 import {
   DISPATCH_KINDS,
@@ -36,7 +31,6 @@ const TIMESTAMP = /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
 const ULID = /^[0-9A-HJKMNP-TV-Z]{26}$/;
 const BASE64URL = /^[A-Za-z0-9_-]*$/;
-// Under the u flag a surrogate pair is one code point, so only an unpaired surrogate matches.
 const LONE_SURROGATE = /\p{Cs}/u;
 const SIGNATURE_BYTES = 64;
 const SEED_BYTES = 32;

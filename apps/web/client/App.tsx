@@ -71,9 +71,7 @@ const VIEWS = [
   { view: "roadmap", label: "Roadmap", path: "roadmap" },
   { view: "analytics", label: "Analytics", path: "analytics" },
   { view: "sessions", label: "Sessions", path: "sessions" },
-  // The Review queue (client/review.tsx).
   { view: "review", label: "Review", path: "review" },
-  // Phase W1's Sprint and Queue views (web app design T-W1.0, T-W1.5).
   { view: "sprints", label: "Sprints", path: "sprints" },
   { view: "queue", label: "Queue", path: "queue" },
 ] as const;
@@ -88,7 +86,6 @@ type Route =
   | { view: "issue"; id: string; store?: string | undefined }
   | { view: "held"; path: string };
 
-// Wide enough that core's terminal truncation never cuts a title in the browser.
 const NO_TRUNCATION = 10_000;
 const STORE_PARAM = "store";
 /** The Queue view's blocked filter and the Sprint view's selection, in the URL's query. */
@@ -232,7 +229,6 @@ function useBoard(store: string | undefined) {
   const refs = useRef(new Map<string, IssueRef>());
   const shownStore = useRef(store);
   shownStore.current = store;
-  // Every event goes through here, so a plan made right after one sees the state it made.
   const send = useCallback((event: BoardEvent): BoardState => {
     latest.current = reduceBoard(latest.current, event);
     dispatch(event);
@@ -245,7 +241,6 @@ function useBoard(store: string | undefined) {
   const load = useCallback(async () => {
     try {
       const payload = await api.board(store);
-      // A read for a store the page has since left is dropped.
       if (shownStore.current !== store) return;
       const { issues: stored, statuses, reads: storeReads, ...rest } = payload;
       const { issues, refs: next } = keyed({ issues: stored, reads: storeReads });
@@ -266,8 +261,6 @@ function useBoard(store: string | undefined) {
     }
   }, [send, store]);
 
-  // The change feed (T-W3.1) reads the board again the moment a store's head moves; the timer
-  // below stays as the fallback for a page whose stream is down.
   const [feedStale, setFeedStale] = useState<string | undefined>(undefined);
   useEffect(
     () =>
@@ -281,7 +274,6 @@ function useBoard(store: string | undefined) {
       }),
     [load],
   );
-  // Inline edits of priority and owner: the new value shows at once and a conflict rolls back.
   const edits = useFieldEdits(describeRefusal, load);
 
   const refreshSeconds = Math.max(10, meta?.refreshSeconds ?? 10);
@@ -296,7 +288,6 @@ function useBoard(store: string | undefined) {
     };
   }, [load, refreshSeconds]);
 
-  // A refused write queues its card for a re-read (core's refresh list).
   useEffect(() => {
     for (const key of state.refresh) {
       const ref = refOf(key);
@@ -311,7 +302,6 @@ function useBoard(store: string | undefined) {
     }
   }, [state.refresh, load, send, refOf]);
 
-  // A refusal's toast says what core's board view says of it, from the state the refusal made.
   const refused = (event: BoardEvent, title: string, reason?: string) => {
     const next = send(event);
     const line = boardView(next, { columnWidth: NO_TRUNCATION }).conflictLine;
@@ -329,7 +319,6 @@ function useBoard(store: string | undefined) {
     api.move(refOf(id), to, shown).then(
       (moved) => {
         send({ type: "move-succeeded", id });
-        // A leased task's move is a request the queue writes to Beads when its bridge runs.
         if (moved.via === "queue") {
           notify(
             "info",
@@ -348,7 +337,6 @@ function useBoard(store: string | undefined) {
           exitCode: failure?.exitCode ?? 1,
           message: failure?.message ?? String(error),
         };
-        // The work queue's refusal names the status it holds; say that, not bd's conflict line.
         const fromQueue = failure?.error.source?.startsWith("POST /api/queue/") === true;
         refused(
           event,
@@ -669,8 +657,6 @@ function ReadState({ read }: { read: ViewRead<unknown> }) {
 
 export function App() {
   const [route, navigate] = useRoute();
-  // The detail reads its issue in the issue's own store; the board, picker and nav cover the
-  // store the list views are narrowed to, which on the detail is every store.
   const listStore = route.view === "issue" || route.view === "held" ? undefined : route.store;
   const listQuery = route.view === "issue" || route.view === "held" ? undefined : route.query;
   const {
@@ -696,8 +682,6 @@ export function App() {
   const [detail, reloadDetail] = useIssue(
     route.view === "issue" ? { id: route.id, repository: route.store } : undefined,
   );
-  // Roadmap, Analytics and Sessions read one store: the one chosen, or the only one open. With
-  // several open and none chosen (null), they ask for one rather than read.
   const viewStore = listStore ?? ((meta?.repositories ?? []).length > 1 ? null : undefined);
   const storeKey = viewStore ?? "";
   const [weeks, setWeeks] = useState(12);
@@ -718,7 +702,6 @@ export function App() {
     () => api.sessions(viewStore ?? undefined),
     Math.max(10, meta?.refreshSeconds ?? 10),
   );
-  // Phase W1: the Queue view's blocked filter and the held item a detail reads.
   const queueBlocked = queryParam(listQuery, BLOCKED_PARAM) === "1";
   const queueFilters = useMemo(() => decodeQueueFilters(listQuery ?? ""), [listQuery]);
   const queue = useViewRead(
@@ -733,7 +716,6 @@ export function App() {
 
   usePaletteChord(useCallback(() => setPaletteOpen(true), []));
 
-  // A card's link and its open action address its own store, so the detail reads the right issue.
   const issueRoute = useCallback(
     (key: string): Route => {
       const ref = refOf(key);
@@ -743,13 +725,11 @@ export function App() {
   );
   const issueHref = useCallback((key: string) => hrefOf(issueRoute(key)), [issueRoute]);
   const openIssue = useCallback((key: string) => navigate(issueRoute(key)), [navigate, issueRoute]);
-  // Roadmap, Analytics and Sessions name issues by id within the one store they read.
   const viewIssueRoute = useCallback(
     (id: string): Route => ({ view: "issue", id, store: viewStore ?? undefined }),
     [viewStore],
   );
   const viewIssueHref = useCallback((id: string) => hrefOf(viewIssueRoute(id)), [viewIssueRoute]);
-  // With no store chosen, every card and row names the repository it comes from.
   const repositoryOf = useMemo(
     () => (listStore === undefined ? (key: string) => refOf(key).repository : undefined),
     [listStore, refOf],
@@ -779,8 +759,6 @@ export function App() {
   const selected = state.issues.find((issue) => issue.id === selectedId);
   const navView = route.view === "issue" || route.view === "held" ? "board" : route.view;
 
-  // Phase W1: the Sprint view's model, the sprints a card can move to, and inline edits.
-  // The selection is kept as its URL text, so a fresh object for the same sprint is no change.
   const sprintText = sprintSelectionText(
     parseSprintSelection(queryParam(listQuery, SPRINT_PARAM) ?? "backlog"),
   );
@@ -824,7 +802,6 @@ export function App() {
     (key: string) => state.issues.find((issue) => issue.id === key),
     [state.issues],
   );
-  // A list row shows the priority being written while its write runs.
   const shownIssue = useCallback(
     (key: string) => {
       const issue = issueOf(key);
@@ -914,7 +891,6 @@ export function App() {
         run: () => navigate({ view: entry.view, store: listStore }),
       });
     }
-    // The single-key shortcut setting (D-12), which the palette carries.
     list.push(shortcutCommand(keymap));
     return list;
   }, [
@@ -1287,7 +1263,6 @@ export function App() {
             }
           />
         )}
-        {/* The Review queue, and the composer on a task's detail (client/review.tsx). */}
         {route.view === "review" && <ReviewPage />}
         {route.view === "issue" && detail?.payload !== undefined && (
           <>

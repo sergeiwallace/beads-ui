@@ -28,9 +28,6 @@ import {
   world,
 } from "./tests/world.js";
 
-// D-36, T-2C.2: the band's three disclosure levels, at the hooks entry point. The band reads its
-// counts from each store itself here (no refresher runs), so each line ends with `*`.
-
 const HOUR = 3_600_000;
 const HARNESS = "/work/ai-harness";
 const FM = "ops-vm-firstmate-1";
@@ -149,7 +146,6 @@ describe("the band's summary level (D-36, T-2C.2)", () => {
       "[bd][all] [a: 13 tasks] (◒[i: 9 in progress], ◉[k: 1 blocked], ◦[l: 2 open], ✓[j: 1 done last 24h]) [u: 1 unsynced] * [e: ▾] [v: ◫] [◨]",
       "     [fm] [t: 2 tasks] (◒[p: 1 in progress], ◉[b: 0 blocked], ◦[o: 1 open], ✓[d: 0 done last 24h]) *",
     ]);
-    // At 120 columns the first line's tail is cut short and its controls stay right after it.
     expect((await lines($, 120))[0]).toMatch(/24h\]\) ⋯ \[e: ▾\] \[v: ◫\] \[◨\]$/);
     expect(await keysOf($, "band-count:all:", 200)).toEqual([
       "band-count:all:total",
@@ -441,8 +437,6 @@ describe("the band's size (D-36, T-2C.2)", () => {
       {
         const w = await started($, on, as(session));
         const seen: [number, string[]][] = [];
-        // Laid out with no edge to cut at, so a line wider than the band shows its whole width;
-        // 6 rows leave the overview too few for the Tasks view, 12 draw it.
         const look = async () => {
           for (const rows of [6, 12]) {
             seen.push([rows, render(await (await band($, columns, rows)).drawn(), 100_000)]);

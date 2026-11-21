@@ -1,7 +1,3 @@
-// The six task tools (beads-ui design, The MCP App, T-4.1): reads for the model and writes the app
-// or the model calls. Each reads or writes through the web server's MCP routes, so the host's
-// repository allowlist (web app design D-18) applies to every store read here as it does there.
-
 import type { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod";
 import type { WebClient } from "../web.ts";

@@ -1,6 +1,3 @@
-// Runners: Vitest only. It spawns git and gitleaks, which the mod environment lacks.
-// The public-repo hygiene of T-0.4: the pinned gitleaks pre-commit hook refuses a staged
-// secret, and README.md names the shared layers.
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -16,14 +13,10 @@ afterEach(() => {
   for (const dir of scratch.splice(0)) rmSync(dir, { recursive: true });
 });
 
-// Inside the pre-commit hook git exports GIT_INDEX_FILE and friends for the outer repository;
-// the scratch repository must not inherit them, or `git add` and gitleaks would read and write
-// the outer index.
 const scratchEnv = Object.fromEntries(
   Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")),
 );
 
-// The rev .pre-commit-config.yaml pins for the gitleaks hook, without its leading "v".
 function pinnedGitleaks(): string {
   const config = readFileSync(join(repoRoot, ".pre-commit-config.yaml"), "utf8");
   const block =
@@ -51,7 +44,6 @@ function git(dir: string, args: string[]) {
   expect(result.status, result.stderr).toBe(0);
 }
 
-// A scratch git repository with `name` holding `content`, staged and not committed.
 function stagedRepo(name: string, content: string): string {
   const dir = mkdtempSync(join(tmpdir(), "beads-ui-gitleaks-"));
   scratch.push(dir);
@@ -64,8 +56,6 @@ function stagedRepo(name: string, content: string): string {
 const scanStaged = (dir: string) =>
   gitleaks(["git", "--pre-commit", "--staged", "--no-banner", "--redact", "--verbose"], dir);
 
-// A fabricated AWS access key id, assembled at run time so this file holds no secret pattern.
-// The tail is random-looking on purpose: gitleaks ignores low-entropy and EXAMPLE keys.
 const fakeAwsKeyId = (): string => ["AK", "IA", "QZ7XK2M4", "WB6NR3TJ"].join("");
 
 describe("the gitleaks pre-commit hook", () => {

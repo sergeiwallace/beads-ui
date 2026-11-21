@@ -1,12 +1,4 @@
 #!/usr/bin/env node
-// One bound for every test runner in this repository: BEADS_UI_TEST_JOBS (default 1, at most 2).
-// turbo's --concurrency, each Vitest config's maxWorkers, Playwright's workers and the plugin-test
-// loop all read it, so the bounds multiply: turbo runs up to N package tasks and each task runs up
-// to N workers, N * N in all. The maximum of 2 keeps one commit's test run at 4 at most
-// (docs/procedures/web-run.md, Test it).
-//
-// As a command, `node scripts/test-jobs.mjs <command> [args...]` runs the command with every
-// `{jobs}` in its arguments replaced by the bound, and exits with the command's status.
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 

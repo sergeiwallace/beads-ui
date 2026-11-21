@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   beadsSessionsView,
@@ -13,10 +11,6 @@ import {
   queueSessionsView,
 } from "../src/index.js";
 import { storeStatuses, unwrap } from "./helpers.js";
-
-// T-3.4: the Sessions view from the work queue's registry where `[queue] url` is set, else from
-// the store's assignees. The rows below are ai-core's `SessionOut`, `TaskOut` and
-// `QueueEventOut` as `GET /api/queue/sessions`, `/tasks` and `/tasks/{repo}/{task_id}` return them.
 
 const statuses = storeStatuses();
 const NOW = Date.parse("2026-11-09T12:00:00Z");

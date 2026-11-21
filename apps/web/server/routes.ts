@@ -78,11 +78,8 @@ export type ApiErrorKind =
   | "unauthenticated"
   | "forbidden"
   | "store-closed"
-  // An owner change on a claimed task, which goes through the holder's handoff (edits.ts).
   | "handoff-required"
-  // An owner change whose holder's liveness the fleet's check could not establish (T-W2.2).
   | "owner-unknown"
-  // A dispatch action its dispatch's state does not allow, such as deliver now (T-W2.3).
   | "not-held";
 
 /** Every error body is `{ error: ApiError }`; `source` names what failed (`bd list`, a field). */
@@ -181,7 +178,6 @@ export function invalid(message: string): ApiReply {
   return failure({ kind: "invalid", message });
 }
 
-// bd's argument checks (no blank, no leading "-") throw RangeError; that is the caller's input.
 export async function guardedWrite(
   write: () => Promise<BdResult<void>>,
 ): Promise<BdResult<void> | ApiReply> {
@@ -247,7 +243,6 @@ export type StoreBoard =
   | { repository: string; ok: false; reply: ApiReply };
 
 export async function readStoreBoard(store: OpenStore): Promise<StoreBoard> {
-  // One bd process at a time: an embedded store takes one writer, and reads queue behind it.
   const statuses = await store.bd.statuses();
   if (statuses.kind !== "ok") {
     return { repository: store.repository, ok: false, reply: bdFailure("bd statuses", statuses) };
@@ -364,7 +359,6 @@ async function issueRoute(request: ApiRequest, context: ApiContext): Promise<Api
   if (comments.kind === "ok") {
     return { status: 200, body: { issue: shown.value, comments: comments.value, repository } };
   }
-  // The issue still shows; its comments say why they are missing instead of reading as none.
   return {
     status: 200,
     body: {
@@ -385,7 +379,6 @@ async function statusRoute(request: ApiRequest, context: ApiContext): Promise<Ap
   }
   const store = await storeOf(request, context);
   if (!isStore(store)) return store;
-  // A task the work queue holds a lease on moves through the queue (T-3.4).
   const queued = await queueStatusWrite(context, store.repository, id, to, shown);
   if ("reply" in queued) return queued.reply;
   const result = await guardedWrite(() => store.bd.update(id, { status: to }, { ifStatus: shown }));
@@ -499,8 +492,6 @@ async function rankRoute(request: ApiRequest, context: ApiContext): Promise<ApiR
       message: `views.rank is off${where}, so cards keep their sorted order`,
     });
   }
-  // The card's store is `?store=`; a neighbour in the all-stores view may sit in another store,
-  // named by `aboveStore` or `belowStore`, and is read there.
   const store = await storeOf(request, context);
   if (!isStore(store)) return store;
   const neighbourStore = async (key: string) => {
@@ -640,12 +631,9 @@ export const ROUTES: readonly Route[] = [
   { method: "POST", path: "/api/issues/:id/status", handle: statusRoute },
   { method: "POST", path: "/api/issues/:id/priority", handle: priorityRoute },
   { method: "POST", path: "/api/issues/:id/rank", handle: rankRoute },
-  // Phase 3's remaining views: Roadmap, Analytics and Sessions (server/views.ts).
   { method: "GET", path: "/api/roadmap", handle: roadmapRoute },
   { method: "GET", path: "/api/analytics", handle: analyticsRoute },
   { method: "GET", path: "/api/sessions", handle: sessionsRoute },
-  // Phase W1's Sprint moves, owner picker, list reorder, Queue view and held-item detail
-  // (edits.ts, queue-view.ts, held-detail.ts).
   { method: "POST", path: "/api/issues/:id/sprint", handle: sprintRoute },
   { method: "POST", path: "/api/issues/:id/owner", handle: ownerRoute },
   { method: "GET", path: "/api/handoff", handle: handoffRoute },
@@ -653,11 +641,8 @@ export const ROUTES: readonly Route[] = [
   { method: "GET", path: "/api/owners", handle: ownersRoute },
   { method: "GET", path: "/api/queue-view", handle: queueViewRoute },
   { method: "GET", path: "/api/held/item", handle: heldItemRoute },
-  // The receiver API (receiver-api.ts), authorised by a receiving host's token.
   ...RECEIVER_ROUTES,
-  // The Review queue and the composer's dispatches (dispatch.ts).
   ...DISPATCH_ROUTES,
-  // The MCP server's task routes, its dispatch routes and the web app's drafts (mcp.ts, W4).
   ...MCP_TASK_ROUTES,
   ...MCP_ROUTES,
 ];

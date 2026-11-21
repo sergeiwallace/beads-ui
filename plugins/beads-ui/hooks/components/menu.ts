@@ -11,9 +11,6 @@ import type { Surface } from "./adapters.js";
 import { weight } from "./look.js";
 import { lineWindow, textLine, windowed } from "./window.js";
 
-// The options menu (T-2B.4, D-35, T-2C.8): every action a view offers, drawn from core's
-// MenuView on either surface.
-
 const MENU_CLOSE_LABEL = "close the menu";
 
 /** Rows the options menu takes: its frame, each section's title and items, and its close row. */
@@ -48,7 +45,6 @@ export function drawMenu(
 ): RenderElement {
   const { Box, Text, Button } = surface.ui;
   const lined = windowed(surface);
-  // The frame and its padding take four columns, and each item's clickable brackets two.
   const room = Math.max(4, width - (lined ? 0 : 4) - PRESS_FRAME_COLUMNS);
   const lines: RenderNode[] = [
     ...menu.sections.flatMap((section) => [

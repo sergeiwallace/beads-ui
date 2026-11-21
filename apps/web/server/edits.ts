@@ -1,7 +1,3 @@
-// Phase W1's quick edits (web app design T-W1.0): sprint membership, the owner picker's
-// candidates and its write, and a backlog or sprint list's reorder. Every write is one guarded bd
-// call on the issue's own store, so a value that changed since the page drew it writes nothing.
-
 import {
   type Issue,
   keyBetween,
@@ -93,8 +89,6 @@ export async function sprintRoute(request: ApiRequest, context: ApiContext): Pro
   if (adding.length === 0 && remove.length === 0) {
     return { status: 200, body: { id, sprint, unchanged: true } };
   }
-  // bd takes a status guard only beside a field update, and labels are not one, so the write also
-  // sets the status the guard pins it to: it can never change the status.
   const result = await guardedWrite(() =>
     store.bd.update(
       id,
@@ -266,8 +260,6 @@ export async function ownerRoute(request: ApiRequest, context: ApiContext): Prom
       `${to} is not a session the handoff rules allow (read from ${listed.source}${rule})`,
     );
   }
-  // A handoff whose claim was released but whose git-inbox send failed: picking the same
-  // receiver again sends it again, and never releases the claim a second time (T-W2.2).
   const failedSend = await failedGitInboxHandoff(context, store.repository, id);
   if (failedSend !== undefined && failedSend.receiver.session === to) {
     return sendGitInboxHandoff(context, store, failedSend);
@@ -295,7 +287,6 @@ export async function ownerRoute(request: ApiRequest, context: ApiContext): Prom
   const prompt = text(request.body, "prompt");
   if (prompt === undefined || prompt.trim() === "")
     return { status: 200, body: { id, assignee: to } };
-  // The typed prompt goes to the new owner, as any prompt on the task does (T-W2.2).
   const read = await store.bd.show(id);
   if (read.kind !== "ok") return bdFailure("bd show", read);
   const settings = await readDispatchSettings(context);
@@ -406,7 +397,6 @@ export async function listRankRoute(request: ApiRequest, context: ApiContext): P
             message: key.error.message,
           });
     }
-    // Each neighbour is read again just before the write: one reordered meanwhile is stale.
     for (const [neighbourStore, neighbour, before] of [
       [aboveStore, above, low.key],
       [belowStore, below, high.key],

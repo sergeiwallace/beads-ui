@@ -16,11 +16,6 @@ import {
 } from "./auth-env.ts";
 import { createStore, type TestStore } from "./store.ts";
 
-// The local dispatch store through the running server (web app design T-W0.5): a restart keeps
-// every outstanding dispatch with its receipts, and a store that cannot be written refuses a new
-// dispatch through the route, says why, and never reports it queued. The contract suite covers
-// the same rules against the store itself; these go in through the routes a user's request takes.
-
 const HOST = "host-b";
 
 let store: TestStore;
@@ -123,7 +118,6 @@ describe("the local dispatch store across a restart (T-W0.5)", () => {
         source: `receipt from ${task.worker}@${HOST}`,
       });
       expect(after.response.text).toBe("working on it");
-      // The recovered dispatch still takes the next receipt in order.
       expect((await receipt(second, id, task.worker, "acted")).status).toBe(204);
       expect((await status(second, id)).delivery.text).toBe("acted on");
     } finally {
@@ -134,8 +128,6 @@ describe("the local dispatch store across a restart (T-W0.5)", () => {
 
 describe("the same dispatch id written twice (T-W0.5)", () => {
   it("should keep one record, with its receipts, when the journal holds its create line twice", async () => {
-    // Every route mints a new dispatch id, so a repeated id reaches the store only through its
-    // journal: a create line written again, as a retried append would, after a receipt landed.
     const task = await ownedTask();
     const journal = join(env.stateDir, JOURNAL_FILE);
     const first = await start();
@@ -178,7 +170,6 @@ describe("a dispatch store that cannot be written (T-W0.5)", () => {
     const server = await start();
     const journal = join(env.stateDir, JOURNAL_FILE);
     try {
-      // A first dispatch writes the journal, so the refusal below is about writing, not creating.
       const before = await post(server, "/api/dispatch/prompt", {
         repo: repoName(store.dir),
         task: task.id,

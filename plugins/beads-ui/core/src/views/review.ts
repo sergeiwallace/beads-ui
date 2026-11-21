@@ -1,7 +1,3 @@
-// An issue's review items in its Detail (D-40, T-2C.5): the held items the review snapshot names
-// about it and its bd blockers, the reader's pages of one item's body, and the turn an answer
-// hands the session (D-39). Pure: the band's overview and the pane draw the same model.
-
 import type { Comment, Issue } from "../model.js";
 import type { ReviewItem } from "../review.js";
 import {
@@ -335,9 +331,6 @@ export function answerTurn(input: {
   }
   return lines.join("\n");
 }
-
-// The Review view (D-38, D-40, T-2C.6): every item in the session's scope through the filter,
-// sorted and grouped, a page at a time. The pane and the band's overview draw the same model.
 
 /** The view's heading, and its nav label. */
 export const REVIEW_VIEW_TITLE = "Review";

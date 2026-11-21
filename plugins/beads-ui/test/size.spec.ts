@@ -14,8 +14,6 @@ afterEach(() => {
   for (const dir of scratch.splice(0)) rmSync(dir, { recursive: true });
 });
 
-// Inside the pre-commit hook git exports GIT_INDEX_FILE and friends for the outer repository;
-// a scratch repository must not inherit them, or its `git add` would write the outer index.
 const scratchEnv = Object.fromEntries(
   Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")),
 );
@@ -25,8 +23,6 @@ function git(dir: string, args: string[]) {
   expect(result.status, result.stderr).toBe(0);
 }
 
-// A scratch git repository holding `files` (name to byte count), each staged with `git add -f`
-// unless listed in `untracked`, and a .gitignore that ignores node_modules/ and .turbo/.
 function repoWith(files: Record<string, number>, untracked: string[] = []): string {
   const dir = mkdtempSync(join(tmpdir(), "beads-ui-size-"));
   scratch.push(dir);

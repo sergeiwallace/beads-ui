@@ -1,6 +1,3 @@
-// A Raster's cells (T-2B.9): each cell a code point, a foreground and a background,
-// three little-endian 32-bit numbers, the whole grid base64, as Claude Code's Raster reads them.
-
 import type { Token } from "../tokens.js";
 
 /** A Raster cell's colour for the terminal's own default. */

@@ -124,15 +124,9 @@ export function Composer({
   submitLabel = "Queue prompt",
   onEditorReady,
 }: ComposerProps) {
-  // Not seeded from `skills`: a `useState` initial value is ignored on every
-  // later render, so seeding it here made a changed `skills` prop silently
-  // unobservable. The catalog is derived below instead, so there is one source
-  // of truth rather than a copy that can go stale.
   const [fetched, setFetched] = useState<Skill[] | null>(null);
   const [unavailable, setUnavailable] = useState(false);
 
-  // Fetched once per mount. The editor works before it lands: every token reads `unknown` until
-  // the catalog arrives, and SkillTokensPlugin re-marks them when it does.
   useEffect(() => {
     if (skills) return;
     if (loadSkills === undefined) {
@@ -145,8 +139,6 @@ export function Composer({
         if (active) setFetched(loaded);
       },
       () => {
-        // A composer that cannot reach the catalog still has to be usable, and every token stays
-        // `unknown`: a transport failure is not evidence that a real skill is not a skill.
         if (active) setUnavailable(true);
       },
     );
@@ -155,9 +147,6 @@ export function Composer({
     };
   }, [skills, loadSkills]);
 
-  // `null` until a catalog actually exists. `catalogOf([])` would be an empty
-  // catalog, which is a real answer ("the server has no skills") and marks every
-  // token invalid -- the wrong thing to say while the fetch is in flight.
   const catalog = useMemo(() => {
     const loaded = skills ?? fetched;
     return loaded ? catalogOf(loaded) : null;
@@ -174,8 +163,6 @@ export function Composer({
         },
       }}
     >
-      {/* The composer and its action sit in a bottom-anchored region sized against the visual
-          viewport, so the virtual keyboard cannot push the action off screen. */}
       <div className="composer-region" data-testid="composer-region">
         <RichTextPlugin
           contentEditable={
@@ -188,7 +175,6 @@ export function Composer({
           placeholder={null}
           ErrorBoundary={({ children }) => <>{children}</>}
         />
-        {/* History is what makes undo possible, and the token decoration survives it. */}
         <HistoryPlugin />
         <SkillTokensPlugin catalog={catalog} />
         <SkillTypeaheadPlugin catalog={catalog} />

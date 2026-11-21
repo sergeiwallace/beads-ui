@@ -1,7 +1,3 @@
-// The task panel's nav (T-2B.1, D-31): which views it leads to, and how it is drawn at a width
-// and height. A side nav from 72 columns, a top bar of short labels from 48, a bar of keys and
-// glyphs below that; above the prompt or under 12 rows the side nav becomes the top bar.
-
 import { commandById } from "../commands.js";
 import { glyphOf } from "../glyphs.js";
 import {

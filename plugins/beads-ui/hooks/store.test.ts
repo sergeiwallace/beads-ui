@@ -210,7 +210,6 @@ describe("the store a session reads", () => {
     expect(await ui.find({ key: "error-line" })).toBeUndefined();
     expect(text).not.toContain("retrying");
 
-    // The band's own reads and its refresher start are not the pane's.
     const paneReads = () =>
       w.keys().filter((key) => !key.startsWith("bd count ") && !key.startsWith("node ")).length;
     const before = paneReads();

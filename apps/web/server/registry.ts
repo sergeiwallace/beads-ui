@@ -227,7 +227,6 @@ export function createStoreRegistry(options: RegistryOptions): StoreRegistry {
     for (const [i, store] of candidates.entries()) {
       const identity = resolved[i];
       if (identity === undefined) continue;
-      // One repository reached by two paths (a linked worktree and its main tree) is one store.
       const same = known.find(
         (entry) =>
           entry.identity.key === identity.key &&

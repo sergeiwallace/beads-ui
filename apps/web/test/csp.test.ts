@@ -6,9 +6,6 @@ import { type RunningServer, startServer } from "../server/server.ts";
 import { type HostEnv, hostConfig, hostEnv, repoName, signIn } from "./auth-env.ts";
 import { createStore, type TestStore } from "./store.ts";
 
-// T-W1.7: "When the server serves the app, it shall send a Content Security Policy with no inline
-// script and enforce Trusted Types for DOM sinks."
-
 let store: TestStore;
 let host: HostEnv;
 let clientDir: string;

@@ -51,7 +51,6 @@ export async function storeDatabase(path: string): Promise<StoreDatabase | undef
   const host = typeof fields.dolt_server_host === "string" ? fields.dolt_server_host : "127.0.0.1";
   let port = typeof fields.dolt_server_port === "number" ? String(fields.dolt_server_port) : "";
   if (port === "") {
-    // A shared-server store names its port in a file beside the metadata, not in it.
     port = await readFile(join(path, ".beads", "dolt-server.port"), "utf8").then(
       (text) => text.trim(),
       () => "shared",
@@ -273,8 +272,6 @@ export class HeadsFeed<T> {
         this.#kept.set(store.path, { head, value });
       } else this.#kept.delete(store.path);
     }
-    // The heads are taken only once every moved store is read again, so a poll that fails on
-    // the way finds the same stores moved next time.
     this.#failures = 0;
     this.#heads = read.heads;
     this.#status = { asOf: now };
@@ -317,12 +314,10 @@ export class HeadsFeed<T> {
           if (head !== undefined) heads.set(entry.store.path, head);
         }
       } else {
-        // A database the server does not hold fails the whole query; each store then answers alone.
         alone.push(...group.map((entry) => entry.store));
       }
     }
     for (const store of alone) {
-      // The last stream closed mid-poll: no bd starts once the feed is idle.
       if (this.#listeners.size === 0) break;
       const result = await attempt(() => store.bd.head());
       if (result.kind === "ok") heads.set(store.path, result.value);

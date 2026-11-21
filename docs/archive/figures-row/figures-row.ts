@@ -1,9 +1,3 @@
-// Archived 2026-10-27 from plugins/beads-ui/hooks/components/band.ts at 45d7da1 (see README.md).
-// The imports it used there:
-//   import type { RenderElement } from "claude-code";
-//   import { type BandFigures, glyphOf, SPARK_GLYPHS, type Token } from "../../core/src/index.ts";
-//   import type { RasterElement, Surface } from "./adapters.ts";
-
 /** The figures row's key, and its Raster's: what `$.ui.blit` names to repaint it (T-2C.11). */
 export const FIGURES_KEY = "beads-band:figures";
 export const FIGURES_RASTER_KEY = "band-figures";

@@ -1,10 +1,5 @@
 import DOMPurify from "dompurify";
 
-// The server's Content Security Policy requires Trusted Types for every script-capable DOM sink
-// (server/csp.ts). The app's own code writes no HTML; the Roadmap's chart library sets innerHTML
-// on its own elements, so the default policy passes HTML through DOMPurify and refuses every
-// script and script URL outright. This module is imported first, before anything can reach a sink.
-
 interface TrustedTypePolicyFactory {
   createPolicy(
     name: string,
@@ -37,7 +32,6 @@ const factory = (globalThis as { trustedTypes?: TrustedTypePolicyFactory }).trus
 if (factory !== undefined) {
   factory.createPolicy("default", {
     createHTML: sanitizeHtml,
-    // Returning null makes the sink throw, so no string ever becomes a script.
     createScript: () => null,
     createScriptURL: () => null,
   });

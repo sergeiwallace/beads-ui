@@ -18,10 +18,6 @@ import {
   world,
 } from "./tests/world.js";
 
-// D-43: the look of every drawing, walked over the drawn tree as Claude Code mounts it, on the
-// band and on the pane in the terminal and in VS Code, each view and each overlay in turn.
-// T-2C.10: every glyph drawn comes from the glyph table, in the form [indicators] ascii names.
-
 const USER_CONFIG = "/home/me/.config/beads-ui/beads-ui.toml";
 const ASCII = { [USER_CONFIG]: "[indicators]\nascii = true\n" };
 

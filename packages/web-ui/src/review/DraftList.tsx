@@ -1,9 +1,6 @@
 import { useState } from "react";
 import type { DispatchSummary } from "../composer/types.ts";
 
-// Drafted session prompts (web app design Phase W4): a prompt a model asked for through the MCP
-// server waits here, and nothing is sent until the user confirms it, here or in the MCP App.
-
 export interface PromptDraft {
   id: string;
   repo: string;

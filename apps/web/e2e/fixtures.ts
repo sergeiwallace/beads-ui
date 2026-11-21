@@ -55,8 +55,6 @@ async function hostSettings(
       ...(options.auth === undefined ? {} : { auth: options.auth }),
     }),
   );
-  // A private HOME too: the server reads the host's store inventory under HOME, and a spec
-  // serves only the stores it makes.
   await mkdir(join(configHome, "home"), { recursive: true });
   return {
     ...process.env,
@@ -190,12 +188,9 @@ export const test = base.extend<{
   configHome: async ({}, use) => {
     const dir = await mkdtemp(join(tmpdir(), "beads-ui-e2e-config-"));
     await use(dir);
-    // bd writes its event log under the private HOME (`.beads/eventsData`) for a moment after the
-    // served command has exited, so a one-shot removal can meet a directory still filling.
     await rm(dir, { recursive: true, maxRetries: 10, retryDelay: 200 });
   },
   served: async ({ configHome }, use) => {
-    // bd init and the server's start are the spec's setup; run.spec.ts holds the start to its time.
     const { store, served } = await unbudgeted(async () => {
       const store = await createStore("e2e");
       return { store, served: await serve(store.dir, configHome) };

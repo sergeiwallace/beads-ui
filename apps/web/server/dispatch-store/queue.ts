@@ -1,10 +1,3 @@
-// The queue-backed dispatch store (web app design D-14, T-W0.5), used where `queue.url` is set. A
-// dispatch is a prompt in the work queue's prompt store, its signed record and every later entry
-// are queue events on the task, and both are read back through the queue's task detail. The prompt
-// row carries a pointer and the body stays in this host's body store, so a body can be deleted when
-// the dispatch ends and no backup of the queue holds one. A small local index maps each dispatch
-// id to its task, since the queue reads dispatches by task.
-
 import { copyFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import {

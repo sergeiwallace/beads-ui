@@ -251,7 +251,6 @@ describe("POST /api/issues/:id/rank", () => {
 
   it("should answer 422 naming the neighbour when its rank is malformed, and write nothing", async () => {
     const above = await store.create("Malformed above");
-    // bd types a --set-metadata value from its spelling, so this stores the number 0.5.
     await store.bd("update", above, "--set-metadata", "rank=0.5");
     const card = await store.create("Not reordered");
     const reply = await post(`/api/issues/${card}/rank`, { shown: "open", above });
@@ -309,7 +308,6 @@ describe("stopping the server", () => {
       headers: writeHeaders(stopping),
       body: JSON.stringify({ to: "in_progress", shown: "open" }),
     });
-    // The stop starts once the server's bd update is running.
     await expect
       .poll(() =>
         access(slow.marker).then(
@@ -349,7 +347,6 @@ describe("stopping the server", () => {
 
     await stopping.close();
 
-    // Read straight after the stop: the abandoned handler's bd update has already written.
     expect((await store.show(id)).status).toBe("in_progress");
   });
 });

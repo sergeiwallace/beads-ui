@@ -31,7 +31,6 @@ describe("Markdown", () => {
     expect(page.querySelector("script")).toBeNull();
     expect(page.querySelector("img")).toBeNull();
     expect(page.innerHTML).not.toMatch(/onerror|onclick|<script/i);
-    // A raw tag is dropped; the text between its tags stays, as plain text.
     expect([...page.querySelectorAll("a")].some((link) => link.textContent === "raw anchor")).toBe(
       false,
     );

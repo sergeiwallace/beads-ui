@@ -1,7 +1,3 @@
-// Phase 3's remaining views (T-3.2 to T-3.4): the Roadmap, Analytics and Sessions reads, and the
-// status write a leased task takes through the work queue. Every model is core's; each route reads
-// the store (and the queue, where `[queue] url` is set) and returns the view the page draws.
-
 import { readFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
 import {
@@ -64,14 +60,11 @@ async function readStatuses(bd: BdClient): Promise<Unwrapped<Status[]>> {
   return unwrap("bd statuses", await bd.statuses());
 }
 
-// ── Roadmap (T-3.2) ──────────────────────────────────────────────────────────
-
 export async function roadmapRoute(request: ApiRequest, context: ApiContext): Promise<ApiReply> {
   const store = await storeOf(request, context);
   if (!isStore(store)) return store;
   const statuses = await readStatuses(store.bd);
   if ("reply" in statuses) return statuses.reply;
-  // The whole store, brief: a bar's progress counts every child, closed ones too.
   const issues = unwrap("bd list", await store.bd.list());
   if ("reply" in issues) return issues.reply;
   const asOf = context.now();
@@ -85,14 +78,11 @@ export async function roadmapRoute(request: ApiRequest, context: ApiContext): Pr
   };
 }
 
-// ── Analytics (T-3.3) ────────────────────────────────────────────────────────
-
 interface CachedHistory {
   updatedAt: string;
   events: HistoryEvent[];
 }
 
-// One cache a store client: an issue's events change only with a write, which moves updated_at.
 const historyCaches = new WeakMap<BdClient, Map<string, CachedHistory>>();
 
 interface HistoryRead {
@@ -150,7 +140,6 @@ async function flowsOf(
     }
   };
   await Promise.all(Array.from({ length: HISTORY_CONCURRENCY }, worker));
-  // In the issues' own order, whichever worker read each.
   return { flows: issues.flatMap((issue) => flows.get(issue.id) ?? []), failed, skipped };
 }
 
@@ -293,8 +282,6 @@ export async function analyticsRoute(request: ApiRequest, context: ApiContext): 
   };
 }
 
-// ── Sessions and the queue adapter (T-3.4) ───────────────────────────────────
-
 /**
  * This store's name in the work queue, which keys a repository by its bare name: `[queue] repo`,
  * else the last segment of the `allow_repos` entry that opened the store (`name`, `owner/name` or
@@ -324,13 +311,11 @@ export async function sessionsRoute(request: ApiRequest, context: ApiContext): P
   const sessions = await queue.sessions();
   const tasks = sessions.ok ? await leasedTasks(queue) : sessions;
   if (!sessions.ok || !tasks.ok) {
-    // The registry is the only source of liveness; without it the store's assignees still show.
     const queueError = (
       !sessions.ok ? sessions.failure : tasks.ok ? undefined : tasks.failure
     ) as QueueFailure;
     return { status: 200, body: { ...base, view: fromBeads(), queueError } };
   }
-  // Every queue row passes the host's allowlist before it is shown (web app design D-18).
   const allowlist = await context.allowlist();
   const shownSessions = filterAllowed(
     sessions.value,

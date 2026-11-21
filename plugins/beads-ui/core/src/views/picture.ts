@@ -1,7 +1,3 @@
-// Pictures where a surface draws them (D-43, T-2C.13): the Timeline's picture as an Image of
-// real pixels on a terminal that can show one, as an Svg on the desktop, VS Code and mobile
-// surfaces, and as its alt text elsewhere. Pure: which form a surface draws, and each form.
-
 import type { StatusCategory } from "../model.js";
 import type { Token } from "../tokens.js";
 import { base64, rasterColorFor } from "./raster.js";
@@ -250,7 +246,6 @@ export function timelinePicture(
       ? undefined
       : (todayDay - startDay) / span;
 
-  // The Image: palette 0 transparent, 1 the today line, then one entry per category.
   const categories: StatusCategory[] = ["active", "wip", "frozen", "done"];
   const palette = [0, colour("accent"), ...categories.map((one) => colour(CATEGORY_TOKEN[one]))];
   const width = columns * CELL_PX.x;
@@ -270,7 +265,6 @@ export function timelinePicture(
     for (let y = 0; y < height; y++) pixels[y * width + x] = 1;
   }
 
-  // The Svg: the same bars, each with its label and due date as its hover title.
   const svgWidth = columns * SVG_COLUMN_PX;
   const barHeight = 12;
   const svgHeight = items.length * (barHeight + 4);

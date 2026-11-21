@@ -299,7 +299,6 @@ describe("the store a session sums (T-1B.1)", () => {
       seenAt: START_MS,
       windows: ["24h"],
       stores: [{ name: "qa-store", path: MAPPED }],
-      // The store its pane reads, whose board snapshot the refresher keeps (T-1B.8).
       boards: [{ name: "qa-store", path: MAPPED }],
     });
   });
@@ -405,7 +404,6 @@ describe("one refresher for the host (T-1B.4)", () => {
       "/home/me/.config/beads-ui/beads-ui.toml",
     ]);
     expect(w.store.get(LEASE_KEY)).toEqual({ token, at: START_MS });
-    // The last snapshot draws while the new refresher starts; the session reads nothing itself.
     expect(await line($, "own")).toBe(OWN);
     expect(w.keys().filter(isCount)).toEqual([]);
   });
@@ -472,7 +470,6 @@ describe("one refresher for the host (T-1B.4)", () => {
         refresher: true,
         files: LIVE,
         script: starts,
-        // The session that started the killed refresher took the lease 30 s ago, with its token.
         stored: { [LEASE_KEY]: { token: REFRESHER_TOKEN, at: START_MS - 30_000 } },
       }),
     );
@@ -481,10 +478,8 @@ describe("one refresher for the host (T-1B.4)", () => {
     await w.clock.advance(5_000);
     await w.killRefresher();
     await w.clock.advance(BEAT_MS - 5_000);
-    // Its lease was last renewed at the clock's start, 60 s ago: past LEASE_DEAD_MS.
     expect(BEAT_MS).toBeGreaterThan(LEASE_DEAD_MS);
     expect(spawned(w)).toHaveLength(1);
-    // The snapshot is 70 s old, under three minutes: the band still draws it, unmarked.
     expect(await line($, "own")).toBe(OWN);
     expect(w.keys().filter(isCount)).toEqual([]);
   });
@@ -588,8 +583,6 @@ describe("one refresher for the host (T-1B.4)", () => {
     expect(spawned(w)).toEqual([]);
   });
 
-  // BU-4af: a refresher from an older build keeps its lease across an upgrade. Builds before
-  // 0.9.2 write only counts.json and builds before 0.9.4 record no build in their lease.
   const OLD_WRITER = { [INVENTORY_PATH]: INVENTORY, [PUBLISHED]: snapshotOf(STORES) };
 
   test("should start a refresher of its own build and read nothing itself when the running refresher is an older build that writes no snapshot under its token", async ($, on) => {
@@ -734,9 +727,7 @@ describe("the band's cadence and stamp (T-1B.5)", () => {
 
     const marker = JSON.parse(w.files.get(`${STATE}/wake/${wakeFileName(CWD)}`) ?? "{}");
     expect(marker).toEqual({ path: CWD, at: START_MS });
-    // The snapshot holds no read of the store since the write yet: the band keeps its line.
     expect(await line($, "own")).toBe(OWN);
-    // The refresher answers the marker two seconds on.
     await w.clock.advance(2_000);
     w.files.set(SNAPSHOT, snapshotOf(MORE, { beatAt: START_MS + 2_000 }));
     await w.clock.advance(1_000);
@@ -960,10 +951,8 @@ describe("the band's parts (T-1B.11)", () => {
   });
 });
 
-// The open nobody asked for, at session start, is panelmode.test.ts's (T-2B.7).
 describe("the pane's width rule", () => {
   test("should open the pane the person asked for whatever the width", async ($, on) => {
-    // At 80 columns Claude Code holds a pane nobody asked for; the person's own open is placed.
     const w = await started($, on, { columns: 80 });
     await band($, 80);
 
@@ -1094,9 +1083,6 @@ describe("the unpublished-edit count (T-2B.6)", () => {
 });
 
 describe("the session a daemon-hosted session draws for (BU-ylx.6.9)", () => {
-  // A session Claude Code's daemon hosts runs in a worker whose environment is the daemon's, so
-  // CLAUDE_CODE_TASK_LIST_ID names whoever started the daemon, here the firstmate; Claude Code
-  // names the worker's own session in CLAUDE_CODE_SESSION_NAME.
   const DAEMON_STORES: Readonly<Record<string, readonly Counted[]>> = {
     ...STORES,
     [CWD]: [

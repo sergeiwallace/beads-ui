@@ -1,18 +1,9 @@
-// The MCP server's dispatch routes and the drafts it leaves for the user (web app design Phase
-// W4, § Shared code, D-17). The MCP server holds no signing key: it submits a session prompt here
-// with the host's MCP token (auth.ts admits `/api/mcp/` on that token alone), and this server
-// signs it and hands it to the same dispatch ladder a web dispatch takes (dispatch.ts promptTask).
-// Each request names the host's configured user and carries an id of its own, never accepted
-// twice. A prompt from the user's own control in the MCP App is sent at once; one a model asked
-// for is kept as a draft, and sent only when the user confirms it in the MCP App or the web app.
-
 import { randomBytes } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { AuthRefused, loadAuth } from "./auth.ts";
 import { promptTask } from "./dispatch.ts";
 import { Serial } from "./dispatch-store/common.ts";
-// Types only: routes.ts imports this file's route block, so a value import back would be a cycle.
 import type { ApiContext, ApiError, ApiReply, ApiRequest, Route } from "./routes.ts";
 
 /** The drafts and the request ids already used, in the server's state directory (mode 0600). */

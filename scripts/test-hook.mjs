@@ -1,9 +1,4 @@
 #!/usr/bin/env node
-// `node scripts/test-hook.mjs <command> [args...]`: the pre-commit test hooks' path filter. When
-// every staged path is documentation (under docs/ or a *.md file) the suite is skipped; the
-// pre-push test gate still runs the Vitest suites, the ones that read docs included. When any
-// other path is staged, a deletion or a rename's old path included, or nothing is staged at all
-// (`pre-commit run --all-files`), the command runs.
 import { spawnSync } from "node:child_process";
 
 const isDocsPath = (path) => path.startsWith("docs/") || path.endsWith(".md");

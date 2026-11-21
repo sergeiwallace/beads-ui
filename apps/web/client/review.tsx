@@ -31,11 +31,6 @@ import {
 import { useCallback, useEffect, useMemo, useReducer, useState, useSyncExternalStore } from "react";
 import { ApiFailure, dispatchApi, type ReviewPayload } from "./api.ts";
 
-// The web app's Review view and the composer on a task (web app design § The Review queue,
-// § Composer and dispatch): the page reads the server's review payload into core's queue state,
-// carries its filters in the URL, and hands the view its writes. The shortcut setting is kept in
-// this browser's storage, never a credential.
-
 const KEYMAP_STORAGE = "beads-ui.keymap";
 const SHORTCUTS = [...DEFAULT_SHORTCUTS, ...REVIEW_SHORTCUTS];
 
@@ -170,7 +165,6 @@ export function ReviewPage() {
     setReading(true);
     dispatchApi.drafts().then(
       (read) => setDrafts(read.drafts),
-      // The drafts read failing leaves the queue as it is; the next read tries again.
       () => undefined,
     );
     dispatchApi.review().then(

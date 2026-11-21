@@ -1,7 +1,3 @@
-// The Settings view (T-2B.8): the panel's shown count, its collapse rule, panel.mode, open at start, debug
-// mode, each view's surfaces (D-35), and the band's parts, order and done window, as rows a
-// surface draws as controls.
-
 import type { BandSettings } from "./band.js";
 import {
   COLLAPSE_LABELS,

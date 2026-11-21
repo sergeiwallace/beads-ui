@@ -22,10 +22,6 @@ import {
 import type { Host } from "./host.js";
 import type { StoreResolver } from "./store.js";
 
-// Review items in the session (D-37, D-39, T-2C.5): the host refresher's review snapshot, read
-// with `[review] command` from the user's own beads-ui.toml, and the reader that shows one item's
-// body and records Sergei's answer through the held store's own verb.
-
 const SHOW_TIMEOUT_MS = 15_000;
 /** `held_cli.py answer` commits in a landing pad, its hooks with it. */
 const ANSWER_TIMEOUT_MS = 120_000;
@@ -280,7 +276,6 @@ export class ReviewReader {
           this.feed.markAnswered(state.item.path, at);
           state.item = { ...state.item, status: "answered", answeredAt: at };
           state.draft = "";
-          // The refresher runs the review verb again at once, not at its next beat (D-37).
           const dir = await this.stateDir();
           if (dir !== undefined) {
             const now = await host.now();

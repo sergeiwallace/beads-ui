@@ -2,9 +2,6 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { HandoffStatus, type HandoffView } from "../../src/inline-edit/HandoffStatus.tsx";
 
-// T-W2.2 on a task's detail: the owner change's handoff, each state named with the record that
-// proves it, read again until it can no longer change.
-
 const view = (state: string, source: string, final = false): HandoffView => ({
   state,
   source,

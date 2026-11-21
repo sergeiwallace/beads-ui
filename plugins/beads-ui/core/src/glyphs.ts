@@ -1,10 +1,3 @@
-// The one glyph table (D-41, D-43, T-2C.10): every status, control, view, indicator and text
-// glyph the band and the pane draw, each with the ASCII form `[indicators] ascii` draws instead.
-// The indicator registry (D-41, T-2C.3, core/src/indicators.ts) draws its `indicator.*`
-// entries from here. Every glyph is one code point
-// that is neither East Asian wide nor ambiguous nor emoji, so it takes one cell on any
-// terminal; the table's test checks each one.
-
 export type GlyphKind = "status" | "priority" | "type" | "control" | "view" | "indicator" | "text";
 
 export interface Glyph {

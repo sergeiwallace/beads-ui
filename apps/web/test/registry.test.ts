@@ -12,9 +12,6 @@ import {
   storeHost,
 } from "./host-stores.ts";
 
-// The web server's store registry: every store on the host whose repository is on the host's
-// allowlist (web app design T-W0.2, D-18), through requests to the running server.
-
 let host: StoreHost;
 let env: HostEnv;
 let clientDir: string;
@@ -29,10 +26,8 @@ const FIXTURES: [string, string, Parameters<typeof repoStore>[1]][] = [
   ["beta", "beta", { prefix: "beta" }],
   ["gamma", "gamma", { prefix: "gamma" }],
   ["outside", "outside", { prefix: "outside" }],
-  // One prefix, one id, two stores.
   ["left", "left", { prefix: "dup" }],
   ["right", "right", { prefix: "dup" }],
-  // Two repositories named `proj` under different owners.
   ["ours", "ours/proj", { prefix: "ours", remote: "https://git.host-a.invalid/owner-a/proj.git" }],
   [
     "theirs",
@@ -135,7 +130,6 @@ describe("opening the host's stores", () => {
     expect(idsOf(board.body)).toEqual(expect.arrayContaining([a, b]));
     expect(idsOf(board.body)).not.toContain(g);
     expect(board.text).not.toContain("gamma");
-    // gamma and the start directory stay closed, counted and never named.
     expect(board.body.health).toEqual([
       "2 stores from repositories not on this host's allowlist are hidden",
     ]);
@@ -269,7 +263,6 @@ describe("writing to an issue's own store", () => {
       metadata: { rank: rank.body.rank },
     });
 
-    // The same write addressed to alpha does not find beta's issue there.
     const wrongStore = await post(started, `/api/issues/${b}/status?store=alpha`, {
       to: "blocked",
       shown: "in_progress",
@@ -315,7 +308,6 @@ describe("one id in two stores", () => {
     await store("right").create("The right one", { id: "dup-1" });
     await inventoryOf("left");
     await allow(["left", "right"]);
-    // right is the start directory, left the inventory's store of the same prefix.
     const started = await start(store("right").dir);
     expect(started.server.stores).toEqual(["left", "right"]);
 
@@ -379,10 +371,8 @@ describe("a repository's identity (D-18)", () => {
       expect.stringContaining('[hosts] allow_repos entry "twin" names more than one repository'),
     );
 
-    // Naming the owner settles it: only that repository opens.
     await allow(["twin", "owner-b/twin", "alpha"]);
     expect((await get(started, "/api/health")).body.stores).toEqual(["owner-b/twin", "alpha"]);
-    // A path names one repository too.
     await allow([store("twinA").dir, "alpha"]);
     expect((await get(started, "/api/health")).body.stores).toEqual([store("twinA").dir, "alpha"]);
   });

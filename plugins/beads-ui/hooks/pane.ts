@@ -560,8 +560,6 @@ export class BeadsPane {
     this.onWrite?.(store);
   }
 
-  // ---- view preferences -------------------------------------------------------------------
-
   private async loadPrefs(): Promise<void> {
     const pending = await this.host?.storeGet(PENDING_IDS_KEY).catch(() => undefined);
     for (const entry of readPendingDisplayIds(pending)) {
@@ -651,12 +649,9 @@ export class BeadsPane {
     }
     if (wrote !== undefined) {
       this.queued = true;
-      // A display id written late is a write like any other: the band and the publish hear of it.
       this.onWrite?.(wrote);
     }
   }
-
-  // ---- bd ---------------------------------------------------------------------------------
 
   /**
    * One bd call. `streamed` reads it through `$.process.spawn`, for a read whose output can pass
@@ -788,7 +783,6 @@ export class BeadsPane {
     try {
       this.config = await this.readConfig();
       this.retime();
-      // No store resolved: the pane says what it tried, and no bd read runs until one does.
       if (this.store?.ok !== true) return;
       const full = this.isOpen;
       const snapshot = options.direct === true ? false : await this.fromSnapshot(true);
@@ -805,7 +799,6 @@ export class BeadsPane {
         if (loaded) this.boardHead = undefined;
       }
       if (loaded) await this.retryPendingIds();
-      // The pane opened on the Timeline before its store was resolved: its own read runs now.
       if (full && this.tab === "timeline" && this.timelineRead?.store !== this.store.path) {
         void this.readTimeline();
       }
@@ -862,7 +855,6 @@ export class BeadsPane {
       host.now().catch(() => 0),
     ]);
     const lease = leaseText === undefined ? undefined : parseFileLease(leaseText);
-    // The snapshot of the token the lease names; with no lease, the last one published.
     const token = lease === undefined ? undefined : lease.token;
     if (token !== undefined && !isRefresherToken(token)) return false;
     const countsFile = token === undefined ? SNAPSHOT_FILE : snapshotFileName(token);
@@ -882,7 +874,6 @@ export class BeadsPane {
     if (current) {
       if (entry?.ok !== true || !refresherRunning(lease, now)) return false;
       if (now - entry.checkedAt > STALE_MS || entry.readAt < this.wroteAt) return false;
-      // The board already draws this head: nothing to read.
       if (entry.head === this.boardHead && this.board.loaded) return true;
     }
     if (entry?.ok === false) return false;
@@ -932,7 +923,6 @@ export class BeadsPane {
         });
         return false;
       }
-      // An issue closed between the two reads is in both: the first read's copy is kept.
       for (const issue of parsed.value) {
         if (seen.has(issue.id)) continue;
         seen.add(issue.id);
@@ -994,7 +984,6 @@ export class BeadsPane {
           `The Timeline shows only the newest closed epics and milestones: ${failure}`,
           "warning",
         );
-        // Kept with no head, so the next open reads again and no refresh retries meanwhile.
         const kept = this.timelineRead?.store === store ? this.timelineRead.issues : [];
         this.timelineRead = { store, head: undefined, issues: kept };
         this.host?.invalidate();
@@ -1015,8 +1004,6 @@ export class BeadsPane {
     const known = new Set(this.board.issues.map((issue) => issue.id));
     return [...this.board.issues, ...read.issues.filter((issue) => !known.has(issue.id))];
   }
-
-  // ---- opening and closing ----------------------------------------------------------------
 
   /** `/show-beads-ui` and `/bu`: close the open pane, else open it, as the person asked. */
   async toggle(): Promise<void> {
@@ -1089,12 +1076,10 @@ export class BeadsPane {
       return;
     }
     if (!this.panel.settings.openAtStart) return;
-    // The person opened the pane while the settings were read: theirs is the open, even if closed.
     if (this.isOpen || this.asked) return;
     const kept = this.tab;
     this.tab = "tasks";
     await this.open(false).catch(() => undefined);
-    // Held unplaced: `/bu` later opens on the view the person kept.
     if (!this.isOpen) this.tab = kept;
   }
 
@@ -1107,8 +1092,6 @@ export class BeadsPane {
     if (host === undefined) throw new Error("beads-ui has no session yet");
     if (asked) this.asked = true;
     this.settleTab();
-    // T-1B.8: a board with nothing to draw yet takes the store's snapshot before the pane opens,
-    // so the first render draws cards; the bd read below then replaces it.
     if (!this.board.loaded && this.store?.ok === true) {
       await this.fromSnapshot(false).catch(() => false);
     }
@@ -1141,11 +1124,8 @@ export class BeadsPane {
   closed(): void {
     this.isOpen = false;
     this.savePrefs();
-    // The band's toggle draws the pane's state.
     this.host?.invalidate();
   }
-
-  // ---- actions ----------------------------------------------------------------------------
 
   private note(text: string, token: Token = "text.default"): void {
     this.notice = { text, token };
@@ -1341,8 +1321,6 @@ export class BeadsPane {
     const first = drawn[0];
     if (first === undefined) return;
     this.focusedId = first.id;
-    // The card's detail button, not its Move to: a focused Select reads a letter as type-ahead,
-    // so the next p would pick an option instead of stepping the page. m reaches the Move to.
     await this.host?.focus(PANE_ID, `open:${first.id}`).catch(() => undefined);
   }
 
@@ -1448,8 +1426,6 @@ export class BeadsPane {
         : /^(?:move|open|row|task|taskmenu|timeline):(.+)$/.exec(element);
     if (match?.[1] === undefined || match[1] === this.focusedId) return;
     this.focusedId = match[1];
-    // The Tasks view and the Timeline draw a window of rows that follows the focus (T-2B.1), so
-    // the next row is drawn before Down reaches it.
     if (this.tab === "tasks" || this.tab === "timeline") this.host?.invalidate();
   }
 
@@ -1485,7 +1461,6 @@ export class BeadsPane {
     this.menuOn = on;
     this.clearHint();
     this.host?.invalidate();
-    // A menu opened on the band leaves the keyboard where it is.
     if (on === "band") return;
     const first = this.menuAt(this.frame).sections.flatMap((section) => section.items)[0];
     if (first !== undefined) {
@@ -1540,7 +1515,6 @@ export class BeadsPane {
 
   /** Every command a control or a menu item runs, by COMMANDS id (T-2B.4). */
   runCommand(command: string): void {
-    // A view's own command opens it (D-35): every registered view's, not a fixed list.
     const view = this.views.byCommand(command);
     if (view !== undefined && !view.planned) {
       this.setTab(view.view);
@@ -1777,7 +1751,6 @@ export class BeadsPane {
       void this.toggleMenu(undefined, undefined, "band", view);
       return;
     }
-    // Every other command reads the view it is for, which is the band's, for its one call.
     const kept = this.tab;
     this.tab = view;
     try {
@@ -1948,8 +1921,6 @@ export class BeadsPane {
     await this.refresh({ direct: true });
   }
 
-  // ---- drawing ----------------------------------------------------------------------------
-
   /**
    * The pane at its body size (T-1B.9): `width` picks the layout tier, and above the prompt or
    * under 12 rows the help, the band settings and the footer's hints are dropped and the inputs
@@ -1969,12 +1940,9 @@ export class BeadsPane {
       return Box({ children: [Text({ children: "beads-ui starts with the session." })] });
     }
     this.frame = frame;
-    // A panel.mode changed to native in beads-ui.toml shows at this draw.
     this.settleTab();
     const nav = this.navAt(frame);
     const short = isShort(frame.placement, frame.bodyRows);
-    // The view's own width: the body less the side nav when it is drawn (T-2B.1), and inside it
-    // the view's framed section (T-2C.12), which a short pane does not draw.
     const width = this.bodyColumnsAt(frame);
     this.width = width;
     const region = this.clientFaulted ? undefined : tasksRegion;
@@ -1983,8 +1951,6 @@ export class BeadsPane {
       ...(raster === undefined ? {} : { raster }),
       ...(picture === undefined ? {} : { picture }),
     };
-    // The pane adapter (D-35): what every component the pane draws through can use, at the
-    // view's width for its chrome and at the section's inner width for the view itself.
     const surface = paneSurface(ui, {
       columns: nav.viewColumns,
       short,
@@ -2006,12 +1972,10 @@ export class BeadsPane {
     if (this.store?.ok === false) return framed(this.drawNoStore(ui, this.store, short));
     const view = this.boardViewAt(width);
     const ctx = this.actionContext(width, view);
-    // The Tasks view draws the menu under the row it is about; every other view, above its body.
     const menu =
       this.menuOpen && this.menuOn === "pane" && this.tab !== "tasks"
         ? this.drawMenu(inner, ctx, width, false)
         : undefined;
-    // Every view draws itself through the pane adapter (D-35, T-2C.8), from its registry entry.
     const entry = this.views.get(this.tab);
     const content =
       entry?.draw?.(inner) ??
@@ -2265,8 +2229,6 @@ export class BeadsPane {
         : { gapAfter: this.menuFor, gapRows: menuRows(menu) }),
       selectedColor: colorOf("surface.focus"),
     });
-    // The Client draws with its own elements, so its rows take the look's glyph form here, and
-    // their gutters the colours the look resolves.
     const props = {
       ...built,
       rows: built.rows.map((row, i) => {
@@ -2299,7 +2261,6 @@ export class BeadsPane {
     const ctx = this.actionContext(width, undefined, "tasks");
     const region = surface.client;
     const band = surface.id === "band";
-    // On the band the overview draws an open menu in place of the view.
     const menu =
       this.menuOpen && !band && this.menuOn === "pane"
         ? this.drawMenu(surface, ctx, width, region !== undefined)
@@ -2409,8 +2370,6 @@ export class BeadsPane {
       ...(this.board.loadedAt === undefined ? {} : { today: this.board.loadedAt }),
     });
     const nav = this.navAt(this.frame);
-    // The picture (T-2C.13), where the surface draws one: not on the band, whose rows its
-    // levels keep. It takes its rows, or one for its alt text, before the items' window.
     const picture =
       surface.picture === undefined || windowed(surface)
         ? undefined
@@ -2427,7 +2386,6 @@ export class BeadsPane {
       pictureRows -
       (surface.short ? 0 : SECTION_ROWS) -
       (nav.kind === "side" ? 0 : nav.rows.length);
-    // A Raster bar under its label takes two rows.
     const perItem = surface.raster !== undefined && timelinePlacement(width) === "above" ? 2 : 1;
     const layout = timelineLayout(
       view,

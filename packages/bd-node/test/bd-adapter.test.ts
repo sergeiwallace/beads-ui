@@ -9,7 +9,6 @@ import { BD_INSTALL_PAGE, type BdResult, createBdClient, type StaleWrite } from 
 import { type StubBd, type StubReply, stubBd } from "./stub.ts";
 
 const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
-// The host runs the shared Dolt server under load; a whole-store read has timed out at 10 s (Risk 4).
 const REAL_BD_TIMEOUT_MS = 60_000;
 
 const stubs: StubBd[] = [];
@@ -72,10 +71,6 @@ function expectIssueModel(issue: Issue): void {
   expect(Array.isArray(issue.metadata)).toBe(false);
 }
 
-// The Issue the design's Data Model says a raw bd record maps to, written from the design's
-// field names and conventions rather than from the parser: optional text fields are absent when
-// bd sends none or "", the display id and the human owner come from metadata (D-9, D-17), and a
-// list record's dependency is { type, depends_on_id }.
 const OPTIONAL_TEXT: [keyof Issue, string][] = [
   ["description", "description"],
   ["design", "design"],
@@ -116,7 +111,6 @@ function expectedIssue(record: Record<string, unknown>): Record<string, unknown>
   return expected;
 }
 
-// Every field of the design's Issue type, so a record can be shown to exercise each mapping.
 const ISSUE_FIELDS = [
   "id",
   "displayId",
@@ -145,8 +139,6 @@ const ISSUE_FIELDS = [
   "metadata",
 ];
 
-// A bd list record with every field the Issue type reads set, each to a distinct value. The
-// top-level owner is bd's repository owner email, which must not become Issue.owner.
 const FULL_RECORD = {
   id: "BU-full",
   title: "Every field",
@@ -181,8 +173,6 @@ describe("list against this repository's own store", () => {
   it(
     "should return an Issue matching the core model for every record when bd list --json runs",
     async () => {
-      // Raw reads before and after the adapter's; a record another actor touched in between is
-      // left out of the comparison, every record stable across both must come back matching.
       const before = rawList();
       const client = createBdClient({ cwd: repoRoot, timeoutMs: REAL_BD_TIMEOUT_MS });
       const issues = okValue(await client.list());
@@ -257,8 +247,6 @@ describe("list through a stub bd", () => {
 });
 
 describe("timeouts", () => {
-  // Node reads 0 as no timeout, throws on a negative, fractional or non-finite one, and turns
-  // one past 2^31 - 1 into 1 ms, so each must come back as a typed failure before bd runs.
   const invalid = [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, 2 ** 31];
 
   for (const timeoutMs of invalid) {

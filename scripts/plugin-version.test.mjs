@@ -1,5 +1,3 @@
-// Drives scripts/plugin-version.mjs the way the pre-push hook and a person do: as a CLI,
-// in a throwaway repository with an origin, so every case runs real git.
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -14,10 +12,6 @@ const MANIFEST = "plugins/beads-ui/.claude-plugin/plugin.json";
 const scratch = mkdtempSync(join(tmpdir(), "plugin-version-test-"));
 after(() => rmSync(scratch, { recursive: true, force: true }));
 
-// Inside a git hook, git exports GIT_DIR, GIT_INDEX_FILE and friends; inherited, they point every
-// git call here at the repository being committed instead of the throwaway one. Inside a push,
-// pre-commit exports PRE_COMMIT_TO_REF and friends too, naming the pushed commit, which the
-// script under test reads and the throwaway repository does not hold.
 const inherited = Object.fromEntries(
   Object.entries(process.env).filter(
     ([key]) => !key.startsWith("GIT_") && !key.startsWith("PRE_COMMIT_"),
@@ -49,7 +43,6 @@ function commit(cwd, message, files) {
   git(cwd, "commit", "-q", "-m", message);
 }
 
-// A clone whose origin/main holds the policy and the plugin at `version`, on a work branch.
 function repo(version = "0.1.1") {
   counter += 1;
   const origin = join(scratch, `origin-${counter}.git`);

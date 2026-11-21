@@ -2,10 +2,6 @@ import { describe, expect, it } from "vitest";
 import { describeRefusal, findSecrets } from "../../src/composer/secrets.ts";
 import { FAKE_AWS_KEY } from "./harness.ts";
 
-// The composer's secret guard, the ai-core dashboard's as shipped (T-W1.3): common credential
-// shapes are refused, the refusal names the rule and the position and never the value, and
-// ordinary prompt text passes. Every token here is assembled at run time.
-
 const repeat = (prefix: string, char: string, count: number) => `${prefix}${char.repeat(count)}`;
 
 describe("findSecrets", () => {

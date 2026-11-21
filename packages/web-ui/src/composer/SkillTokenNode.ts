@@ -69,14 +69,7 @@ export class SkillTokenNode extends TextNode {
     element.classList.add("skill-token");
     element.classList.toggle("skill-token--valid", verdict === "valid");
     element.classList.toggle("skill-token--invalid", verdict === "invalid");
-    // `unknown` carries its own class so the stylesheet can leave the token
-    // looking like ordinary text; neither of the verdict classes is applied,
-    // so nothing reads as an answer.
     element.classList.toggle("skill-token--unknown", verdict === "unknown");
-    // The AC is about what the editor *marks*, so the verdict is also exposed
-    // non-visually: a test and a screen reader both read this rather than
-    // inferring validity from a colour. Three-valued, because a boolean
-    // attribute could not say "no catalog yet".
     element.setAttribute("data-skill", this.skillName());
     element.setAttribute("data-skill-verdict", verdict);
   }

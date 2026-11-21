@@ -1,25 +1,4 @@
 #!/usr/bin/env node
-// Keeps each plugin's version ahead of main whenever its shipped content changes.
-//
-// An installed copy of the mod only updates when `version` in its plugin.json rises:
-// `claude plugin update` and marketplace auto-update both compare it and install nothing
-// for a commit that leaves it alone. So a branch that changes shipped plugin files must
-// carry a version above main's, raised by at least the level its commits call for:
-//
-//   feat            -> minor
-//   anything else   -> patch
-//   `type!:` or a BREAKING CHANGE footer -> major, which is never automatic: it needs
-//                      the policy's approval trailer (Sergei decides majors).
-//
-//   node scripts/plugin-version.mjs check [--base <ref>] [--head <ref>] [--title <subject>]
-//   node scripts/plugin-version.mjs bump [--base <ref>]
-//   node scripts/plugin-version.mjs pre-push
-//
-// `pre-push` is the pre-commit hook: when the pushed branch falls short it raises the
-// version in a commit of its own and fails the push once, so the next push carries it.
-// The policy is plugin-release.json at the repository root; ai-harness's
-// `ghp pr merge` reads the same file and refuses a merge that falls short.
-// Exit status: 0 ok, 1 refused, 2 could not run.
 
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -79,7 +58,6 @@ export function bumpLevel(base, head) {
   return "patch";
 }
 
-// The level one commit message calls for.
 export function messageLevel(message) {
   const subject = message.split("\n", 1)[0].trim();
   const typed = /^([A-Za-z]+)(\([^)]*\))?(!)?:/.exec(subject);
@@ -108,15 +86,12 @@ function manifestVersion(cwd, ref, manifest) {
   return JSON.parse(text).version ?? null;
 }
 
-// One verdict per plugin: does `head` carry a version far enough above `base`'s?
 export function evaluate({ cwd, base, head = "HEAD", messages = [], worktree = false }) {
   const policy = readPolicy(cwd);
   const mergeBase = git(cwd, ["merge-base", base, head]).trim();
   const changed = git(cwd, ["diff", "--name-only", "--no-renames", `${mergeBase}`, head])
     .split("\n")
     .filter(Boolean);
-  // Each commit with the files it touches: a commit's type counts only for a plugin whose
-  // shipped files it changed, so a feat to the repository's tooling never raises the mod.
   const commits = git(cwd, ["rev-list", "--no-merges", `${mergeBase}..${head}`])
     .split("\n")
     .filter(Boolean)
@@ -255,12 +230,11 @@ function bump(cwd, base) {
 
 function prePush(cwd) {
   const policy = readPolicy(cwd);
-  // pre-commit's pre-push stage names the remote and the pushed sha in these two variables.
   // biome-ignore lint/suspicious/noUndeclaredEnvVars: set by pre-commit, not a turbo task input
   const remote = process.env.PRE_COMMIT_REMOTE_NAME || "origin";
   // biome-ignore lint/suspicious/noUndeclaredEnvVars: set by pre-commit, not a turbo task input
   const toRef = process.env.PRE_COMMIT_TO_REF || "HEAD";
-  if (/^0+$/.test(toRef)) return 0; // deleting a remote branch
+  if (/^0+$/.test(toRef)) return 0;
   if (
     tryGit(cwd, [
       "fetch",

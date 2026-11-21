@@ -1,27 +1,4 @@
 #!/usr/bin/env node
-// Allow-list gate for the mod's hooks and calls (design D-15, task T-0.3).
-// Usage: node scripts/check-plugin-allowlist.mjs <plugin-dir> <allowlist.json>
-// Runs `claude plugin validate --strict --json <plugin-dir>` and compares every
-// "<module> <kind>: <values>" note it reports (hooks, calls, env reads, env writes,
-// surface modules, gating hooks) with the allow-list, printing one line per difference.
-// Then it scans the sources, because validate files every call under the module that reached
-// it, even one made in a helper the module handed `on` or `$` to, so the report alone cannot
-// show where a call sits. It fails naming the file and line of:
-//   - any `$.` outside the hooks modules that hooks/hooks.json names;
-//   - outside those modules, any reference to a claude-code type that carries the engine
-//     (ENGINE_TYPES: the engine interface, the registrar and the hook signatures), by a named
-//     import (aliased or not), a re-export, a namespace member or an inline `import("claude-code")`;
-//   - inside a hooks module, a bare `$` that is neither a parameter nor followed by a member
-//     access, such as `helper($)`. validate --strict already refuses `$` bound to a name
-//     (`const engine = $`) but accepts it passed straight to a call.
-// Test files (*.test.*, *.spec.*, test/ and tests/) and .claude-plugin/ are skipped.
-//
-// A static scan is not a proof. It does not see: a helper whose engine parameter is untyped or
-// typed `any` or `unknown`, when the hooks module hands it the engine under another name than
-// `$` (a hook may name its first parameter anything); a noun handed out, such as `helper($.ui)`;
-// an engine type rebuilt structurally or derived from a hooks module's export
-// (`Parameters<typeof register>`). `claude plugin test` and review cover those.
-// Exits 1 on any difference or validation error, 2 when validate cannot run.
 import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { extname, join, relative, resolve } from "node:path";
@@ -32,13 +9,8 @@ const VIA = / \(via [\w$.]+\)$/;
 const DEFAULT_MATCHER = / \(default matcher key: [\w$]+(?:, [\w$]+)*\)$/;
 const ENGINE_CALL = /(?<![\w$])\$\.[A-Za-z_]/;
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"]);
-// .claude-plugin holds the manifest and the mod types Claude Code writes there when it loads the
-// plugin (.claude-plugin/types/, ignored by the repository), whose declarations name every
-// engine type.
 const SKIPPED_DIRS = new Set(["node_modules", ".turbo", ".claude-plugin", "test", "tests"]);
 const TEST_FILE = /\.(test|spec)\.[cm]?[jt]sx?$/;
-// The exported names of the "claude-code" module (mods/types/claude-code.d.ts) whose type is or
-// takes the engine `$`.
 const ENGINE_TYPES = new Set([
   "AnyEventHook",
   "CatchHandler",
@@ -74,7 +46,6 @@ function splitTopLevel(values) {
     const char = values[i];
     if (char === "{") depth++;
     if (char === "}") depth--;
-    // Validator annotations can contain commas, independently of matcher braces.
     if (depth === 0 && char === "(") parentheses++;
     if (depth === 0 && char === ")") parentheses--;
     if (depth === 0 && parentheses === 0 && values.startsWith(", ", i)) {
@@ -126,7 +97,6 @@ function reportedOf(report, problems) {
       modules[module][kind].push(
         ...listed.map((value) => {
           if (kind === "calls") return value.replace(VIA, "");
-          // This suffix describes implicit matching, not another registration or matcher.
           if (kind === "hooks") return value.replace(DEFAULT_MATCHER, "");
           return value;
         }),
@@ -136,8 +106,6 @@ function reportedOf(report, problems) {
   return modules;
 }
 
-// The source with every comment and string literal blanked, newlines kept so line numbers
-// hold; a template literal's `${...}` stays, as it is code.
 function codeOnly(source) {
   let out = "";
   let mode = "code";
@@ -206,7 +174,6 @@ function sourceFiles(dir) {
 
 const lineAt = (text, offset) => text.slice(0, offset).split("\n").length;
 
-// Each engine type the file names from "claude-code", as [offset, name].
 function engineTypeReferences(source, code) {
   const found = [];
   const inCode = (offset) => code[offset] !== " ";
@@ -241,8 +208,6 @@ function engineTypeReferences(source, code) {
   return found;
 }
 
-// True when the `$` at `offset` is declared in a parameter list: the innermost bracket around
-// it is a `(` that opens a function's parameters, not a call's arguments.
 function isParameter(code, offset) {
   let depth = 0;
   let open = -1;
@@ -268,7 +233,6 @@ function isParameter(code, offset) {
   return false;
 }
 
-// Each bare `$` in a hooks module that is not a parameter or a member access's object.
 function engineHandedOut(code) {
   const found = [];
   for (const match of code.matchAll(BARE_ENGINE)) {
@@ -355,7 +319,6 @@ function main() {
   const allowlistPath = resolve(allowlistArg);
   const allowlist = JSON.parse(readFileSync(allowlistPath, "utf8"));
   const allowed = allowlist.modules ?? {};
-  // Exact messages only, each with a reason. Errors never use the warning allow-list.
   const allowedWarnings = new Set(
     (allowlist.warnings ?? [])
       .filter(({ reason }) => typeof reason === "string" && reason.trim() !== "")

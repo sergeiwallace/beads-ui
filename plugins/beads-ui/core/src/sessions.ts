@@ -1,8 +1,3 @@
-// The Sessions view and the work-queue adapter's reads (T-3.4, D-11, D-17). Where `[queue] url`
-// is set the view is the queue's session registry, the only source of liveness: each session's
-// state, current task, last heartbeat and claim age. Without it the view is the store's assignees
-// alone, and says that liveness is unavailable. Pure: the server makes the calls.
-
 import type { Issue, Status } from "./model.js";
 import { statusCategory } from "./views/timeline.js";
 

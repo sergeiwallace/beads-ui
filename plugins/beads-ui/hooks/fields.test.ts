@@ -17,10 +17,6 @@ import {
   world,
 } from "./tests/world.js";
 
-// BU-mg2.3.14: a field shows its whole text whenever the pane has the room for it, and only a
-// value that cannot fit is cut, with an ellipsis. Frozen at fixed body widths, so a layout
-// budget computed from a narrower column than the one a field is drawn in turns this red.
-
 const TITLE =
   "beads-ui Claude Code mod: the task manager inside the Claude Code TUI, with mouse control";
 const HEADING = `BU-beads-ui-claude-code-aeyb ${TITLE}`;
@@ -62,9 +58,6 @@ async function mountAt(
 const textOf = async (ui: Awaited<ReturnType<typeof mountAt>>["ui"], key: string) =>
   String((await ui.find({ key }))?.text ?? "");
 
-// The view's width at each body width: the body less one column (register.ts), from 72 columns
-// less the side nav's 15 and its gap (T-2B.1), and from 48 columns less the view's framed
-// section's border and padding, 4 (T-2C.12): 144 draws 123, 48 draws 47.
 describe("fields drawn whole when the pane has room (BU-mg2.3.14)", () => {
   test("should draw the Detail heading and a field whole at 144 columns, where each fits", async ($, on) => {
     const ui = await detailAt($, on, 144);
@@ -96,7 +89,6 @@ describe("fields drawn whole when the pane has room (BU-mg2.3.14)", () => {
     expect(await textOf(ui, "field:metadata")).toBe(
       'Metadata: {"display_id":"BU-beads-ui-claude-co⋯',
     );
-    // A short field still fits whole.
     expect(await textOf(ui, "field:id")).toBe("Id: BU-mg2.3");
   });
 

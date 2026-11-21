@@ -8,8 +8,6 @@ import { type RunningServer, startServer } from "../server/server.ts";
 import { type HostEnv, hostConfig, hostEnv, repoName, send, signIn } from "./auth-env.ts";
 import { createStore, type TestStore } from "./store.ts";
 
-// The app-portal member duties the Node server performs itself (web app design D-15 (a), T-W3.2).
-
 const SHELL =
   '<!doctype html><html lang="en"><head><meta charset="utf-8" /><title>shell</title></head><body></body></html>';
 
@@ -175,7 +173,6 @@ describe("the shell's headers", () => {
       const policy = String(reply.headers["content-security-policy"] ?? "");
       expect(policy, name).toContain("script-src 'self'");
       expect(policy, name).toContain("require-trusted-types-for 'script'");
-      // The shell's <base href="/beads/"> holds only where the policy lets a same-origin base in.
       expect(policy, name).toContain("base-uri 'self'");
     }
     expect(replies.shell.text).toContain('<base href="/beads/" />');
@@ -203,7 +200,6 @@ describe("the client build", () => {
     expect(manifest).toMatchObject({ name: "beads-ui", start_url: ".", scope: "." });
     const html = await readFile(join(outDir, "index.html"), "utf8");
     expect(html).toMatch(/<link rel="manifest" href="\.\/manifest\.webmanifest"/);
-    // Relative URLs, so the base the server writes into the shell places every asset under it.
     expect(html).not.toMatch(/(src|href)="\/assets\//);
   });
 

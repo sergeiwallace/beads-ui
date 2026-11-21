@@ -1,7 +1,3 @@
-// Archived 2026-10-27 from plugins/beads-ui/hooks/figures.test.ts at 45d7da1 (see README.md). Its
-// last suite, the band overview drawing no picture (T-2C.13), moved to
-// plugins/beads-ui/hooks/band-figures-removed.test.ts.
-
 import type { On } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
@@ -30,10 +26,6 @@ import {
   type WorldOptions,
   world,
 } from "./tests/world.ts";
-
-// T-2C.11 (D-43): the band's figures row at the hooks entry point. The band reads its counts
-// from each store itself here (no refresher runs), so each line ends with `*`. The done window
-// is 24 hours, cut into 12 parts of 2 hours; a done task's part is where its close falls.
 
 const HOUR = 3_600_000;
 const MINUTE = 60_000;
@@ -149,8 +141,6 @@ describe("the band's figures row (T-2C.11)", () => {
       "[bd] [t: 12 tasks] (◒[p: 4 in progress], ◉[b: 1 blocked], ◦[o: 3 open], ✓[d: 4 done last 24h]) * [e: ▾] [v: ◫] [◨]",
       FIGURES_120,
     ]);
-    // BU-7 and BU-8 in the newest part, OPS-3 at 11 hours, BU-9 at 23 hours; BU-10 is outside
-    // the window and BU-11 another session's. Each store with a done count was read once.
     expect(doneReads(w)).toHaveLength(2);
     expect(overflows(await ui.drawn(), 120)).toEqual([]);
   });
@@ -228,7 +218,6 @@ describe("the figures row's repaint (T-2C.11)", () => {
     const drawnCells = String((await ui.find({ type: "Raster" }))?.props.cells);
     expect(w.blits).toEqual([]);
 
-    // A task closes in the store: the next minute's count moves and the store's times are read.
     STORES[HARNESS]?.push({ id: "OPS-9", status: "closed", assignee: ME, closedAt: START_MS });
     try {
       await w.clock.advance(MINUTE);
@@ -259,7 +248,6 @@ describe("the figures row's repaint (T-2C.11)", () => {
 
     expect(doneReads(w)).toHaveLength(4);
     expect(w.blits).toHaveLength(1);
-    // The redraw draws both stores' closes, which the one blit could not have held.
     const redrawn = String((await ui.find({ type: "Raster" }))?.props.cells);
     expect(redrawn).not.toBe(w.blits[0]?.cells);
   });

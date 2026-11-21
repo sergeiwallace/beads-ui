@@ -99,7 +99,6 @@ export function failureOf(
 export const dedupeKey = (failure: SyncFailure): string =>
   JSON.stringify([failure.store, failure.step, failure.exitCode]);
 
-// Escape sequences, then every other control character but the newline and the tab.
 // biome-ignore lint/suspicious/noControlCharactersInRegex: escape sequences are what it removes.
 const ESCAPE = /\u001b\[[0-?]*[ -/]*[@-~]|\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)?|\u001b./g;
 // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what it removes.
@@ -114,7 +113,6 @@ export function cleanDetail(detail: string): { text: string; cut: boolean } {
     : { text: clean, cut: false };
 }
 
-// Every control character, the newline and the tab included, and the Unicode line separators.
 // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what it removes.
 const LINE_BREAKING = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g;
 
@@ -261,7 +259,6 @@ export class SyncState {
       state.covering = 0;
       state.failed = false;
       state.synced++;
-      // The store publishes now: a failure turn the session refused for it is resolved.
       this.pending = this.pending.filter((one) => one.store !== store);
       return { kind: "synced", text: syncedText(store) };
     }
@@ -297,7 +294,6 @@ export class SyncState {
     if (one.retries < MAX_SUBMIT_RETRIES) return "retry";
     this.pending = this.pending.filter((pending) => pending !== one);
     const state = this.stores.get(one.store);
-    // A publish that succeeded since the failure already cleared it.
     if (state !== undefined && state.synced === one.synced) state.failed = true;
     return "given-up";
   }

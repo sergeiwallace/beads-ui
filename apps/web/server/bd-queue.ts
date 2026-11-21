@@ -1,9 +1,3 @@
-// One queue of bd calls per store (beads-ui design, the bd-node adapter). An
-// embedded store runs one bd process at a time, so calls the server starts side by side wait on
-// the store's lock inside bd, and that wait counted against bd-node's 10-second call timeout: on a
-// loaded host a view's read timed out behind the app's own Board read. Here each call starts only
-// after the store's earlier calls have settled, so its timeout covers its own run alone.
-
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { BdClient } from "@sergeiwallace/beads-ui-bd-node";
 

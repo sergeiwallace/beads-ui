@@ -37,8 +37,6 @@ function client() {
 }
 
 describe("terminal session board", () => {
-  // This boundary owns claim-race orchestration between the shared core and bd-node. Checking
-  // only rendered text cannot prove that a stale write was guarded and never retried.
   it("should guard both owner and status and refresh without retry when a claim changes", async () => {
     const bd = client();
     const board = new SessionBoard(bd, "aih-fw-cole");
@@ -99,8 +97,6 @@ it("should confirm the shared optimistic transition when the guarded update succ
   expect(update).toHaveBeenCalledTimes(1);
 });
 
-// The controller owns this scheduling boundary: a delayed read must not overwrite a
-// successful move, regardless of whether the host's refresh timer overlaps user input.
 it("should serialize a move after an unfinished refresh and retain the confirmed status", async () => {
   const bd = client();
   const update = vi.fn(async () => ({ kind: "ok" as const, value: undefined }));

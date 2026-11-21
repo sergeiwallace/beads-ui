@@ -18,11 +18,6 @@ import {
 } from "./auth-env.ts";
 import { createStore, type TestStore } from "./store.ts";
 
-// The Review queue's reads and the dispatch routes through the running server (T-W1.1, T-W1.2,
-// T-W1.3, T-W1.6, server side): the held store's verbs run as a subprocess (a stand-in tool that
-// prints what its directory holds), every dispatch is read back through the receiver API with the
-// receiving host's own token, and every bd comment and status from the real store.
-
 const FAKE_HELD = fileURLToPath(new URL("./fixtures/fake-held.mjs", import.meta.url));
 const FAKE_UNBLOCK = fileURLToPath(new URL("./fixtures/fake-unblock.mjs", import.meta.url));
 

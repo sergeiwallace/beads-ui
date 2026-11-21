@@ -10,11 +10,6 @@ const viewRead = (page: Page, path: string) =>
     timeout: 60_000,
   });
 
-// T-3.3: "When Analytics renders, the system shall draw throughput, cycle time with a rolling
-// average, cumulative flow, a count-based sprint burndown and aging work in progress from bd
-// history --events." and "Where a Claude Code cost export is configured, when an issue closed
-// with a session id the system shall show cost and tokens per closed issue."
-
 const DAY = 86_400_000;
 const day = (offset: number) => new Date(Date.now() + offset * DAY).toISOString().slice(0, 10);
 
@@ -112,9 +107,6 @@ test.describe("Analytics", () => {
         `[analytics]\ncost_export = "${join(dir, "metrics.jsonl")}"\n`,
       );
 
-      // The read that carries this issue's cost row, not merely the first analytics read: on a
-      // loaded host an earlier read can land first, from before the export was configured or
-      // before the closed issue was listed, and the page draws its rows only from the later one.
       const read = page.waitForResponse(
         async (response) => {
           if (new URL(response.url()).pathname !== "/api/analytics" || !response.ok()) {

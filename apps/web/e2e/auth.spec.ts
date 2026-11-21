@@ -3,8 +3,6 @@ import type { AddressInfo } from "node:net";
 import { request as playwrightRequest } from "@playwright/test";
 import { column, expect, loginLink, test } from "./fixtures.ts";
 
-// T-W0.1 in the browser: sign-in, replay, storage, the event stream, CSRF and logout.
-
 const SESSION = /^beads_ui_session_\d+$/;
 
 /** A page on another origin of 127.0.0.1 (same site, other port): what a hostile local page is. */
@@ -136,7 +134,6 @@ test.describe("cross-site writes", () => {
       ).toBe("blocked");
       const posted = page.waitForResponse((response) => response.url() === target);
       await page.evaluate(() => (document.getElementById("f") as HTMLFormElement).submit());
-      // 403 when the browser sends the cookie same-site (no X-Beads-UI), 401 when it does not.
       expect([401, 403]).toContain((await posted).status());
       expect((await served.store.show(id)).status).toBe("open");
     } finally {

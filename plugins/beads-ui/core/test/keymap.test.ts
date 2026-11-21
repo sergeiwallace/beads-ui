@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   buildKeymap,
@@ -14,9 +12,6 @@ import {
   type Shortcut,
   setSingleKeys,
 } from "../src/index.js";
-
-// T-W1.4 of the web app design (D-12): single-key shortcuts on by default, an off setting that
-// keeps modified shortcuts, and remaps that refuse one key for two commands.
 
 const SHORTCUTS: Shortcut[] = [
   ...DEFAULT_SHORTCUTS,
