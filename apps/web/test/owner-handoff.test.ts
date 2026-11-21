@@ -17,12 +17,6 @@ import {
 } from "./auth-env.ts";
 import { createStore, type TestStore } from "./store.ts";
 
-// An owner change through the running server (web app design T-W2.2, D-9): the fleet's
-// receiver-first handoff. The fleet's liveness check and git-inbox are stand-ins that check the
-// server called them with the real tools' arguments (fixtures/fake-fleet-tool.mjs); the holder's
-// and the receiver's own steps are played by the test through the receiver API and bd, as the
-// sessions would; every assignee and status is read from the real store.
-
 const FAKE_TOOL = fileURLToPath(new URL("./fixtures/fake-fleet-tool.mjs", import.meta.url));
 const HOST = "host-b";
 
@@ -228,15 +222,12 @@ describe("a task a live session holds (T-W2.2)", () => {
     const receipt = (body: Record<string, unknown>) =>
       receiver(`/dispatches/${request?.id}/receipts`, { session: holder, ...body });
     expect((await receipt({ state: "taken" })).status).toBe(204);
-    // The holder reassigns its claim (session-handoff Step 2). This server reads the store
-    // before any publication, so what it reads is an observation, never "handoff sent".
     await store.bd("update", id, "--assignee", target, "--actor", holder);
     const observed = await handoff(id);
     expect(observed.state).toBe(`handoff pending to ${target}`);
     expect(observed.observation).toMatch(
       new RegExp(`^the store as this server reads it names ${target} \\(bd show ${id}, `),
     );
-    // The holder publishes the store and says so.
     const published = await receiver(`/dispatches/${request?.id}/progress`, {
       session: holder,
       step: "sent",
@@ -247,7 +238,6 @@ describe("a task a live session holds (T-W2.2)", () => {
     expect(sent.state).toBe("handoff sent");
     expect(sent.source).toMatch(new RegExp(`^progress receipt from ${holder}@${HOST}`));
     expect(sent.source).toContain("sent: bd_dolt_publish.py --attest: shared, converged");
-    // The receiver replies taken; the holder records the reply.
     const progress = await receiver(`/dispatches/${request?.id}/progress`, {
       session: holder,
       step: "taken",
@@ -258,7 +248,6 @@ describe("a task a live session holds (T-W2.2)", () => {
     expect(taken.state).toBe("taken");
     expect(taken.source).toMatch(new RegExp(`progress receipt from ${holder}@${HOST}`));
     expect(taken.source).toContain(`taken ${id}, store published`);
-    // The holder's verify exits 0 and it lets go.
     const verified = await receiver(`/dispatches/${request?.id}/progress`, {
       session: holder,
       step: "verified",
@@ -410,7 +399,6 @@ describe("a git-inbox send that fails after the release (T-W2.2)", () => {
     const sends = (await calls("git-inbox")).filter((call) => call.args[0] === "send");
     expect(sends).toHaveLength(2);
     expect(flag(sends[1], "--action")).toBe(`${id}@${repoName(store.dir)}`);
-    // The retry went straight to the send: no second liveness read, so no second release.
     expect(await calls("liveness")).toHaveLength(1);
     const after = await show(id);
     expect(after.assignee ?? "").toBe("");

@@ -1,8 +1,4 @@
 #!/usr/bin/env node
-// A stand-in for bd-unblock in the server suites: `fake-unblock.mjs <dir> <id> --to <status>
-// --why <text>`. It records its arguments in `<dir>/unblock.jsonl`; with `<dir>/unblock.exit`
-// holding a non-zero code it refuses with that code, as it does a `--why` of more than one line,
-// and otherwise moves the issue with bd.
 
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
@@ -10,7 +6,6 @@ import { join } from "node:path";
 
 const [dir, id, ...rest] = process.argv.slice(2);
 appendFileSync(join(dir, "unblock.jsonl"), `${JSON.stringify([id, ...rest])}\n`);
-// The fleet's bd-unblock refuses a reason that is not one line, before it writes anything.
 const why = rest[rest.indexOf("--why") + 1] ?? "";
 if (/[\r\n]/.test(why)) {
   process.stderr.write("bd-unblock: --why must be one line\n");

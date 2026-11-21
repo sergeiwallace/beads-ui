@@ -1,8 +1,6 @@
 import list from "../../core/test/fixtures/bd-list-all-brief.json.js";
 import { ok, STORE_LIST, type WorldOptions } from "./world.js";
 
-// The task panel's session (Phase 2B): the fixture store with some of its tasks this session's.
-
 export const ME = "ops-vm-3";
 
 /**

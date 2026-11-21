@@ -1,11 +1,5 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import { costPerIssue, type Issue, parseCostExport } from "../src/index.js";
-
-// T-3.3: "Where a Claude Code cost export is configured, when an issue closed with a session id
-// the system shall show cost and tokens per closed issue." The export is OTLP JSON Lines as an
-// OpenTelemetry Collector's file exporter writes Claude Code's metrics.
 
 const attr = (key: string, value: string) => ({ key, value: { stringValue: value } });
 

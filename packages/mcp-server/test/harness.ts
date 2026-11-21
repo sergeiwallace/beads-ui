@@ -1,7 +1,3 @@
-// The MCP server under test, started over stdio as Claude Desktop starts it, against a running
-// beads-ui web server over a real Beads store. The web server, its host settings and the fleet
-// tool stand-ins are the web app's own test harness (apps/web/test).
-
 import { existsSync } from "node:fs";
 import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

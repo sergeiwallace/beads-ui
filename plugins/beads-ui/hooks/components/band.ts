@@ -12,9 +12,6 @@ import {
 import type { Surface } from "./adapters.js";
 import { gutter } from "./indicators.js";
 
-// The band's disclosure levels (D-36, T-2C.2) as components: the summary line with its counts as
-// buttons, a count's rows with their controls, and the controls row every level ends with.
-
 /** The columns a row under a line is indented by, under the line's label. */
 export const ROW_INDENT = 2;
 

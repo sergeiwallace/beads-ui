@@ -16,12 +16,6 @@ import { colorOf, weight } from "./look.js";
 import { reviewBlock, reviewRows, type SectionActions } from "./review.js";
 import { fitted, lineWindow, textLine, textLines, windowed } from "./window.js";
 
-// The Detail view (T-1.3, BU-mg2.3.14, BU-mg2.3.15, T-2C.5, D-35, T-2C.8), drawn from core's
-// DetailView, CommentsView and ReviewSection on either surface: its heading, the Review section
-// above the description, the fields with a control each, the description and notes, the
-// dependencies, the history and the comments with the control a new one is typed into. On a
-// windowed surface (the band) each is one line or more of one row, in the surface's window.
-
 const MORE = glyphOf("text.more");
 /** What a one-line control holds where it takes a line break or a backslash. */
 const ONE_LINE_HINT = "one line: \\n is a line break, \\\\ a backslash";
@@ -235,7 +229,6 @@ export function detail(surface: Surface, model: DetailModel): RenderElement {
   if (lined) return lineWindow(surface, "detail", detailLines(surface, model, view));
   const line = (key: string, text: string, token: "text.dim" | "error") =>
     Box({ key, children: [Text({ color: colorOf(token), children: text })] });
-  // Each part of the Detail under its heading on the weight scale, a `tight` row above it.
   const heading = (key: string, text: string) =>
     Box({
       key,

@@ -21,13 +21,6 @@ import type { BodyRead, ReviewActions } from "./types.ts";
 import { UnblockForm } from "./UnblockForm.tsx";
 import "./review.css";
 
-// The Review queue (web app design § The Review queue, D-1, T-W1.1, T-W1.2, T-W1.6): a split list
-// and detail, keyboard first. The list groups every item needing an answer, an unblock or a prompt
-// in core's order (priority, impact, age, id); the detail answers a held decision by its option
-// card, unblocks a task, or sends a prompt through the composer. Below 600 px it collapses to one
-// item at a time with the list a key away. Selection mode approves every recommendation in the
-// selected items behind a confirm that lists them.
-
 /** The Review view's own commands, beside core's defaults, for the key map. */
 export const REVIEW_SHORTCUTS = [
   { command: "review.list", label: "Back to the list", key: "u" },
@@ -159,7 +152,6 @@ function useBody(
 ): BodyRead | undefined {
   const [state, setState] = useState<{ key: string; body: BodyRead } | undefined>(undefined);
   const key = entry?.source === "held" ? entry.key : undefined;
-  // The entry object changes on every re-read; its key names the item, so only the key re-reads.
   const latest = useRef(entry);
   latest.current = entry;
   useEffect(() => {
@@ -209,7 +201,6 @@ export function ReviewQueue({
   const view = useMemo(() => reviewQueueView(state), [state]);
   const ordered = useMemo(() => view.sections.flatMap((section) => section.entries), [view]);
   const [selectedKey, setSelectedKey] = useState<string | undefined>(undefined);
-  // Below 600 px one item shows at a time, the first in order until another is chosen (D-1).
   const [showing, setShowing] = useState<"list" | "detail">("detail");
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
   const [confirming, setConfirming] = useState(false);

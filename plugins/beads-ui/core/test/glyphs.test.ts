@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   asciiOf,
@@ -12,9 +10,6 @@ import {
   truncate,
 } from "../src/index.js";
 import { WIDE_OR_AMBIGUOUS } from "./fixtures/east-asian-width.js";
-
-// D-41, D-43 and T-2C.10: one glyph table, each glyph one cell wide on any terminal, each with
-// an ASCII form `[indicators] ascii` draws.
 
 const wideOrAmbiguous = (cp: number) =>
   WIDE_OR_AMBIGUOUS.some(([first, last]) => cp >= first && cp <= last);

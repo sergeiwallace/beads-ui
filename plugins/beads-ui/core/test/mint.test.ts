@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   type Issue,
@@ -18,13 +16,11 @@ import minted from "./fixtures/bd-show-minted.json.js";
 import { allIssues, byId, unwrap } from "./helpers.js";
 
 const SUFFIX = /^[abcdefghjkmnpqrstuvwxyz]{4}$/;
-// A fixed random source: the surface passes its own, tests pass a sequence.
 const sequence = (...draws: number[]) => {
   let i = 0;
   return () => draws[i++ % draws.length] ?? 0;
 };
 
-// `bd show BU-mg2.3.1 BU-mg2.3.6 BU-mg2.3 BU-mg2 BU-2zw --json`: ids bd-new minted in this store.
 const mintedIssues = unwrap(parseBdShow(minted));
 
 function bodyOf(issue: Issue): string {
@@ -69,9 +65,6 @@ describe("slugifyTitle", () => {
 
 describe("slug budgets from bd-new's overrides", () => {
   const TITLE = "npm audit: 10 dev-only advisories under markdownlint-cli2";
-  // What ai-harness scripts/bd_new.py's slugify_title gave for TITLE with
-  // AIH_SLUG_BODY_MAX_CHARS set to each value (read 2026-10-21); a value _env_budget refuses
-  // falls back to 32.
   const BD_NEW_BODIES: readonly [string, string][] = [
     ["12", "npm-audit-10"],
     ["50", "npm-audit-10-dev-only-advisories-under"],
@@ -81,8 +74,6 @@ describe("slug budgets from bd-new's overrides", () => {
     ["0", "npm-audit-10-dev-only-advisories"],
     ["-5", "npm-audit-10-dev-only-advisories"],
     ["", "npm-audit-10-dev-only-advisories"],
-    // Unicode digits and whitespace, measured against the same _env_budget and slugify_title
-    // under Python 3.14 (2026-10-21).
     ["１２", "npm-audit-10"],
     ["١٢", "npm-audit-10"],
     ["१२", "npm-audit-10"],
@@ -249,9 +240,6 @@ describe("planDisplayId", () => {
     expect(!result.ok && result.error.kind).toBe("invalid-id");
   });
 
-  // BU-2zw is a top-level issue bd-new minted in this store: `bd show BU-2zw --json` reads
-  // title "npm audit: 10 dev-only advisories under markdownlint-cli2" and display id
-  // BU-npm-audit-10-dev-only-advisories-2zw. Planned as if just created, it must get that id.
   const withoutOwnId = (id: string) => allIssues().filter((issue) => issue.id !== id);
 
   test("should copy the hash suffix bd-new copies when a top-level issue is created", () => {

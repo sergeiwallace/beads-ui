@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   type DecisionOptionsOutput,
@@ -8,9 +6,6 @@ import {
   optionsForItem,
   parseDecisionOptions,
 } from "../src/index.js";
-
-// T-W1.2 of the web app design (D-2): option cards from `held_cli.py options` stdout, in the
-// shape that command prints: version 1, one entry per review item, its decisions or its error.
 
 const ITEM = "/repos/ai-harness/docs/held/host-c--session-a/2026-11-09-web-app.md";
 const OTHER = "/repos/ai-harness/docs/held/host-c--session-a/2026-11-09-notes.md";

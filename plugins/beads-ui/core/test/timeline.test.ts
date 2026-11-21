@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   barCells,
@@ -11,9 +9,6 @@ import {
   timelineView,
 } from "../src/index.js";
 import { storeStatuses } from "./helpers.js";
-
-// T-2B.9: the Timeline's view model. The pane draws it as Raster bars in the terminal and Text
-// rows elsewhere; hooks/timeline.test.ts drives that through the pane.
 
 const issue = (id: string, fields: Partial<Issue> = {}): Issue => ({
   id,

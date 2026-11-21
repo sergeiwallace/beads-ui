@@ -116,8 +116,6 @@ function Card({ card, status, rank, selected, index, props }: CardProps) {
       data-drop-edge={edge ?? undefined}
       aria-current={selected ? "true" : undefined}
       aria-label={`${card.displayId} ${card.title}`}
-      // Selection follows the pointer and the focus of the card's link or button, so the
-      // palette's Move to acts on the card last touched; the link itself opens the detail.
       onPointerDown={() => props.onSelect(card.id)}
       onFocus={() => props.onSelect(card.id)}
     >
@@ -135,7 +133,6 @@ function Card({ card, status, rank, selected, index, props }: CardProps) {
       <a
         className="bu-card-title"
         href={props.issueHref(card.id)}
-        // The card is the drag source; a link's own native drag would carry its URL instead.
         draggable={false}
         onClick={(event) => {
           if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;

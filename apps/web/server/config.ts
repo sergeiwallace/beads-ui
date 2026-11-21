@@ -160,8 +160,6 @@ export async function readWebConfig(repoRoot: string, env: ConfigEnv): Promise<W
   if (probeInterval.seconds !== undefined) {
     config.serviceProbeIntervalSeconds = probeInterval.seconds;
   }
-  // The owner picker's rule and the held tool come from the user's file, as `[queue]` does: a
-  // repository's own file must not widen who may receive its tasks or name a command to run.
   const userText = user.kind === "file" ? user.text : undefined;
   const handoff = resolveHandoff(userText);
   config.problems.push(...handoff.problems);

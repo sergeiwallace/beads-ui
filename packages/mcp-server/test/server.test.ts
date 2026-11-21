@@ -4,9 +4,6 @@ import { repoName } from "../../../apps/web/test/auth-env.ts";
 import { BOARD_URI, CONFIRM_TOOL, DRAFT_TOOL, SEND_TOOL } from "../src/tools/dispatch.ts";
 import { type Connected, connect, startWorld, textOf, type World } from "./harness.ts";
 
-// beads-ui design T-4.1, through the server started over stdio: the tools and the board resource
-// it registers, and how it degrades on a host that does not advertise the MCP Apps capability.
-
 const TASK_TOOLS = [
   "beads_list",
   "beads_show",

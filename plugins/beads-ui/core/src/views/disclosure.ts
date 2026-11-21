@@ -1,7 +1,3 @@
-// The band's disclosure levels (D-36, T-2C.2): the summary line, whose counts are buttons; a
-// count's task rows under its line, band.rows at a time; and the overview of the views the band
-// draws. Pure: a reducer over the person's presses, and the layouts the band draws from it.
-
 import { glyphOf } from "../glyphs.js";
 import type { GutterCell } from "../indicators.js";
 import { buttonWidth, PRESS_FRAME_COLUMNS, textWidth } from "../layout.js";
@@ -170,8 +166,6 @@ export function disclosureOf(value: unknown): Disclosure | undefined {
   };
 }
 
-// ---- the summary line ---------------------------------------------------------------------
-
 /** The statuses a count's rows are of, in the Tasks view's order, the done count last. */
 export const ROW_GROUPS = ["in_progress", "blocked", "open", "done"] as const;
 export type RowGroup = (typeof ROW_GROUPS)[number];
@@ -262,8 +256,6 @@ export function summaryPieces(line: BandLine, columns: number): SummaryPiece[] {
   out.push({ kind: "text", segment: { text: more } });
   return out;
 }
-
-// ---- a count's rows -----------------------------------------------------------------------
 
 /** A task the band read for a count's rows: the issue and the store it is in. */
 export interface BandTask {

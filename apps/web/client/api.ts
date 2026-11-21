@@ -14,8 +14,6 @@ import type {
   DispatchStatus,
   DispatchSummary,
   HandoffView,
-  // A held item's detail read failure (server/held-detail.ts); the Review read's own failure
-  // shape, from server/dispatch.ts, is HeldReadFailure below.
   HeldReadFailure as HeldDetailFailure,
   HeldItemSummary,
   PromptDraft,
@@ -145,8 +143,6 @@ export interface MovePayload {
   notice?: string;
 }
 
-// Every API path is relative to the app's base, so the server's base path moves them all at once.
-
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
@@ -175,7 +171,6 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
-// Every write carries X-Beads-UI, which a cross-site form cannot send (web app design D-17).
 const WRITE_HEADERS = { "content-type": "application/json", "x-beads-ui": "1" };
 
 const post = <T>(path: string, body: unknown): Promise<T> =>
@@ -207,7 +202,6 @@ export const api = {
       aboveStore: above?.repository,
       belowStore: below?.repository,
     }),
-  // Phase 3's remaining views read one store: the one chosen, or the only one open.
   roadmap: (store?: string) => call<RoadmapPayload>(`roadmap${storeQuery(store)}`),
   analytics: (weeks: number, sprint?: string, store?: string) =>
     call<AnalyticsPayload>(
@@ -218,7 +212,6 @@ export const api = {
       })}`,
     ),
   sessions: (store?: string) => call<SessionsPayload>(`sessions${storeQuery(store)}`),
-  // Phase W1: sprint moves, the owner picker, list reorder, the Queue view and held-item detail.
   sprint: (ref: IssueRef, to: string, from: string, shown: string) =>
     post<{ id: string; sprint: string }>(issuePath(ref, "/sprint"), { to, from, shown }),
   /**
@@ -246,8 +239,6 @@ export const api = {
     call<QueueViewPayload>(`queue-view${blocked ? "?blocked=1" : ""}`),
   heldItem: (path: string) => call<HeldItemPayload>(`held/item?path=${encodeURIComponent(path)}`),
 };
-
-// The Review queue's and the composer's routes (server/dispatch.ts), in their own block.
 
 /** A held read that did not succeed, named with its exit code. */
 export interface HeldReadFailure {

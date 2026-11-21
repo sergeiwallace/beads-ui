@@ -1,12 +1,6 @@
 import type { OptionCard as Card, OptionChoice } from "@beads-ui/core";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 
-// One held decision as an option card (web app design D-2, D-3, T-W1.2): each option from the
-// structured-options command with its label, the recommended one preselected and marked, and the
-// card focused when it is shown. Enter chooses the highlighted option (the recommended one until
-// the arrows move it), a number key chooses that option, each with that one key. Inside a text
-// field neither does anything, so the key types.
-
 export interface OptionCardProps {
   card: Card;
   /** The option chosen for this decision, while the item's answer waits to be written. */

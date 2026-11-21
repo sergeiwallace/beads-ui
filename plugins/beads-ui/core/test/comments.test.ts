@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   COMMENTS_MAX_CHARS,
@@ -39,7 +37,6 @@ describe("commentsView", () => {
 
     expect(view.rows).toHaveLength(6);
     const total = view.rows.reduce((sum, row) => sum + row.text.length, 0);
-    // Past the budget, a body is only its note: about 60 characters for each of the two oldest.
     expect(total).toBeLessThanOrEqual(COMMENTS_MAX_CHARS + 200);
     expect(view.rows[5]?.text).toBe(big);
     expect(view.rows[0]?.text).toContain("[9000 characters; read it whole with bd comments BU-x]");

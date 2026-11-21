@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   parseBdCount,
@@ -109,8 +107,6 @@ describe("parseBdDeletePreview", () => {
     });
   });
 
-  // A malformed preview must never parse, so a missing or non-boolean cascade cannot read as a
-  // plain delete and skip the typed-id confirmation.
   const malformed: [string, Record<string, unknown>, string][] = [
     ["cascade is missing", { cascade: undefined }, "$.cascade"],
     ["cascade is a string", { cascade: "true" }, "$.cascade"],

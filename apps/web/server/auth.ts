@@ -5,8 +5,6 @@ import { dirname, join } from "node:path";
 import { parseToml, type TomlTable, type TomlValue } from "@beads-ui/core";
 import { type ConfigEnv, readUserConfig, serverStateDir } from "./config.ts";
 
-// Request authentication and write authorization (web app design D-17, T-W0.1).
-
 export const AUTH_TABLE = "auth";
 /** A one-time sign-in code works for five minutes. */
 export const CODE_TTL_MS = 5 * 60_000;
@@ -562,7 +560,6 @@ export class AuthLayer {
   #saveSessions(): Promise<boolean> {
     const entries = Array.from(this.#sessions, ([hash, session]) => [hash, session.saved]);
     const content = `${JSON.stringify(Object.fromEntries(entries))}\n`;
-    // Finish each replacement before the next so an older snapshot cannot overwrite a newer one.
     this.#saving = this.#saving.then(async () => {
       try {
         await replaceCredential(this.#sessionFile, content);
@@ -680,7 +677,6 @@ export class AuthLayer {
     const isApi = url.pathname === "/api" || url.pathname.startsWith("/api/");
     const refuse = (status: number, errorKind: string, message: string, extra = {}) => {
       if (kind === "receiver") {
-        // Every receiver refusal is the same empty 404, whatever its cause (Receiver API).
         response.writeHead(404, { "cache-control": "no-store", "content-length": 0 });
         response.end();
       } else if (isApi) {

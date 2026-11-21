@@ -1,9 +1,3 @@
-// The server's dispatch service (web app design D-14, D-20, T-W0.2, T-W0.3, T-W0.4): the one
-// dispatch store the receiver API serves, chosen by `[queue] url`; the signing key `[auth]
-// signing_key` names, read at call time; the files this host publishes for receivers and other
-// servers (its public signing keys as a trusted-keys map, and its repository allowlist); and the
-// sweep that expires a dispatch, tombstoning its body.
-
 import { createPublicKey, generateKeyPairSync, randomBytes } from "node:crypto";
 import { lstat, mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";

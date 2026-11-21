@@ -13,7 +13,6 @@ test.describe("manual rank, on by default in the web app", () => {
     await page.goto(app.url);
     await expect.poll(() => columnIds(page, "open")).toEqual([a, b, c]);
 
-    // Onto the top edge of the second card: the slot between the first and the second.
     const write = written(page, c, "rank");
     await card(page, c).dragTo(card(page, b), { targetPosition: { x: 20, y: 4 } });
 
@@ -23,8 +22,6 @@ test.describe("manual rank, on by default in the web app", () => {
     expect(typeof rank === "string" && "a0" < rank && rank < "a1").toBe(true);
     expect((await app.store.show(a)).metadata?.rank).toBe("a0");
     expect((await app.store.show(b)).metadata?.rank).toBe("a1");
-    // The reloaded page draws the column only once its board read lands, which on a loaded host
-    // can take longer than the poll below allows; wait for that read, as viewRead does elsewhere.
     const reread = page.waitForResponse(
       (response) => new URL(response.url()).pathname === "/api/board",
       { timeout: 60_000 },

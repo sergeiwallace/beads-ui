@@ -2,9 +2,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createBdClient } from "../src/index.ts";
 import { type StubBd, stubBd } from "./stub.ts";
 
-// bd's force path for an abandoned claim (web app design T-W2.2): `--force` beside the status
-// guard, and refused before bd runs beside the assignee guard, which bd itself refuses.
-
 const stubs: StubBd[] = [];
 afterEach(async () => {
   for (const stub of stubs.splice(0)) await stub.remove();

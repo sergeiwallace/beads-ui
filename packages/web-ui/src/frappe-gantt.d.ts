@@ -1,4 +1,3 @@
-// Frappe Gantt 1.2.2 ships no types; this declares the part the Roadmap uses (src/index.js).
 declare module "frappe-gantt" {
   export interface GanttTask {
     id: string;

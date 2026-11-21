@@ -115,7 +115,6 @@ async function handleApi(
       return;
     }
   }
-  // A write moves its store's head before the next poll sees it, so no kept read survives it.
   if (match.route.method === "POST") options.context.feed?.forget();
   let reply: Awaited<ReturnType<Route["handle"]>>;
   try {
@@ -131,7 +130,6 @@ async function handleApi(
       message: error.message,
     });
   }
-  // And after it: a board read that ran beside the write may have kept the state before it.
   if (match.route.method === "POST") options.context.feed?.forget();
   if (caller.kind === "receiver" && reply.status >= 400) {
     sendEmpty(response, reply.status >= 500 ? reply.status : 404);
@@ -175,12 +173,8 @@ export function createApp(options: AppOptions): App {
   const basePath = options.basePath ?? "/";
   const handling = new Set<Promise<void>>();
   const streams = new Set<() => void>();
-  // Set once the server stops: a browser's EventSource reconnects the moment its stream ends, and
-  // a stream opened then would hold the stop open until its connection is cut.
   let closing = false;
   const serve = async (request: IncomingMessage, response: ServerResponse) => {
-    // app-portal's member header set and the Content Security Policy (T-W1.7), on every response
-    // before any handler writes: /healthz, the API, the shell and every refusal alike.
     setMemberHeaders(response);
     applyContentSecurityPolicy(response);
     const url = new URL(request.url ?? "/", "http://127.0.0.1");

@@ -1,10 +1,3 @@
-// A drawn tree as text lines, for the design doc's before-and-after captures (D-43) and the
-// tests that pin a line's look. The kit hands back the element tree, not the terminal's frame,
-// so this lays it out the way tests/width.ts measures it: a column stacks its children, a row
-// sets them side by side with their gaps and gives the room left to a `flexGrow` child, a
-// border frames its box, and a plain Button draws `{hotkey}: {label}` (a framed one
-// `[ {label} ]`). Colour, hover and wrapping are not drawn.
-
 import { decodeRasterCells, RASTER_DEFAULT_COLOR } from "../../core/src/index.js";
 
 interface DrawnNode {
@@ -98,7 +91,6 @@ function box(props: Record<string, unknown>, children: unknown[], outer: number)
     const grower = parts.findIndex((part) => part.grow);
     if (grower >= 0 && used < inner) widths[grower] = (widths[grower] ?? 0) + inner - used;
     const height = Math.max(0, ...parts.map((part) => part.lines.length));
-    // A row is cut at its box's inner width, as the engine cuts a truncated Text in it.
     lines = Array.from({ length: height }, (_, row) =>
       cut(
         parts.map((part, i) => pad(part.lines[row] ?? "", widths[i] ?? 0)).join(" ".repeat(gap)),

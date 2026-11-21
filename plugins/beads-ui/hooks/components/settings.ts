@@ -7,8 +7,6 @@ import { emptyState, stateBox } from "./frame.js";
 import { weight } from "./look.js";
 import { lineWindow, textLine, windowed } from "./window.js";
 
-// The Settings view (T-2B.8, D-35, T-2C.8), drawn from core's SettingsView on either surface.
-
 export interface SettingsHandlers {
   shown: (text: string) => void;
   choose: (key: string, value: string) => void;

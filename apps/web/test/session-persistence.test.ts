@@ -183,7 +183,6 @@ describe("browser sessions across server restarts", () => {
 
   it("should replace the file at most once a minute for session activity", async () => {
     const cookie = await signIn(running());
-    // An atomic replacement changes the inode, even if the file size and mtime match.
     let inode = (await stat(stateFile)).ino;
     let writes = 0;
     for (const seconds of [10, 20, 59, 60, 61, 119, 120]) {

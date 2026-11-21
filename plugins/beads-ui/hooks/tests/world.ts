@@ -13,10 +13,6 @@ import show5 from "../../core/test/fixtures/bd-show-BU-mg2.3.5.json.js";
 import statuses from "../../core/test/fixtures/bd-statuses.json.js";
 import { UNASKED_COLUMNS } from "../pane.js";
 
-// The world beneath the mod in the hooks tests: a session in this repository, whose bd answers
-// from the real output of its own Beads store (the core's fixtures, each captured read-only with
-// bd 1.3.1), and an engine that keeps what the mod asked of it.
-
 export const CWD = "/work/beads-ui";
 export const SESSION = { surface: "terminal", isInteractive: true, cwd: CWD } as const;
 export const SHOW = {
@@ -220,8 +216,6 @@ export function world(on: On, options: WorldOptions = {}) {
     return { value: { command: e.name } };
   });
   const clock = mock.clock(on, { now: START_MS });
-  // The plugin store in memory, as mock.store keeps it, but readable by the test: what a pane
-  // reopened in a later session would read back. A value is kept as its JSON, as the engine's is.
   const store = new Map<string, unknown>(Object.entries(options.stored ?? {}));
   on("store.get", (_engine, e) => ({ value: store.get(e.key) }));
   on("store.set", (_engine, e) => {
@@ -235,9 +229,7 @@ export function world(on: On, options: WorldOptions = {}) {
   });
   on("store.keys", () => ({ value: [...store.keys()] }));
   mock.env(on, options.env ?? { HOME: "/home/me" });
-  // The files the session reads and writes, by absolute path; a write is read back.
   const files = new Map<string, string>(Object.entries(options.files ?? {}));
-  // The refresher renews at START_MS and every RENEW_EVERY_MS after, until it is killed.
   let killedAt: number | undefined;
   const renewedAt = (now: number) => {
     const until = killedAt ?? now;
@@ -316,7 +308,6 @@ export function world(on: On, options: WorldOptions = {}) {
     if (options.openAnswer !== undefined) return { value: options.openAnswer };
     const columns = options.columns ?? VIEWPORT.columns;
     if (e.focus !== true && columns < UNASKED_COLUMNS) {
-      // Claude Code 2.1.310's own answer, read from its binary.
       const reason = `unasked below ${UNASKED_COLUMNS} columns (${columns} now): placed when the person opens it, or when the terminal is widened to ${UNASKED_COLUMNS} columns`;
       return { value: { isPlaced: false, reason } };
     }
@@ -335,8 +326,6 @@ export function world(on: On, options: WorldOptions = {}) {
     return {};
   });
   on("ui.render", { component: "AbovePrompt" }, () => ({ type: "Box", children: [] }));
-  // The test kit answers no blit (Claude Code 2.1.310): the world keeps each one, so a test can
-  // show the band sends none.
   const blits: Args<"ui.blit">[] = [];
   on("ui.blit", (_engine, e) => {
     blits.push(e);

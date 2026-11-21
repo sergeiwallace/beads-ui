@@ -1,10 +1,5 @@
 import type { DispatchStatus, Indicator } from "./types.ts";
 
-// The three indicators beside the composer (web app design D-5, T-W1.3): whether the session is
-// live, where the dispatch is, and what the session said back. Each is its own element naming its
-// own source, so "the session is live" never reads as "it got my prompt". Below 600 px the
-// stylesheet draws them as one segmented chip, each segment still labelled.
-
 const NAMES = [
   ["liveness", "Session"],
   ["delivery", "Delivery"],

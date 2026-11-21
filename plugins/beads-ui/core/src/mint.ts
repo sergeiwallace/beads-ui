@@ -1,8 +1,3 @@
-// Display-id minting (D-9), a port of ai-harness scripts/bd_new.py's slugify_title,
-// mint_display_id and display_id_from_primary. The two implementations must agree;
-// test/mint.test.ts pins this one against ids bd-new minted in this repository's own store.
-// bd-new's per-machine budget overrides (AIH_SLUG_BODY_MAX_CHARS and _CHILD) are environment
-// reads; core does no reads, so a surface reads the two strings and passes slugBudgets' result.
 import { issueIdArg } from "./argv.js";
 import type { BdArgv, Issue, RandomSource, Result } from "./model.js";
 
@@ -66,8 +61,6 @@ const SLUG_STOPWORDS = new Set([
   "when",
 ]);
 
-// Python's str.isspace() over ASCII (tab to carriage return, 0x1c to 0x1f, space), which is what
-// bd-new's rstrip() and split() use.
 function isPySpace(ch: string): boolean {
   const code = ch.charCodeAt(0);
   return (code >= 0x09 && code <= 0x0d) || (code >= 0x1c && code <= 0x20);
@@ -84,7 +77,6 @@ function pyWordCount(text: string): number {
   return count;
 }
 
-// NFKD, then drop every non-ASCII code unit: bd-new's .encode("ascii", "ignore").
 function toAscii(text: string): string {
   let out = "";
   for (const ch of text.normalize("NFKD")) if (ch.charCodeAt(0) < 0x80) out += ch;
@@ -159,9 +151,6 @@ export const DEFAULT_SLUG_BUDGETS: SlugBudgets = {
   child: SLUG_BODY_MAX_CHARS_CHILD,
 };
 
-// What Python's int() takes from a string: surrounding whitespace, a sign, and any Unicode decimal
-// digits (Nd) with single underscores between them. Its whitespace, measured over every code
-// point with Python 3.14 (Unicode 16): JavaScript's \s with U+0085 and without U+FEFF.
 const PY_SPACE =
   "[\\t\\n\\v\\f\\r \\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]";
 const PY_INT = new RegExp(`^${PY_SPACE}*([+-]?\\p{Nd}+(?:_\\p{Nd}+)*)${PY_SPACE}*$`, "u");

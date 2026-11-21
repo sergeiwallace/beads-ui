@@ -1,6 +1,3 @@
-// The pane's layout tiers (T-1B.9, the first step of R-24): what a drawn row costs in terminal
-// columns, and how controls are labelled and packed so no row passes the pane's width.
-
 /** `wide` from 72 columns, `medium` from 48 to 71, `narrow` below 48 (the tiers T-2B.1 names). */
 export type Tier = "wide" | "medium" | "narrow";
 

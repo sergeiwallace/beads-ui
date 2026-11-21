@@ -3,10 +3,6 @@ import type { RenderElement, RenderNode } from "claude-code";
 import type { Surface } from "./adapters.js";
 import { lineWindow, textLine, textLines, windowed } from "./window.js";
 
-// The help (T-1.1, D-35, T-2C.8): the keys, the quick-add and filter grammars, the indicators'
-// legend and how to focus the pane, drawn from one list of parts on either surface: framed on
-// the pane, as lines in the band's window.
-
 /** One part of the help: a title, a line, a line in its own keyed box, or a code block. */
 export type HelpPart =
   | { kind: "title"; text: string }

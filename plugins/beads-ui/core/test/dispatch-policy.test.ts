@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   CARRIERS,
@@ -14,9 +12,6 @@ import {
   resolveDispatchPolicy,
   rungSummary,
 } from "../src/index.js";
-
-// T-W2.1 and T-W2.3 of the web app design (D-6, D-7, D-10, § Configuration): the policy one
-// dispatch's delivery follows, read from beads-ui.toml and the target host's wake policy.
 
 const ON = { state: "on" } as const;
 const OFF = { state: "off" } as const;

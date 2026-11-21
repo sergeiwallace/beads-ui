@@ -1,9 +1,5 @@
 import type { Result } from "./model.js";
 
-// The host refresher's files and timings (D-26, T-1B.4), shared by the refresher process
-// (plugins/beads-ui/refresher/refresher.mjs, which Node loads with its type stripping, so this file
-// keeps to erasable syntax) and by each session's band. Every function takes the time it needs.
-
 /** The refresher counts once a minute (T-1B.4: no sooner than every 50 s, no later than 90). */
 export const BEAT_MS = 60_000;
 /** A snapshot older than this is stale (T-1B.4): its refresher is taken to have stopped. */
@@ -144,7 +140,6 @@ export function parseGroupedCount(text: string): Result<Record<string, number>, 
   }
   if (!isRecord(json)) return { ok: false, error: "bd count answered no object" };
   const counts: Record<string, number> = {};
-  // bd leaves `groups` out when nothing matched.
   const groups = json.groups ?? [];
   if (!Array.isArray(groups)) return { ok: false, error: "bd count's groups is not a list" };
   for (const group of groups) {
@@ -350,7 +345,6 @@ export function boardRow(row: unknown): Record<string, unknown> | undefined {
   for (const field of BOARD_FIELDS) {
     if (row[field] !== undefined && row[field] !== null) kept[field] = row[field];
   }
-  // The blocked indicator's `blocks` dependencies (D-41), each cut to its target and type.
   const blocks = Array.isArray(row.dependencies)
     ? row.dependencies.flatMap((dep) =>
         isRecord(dep) && dep.type === "blocks" && typeof dep.depends_on_id === "string"
@@ -642,7 +636,6 @@ export function supervise(options: {
   const { live, running, outdated, lease, heldBy, nowMs, startFailed } = options;
   const expired = lease === undefined || nowMs - lease.at >= LEASE_TTL_MS;
   const free = expired || lease.token === heldBy;
-  // A failed replacing start is tried again once its lease expires, as any failed start is.
   if (running && (!outdated || (startFailed && !expired))) {
     return live ? { kind: "snapshot" } : { kind: "direct" };
   }

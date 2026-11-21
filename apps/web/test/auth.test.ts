@@ -21,8 +21,6 @@ import {
 } from "./auth-env.ts";
 import { createStore, type TestStore } from "./store.ts";
 
-// T-W0.1: every criterion through a real request to the running server, or through the CLI.
-
 /** Routes the receiver, MCP and dispatch legs will register; here they only name their caller. */
 const PROBE_ROUTES: Route[] = [
   {

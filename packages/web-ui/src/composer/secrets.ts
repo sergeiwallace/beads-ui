@@ -30,8 +30,6 @@ const RULES: Rule[] = [
   { kind: "AWS access key id", pattern: /\b(?:AKIA|ASIA|ABIA|ACCA)[0-9A-Z]{16}\b/g },
   { kind: "GitHub token", pattern: /\bgh[pousr]_[A-Za-z0-9]{16,}\b/g },
   { kind: "GitHub fine-grained token", pattern: /\bgithub_pat_[A-Za-z0-9_]{22,}\b/g },
-  // Anthropic before OpenAI: `sk-ant-...` satisfies both shapes, and the rule
-  // listed first wins the overlap, so the more specific one has to come first.
   { kind: "Anthropic API key", pattern: /\bsk-ant-[A-Za-z0-9_-]{20,}\b/g },
   { kind: "OpenAI API key", pattern: /\bsk-(?:proj-|svcacct-|admin-)?[A-Za-z0-9_-]{20,}\b/g },
   { kind: "Slack token", pattern: /\bxox[abprs]-[A-Za-z0-9-]{10,}\b/g },
@@ -44,8 +42,6 @@ const RULES: Rule[] = [
   { kind: "npm token", pattern: /\bnpm_[A-Za-z0-9]{36}\b/g },
   { kind: "PyPI token", pattern: /\bpypi-[A-Za-z0-9_-]{32,}\b/g },
   {
-    // A credential-looking assignment: a name whose own words claim it is a
-    // secret, with a long opaque value attached.
     kind: "credential assignment",
     pattern:
       /\b[A-Za-z0-9_]*(?:SECRET|PASSWORD|PASSWD|API[_-]?KEY|ACCESS[_-]?TOKEN|AUTH[_-]?TOKEN|PRIVATE[_-]?KEY)[A-Za-z0-9_]*\s*[:=]\s*["']?([A-Za-z0-9/+=_.-]{12,})["']?/gi,
@@ -68,25 +64,14 @@ function positionOf(text: string, index: number): { line: number; column: number
 export function findSecrets(text: string): SecretFinding[] {
   const findings: (SecretFinding & { rule: number })[] = [];
   for (const [rule, { kind, pattern }] of RULES.entries()) {
-    // Each rule's RegExp is module-level and stateful (/g keeps lastIndex), so it
-    // must be reset or the second call over the same text starts mid-string and
-    // silently finds nothing.
     pattern.lastIndex = 0;
     for (let match = pattern.exec(text); match !== null; match = pattern.exec(text)) {
-      // Group 1, when a rule declares one, is the value rather than the whole
-      // assignment: naming `PASSWORD = hunter2hunter2` at the `P` would point at
-      // the part that is not the secret.
       const token = match[1] ?? match[0];
       const index = match[1] === undefined ? match.index : match.index + match[0].indexOf(match[1]);
       findings.push({ kind, token, index, rule, ...positionOf(text, index) });
       if (match[0].length === 0) pattern.lastIndex += 1;
     }
   }
-  // One token can satisfy two shapes (`sk-ant-...` is both an Anthropic key and
-  // the generic `sk-` shape; a `TOKEN=ghp_...` line is both an assignment and a
-  // GitHub token), and reporting it twice would name two positions for one
-  // mistake. Keep the earliest finding, breaking a tie on rule order -- the more
-  // specific rule is listed first -- and drop anything overlapping it.
   const ordered = findings.sort(
     (left, right) => left.index - right.index || left.rule - right.rule,
   );

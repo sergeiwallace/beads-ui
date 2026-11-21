@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   BLOCK_MAX_CHARS,
@@ -78,7 +76,6 @@ describe("boardView with a sort and a card budget", () => {
     expect(open()).not.toEqual(byCreated);
   });
 
-  // A budget of 20 cards with every other cost zero, so the arithmetic below is in cards.
   const LIMIT: BoardPageLimit = {
     perCell: 12,
     minPerCell: 1,
@@ -145,7 +142,6 @@ describe("boardView with a sort and a card budget", () => {
   });
 
   test("should split the swimlanes into lane pages that fit when one card per cell is over the budget", () => {
-    // 29 assignees, an odd count, so every lane holds both open and closed cards: two cells each.
     const issues = many(300, 29);
 
     const { first, seen, drawnMost } = walk(issues, { swimlane: "assignee" });
@@ -156,7 +152,6 @@ describe("boardView with a sort and a card budget", () => {
   });
 
   test("should split one lane into column windows that fit when one card per column is over the budget", () => {
-    // 30 custom statuses beside the store's own, two cards each: 30 cards at one per cell.
     const custom = Array.from({ length: 30 }, (_, i) => ({
       name: `custom-${i}`,
       category: "wip" as const,

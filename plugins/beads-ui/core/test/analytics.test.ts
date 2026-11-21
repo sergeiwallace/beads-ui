@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   analyticsView,
@@ -11,11 +9,6 @@ import {
   statusChanges,
 } from "../src/index.js";
 import { storeStatuses, unwrap } from "./helpers.js";
-
-// T-3.3: "When Analytics renders, the system shall draw throughput, cycle time with a rolling
-// average, cumulative flow, a count-based sprint burndown and aging work in progress from bd
-// history --events." Each event list below is `bd history <id> --events --json` as bd 1.3.4
-// writes it: newest first, a status move's old value the issue's snapshot.
 
 const statuses = storeStatuses();
 
@@ -102,7 +95,6 @@ describe("an issue's status changes from bd history --events", () => {
 
   test("should open first and end on the issue's own status when bd lists one second's events out of order", () => {
     const fields = issue("BU-3", { status: "closed", closedAt: "2026-11-03T09:00:00Z" });
-    // Created and closed in the same second, listed as if the close came first.
     const events = unwrap(
       parseBdHistoryEvents(
         JSON.stringify([
@@ -129,7 +121,6 @@ describe("an issue's status changes from bd history --events", () => {
       "open",
       "closed",
     ]);
-    // A close and a reopen inside one second, listed reopen-last: the issue is closed now.
     const raced = unwrap(
       parseBdHistoryEvents(
         JSON.stringify(
@@ -193,7 +184,6 @@ describe("Analytics over the events (T-3.3)", () => {
       ["2026-10-27T10:00:00Z", "status_changed", "in_progress"],
       ["2026-11-02T10:00:00Z", "closed"],
     ]),
-    // Closed straight from open: in throughput, never in cycle time.
     flow(issue("BU-c", { status: "closed" }), [
       ["2026-11-03T09:00:00Z", "created"],
       ["2026-11-04T09:00:00Z", "closed"],
@@ -302,7 +292,6 @@ describe("Analytics over the events (T-3.3)", () => {
   });
 
   test("should burn down the members given apart, and count none of them in the cumulative flow", () => {
-    // Done before a one-week window: in the burndown, never on top of the done floor.
     const early = flow(issue("BU-m1", { labels: ["sprint:9"], status: "closed" }), [
       ["2026-10-20T09:00:00Z", "created"],
       ["2026-10-22T09:00:00Z", "closed"],

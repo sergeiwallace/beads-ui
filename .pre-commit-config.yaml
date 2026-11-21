@@ -31,11 +31,6 @@ repos:
         args: [--fix]
         exclude: ^(\.claude/|\.githooks/|node_modules/|docs/research/)
 
-  # ── Secrets: gitleaks (public repo; T-0.4) ──────────────────────────────
-  # Scans the staged diff and refuses the commit on any secret-pattern match.
-  # The golang hook builds gitleaks itself. plugins/beads-ui/test/hygiene.spec.ts (npm test)
-  # runs the gitleaks on PATH against a staged fabricated key and checks it is this rev, so a
-  # contributor installs it too (CONTRIBUTING.md, Setup).
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.30.1
     hooks:
@@ -60,18 +55,12 @@ repos:
         entry: python3 scripts/comment_ratchet.py
         language: system
 
-      # The repo's own gates (beads-ui design, Phase 0): Biome, the core purity
-      # gate and the core type check, then Vitest. Both need `npm ci` first and
-      # fail loudly without it.
       - id: npm-lint
         name: npm run lint (Biome, core purity gate, core type check)
         entry: npm run lint
         language: system
         pass_filenames: false
         always_run: true
-      # The two test hooks skip a commit whose staged paths are all docs/** or *.md
-      # (scripts/test-hook.mjs), and BEADS_UI_TEST_JOBS bounds how many test processes they
-      # start (default 1, at most 2; docs/procedures/web-run.md, Test it).
       - id: npm-test
         name: npm test (Vitest, then the mod's tests file by file)
         entry: node scripts/test-hook.mjs npm test
@@ -79,8 +68,6 @@ repos:
         pass_filenames: false
         always_run: true
 
-      # The mod's gates (beads-ui design, D-15 and T-0.3). Each needs `claude` on PATH
-      # and fails loudly without it.
       - id: plugin-validate-allowlist
         name: claude plugin validate --json plugins/beads-ui matches its allow-list
         entry: node scripts/check-plugin-allowlist.mjs plugins/beads-ui plugins/beads-ui/validate-allowlist.json
@@ -106,10 +93,6 @@ repos:
         pass_filenames: false
         always_run: true
 
-      # Every change to shipped plugin files raises the plugin's version above main's
-      # (feat -> minor, else patch; a major only with Sergei's trailer). When the
-      # pushed branch falls short this commits the raise itself and fails the push
-      # once; push again. docs/procedures/releasing.md.
       - id: plugin-version
         name: plugin version is above main's when shipped plugin files changed
         entry: node scripts/plugin-version.mjs pre-push
@@ -117,12 +100,6 @@ repos:
         stages: [pre-push]
         pass_filenames: false
         always_run: true
-      # docs-index-check REMOVED. The generated docs/README.md index had
-      # no reader -- nothing in the fleet consumed it -- yet the gate blocked every
-      # docs commit until it was regenerated. It also could not be regenerated
-      # correctly from a linked worktree, so the only in-worktree remedy
-      # was its own forbidden SKIP=docs-index-check bypass. Removed deliberately,
-      # gate-first: docs/README.md content is untouched by this change.
       - id: test-gate
         name: test gate (mise-aware, tech-stack auto-detect)
         entry: test-gate

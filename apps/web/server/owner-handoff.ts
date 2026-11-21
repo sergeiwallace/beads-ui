@@ -1,11 +1,3 @@
-// An owner change on a task a session has claimed (web app design D-9, T-W2.2): the fleet's
-// receiver-first handoff, driven from the web app. The holder's liveness comes from the fleet's own
-// liveness check, never a guess. A live holder gets a dispatch of kind handoff-request naming the
-// receiver and runs /handoff itself; the server never writes the assignee then. A holder proved
-// gone has its abandoned claim released through bd's documented force path, and the receiver gets
-// a git-inbox action carrying a pointer only. With liveness unknown nothing is written and the
-// page offers a retry. Each handoff's state is read back from the record that proves it.
-
 import { execFile } from "node:child_process";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -353,8 +345,6 @@ export async function claimedOwnerChange(
       },
     };
   }
-  // Proved gone: bd's force path, then a pointer to the receiver. bd takes --force with the status
-  // guard but not the assignee guard, so the holder is read again just before the write.
   const again = await store.bd.show(issue.id);
   if (again.kind !== "ok") return bdFailure("bd show", again);
   if (again.value.assignee !== issue.assignee || again.value.status !== CLAIMED) {
@@ -364,7 +354,6 @@ export async function claimedOwnerChange(
       message: `${issue.id}'s claim changed while its holder's liveness was read; nothing was written`,
     });
   }
-  // The record comes first, so a release whose send then fails is never left with no record.
   const record: Handoff = {
     task,
     holder: holder.value,
@@ -483,8 +472,6 @@ async function handoffState(
   const progress = progressOf(dispatch?.notes ?? []);
   const latest = (step: Progress["step"]) => progress.filter((one) => one.step === step).at(-1);
   const sourceOf = (one: Progress) => `${one.source} at ${one.at}: ${one.text}`;
-  // Complete only on the holder's verify receipt with exit 0 (T-W2.2); an acted receipt alone
-  // says the holder finished with the request, not that the handoff verified.
   const verified = latest("verified");
   if (verified?.exitCode === 0) {
     return { state: "handoff complete", source: sourceOf(verified), final: true };
@@ -507,8 +494,6 @@ async function handoffState(
   if (taken !== undefined) return { state: "taken", source: sourceOf(taken), final: false };
   const sent = latest("sent");
   if (sent !== undefined) return { state: "handoff sent", source: sourceOf(sent), final: false };
-  // This server may read the store before it is published (a shared database), so what it reads
-  // is only an observation; "handoff sent" comes from the holder's sent receipt alone.
   const read = store === undefined ? undefined : await store.bd.show(handoff.task.id);
   const observed =
     read?.kind === "ok" && read.value.assignee === handoff.receiver.session

@@ -21,9 +21,6 @@ import {
   world,
 } from "./tests/world.js";
 
-// T-1B.6 and D-27: how focus enters and leaves the pane, how it is shown and hidden, and the
-// help that says so.
-
 /** A store whose band draws, so its pane button is there to press. */
 const COUNTED = { script: countScript({ [CWD]: [{ status: "open" }] }) };
 
@@ -75,7 +72,6 @@ describe("the band's pane toggle (D-43, T-2C.14)", () => {
     expect((await ui.findAll({ type: "Button" })).map((one) => one.props.label)).not.toContain(
       "beads",
     );
-    // D-36: the counts are buttons, and the expand and overview controls come before the toggle.
     expect(await firstLine($)).toBe(
       `[bd] [t: 1 task] (◒[p: 0 in progress], ◉[b: 0 blocked], ◦[o: 1 open], ✓[d: 0 done last 24h]) * [e: ▾] [v: ◫] [${glyphOf("pane.open")}]`,
     );
@@ -153,7 +149,6 @@ describe("show and hide (T-1B.6)", () => {
     await ui.press({ key: BEADS_BUTTON_KEY });
     await w.clock.settle();
 
-    // The session start opened nothing (BU-ylx.10): the button's open is the only one.
     expect(w.opened.map((open) => [open.id, open.focus])).toEqual([[PANE_ID, true]]);
     expect(w.focused).toEqual([]);
   });
@@ -170,8 +165,6 @@ describe("show and hide (T-1B.6)", () => {
 
     expect(w.opened).toHaveLength(1);
     expect(w.closed).toEqual([]);
-    // The kit answers the mod's own $.ui.focus without raising it to the test's hooks (see
-    // pane.test.ts), so the call itself is checked in test/focus.spec.ts.
   });
 });
 
@@ -220,7 +213,6 @@ describe("the help (T-1B.6)", () => {
       expect(help).toContain(`${key}: ${command.label}`);
     }
     expect(help).toContain("a: Mine or All");
-    // The help draws the same lines README.md and mod-install.md carry (test/mod-install-doc).
     for (const line of USAGE_LINES) expect(help).toContain(line);
     expect(KEYBINDINGS_BLOCK).toContain('"meta+b": "command:bu"');
   });

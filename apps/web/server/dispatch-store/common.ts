@@ -1,8 +1,3 @@
-// What both dispatch stores share (web app design T-W0.3, T-W0.5): the body store, the append-only
-// line file, the write queue and the check every new dispatch passes. Bodies live one file each in
-// the server's state directory, apart from the records, so a backup of the records never holds a
-// body; the work queue's prompt row carries a pointer, never the text.
-
 import { mkdir, open, readdir, readFile, rename, truncate, unlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { type DispatchRecord, DispatchStoreError, type StoredDispatch } from "@beads-ui/core";

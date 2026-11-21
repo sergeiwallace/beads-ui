@@ -1,6 +1,3 @@
-// A module resolve hook for the host refresher. The core's relative imports name a `.js` file,
-// the form Claude Code's mod docs use and `claude plugin validate` type-checks; Node's type
-// stripping does not map that to the `.ts` source, so this hook does.
 const CORE = new URL("../core/src/", import.meta.url);
 
 export async function resolve(specifier, context, next) {

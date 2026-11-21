@@ -1,8 +1,5 @@
 import type { DeliveryState } from "@beads-ui/core";
 
-// What the server's dispatch routes answer (apps/web/server/dispatch.ts), as the composer and the
-// Review view draw it. Each indicator names the record its text comes from (web app design D-5).
-
 export interface DispatchTargetView {
   session: string;
   host: string;

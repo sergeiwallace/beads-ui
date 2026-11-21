@@ -1,8 +1,3 @@
-// A module resolve hook: `@beads-ui/core` and `@beads-ui/core/<file>` resolve to the core's
-// sources inside the plugin, as the path alias in tsconfig.base.json says for the type checker.
-// The core's own relative imports name a `.js` file, the form Claude Code's mod docs use and
-// `claude plugin validate` type-checks; Node's type stripping does not map that to the `.ts`
-// source, so this hook does.
 const CORE = new URL("../../../plugins/beads-ui/core/src/", import.meta.url);
 
 export async function resolve(specifier, context, next) {

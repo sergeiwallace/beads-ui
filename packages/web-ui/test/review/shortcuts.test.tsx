@@ -7,10 +7,6 @@ import { ShortcutSettings } from "../../src/review/ShortcutSettings.tsx";
 import { installClipboardStubs } from "../composer/harness.ts";
 import { actions, issue, keymapOf, loaded, taskOf } from "./fixtures.tsx";
 
-// T-W1.4 through the Review view and the shortcut setting: a mapped key outside a text field runs
-// its command; with single-key shortcuts off, single keys do nothing and modified ones still run;
-// a remap that gives one key to two commands is refused, naming both.
-
 const ENTRIES = [
   taskOf(issue("w-1", { status: "blocked", priority: 0 })),
   taskOf(issue("w-2", { status: "blocked", priority: 1 })),

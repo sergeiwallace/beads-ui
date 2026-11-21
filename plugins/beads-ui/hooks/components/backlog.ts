@@ -6,10 +6,6 @@ import { gutter } from "./indicators.js";
 import { colorOf, rowHover, weight } from "./look.js";
 import { lineWindow, windowed } from "./window.js";
 
-// The Backlog (T-1.2, T-2C.12, D-35, T-2C.8), drawn from core's BacklogView on either surface:
-// its count, one row an issue, its pager. Every row is one line, so on a windowed surface (the
-// band) the same lines draw in its window.
-
 const present = <T>(items: readonly (T | undefined | false)[]): T[] =>
   items.filter((item): item is T => item !== undefined && item !== false);
 

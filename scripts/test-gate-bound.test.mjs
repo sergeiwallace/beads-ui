@@ -1,6 +1,3 @@
-// The commit test gate's two limits, driven through their real entry points: the pre-commit
-// test hooks' docs-only path filter (scripts/test-hook.mjs) and the BEADS_UI_TEST_JOBS bound read
-// by turbo, every Vitest config, Playwright and the plugin-test loop (scripts/plugin-test.mjs).
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import {
@@ -21,9 +18,6 @@ const BIN = join(ROOT, "node_modules", ".bin");
 const scratch = mkdtempSync(join(tmpdir(), "test-gate-bound-"));
 after(() => rmSync(scratch, { recursive: true, force: true }));
 
-// Inside a git hook, git exports GIT_DIR, GIT_INDEX_FILE and friends; inherited, they point every
-// git call here at the repository being committed instead of the throwaway one. The bound itself
-// is set per case, never inherited from the shell running the suite.
 const inherited = Object.fromEntries(
   Object.entries(process.env).filter(
     ([key]) =>
@@ -60,7 +54,6 @@ function run(command, args, { cwd = ROOT, jobs } = {}) {
 }
 
 describe("the pre-commit test hooks' path filter", () => {
-  // The marker is built at run time so the hook's skip line, which names the command, never holds it.
   const SUITE = ["-e", "console.log(['SUITE', 'RAN'].join(' '))"];
 
   function repo() {
@@ -137,8 +130,6 @@ describe("the pre-commit test hooks' path filter", () => {
   });
 });
 
-// The highest number of overlapping start/end intervals in a log of `start <name>` and
-// `end <name>` lines.
 function peak(lines, startOf, endOf) {
   let now = 0;
   let max = 0;
@@ -150,8 +141,6 @@ function peak(lines, startOf, endOf) {
 }
 
 describe("turbo's concurrency", () => {
-  // Three packages whose tests each hold for a moment, run from the fixture's folder by the root
-  // test script's own turbo command.
   function turboCommand() {
     const script = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).scripts.test;
     const segment = script.split(" && ").find((part) => part.includes(" turbo "));
@@ -313,7 +302,6 @@ describe("broken", () => {
   const loop = (dir, jobs) =>
     run(process.execPath, [join(ROOT, "scripts", "plugin-test.mjs"), dir], { jobs });
 
-  // A file is in flight from its `run <file>` line to its `<file>:` result block.
   const inFlight = (stdout) =>
     peak(
       stdout.split("\n"),

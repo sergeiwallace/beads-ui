@@ -187,8 +187,6 @@ export class BandTally {
       const fileLease = dir === undefined ? undefined : await this.readLease(dir);
       const snapshot = dir === undefined ? undefined : await this.readSnapshot(dir, fileLease);
       const live = snapshotLive(snapshot, now);
-      // The sessions the registry holds live (D-42), this one with them: the agent glyph is
-      // dimmed for an agent row whose session is not among them.
       setLiveSessions(
         live && snapshot?.sessions !== undefined
           ? new Set([...snapshot.sessions, this.stores.sessionName ?? this.anonId])
@@ -221,10 +219,8 @@ export class BandTally {
         const stores = await this.seenWrite(held, settings, now, options.final === true);
         this.last = { reads, stores, source, readAt: snapshot.beatAt };
       }
-      // A start under way with no snapshot yet keeps whatever was drawn last.
       this.draw(settings);
     } catch {
-      // The engine refused a call (the session is ending): the last lines stay.
     } finally {
       this.refreshing = false;
       host.invalidate();
@@ -338,7 +334,6 @@ export class BandTally {
       return;
     }
     const readAt = clockStamp(last.readAt, new Date(last.readAt).getTimezoneOffset());
-    // The session's own edits: on its own line, never the firstmate's totals over every owner.
     const own = {
       unpublished: this.sync?.unpublished ?? 0,
       syncFailed: this.sync?.failed ?? false,
@@ -386,7 +381,6 @@ export class BandTally {
       ...(group === "done" ? { closedAfter: new Date(now - span).toISOString() } : {}),
     });
     const stores = unique(read.stores);
-    // In the line's store order, whichever read lands first, so equal tasks list the same way.
     const answers = await Promise.all(
       stores.map(async (store) => {
         const ran = await host.runIn(store.path, argv, COUNT_TIMEOUT_MS).catch(() => undefined);
@@ -487,8 +481,6 @@ export class BandTally {
       .then(leaseOf)
       .catch(() => undefined);
     if (taken?.token !== token) return { kind: "wait" } as const;
-    // The user's own beads-ui.toml, where the refresher reads `[review] command` at each beat
-    // (D-37); never a repository's.
     const config = userConfigPath({ xdgConfigHome: this.stores.xdgConfigHome, home });
     const argv = [
       "node",

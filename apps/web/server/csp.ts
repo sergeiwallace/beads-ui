@@ -21,9 +21,6 @@ export const CONTENT_SECURITY_POLICY = [
   "font-src 'self'",
   "connect-src 'self'",
   "object-src 'none'",
-  // 'self', not 'none': the shell carries `<base href="/beads/">` when the app is mounted under a
-  // base path (portal.ts), and the browser drops a <base> the policy refuses. app-portal's member
-  // helper sends `base-uri 'self'` too.
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",

@@ -2,12 +2,6 @@ import type { Page } from "@playwright/test";
 import { boardHtml } from "../../../packages/mcp-server/src/view.ts";
 import { expect, test } from "./fixtures.ts";
 
-// The MCP App's board view in a real browser (beads-ui design T-4.1 and T-4.2, web app design
-// Phase W4): the `ui://beads-ui/board` document runs in a sandboxed iframe under a minimal MCP
-// Apps host that answers the view's JSON-RPC over postMessage and records every request. A draft
-// the model asked for is shown with its Confirm control, a prompt the user types is confirmed in
-// the view before it is sent, and no write tool is called until the user confirms.
-
 interface HostLog {
   initialized: boolean;
   modes: string[];

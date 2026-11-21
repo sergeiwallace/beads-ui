@@ -25,7 +25,6 @@ const RUN_TIMEOUT_MS = 15_000;
 const messageOf = (reason: unknown): string =>
   reason instanceof Error ? reason.message : String(reason);
 
-// The event each phase's bd command answers with.
 function answerOf(phase: ConfirmPhase, result: ProcessRunResult): ConfirmEvent | undefined {
   const { exitCode, stdout, stderr } = result;
   const message = stderr.trim() || stdout.trim();

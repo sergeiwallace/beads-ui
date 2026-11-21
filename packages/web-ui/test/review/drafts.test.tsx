@@ -2,9 +2,6 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DraftList, type PromptDraft } from "../../src/review/DraftList.tsx";
 
-// Web app design Phase W4 through the rendered Drafts list: a prompt a model drafted through the
-// MCP server is shown with its text, and nothing is sent until the user presses Confirm.
-
 const DRAFT: PromptDraft = {
   id: "draft-0000000000000001",
   repo: "work",

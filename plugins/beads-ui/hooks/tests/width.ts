@@ -1,6 +1,3 @@
-// How wide a drawing is, for the reflow tests (T-1B.9). The test kit hands back the element tree,
-// not the terminal's frame, so this measures the tree the way Claude Code lays it out.
-
 interface DrawnNode {
   type?: string;
   props?: Record<string, unknown>;

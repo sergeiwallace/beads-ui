@@ -1,8 +1,3 @@
-// Analytics (T-3.3, R-9): throughput, cycle time with a rolling average, cumulative flow, a
-// count-based sprint burndown and aging work in progress, each read from the store's events
-// audit table (`bd history --events`, D-16). Pure: the surface supplies the issues, their events
-// and the time; the web app draws the charts.
-
 import type { HistoryEvent, Issue, Status, StatusCategory } from "./model.js";
 import { STATUS_CATEGORIES } from "./model.js";
 import type { SprintInfo } from "./sprint-view.js";
@@ -66,7 +61,6 @@ export function statusChanges(issue: Issue, events: readonly HistoryEvent[]): St
   const firstMove = ordered.find((entry) => entry.event.type === "status_changed");
   const initial = statusOfJson(firstMove?.event.oldValue) ?? "open";
   for (const { event, at } of ordered) {
-    // bd import keeps created_at but stamps the created event at import time.
     if (event.type === "created") {
       changes.push({ at: Math.min(at, time(issue.createdAt) ?? at), status: initial });
     } else if (event.type === "status_changed") {

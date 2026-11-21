@@ -12,8 +12,6 @@ import {
 } from "../../core/src/index.js";
 import type { Surface } from "./adapters.js";
 
-// The nav each surface draws (T-2B.1, D-35), from the view registry's entries on that surface.
-
 const navButton = (surface: Surface, item: NavItem, press: (item: NavItem) => void) =>
   surface.ui.Button({
     key: item.key,

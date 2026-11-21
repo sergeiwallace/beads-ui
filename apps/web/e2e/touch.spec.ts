@@ -1,6 +1,5 @@
 import { card, column, columnIds, expect, test, written } from "./fixtures.ts";
 
-// WCAG 2.2 2.5.7 Dragging Movements: every drag has a single-pointer alternative.
 test.describe("on a touch device", () => {
   test("should give every draggable card a Move to menu that moves it with taps", async ({
     app,

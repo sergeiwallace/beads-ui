@@ -14,8 +14,6 @@ import { emptyState } from "./frame.js";
 import { rowHover, weight } from "./look.js";
 import { lineWindow, textLine, windowed } from "./window.js";
 
-// The Timeline view (T-2B.9, D-35, T-2C.8), drawn from core's TimelineLayout on either surface.
-
 const present = <T>(items: readonly (T | undefined | false)[]): T[] =>
   items.filter((item): item is T => item !== undefined && item !== false);
 

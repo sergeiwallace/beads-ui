@@ -1,7 +1,3 @@
-// The Queue view's read (web app design T-W1.5): every open task the host's allowlist permits,
-// across every open store, in the work queue's order where `[queue] url` is set and otherwise by
-// priority, then rank, then age; with `blocked=1`, only blocked tasks, each with its blocker.
-
 import {
   type Issue,
   orderByPriorityRank,
@@ -101,7 +97,6 @@ function openBlockers(issue: Issue, byId: ReadonlyMap<string, Issue>, done: Read
     .filter((dependency) => dependency.type === "blocks")
     .flatMap((dependency) => {
       const blocker = byId.get(dependency.id);
-      // The board read holds every issue not closed: a blocker missing from it is closed.
       if (blocker === undefined || done.has(blocker.status)) return [];
       return [{ id: blocker.displayId ?? blocker.id, title: blocker.title }];
     });
@@ -192,8 +187,6 @@ export async function queueViewRoute(request: ApiRequest, context: ApiContext): 
   }
   if (blockedOnly) rows = rows.filter(({ row }) => row.blocked);
 
-  // A task in the blocked status with no open blocker says why through its newest comment, the
-  // reason bd-block stamps.
   await inTurn(
     rows
       .filter(({ row }) => row.blockers.length === 0 && row.status === "blocked")
@@ -209,7 +202,6 @@ export async function queueViewRoute(request: ApiRequest, context: ApiContext): 
     COMMENT_CONCURRENCY,
   );
 
-  // Every store's rows arrive in priority, rank, age order; merging keeps that order across stores.
   const rankOf = (issue: Issue) => {
     const read = readRank(issue);
     return read.kind === "ranked" ? read.key : undefined;

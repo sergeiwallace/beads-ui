@@ -10,9 +10,6 @@ import { BIN, hostConfig } from "./auth-env.ts";
 
 const exec = promisify(execFile);
 
-// The supervised run (web app design T-W3.2's deploy step): `beads-ui-web install-service`
-// writes the systemd user unit from the host's settings and reloads systemd.
-
 let root: string;
 let configHome: string;
 let fakeBin: string;
@@ -134,9 +131,6 @@ describe("beads-ui-web install-service", () => {
   });
 });
 
-// `install-service --enable`: the one command that takes a host from an ad hoc run to an enabled,
-// supervised service that answers. The fake systemctl starts nothing; a listener on a free port
-// plays the started server's /healthz.
 describe("beads-ui-web install-service --enable", () => {
   let listener: Server;
   let port: number;

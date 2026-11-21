@@ -14,11 +14,6 @@ import { Composer } from "../../src/composer/Composer.tsx";
 import type { Skill } from "../../src/composer/skills.ts";
 import { FAKE_AWS_KEY, installClipboardStubs, pasteIntoEditor, typeIntoEditor } from "./harness.ts";
 
-// The composer port's parity inventory (web app design T-W1.3, D-4): the same behaviours the ai-core
-// dashboard's composer tests pin, run against the ported component. Kept: the multi-line editor with
-// its submit and newline keys, the skill typeahead and the skill tokens' marking, the Markdown record,
-// the editor's accessible name and focus order, and the catalog's unknown and unavailable states.
-
 const CATALOG: Skill[] = [
   { name: "implement", source: "installed", description: "the dev cycle" },
   { name: "beads-task", source: "builtin", description: null },
@@ -309,7 +304,6 @@ describe("the editor's name, region and focus order", () => {
     expect(region.contains(input())).toBe(true);
     expect(region.classList.contains("composer-region")).toBe(true);
     expect(screen.getByLabelText("Prompt text")).toBe(input());
-    // The editor comes first in document order, so Tab reaches it before the action.
     expect(input().compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

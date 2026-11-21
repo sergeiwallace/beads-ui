@@ -53,7 +53,6 @@ it("should recover the live owned companion after its mutation worker dies befor
   let first: ReturnType<typeof spawn> | undefined;
   let mutationWorker: number | undefined;
   try {
-    // Real tmux does the split; only the first reply is held to expose the publication boundary.
     await writeFile(
       join(dir, "tmux"),
       `#!/usr/bin/python3
@@ -127,8 +126,6 @@ sys.stdout.buffer.write(result.stdout);sys.stderr.buffer.write(result.stderr);sy
         )
       ];
     expect(mutationWorker).toBeDefined();
-    // The real split reply is gated, so the mutator cannot publish or finish before release.
-    // Kill only the owned mutator; the tmux-owned companion must survive this crash.
     process.kill(mutationWorker ?? 0, "SIGKILL");
     await waitFor(async () => (await command(mutationWorker ?? 0)) === "");
     await writeFile(join(dir, "release"), "");

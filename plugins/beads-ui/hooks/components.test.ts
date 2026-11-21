@@ -33,11 +33,6 @@ import type { BandTally } from "./tally.js";
 import { test } from "./tests/kit.js";
 import { CWD } from "./tests/world.js";
 
-// D-35 and T-2C.1: the component layer. A component draws a core model through a surface's
-// adapter; these draw one model through the band's and the pane's and compare what each draws.
-// The elements are the kit's shape, `{ type, props }`, from constructors of the test's own, as
-// mouse.test.ts draws the pane; the hooks-entry tests of [surfaces] are surfaces.test.ts.
-
 interface Node {
   type: string;
   props: Record<string, unknown>;
@@ -73,7 +68,6 @@ const textOf = (tree: unknown): string[] => {
     else if (Array.isArray(value)) for (const child of value) walk(child);
     else if (isNode(value)) {
       if (value.type === "Button") out.push(String(value.props.label));
-      // A button's clickable brackets (T-2C.14) are its frame, not text; bareButtons checks them.
       if (String(value.props.key ?? "").startsWith(pressKey(""))) {
         walk(
           (value.props.children as unknown[]).filter(
@@ -434,7 +428,6 @@ describe("the view registry (D-35, T-2C.1)", () => {
     expect(pane.menuOpen).toBe(true);
     expect(pane.menuOn).toBe("band");
     expect(pane.menuFor).toBe(String(menuKey).slice("taskmenu:".length));
-    // A menu opened on the band draws there, in the overview, and not in the pane.
     expect(
       keysOf(pane.drawBandMenu(windowedBand(VIEW_COLUMNS, 80), "tasks"), "menu:item:"),
     ).toEqual(keysOf(pane.drawBandMenu(band(VIEW_COLUMNS), "tasks"), "menu:item:"));
@@ -538,7 +531,6 @@ describe("the view registry (D-35, T-2C.1)", () => {
     const drawn = pane.draw(UI, FRAME);
     expect(navIn(drawn)).not.toContain("probe");
     expect(navIn(bandNavOf(pane))).toContain("probe");
-    // The open view moved off the pane at this redraw.
     expect(pane.tab).toBe("tasks");
     expect(keysOf(drawn, "probe-view")).toEqual([]);
 

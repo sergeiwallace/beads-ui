@@ -218,7 +218,6 @@ async function twoStores(server?: number): Promise<Host> {
       return (await readFile(log, "utf8")).split("\n").filter(Boolean).slice(from);
     },
     async remove() {
-      // A case that stopped the server itself has closed it already.
       await running.close().catch(() => undefined);
       await bd.remove();
       await env.remove();
@@ -234,7 +233,6 @@ async function logged(host: Host): Promise<number> {
 
 /** Waits until the feed has read every head once, so the next move is a change. */
 async function settled(host: Host, stream: Stream): Promise<void> {
-  // Any write moves no head here; the first poll records the heads and pushes nothing.
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
     const status = host.server.feed.status();
@@ -276,7 +274,6 @@ describe.skipIf(!hasDolt)("the change feed on a Dolt sql-server", () => {
   afterAll(async () => {
     await host?.remove();
     if (dolt !== undefined && dolt.exitCode === null) {
-      // The server writes its files until it exits, so its directory goes only after that.
       const exited = new Promise((resolve) => dolt.once("exit", resolve));
       dolt.kill("SIGTERM");
       await exited;
@@ -290,7 +287,6 @@ describe.skipIf(!hasDolt)("the change feed on a Dolt sql-server", () => {
       await settled(host, stream);
       const [a, b] = host.stores;
       if (a === undefined || b === undefined) throw new Error("two stores");
-      // A store's own read, before the move, is kept for its head.
       await fetch(new URL("/api/board", host.server.url), { headers: { cookie: host.cookie } });
       const from = await logged(host);
       const seen = stream.events.length;
@@ -303,7 +299,6 @@ describe.skipIf(!hasDolt)("the change feed on a Dolt sql-server", () => {
       const calls = await host.calls(from);
       expect(boardReadsIn(calls, a.dir).length).toBeGreaterThan(0);
       expect(boardReadsIn(calls, b.dir)).toEqual([]);
-      // One process asked the server for both heads; neither store's head was read on its own.
       const sql = calls.filter((line) =>
         / sql SELECT @@`feeda_head` AS h0, @@`feedb_head` AS h1/.test(line),
       );
@@ -365,7 +360,6 @@ describe("the change feed on embedded stores", () => {
   }, 60_000);
 
   it("should run no bd for the feed while no event stream is open", async () => {
-    // Every stream of the earlier cases is closed; the feed goes idle once the server sees it.
     const deadline = Date.now() + 10_000;
     while (host.server.feed.status().asOf !== undefined && Date.now() < deadline) {
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -394,7 +388,6 @@ describe("the change feed on embedded stores", () => {
       expect(second.at - first.at).toBeGreaterThanOrEqual((first.data.retryInMs as number) - 100);
       expect(stream.events.slice(seen).map((event) => event.type)).not.toContain("change");
       expect(host.server.feed.status().stale?.since).toBe(first.data.since);
-      // The last state stands: the board still reads, as it did before the heads failed.
       const during = await (
         await fetch(new URL("/api/board", host.server.url), { headers: { cookie: host.cookie } })
       ).json();
@@ -425,14 +418,12 @@ describe("stopping the server while a page holds a stream", () => {
   it("should refuse the stream a browser reopens as the stop begins, so the stop does not wait out its connection", async () => {
     const stream = await openStream(host.server, host.cookie);
     await settled(host, stream);
-    // Hold a poll in flight, as a loaded host does: the stop waits for it before it stops listening.
     await writeFile(`${host.fail}.slow`, "");
     const from = await logged(host);
     while (!(await host.calls(from)).some((line) => / vc /.test(line))) {
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
     const started = Date.now();
-    // A browser's EventSource reconnects the moment its stream ends, and the stop ends it first.
     const stopping = host.server.close();
     const reopened = await fetch(new URL("/api/events", host.server.url), {
       headers: { cookie: host.cookie },

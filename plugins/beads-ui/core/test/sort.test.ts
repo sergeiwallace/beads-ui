@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import { DEFAULT_SORT, parseSort, sortIssues } from "../src/index.js";
 import { allIssues, byId } from "./helpers.js";

@@ -1,13 +1,3 @@
-// The dispatch tools (web app design Phase W4, § Shared code). The MCP App cannot post into a
-// Claude Code session, so a session prompt goes through the web server's dispatch API with this
-// host's MCP token; the web server signs it and its dispatch ladder carries it, exactly as it
-// carries a prompt from the web app's composer. This server holds no signing key.
-//
-// A prompt the model asks for is only ever a draft: `beads_dispatch` sends nothing, and the user
-// confirms the draft in the MCP App or in the web app. The MCP App's own Send and Confirm controls
-// call the two app-only tools, which a host that advertises the app capability never offers to
-// the model; on a host that does not, they are not registered at all (T-4.1).
-
 import { randomBytes } from "node:crypto";
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import type { McpServer, RegisteredTool } from "@modelcontextprotocol/server";

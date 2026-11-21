@@ -1,11 +1,3 @@
-// The dispatch ladder (web app design D-6, D-7, D-10, § Composer and dispatch, T-W2.1, T-W2.3):
-// how a written dispatch reaches its session. Dispatches to one session written within the
-// coalescing window go as one event; past the hourly cap, or while the session's goal is paused
-// for a limit, they wait. An event is carried by Agent Mail, then Buzz, then git-inbox, the first
-// that takes it; with automatic wakes on and no shown receipt in time, the prompt-injection
-// pointer, then the mod's submit; and every dispatch keeps the turn-end pickup as its floor. Every
-// policy and every tool is read at call time, and each rung's attempt is recorded on the dispatch.
-
 import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -555,10 +547,7 @@ export class DispatchLadder {
     }
     const pointer = dispatchPointer(open.map((dispatch) => dispatch.record));
     let carried = false;
-    // The ids that go out together: a carrier may cut the subject, so a shown receipt for any
-    // one of them stands for the whole event (shown below).
     const event = open.map((dispatch) => dispatch.record.id);
-    // A receipt can arrive while the carrier is still exiting, before its rung records the event.
     for (const id of event) this.#carrying.set(id, event);
     try {
       for (const carrier of plan.carriers) {

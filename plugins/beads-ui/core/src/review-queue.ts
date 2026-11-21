@@ -1,10 +1,6 @@
 import type { Issue } from "./model.js";
 import type { ReviewItem } from "./review.js";
 
-// The web app's Review queue (web app design § The Review queue, D-1, T-W1.1): every held item and
-// every task that needs Sergei, grouped by next action, sorted by priority, impact, age and id, and
-// filtered by epic, goal, type, size, owner and repository, with the filters carried in the URL.
-
 /** The next action each section holds, in the order the view draws them. */
 export const REVIEW_ACTIONS = ["answer", "unblock", "prompt"] as const;
 export type ReviewAction = (typeof REVIEW_ACTIONS)[number];
@@ -159,7 +155,6 @@ const ageOf = (entry: ReviewQueueEntry): number | undefined => {
   return Number.isNaN(ms) ? undefined : ms;
 };
 
-// A missing value sorts after every present one; `sign` 1 is ascending, -1 descending.
 function present(a: number | undefined, b: number | undefined, sign: number): number {
   if (a === undefined && b === undefined) return 0;
   if (a === undefined) return 1;

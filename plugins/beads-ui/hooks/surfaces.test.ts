@@ -8,10 +8,6 @@ import { test } from "./tests/kit.js";
 import { MINE } from "./tests/mine.js";
 import { PANE_PROPS, SESSION, SHOW, VIEWPORT, type WorldOptions, world } from "./tests/world.js";
 
-// D-35 and T-2C.1, criterion 3: `[surfaces]` in beads-ui.toml, or Settings, limits a view to the
-// band or the pane from the next redraw; both, or no setting, draws it on both. Driven through
-// the pane as Claude Code mounts it.
-
 const USER_CONFIG = "/home/me/.config/beads-ui/beads-ui.toml";
 
 async function openPanel($: Engine, on: On, options: WorldOptions = MINE) {

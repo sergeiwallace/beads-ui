@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   type DeliveryMachine,
@@ -7,9 +5,6 @@ import {
   deliveryMachine,
   reduceDelivery,
 } from "../src/index.js";
-
-// T-W1.3 of the web app design (D-5): the composer's delivery indicator over the dispatch
-// record's states, queued, shown, taken, acted, failed, expired and waiting.
 
 const run = (
   machine: DeliveryMachine,

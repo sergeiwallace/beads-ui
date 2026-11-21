@@ -1,10 +1,3 @@
-// The Review queue's reads and the dispatch routes (web app design § The Review queue, § Composer
-// and dispatch, T-W1.1, T-W1.2, T-W1.3, T-W1.6). The held store's `review`, `options` and `show`
-// verbs run as subprocesses with a timeout; a failed run is named with its exit code, never read as
-// an empty queue. A prompt, an answer or an unblock is a signed dispatch record written through the
-// dispatch service, mirrored as a bd comment on its task; in this phase it is delivered when the
-// receiving session next asks the receiver API at a turn end (rung 5).
-
 import { execFile } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
@@ -36,7 +29,6 @@ import { DispatchRefused } from "./dispatch-service.ts";
 import { Serial } from "./dispatch-store/common.ts";
 import { QueueClient } from "./queue.ts";
 import type { OpenStore } from "./registry.ts";
-// Types only: routes.ts imports this file's route block, so a value import back would be a cycle.
 import type { ApiContext, ApiError, ApiReply, ApiRequest, Route } from "./routes.ts";
 
 const STATUS_BY_KIND: Readonly<Record<string, number>> = {
@@ -339,8 +331,6 @@ async function readOptions(
   settings: DispatchSettings,
   paths: readonly string[],
 ): Promise<{ state: "ok"; stdout: string } | { state: "failed"; failure: ReadFailure }> {
-  // An item path is an argument, never an option: one that starts with "-" is refused before the
-  // call, and the paths follow "--" so the held tool reads every one of them as an item.
   const flagLike = paths.find((path) => path.startsWith("-"));
   if (flagLike !== undefined) {
     return {
@@ -993,7 +983,6 @@ async function unblockRoute(request: ApiRequest, context: ApiContext): Promise<A
     if (commented !== undefined) {
       return failure({ kind: "failed", source: "bd comments add", message: commented });
     }
-    // The comment above keeps the resolution whole; bd-unblock takes a `--why` of one line only.
     const why = resolution.replace(/\s+/g, " ").trim();
     const argv = [...settings.unblockCommand, issue.id, "--to", "in_progress", "--why", why];
     const outcome = await run(argv, { cwd: store.path, timeoutMs: UNBLOCK_TIMEOUT_MS });

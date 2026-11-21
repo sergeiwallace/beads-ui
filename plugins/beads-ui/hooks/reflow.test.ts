@@ -17,9 +17,6 @@ import {
   world,
 } from "./tests/world.js";
 
-// T-1B.9: the pane reflows to its body's width and height. The kit hands back the element
-// tree, so tests/width.ts measures it as Claude Code lays it out.
-
 const WIDTHS = [40, 48, 64, 72, 80, 120];
 const LIVE_BAND = {
   env: { HOME: "/home/me", CLAUDE_CODE_TASK_LIST_ID: "ops-vm-firstmate-1" },
@@ -105,7 +102,6 @@ describe("reflow without overflow (T-1B.9)", () => {
     const { ui } = await paneAt($, on, { bodyColumns: 40 });
 
     expect((await ui.find({ key: "swimlane" }))?.props.label).toBe("Lanes");
-    // T-2B.1: below 48 columns the nav is a bar of keys and glyphs.
     expect((await ui.find({ key: "tab:backlog" }))?.props.label).toBe("≣");
     expect((await ui.find({ key: "delete" }))?.props.label).toBe("Del");
     expect((await ui.find({ key: "tab:backlog" }))?.props.hotkey).toBe("2");
@@ -151,7 +147,6 @@ describe("the short-height rule (T-1B.9)", () => {
       await ui.press({ key: "help" });
       const keys = await keysIn(ui);
 
-      // The Help button stays; the help box it opens does not draw.
       expect(await ui.find({ key: "help", type: "Box" })).toBeUndefined();
       expect(keys).not.toContain("footer");
       expect((await ui.find({ key: "help-short" }))?.text).toBe(SHORT_HELP_TEXT);
@@ -160,7 +155,6 @@ describe("the short-height rule (T-1B.9)", () => {
       const card = keys.findIndex((key) => key.startsWith("card:"));
       expect(header).toBeGreaterThan(-1);
       expect(card).toBeGreaterThan(header);
-      // The inputs follow the board, so they never push its first card down.
       expect(keys.indexOf("inputs")).toBeGreaterThan(card);
     });
   }

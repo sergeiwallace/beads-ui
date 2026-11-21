@@ -1,7 +1,3 @@
-// An issue's comments (BU-mg2.3.15): every comment `bd comments <id> --json` returned, oldest
-// first and newest last, each with its author and time, and the draft a new comment is typed
-// into. Pure: the Detail view draws it, and the task panel opens a task into that view.
-
 import type { Comment, Result } from "../model.js";
 import { fromOneLine } from "./detail.js";
 import { BLOCK_MAX_CHARS, truncate } from "./text.js";
