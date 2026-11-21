@@ -166,7 +166,7 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     });
   });
   const { port } = server.address() as AddressInfo;
-  const auth = new AuthLayer({
+  const auth = await AuthLayer.open({
     settings,
     port,
     ...(options.clock === undefined ? {} : { clock: options.clock }),
@@ -254,6 +254,7 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
         server.closeIdleConnections();
       });
       await started.settled();
+      await auth.close();
       await sweeping;
       await ladder.idle();
     },

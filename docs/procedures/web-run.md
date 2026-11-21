@@ -100,6 +100,12 @@ hours with no request; Sign out in the app bar ends it at once. Run `login-link`
 `--port <n>` for a server on another port, and with `--origin <url>` when your browser reaches the
 server at another address than the first `[auth] origins` entry (through a port forward, say).
 
+Browser sessions survive a restart on the same port. The server atomically replaces
+`browser-sessions.json` (mode `0600`) in its state directory. The file keys sessions by the
+SHA-256 hash of each cookie ID and records activity at most once a minute per session, so after a
+restart up to a minute of recent activity can be missing. If the file is unreadable or corrupt,
+the server logs a warning and starts with no browser sessions.
+
 | Flag | What it does |
 |---|---|
 | `--port <n>` | Serves on port `n`; `0` picks a free port. The default is 4810, or `[web] port` |
