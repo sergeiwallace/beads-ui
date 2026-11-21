@@ -10,6 +10,8 @@ import {
   parseReceiverMap,
   replaceCredential,
   rotatedSecret,
+  SESSION_LABEL,
+  SESSION_LABEL_RULE,
   sha256Hex,
 } from "./auth.ts";
 import { type ConfigEnv, DEFAULT_PORT, readWebConfig } from "./config.ts";
@@ -29,15 +31,18 @@ export type AdminCommand = (typeof ADMIN_COMMANDS)[number];
 export const isAdminCommand = (name: string | undefined): name is AdminCommand =>
   (ADMIN_COMMANDS as readonly string[]).includes(name ?? "");
 
-export const ADMIN_USAGE = `       beads-ui-web login-link [--port <n>] [--origin <url>]
+export const ADMIN_USAGE = `       beads-ui-web login-link [--port <n>] [--origin <url>] [--label <text>]
        beads-ui-web sessions [--port <n>]
        beads-ui-web revoke-session <id> [--port <n>]
+       beads-ui-web revoke-session --label <text> [--port <n>]
        beads-ui-web rotate-secret
        beads-ui-web issue-receiver-token <host>
 
-  login-link            print a sign-in link for the running server; it works once, for five minutes
+  login-link            print a sign-in link for the running server; it works once, for five minutes;
+                        --label names the session it opens (1 to 64 of A-Z a-z 0-9 . _ -)
   sessions              list the running server's browser sessions
-  revoke-session <id>   end one browser session, by the id sessions lists
+  revoke-session <id>   end one browser session, by the id sessions lists; with --label, end
+                        every session carrying exactly that label
   rotate-secret         replace the browser secret, which ends every browser session
   issue-receiver-token  issue <host>'s receiver token, printed once; it replaces any earlier one`;
 
@@ -57,10 +62,12 @@ async function callServer(
   port: number,
   method: "GET" | "POST",
   path: string,
+  body?: unknown,
 ): Promise<{ status: number; body: string }> {
   const secret = await readFile(settings.browserSecret, "utf8");
   const first = settings.hosts[0] ?? "127.0.0.1";
   const hostHeader = /:\d+$/.test(first) && !first.endsWith("]") ? first : `${first}:${port}`;
+  const sent = body === undefined ? undefined : JSON.stringify(body);
   return new Promise((resolve, reject) => {
     const call = httpRequest(
       {
@@ -68,16 +75,22 @@ async function callServer(
         port,
         method,
         path,
-        headers: { host: hostHeader, authorization: `Bearer ${adminKey(secret)}` },
+        headers: {
+          host: hostHeader,
+          authorization: `Bearer ${adminKey(secret)}`,
+          ...(sent === undefined
+            ? {}
+            : { "content-type": "application/json", "content-length": Buffer.byteLength(sent) }),
+        },
         timeout: 10_000,
       },
       (response) => {
-        let body = "";
+        let text = "";
         response.setEncoding("utf8");
         response.on("data", (chunk: string) => {
-          body += chunk;
+          text += chunk;
         });
-        response.on("end", () => resolve({ status: response.statusCode ?? 0, body }));
+        response.on("end", () => resolve({ status: response.statusCode ?? 0, body: text }));
       },
     );
     call.on("timeout", () => call.destroy(new Error("no answer within 10 seconds")));
@@ -88,7 +101,7 @@ async function callServer(
         ),
       ),
     );
-    call.end();
+    call.end(sent);
   });
 }
 
@@ -110,12 +123,16 @@ export async function adminMain(
   env: ConfigEnv,
   cwd: string,
 ): Promise<number> {
-  let values: { port?: string | undefined; origin?: string | undefined };
+  let values: {
+    port?: string | undefined;
+    origin?: string | undefined;
+    label?: string | undefined;
+  };
   let positionals: string[];
   try {
     ({ values, positionals } = parseArgs({
       args: [...argv],
-      options: { port: { type: "string" }, origin: { type: "string" } },
+      options: { port: { type: "string" }, origin: { type: "string" }, label: { type: "string" } },
       allowPositionals: true,
     }));
   } catch (error) {
@@ -130,6 +147,10 @@ export async function adminMain(
       throw new CommandFailed(`--port takes a whole number from 1 to 65535, not ${values.port}`);
     }
     const address = serverAddress(config.host);
+    const { label } = values;
+    if (label !== undefined && !SESSION_LABEL.test(label)) {
+      throw new CommandFailed(`${SESSION_LABEL_RULE}, not ${JSON.stringify(label)}`);
+    }
     switch (command) {
       case "login-link": {
         const origin = values.origin ?? settings.origins[0] ?? `http://127.0.0.1:${port}`;
@@ -139,6 +160,7 @@ export async function adminMain(
           port,
           "POST",
           "/api/admin/v1/login-codes",
+          label === undefined ? undefined : { label },
         );
         if (reply.status !== 200) throw refusal(reply);
         const { path, expiresAt } = JSON.parse(reply.body) as { path: string; expiresAt: string };
@@ -150,18 +172,43 @@ export async function adminMain(
         const reply = await callServer(settings, address, port, "GET", "/api/admin/v1/sessions");
         if (reply.status !== 200) throw refusal(reply);
         const { sessions } = JSON.parse(reply.body) as {
-          sessions: { id: string; createdAt: string; seenAt: string; identity: string | null }[];
+          sessions: {
+            id: string;
+            createdAt: string;
+            seenAt: string;
+            identity: string | null;
+            label: string | null;
+          }[];
         };
         if (sessions.length === 0) process.stdout.write("no browser sessions\n");
         for (const session of sessions) {
           const identity = session.identity === null ? "" : `  ${session.identity}`;
+          const named = session.label === null ? "" : `  label ${session.label}`;
           process.stdout.write(
-            `${session.id}  signed in ${session.createdAt}  last seen ${session.seenAt}${identity}\n`,
+            `${session.id}  signed in ${session.createdAt}  last seen ${session.seenAt}${identity}${named}\n`,
           );
         }
         return 0;
       }
       case "revoke-session": {
+        if (label !== undefined) {
+          const reply = await callServer(
+            settings,
+            address,
+            port,
+            "POST",
+            "/api/admin/v1/sessions/revoke-label",
+            { label },
+          );
+          if (reply.status === 404)
+            throw new CommandFailed(`no session carries the label ${label}`);
+          if (reply.status !== 200) throw refusal(reply);
+          const { ended } = JSON.parse(reply.body) as { ended: number };
+          process.stdout.write(
+            `ended ${ended} session${ended === 1 ? "" : "s"} labelled ${label}\n`,
+          );
+          return 0;
+        }
         const id = positionals[0];
         if (id === undefined) throw new CommandFailed("revoke-session takes the session's id");
         const reply = await callServer(

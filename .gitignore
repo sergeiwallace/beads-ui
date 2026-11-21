@@ -26,6 +26,7 @@ coverage/
 .env.local
 .direnv/
 
-# Playwright (apps/web/e2e)
+# Playwright and the frontend test harness's run directories (apps/web/e2e)
 test-results/
 playwright-report/
+.fth-runs/

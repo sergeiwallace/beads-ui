@@ -266,11 +266,14 @@ await vitest.close();`;
 });
 
 describe("Playwright's workers", () => {
+  // The browser suites run from their own install root, apps/web/e2e, on the harness config.
+  const E2E = join(ROOT, "apps", "web", "e2e");
   const listed = (jobs) =>
-    run(join(BIN, "playwright"), ["test", "--list", "--reporter=json"], {
-      cwd: join(ROOT, "apps", "web"),
-      jobs,
-    });
+    run(
+      join(E2E, "node_modules", ".bin", "playwright"),
+      ["test", "-c", "frontend-harness.config.ts", "--list", "--reporter=json"],
+      { cwd: E2E, jobs },
+    );
 
   for (const [jobs, expected] of [
     [undefined, 1],

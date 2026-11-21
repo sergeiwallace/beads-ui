@@ -3,6 +3,7 @@ import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import { recordCreatedStore } from "./run-stores.ts";
 
 const exec = promisify(execFile);
 
@@ -27,6 +28,7 @@ export async function createStore(prefix = "web"): Promise<TestStore> {
   const bd = async (...args: string[]) =>
     (await exec("bd", args, { cwd: dir, encoding: "utf8", timeout: 60_000 })).stdout;
   await bd("init", "--non-interactive", "--skip-hooks", "-p", prefix);
+  await recordCreatedStore(dir);
   return {
     dir,
     bd,

@@ -401,6 +401,13 @@ const isWrite = (method: string | undefined) => method !== "GET" && method !== "
 const SESSION_FILE = "browser-sessions.json";
 const SESSION_SAVE_INTERVAL_MS = 60_000;
 
+/**
+ * A session's label: what a scripted run names its own session by (`login-link --label`), so it
+ * signs out by the label alone and never ends a session someone else holds.
+ */
+export const SESSION_LABEL = /^[A-Za-z0-9._-]{1,64}$/;
+export const SESSION_LABEL_RULE = "--label takes 1 to 64 of A-Z, a-z, 0-9, '.', '_' and '-'";
+
 interface StoredSession {
   /** What the host's commands list and revoke by; never the cookie's value. */
   publicId: string;
@@ -409,6 +416,8 @@ interface StoredSession {
   createdAt: number;
   seenAt: number;
   identity: string | null;
+  /** Set only on a session a labelled link opened. */
+  label?: string;
 }
 
 interface Session {
@@ -423,8 +432,14 @@ function isSessionTime(value: unknown): value is number {
 }
 
 function isStoredSession(value: unknown): value is StoredSession {
-  if (typeof value !== "object" || value === null || Object.keys(value).length !== 5) return false;
+  if (typeof value !== "object" || value === null) return false;
   const session = value as Partial<Record<keyof StoredSession, unknown>>;
+  const keys = Object.keys(value).length;
+  const labelled = "label" in session;
+  if (keys !== (labelled ? 6 : 5)) return false;
+  if (labelled && !(typeof session.label === "string" && SESSION_LABEL.test(session.label))) {
+    return false;
+  }
   return (
     typeof session.publicId === "string" &&
     /^[0-9a-f]{12}$/.test(session.publicId) &&
@@ -441,6 +456,7 @@ export interface SessionInfo {
   createdAt: string;
   seenAt: string;
   identity: string | null;
+  label: string | null;
 }
 
 export interface AuthOptions {
@@ -451,6 +467,30 @@ export interface AuthOptions {
   basePath?: string;
   /** Milliseconds since the epoch; the system clock unless a test sets one. */
   clock?: () => number;
+}
+
+/** A host command's small JSON body, or undefined when it sent none. */
+async function adminBody(request: IncomingMessage): Promise<unknown> {
+  let text = "";
+  for await (const chunk of request) {
+    text += String(chunk);
+    if (text.length > 4096) return null;
+  }
+  if (text === "") return undefined;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+/** The body's label: undefined for none, null for one that breaks SESSION_LABEL or a bad body. */
+function adminLabel(body: unknown): string | undefined | null {
+  if (body === undefined) return undefined;
+  if (typeof body !== "object" || body === null) return null;
+  const label = (body as { label?: unknown }).label;
+  if (label === undefined) return undefined;
+  return typeof label === "string" && SESSION_LABEL.test(label) ? label : null;
 }
 
 function sendJson(response: ServerResponse, status: number, body: unknown, extra = {}): void {
@@ -502,8 +542,8 @@ export class AuthLayer {
   readonly #sessions = new Map<string, Session>();
   #saving = Promise.resolve(true);
   #closing = false;
-  /** SHA-256 of each outstanding one-time code, to its expiry. */
-  readonly #codes = new Map<string, number>();
+  /** SHA-256 of each outstanding one-time code, to its expiry and the label its session takes. */
+  readonly #codes = new Map<string, { expiresAt: number; label: string | undefined }>();
   readonly #ended = new Map<string, Set<() => void>>();
 
   private constructor(options: AuthOptions) {
@@ -575,13 +615,18 @@ export class AuthLayer {
     return this.#saving;
   }
 
-  /** Mints a one-time sign-in code; the link carrying it works once, within CODE_TTL_MS. */
-  mintCode(): { code: string; expiresAt: number; path: string } {
+  /**
+   * Mints a one-time sign-in code; the link carrying it works once, within CODE_TTL_MS. A label
+   * (SESSION_LABEL) is kept on the session the link opens.
+   */
+  mintCode(label?: string): { code: string; expiresAt: number; path: string } {
+    if (label !== undefined && !SESSION_LABEL.test(label))
+      throw new AuthRefused(SESSION_LABEL_RULE);
     const now = this.#clock();
-    for (const [hash, expires] of this.#codes) if (expires <= now) this.#codes.delete(hash);
+    for (const [hash, entry] of this.#codes) if (entry.expiresAt <= now) this.#codes.delete(hash);
     const code = randomBytes(32).toString("base64url");
     const expiresAt = now + CODE_TTL_MS;
-    this.#codes.set(sha256Hex(code), expiresAt);
+    this.#codes.set(sha256Hex(code), { expiresAt, label });
     return { code, expiresAt, path: `${this.basePath}${EXCHANGE_PATH}?code=${code}` };
   }
 
@@ -601,10 +646,21 @@ export class AuthLayer {
         createdAt: new Date(session.saved.createdAt).toISOString(),
         seenAt: new Date(session.seenAt).toISOString(),
         identity: session.saved.identity,
+        label: session.saved.label ?? null,
       });
     }
     if (expired) await this.#saveSessions();
     return live;
+  }
+
+  /** Ends every session carrying exactly `label`; returns how many it ended. */
+  async revokeLabel(label: string): Promise<number> {
+    const matching = [...this.#sessions].filter(([, session]) => session.saved.label === label);
+    for (const [hash] of matching) this.#forget(hash);
+    if (matching.length > 0 && !(await this.#saveSessions())) {
+      throw new Error("the server cannot save browser sessions");
+    }
+    return matching.length;
   }
 
   /** Ends the one session the host's revoke command names; false when none has that id. */
@@ -872,8 +928,29 @@ export class AuthLayer {
     }
     const path = url.pathname.slice("/api/admin/v1/".length);
     if (request.method === "POST" && path === "login-codes") {
-      const { code, expiresAt, path: link } = this.mintCode();
+      const label = adminLabel(await adminBody(request));
+      if (label === null) {
+        sendJson(response, 400, { error: { kind: "invalid", message: SESSION_LABEL_RULE } });
+        return;
+      }
+      const { code, expiresAt, path: link } = this.mintCode(label);
       sendJson(response, 200, { code, expiresAt: new Date(expiresAt).toISOString(), path: link });
+      return;
+    }
+    if (request.method === "POST" && path === "sessions/revoke-label") {
+      const label = adminLabel(await adminBody(request));
+      if (label === null || label === undefined) {
+        sendJson(response, 400, { error: { kind: "invalid", message: SESSION_LABEL_RULE } });
+        return;
+      }
+      const ended = await this.revokeLabel(label);
+      if (ended === 0) {
+        sendJson(response, 404, {
+          error: { kind: "not-found", message: `no session carries the label ${label}` },
+        });
+        return;
+      }
+      sendJson(response, 200, { ended });
       return;
     }
     if (request.method === "GET" && path === "sessions") {
@@ -940,10 +1017,10 @@ export class AuthLayer {
     }
     const code = url.searchParams.get("code") ?? "";
     const hash = sha256Hex(code);
-    const expiresAt = this.#codes.get(hash);
+    const minted = this.#codes.get(hash);
     this.#codes.delete(hash);
     const now = this.#clock();
-    if (code === "" || expiresAt === undefined || now >= expiresAt) {
+    if (code === "" || minted === undefined || now >= minted.expiresAt) {
       sendPage(
         response,
         401,
@@ -969,6 +1046,7 @@ export class AuthLayer {
         createdAt: now,
         seenAt: now,
         identity: header(request, IDENTITY_HEADER) ?? null,
+        ...(minted.label === undefined ? {} : { label: minted.label }),
       },
     });
     if (!(await this.#saveSessions())) {

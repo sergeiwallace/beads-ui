@@ -1,0 +1,6 @@
+{
+  "tabSwitch": {
+    "coldMs": 1000,
+    "warmMs": 100
+  }
+}

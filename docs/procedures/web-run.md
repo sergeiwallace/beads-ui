@@ -551,9 +551,15 @@ other address. This needs a Linux Docker host, or Docker Desktop with host netwo
 ## Test it
 
 ```sh
-npm run e2e:install -w apps/web   # once: Chromium into this checkout's node_modules
+npm run e2e:install -w apps/web   # once: apps/web/e2e's own install, the harness library and Chromium
 npm test                          # includes the web server suite and the Playwright specs
 ```
+
+`apps/web/e2e/` is its own install root, outside the npm workspaces, because it alone depends on the
+private frontend test harness library; `npm run test:e2e` checks that install first and names the
+fix when it is missing, then type-checks the specs (`tsc -p e2e`) and runs the smoke tier. The sweep
+and budget tiers (`npx fth run --tier sweep` in `apps/web/e2e/`) run on fw-lnx only; started on any
+other host they stop before booting anything and name the route for asking fw-lnx to run them.
 
 The Playwright specs under `apps/web/e2e/` run the Board, Backlog, Issue detail, palette,
 Roadmap, Analytics, Sessions, Sprints and Queue specs at 1280 px with a mouse and at 390 px on a touch screen; the

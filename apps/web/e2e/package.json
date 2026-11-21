@@ -1,0 +1,13 @@
+{
+  "name": "@sergeiwallace/beads-ui-web-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The web app's browser suites: an install root outside the npm workspaces, so only it depends on the private frontend test harness (frontend test harness design, D-16)",
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.65.0",
+    "@sergeiwallace/frontend-test-harness": "git+https://github.com/sergeiwallace/frontend-test-harness.git#v0.1.2",
+    "playwright-core": "1.65.0"
+  }
+}

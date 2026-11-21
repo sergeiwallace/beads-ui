@@ -15,7 +15,6 @@
     "apps/*/client/**/*.tsx",
     "apps/*/server/**/*.ts",
     "apps/*/test/**/*.ts",
-    "apps/*/e2e/**/*.ts",
     "apps/*/*.ts",
     "*.ts"
   ],

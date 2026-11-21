@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { STORE_INVENTORY_FILE } from "@beads-ui/core";
+import { recordCreatedStore } from "./run-stores.ts";
 
 const exec = promisify(execFile);
 
@@ -68,6 +69,7 @@ export async function repoStore(
     (await exec(command, args, { cwd: dir, encoding: "utf8", timeout: 120_000 })).stdout;
   if (options.git !== false) await run("git", ["init", "-q"]);
   await run("bd", ["init", "--non-interactive", "--skip-hooks", "-p", options.prefix]);
+  await recordCreatedStore(dir);
   if (options.remote !== undefined) await run("git", ["remote", "add", "origin", options.remote]);
   const bd = (...args: string[]) => run("bd", args);
   return {
