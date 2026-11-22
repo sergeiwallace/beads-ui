@@ -321,9 +321,19 @@ describe("which tasks npm test and the commit's test hook run", () => {
     assert.deepEqual(commit.sort(), full.filter((id) => id !== `${MOD}#test:mod`).sort());
   });
 
-  function workspace(log) {
+  function entryOf(id) {
+    const config = readFileSync(join(ROOT, ".pre-commit-config.yaml"), "utf8");
+    const block = config
+      .split(/^ {6}- id: /m)
+      .slice(1)
+      .find((b) => b.startsWith(`${id}\n`));
+    assert.ok(block, `no ${id} hook in .pre-commit-config.yaml`);
+    return block.match(/^ {8}entry: (.*)$/m)?.[1];
+  }
+
+  function workspace(log, total) {
     const dir = fresh("turbo-gates");
-    const hold = (name) => `node ../../hold.mjs ${log} ${name}`;
+    const hold = (name) => `node ../../hold.mjs ${log} ${name} ${total}`;
     write(
       dir,
       "package.json",
@@ -332,17 +342,33 @@ describe("which tasks npm test and the commit's test hook run", () => {
         private: true,
         packageManager: "npm@11.19.0",
         workspaces: ["packages/*", "plugins/*"],
-        scripts: { "test:scripts": `node hold.mjs ${log} scripts` },
+        scripts: {
+          "test:commit": rootScripts()["test:commit"],
+          "test:push": rootScripts()["test:push"],
+          "test:scripts": `node hold.mjs ${log} scripts ${total}`,
+        },
       }),
     );
     write(dir, "turbo.json", readFileSync(join(ROOT, "turbo.json"), "utf8"));
+    for (const script of ["test-hook.mjs", "test-jobs.mjs"]) {
+      write(dir, `scripts/${script}`, readFileSync(join(ROOT, "scripts", script), "utf8"));
+    }
     write(
       dir,
       "hold.mjs",
-      `import { appendFileSync } from "node:fs";
-const [log, name] = process.argv.slice(2);
+      `import { appendFileSync, readFileSync } from "node:fs";
+const [log, name, total] = process.argv.slice(2);
+const jobs = Number(process.env.BEADS_UI_TEST_JOBS ?? 1);
 appendFileSync(log, \`start \${name} \${process.env.BEADS_UI_TEST_JOBS}\\n\`);
-setTimeout(() => appendFileSync(log, \`end \${name}\\n\`), 800);
+const count = (word) => readFileSync(log, "utf8").split("\\n").filter((l) => l.startsWith(word)).length;
+const deadline = Date.now() + 60000;
+const end = () => appendFileSync(log, \`end \${name}\\n\`);
+const poll = () =>
+  count("start ") - count("end ") >= jobs || count("start ") >= Number(total) || Date.now() > deadline
+    ? end()
+    : setTimeout(poll, 20);
+if (jobs > 1) poll();
+else setTimeout(end, 500);
 `,
     );
     for (const name of ["a", "b", "c"]) {
@@ -360,23 +386,39 @@ setTimeout(() => appendFileSync(log, \`end \${name}\\n\`), 800);
         scripts: { test: hold("mod-vitest"), "test:mod": hold("mod-loop") },
       }),
     );
+    write(dir, "src/a.ts", "export const a = 1;\n");
+    execFileSync("git", ["init", "-q", "-b", "main"], { cwd: dir, env: ENV });
+    execFileSync("git", ["add", "src/a.ts"], { cwd: dir, env: ENV });
     appendFileSync(log, "");
     return dir;
   }
 
-  for (const [name, ran] of [
-    ["test", ["a", "b", "c", "mod-loop", "mod-vitest", "scripts"]],
-    ["test:commit", ["a", "b", "c", "mod-vitest", "scripts"]],
-    ["test:push", ["mod-loop", "scripts"]],
-  ]) {
+  const gates = [
+    [
+      "the commit's test hook",
+      ["a", "b", "c", "mod-vitest", "scripts"],
+      (jobs) => [
+        "sh",
+        ["-c", entryOf("npm-test")],
+        { ...envWith(jobs), PATH: `${BIN}:${ENV.PATH}` },
+      ],
+    ],
+    [
+      "npm run test:push",
+      ["mod-loop", "scripts"],
+      (jobs) => [process.execPath, turboCommand("test:push"), envWith(jobs)],
+    ],
+  ];
+  for (const [gate, ran, command] of gates) {
     for (const [jobs, expected] of [
       [undefined, 1],
       [2, 2],
     ]) {
-      test(`should run ${ran.join(", ")}, ${expected} at a time, when npm run ${name} runs with BEADS_UI_TEST_JOBS ${jobs ?? "unset"}`, () => {
+      test(`should run ${ran.join(", ")}, ${expected} at a time, when ${gate} runs with BEADS_UI_TEST_JOBS ${jobs ?? "unset"}`, () => {
         const log = join(fresh("turbo-gates-log"), "events.log");
-        const dir = workspace(log);
-        const result = run(process.execPath, turboCommand(name), { cwd: dir, jobs });
+        const dir = workspace(log, ran.length);
+        const [file, args, env] = command(jobs);
+        const result = spawnSync(file, args, { cwd: dir, env, encoding: "utf8" });
         assert.equal(result.status, 0, result.stdout + result.stderr);
         const lines = readFileSync(log, "utf8").split("\n").filter(Boolean);
         const starts = lines.filter((l) => l.startsWith("start ")).map((l) => l.split(" "));
