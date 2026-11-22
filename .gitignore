@@ -22,3 +22,4 @@ coverage/
 
 test-results/
 playwright-report/
+.fth-runs/

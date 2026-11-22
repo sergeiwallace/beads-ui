@@ -1,130 +1,12 @@
-import { type ChildProcess, execFile, spawn } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { basename, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
-import { test as base, expect, type Page } from "@playwright/test";
-import { hostConfig } from "../test/auth-env.ts";
+import { join } from "node:path";
+import type { Page } from "@playwright/test";
+import { expect, test as harness } from "@sergeiwallace/frontend-test-harness/test";
 import { createStore, type TestStore } from "../test/store.ts";
+import { BIN, loginLink, type Served, type ServeOptions, serve } from "./harness/adapter.ts";
 
-const exec = promisify(execFile);
-
-export const BIN = fileURLToPath(new URL("../bin/beads-ui-web.mjs", import.meta.url));
-
-export interface Served {
-  url: string;
-  port: number;
-  /** Milliseconds from spawning the command to its URL line. */
-  startedInMs: number;
-  child: ChildProcess;
-  /** The environment the command ran with: its private config and state homes. */
-  env: NodeJS.ProcessEnv;
-  cwd: string;
-  output(): string;
-  stop(): Promise<void>;
-}
-
-/** What a spec may change about the served host: its allowlist and the command's environment. */
-export interface ServeOptions {
-  /** `[hosts] allow_repos`; the served store's repository alone unless given. */
-  allowRepos?: string[];
-  /** Added to the command's environment, such as a HOME holding a store inventory. */
-  env?: NodeJS.ProcessEnv;
-  /** More of the user's `beads-ui.toml`, after `[hosts]` and `[auth]`. */
-  extra?: string;
-  /** `[auth]` keys to set in place of the defaults. */
-  auth?: Record<string, string | string[] | undefined>;
-}
-
-/**
- * The host settings the documented command needs, in a private config home: the `[auth]` table
- * and `[hosts] allow_repos` listing the store's repository. Credentials go to a private state home.
- */
-async function hostSettings(
-  dir: string,
-  configHome: string,
-  options: ServeOptions,
-): Promise<NodeJS.ProcessEnv> {
-  await mkdir(join(configHome, "beads-ui"), { recursive: true });
-  await writeFile(
-    join(configHome, "beads-ui", "beads-ui.toml"),
-    hostConfig({
-      allowRepos: options.allowRepos ?? [basename(dir)],
-      ...(options.extra === undefined ? {} : { extra: options.extra }),
-      ...(options.auth === undefined ? {} : { auth: options.auth }),
-    }),
-  );
-  await mkdir(join(configHome, "home"), { recursive: true });
-  return {
-    ...process.env,
-    HOME: join(configHome, "home"),
-    XDG_CONFIG_HOME: configHome,
-    XDG_STATE_HOME: join(configHome, "state"),
-    ...options.env,
-  };
-}
-
-/**
- * Runs the documented command, `beads-ui-web --port 0`, in `dir`, and resolves on the URL line
- * it prints. The user's config, state and store inventory are kept out with a private
- * XDG_CONFIG_HOME, XDG_STATE_HOME and HOME.
- */
-export async function serve(
-  dir: string,
-  configHome: string,
-  options: ServeOptions = {},
-): Promise<Served> {
-  const env = await hostSettings(dir, configHome, options);
-  const started = Date.now();
-  const child = spawn(process.execPath, [BIN, "--port", "0"], {
-    cwd: dir,
-    env,
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  let output = "";
-  const url = await new Promise<string>((resolve, reject) => {
-    const onData = (chunk: Buffer) => {
-      output += chunk.toString();
-      const match = /at (http:\/\/127\.0\.0\.1:\d+\/)/.exec(output);
-      if (match?.[1] !== undefined) resolve(match[1]);
-    };
-    child.stdout?.on("data", onData);
-    child.stderr?.on("data", onData);
-    child.once("exit", (code) => reject(new Error(`beads-ui-web exited ${code}: ${output}`)));
-  });
-  return {
-    url,
-    port: Number(new URL(url).port),
-    startedInMs: Date.now() - started,
-    child,
-    env,
-    cwd: dir,
-    output: () => output,
-    stop: () =>
-      new Promise((resolve) => {
-        if (child.exitCode !== null) {
-          resolve();
-          return;
-        }
-        child.once("exit", () => resolve());
-        child.kill("SIGTERM");
-      }),
-  };
-}
-
-/**
- * The sign-in link the documented host command prints, `beads-ui-web login-link`, for the
- * origin the browser opens the server on.
- */
-export async function loginLink(served: Served): Promise<string> {
-  const { stdout } = await exec(
-    process.execPath,
-    [BIN, "login-link", "--port", String(served.port), "--origin", new URL(served.url).origin],
-    { cwd: served.cwd, env: served.env, encoding: "utf8", timeout: 30_000 },
-  );
-  return stdout.trim();
-}
+export { BIN, loginLink, type Served, type ServeOptions, serve };
 
 /**
  * Runs a spec's own setup outside the test's budget: once `work` settles, the running test's
@@ -137,7 +19,7 @@ export async function unbudgeted<T>(work: () => Promise<T>): Promise<T> {
   try {
     return await work();
   } finally {
-    const info = base.info();
+    const info = harness.info();
     info.setTimeout(info.timeout + (Date.now() - started));
   }
 }
@@ -175,7 +57,7 @@ export interface App {
   url: string;
 }
 
-export const test = base.extend<{
+export const test = harness.extend<{
   configHome: string;
   /** A served store, not signed in. */
   served: Served & { store: TestStore };

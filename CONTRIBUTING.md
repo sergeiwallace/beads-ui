@@ -24,6 +24,14 @@ npm run e2e:install -w apps/web
 
 The hook install wires the pre-commit and pre-push gates, including the gitleaks secret scan.
 
+The browser suites live in their own install root, `apps/web/e2e/`, outside the npm workspaces:
+its `package.json` and lockfile hold Playwright and the frontend test harness library, which is a
+private repository (`https://github.com/sergeiwallace/frontend-test-harness`). `npm run e2e:install`
+installs that root and Chromium, through your git's credential for that repository. Without read
+access to it, `npm ci`, `npm run lint` and the Vitest suites still work, but `npm test` and the
+pre-commit `npm-test` hook fail after Vitest, naming the library and how to get access, so a
+commit is refused until you have it.
+
 ## Checks
 
 Run these before you push. The hooks run them too.
@@ -88,8 +96,10 @@ It drives every write through a stub `bd` in a temporary directory and never wri
 The web app's suites build their own store. `apps/web/test/*.test.ts` (Vitest) call the server's
 routes over HTTP against a temporary store made with `bd init`; `apps/web/e2e/*.spec.ts`
 (Playwright) run the documented command against one store each and drive a browser at 1280 px with
-a mouse and at 390 px on a touch screen. `npm run e2e:install -w apps/web` puts Chromium in this
-checkout's `node_modules`, where the specs look for it. Component suites are
+a mouse and at 390 px on a touch screen, with the frontend test harness capturing and probing each
+screen a spec reaches (`apps/web/e2e/frontend-harness.config.ts`, adapter and screens under
+`apps/web/e2e/harness/`). `npm run e2e:install -w apps/web` installs `apps/web/e2e/` and puts
+Chromium in its `node_modules`, where the specs look for it. Component suites are
 `packages/web-ui/test/*.test.tsx`, under Vitest with jsdom.
 
 ## Pull requests

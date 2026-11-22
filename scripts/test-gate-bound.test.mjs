@@ -255,11 +255,13 @@ await vitest.close();`;
 });
 
 describe("Playwright's workers", () => {
+  const E2E = join(ROOT, "apps", "web", "e2e");
   const listed = (jobs) =>
-    run(join(BIN, "playwright"), ["test", "--list", "--reporter=json"], {
-      cwd: join(ROOT, "apps", "web"),
-      jobs,
-    });
+    run(
+      join(E2E, "node_modules", ".bin", "playwright"),
+      ["test", "-c", "frontend-harness.config.ts", "--list", "--reporter=json"],
+      { cwd: E2E, jobs },
+    );
 
   for (const [jobs, expected] of [
     [undefined, 1],
@@ -345,4 +347,29 @@ describe("broken", () => {
     assert.equal(result.status, 1);
     assert.match(result.stderr, /no \*\.test\.ts or \*\.test\.tsx under/);
   });
+});
+
+describe("Vitest's module cache", () => {
+  const PROBE = `import { createVitest } from "vitest/node";
+const vitest = await createVitest("test", { root: process.argv[1], watch: false }, {}, {});
+console.log(JSON.stringify(vitest.config.fsModuleCachePath ?? null));
+await vitest.close();`;
+
+  for (const dir of [
+    "apps/terminal",
+    "apps/web",
+    "packages/bd-node",
+    "packages/mcp-server",
+    "packages/web-ui",
+    "plugins/beads-ui",
+  ]) {
+    test(`should keep ${dir}'s module cache inside ${dir}`, () => {
+      const result = run(process.execPath, ["--input-type=module", "-e", PROBE, join(ROOT, dir)], {
+        jobs: 2,
+      });
+      assert.equal(result.status, 0, result.stderr);
+      const path = JSON.parse(result.stdout.trim().split("\n").at(-1));
+      assert.equal(path, join(ROOT, dir, "node_modules", ".vitest-cache"));
+    });
+  }
 });

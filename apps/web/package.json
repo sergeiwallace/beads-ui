@@ -11,8 +11,8 @@
     "start": "node bin/beads-ui-web.mjs",
     "typecheck": "tsc -p .",
     "test": "vitest run && npm run test:e2e",
-    "test:e2e": "PLAYWRIGHT_BROWSERS_PATH=0 playwright test",
-    "e2e:install": "PLAYWRIGHT_BROWSERS_PATH=0 playwright install chromium"
+    "test:e2e": "node e2e/check-install.mjs && tsc -p e2e && cd e2e && PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH:-0} ./node_modules/.bin/playwright test -c frontend-harness.config.ts",
+    "e2e:install": "node e2e/check-install.mjs --install && cd e2e && PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH:-0} ./node_modules/.bin/playwright install chromium"
   },
   "dependencies": {
     "@babel/core": "7.29.13",
@@ -27,7 +27,6 @@
     "vite": "8.3.6"
   },
   "devDependencies": {
-    "@playwright/test": "1.65.0",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0"
   }
