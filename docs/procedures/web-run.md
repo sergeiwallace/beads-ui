@@ -600,9 +600,10 @@ A value outside 1 to 2 fails the run before any test starts.
 BEADS_UI_TEST_JOBS=2 npm test     # a faster run on a quiet host, at most 4 test processes
 ```
 
-The pre-commit test hooks run `npm test` and the mod's tests, never the Playwright specs, and skip
+The pre-commit test hook runs `npm test`, the mod's `claude plugin test` loop included (the mod's
+`test` script runs it after its Vitest suite), never the Playwright specs, and skips
 a commit whose staged paths are all under `docs/` or end in `.md`; any other staged path, a
-deleted or renamed one included, runs them. They run with `BEADS_UI_TEST_SCOPE=commit`, which turbo
+deleted or renamed one included, runs it. It runs with `BEADS_UI_TEST_SCOPE=commit`, which turbo
 passes to each package: under it `apps/web`'s Vitest config leaves out every suite that imports the
 server (`../server/server.ts`) or a store factory (`./store.ts`, `./host-stores.ts`) and runs the
 rest. Any other value fails the run before turbo starts; unset, every suite runs. The pre-push

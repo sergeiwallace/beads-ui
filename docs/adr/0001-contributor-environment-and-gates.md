@@ -23,8 +23,11 @@ plugin also updates only when its manifest version increases.
   itself. Run `npm ci` for the Node gates and have `claude` on PATH for
   the mod gates. The hygiene fixture constructs a fabricated key at runtime
   because gitleaks ignores low-entropy and example keys.
-- `scripts/test-hook.mjs` skips the two pre-commit test suites for staged
+- `scripts/test-hook.mjs` skips the pre-commit test suite for staged
   docs-only changes. Pre-push still checks documentation-linked tests.
+  The mod's `claude plugin test` loop runs inside that suite, through the
+  mod's own `test` script; no other hook runs it, because a second hook
+  ran the whole loop again after `npm test`.
 - The pre-commit `npm-test` hook runs `npm test`: Vitest and the script
   tests, with no Playwright. The web app's Playwright specs run in full at
   pre-push, in the `e2e` hook (`npm run test:e2e`), because they took over

@@ -39,12 +39,12 @@ Run these before you push. The hooks run them too.
 
 ```sh
 npm run lint        # Biome, the core purity gate and the core type check
-npm test            # Vitest, the script tests, then claude plugin test for the mod
+npm test            # Vitest and claude plugin test for the mod, then the script tests
 npm run test:e2e    # the web app's Playwright specs, in full
 npx tsc --noEmit    # type check of the whole repository
 ```
 
-The pre-commit hooks run `npm test` and the mod's tests with `BEADS_UI_TEST_SCOPE=commit`, under
+The pre-commit hook runs `npm test`, the mod's tests included, with `BEADS_UI_TEST_SCOPE=commit`, under
 which `apps/web` runs only its suites that start no server and make no store. Its server suites and
 the Playwright specs take much longer, so they run at pre-push, in full, and not at commit: the
 `test-gate` hook runs every Vitest suite and the `e2e` hook every Playwright spec. Run `npm test`

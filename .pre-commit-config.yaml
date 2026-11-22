@@ -86,12 +86,6 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-      - id: plugin-test
-        name: claude plugin test plugins/beads-ui, file by file (the mod's tests and the import probe)
-        entry: node scripts/test-hook.mjs node scripts/plugin-test.mjs plugins/beads-ui
-        language: system
-        pass_filenames: false
-        always_run: true
 
       - id: plugin-version
         name: plugin version is above main's when shipped plugin files changed

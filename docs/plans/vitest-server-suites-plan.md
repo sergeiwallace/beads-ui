@@ -160,13 +160,13 @@ the whole `claude plugin test` loop. The separate `plugin-test` hook ran it a se
 **Deliverables:**
 
 - Files modified: `.pre-commit-config.yaml`, `scripts/test-gate-bound.test.mjs`, `CONTRIBUTING.md`,
-  `docs/adr/0001-contributor-environment-and-gates.md`
+  `docs/procedures/web-run.md`, `docs/adr/0001-contributor-environment-and-gates.md`
 
 **Acceptance criteria:**
 
-- [ ] When the commit-stage hooks run, the mod's `claude plugin test` loop shall run once, inside
+- [x] When the commit-stage hooks run, the mod's `claude plugin test` loop shall run once, inside
   `npm test`.
-- [ ] If a hook other than `npm-test` runs `scripts/plugin-test.mjs`, then the script tests shall
+- [x] If a hook other than `npm-test` runs `scripts/plugin-test.mjs`, then the script tests shall
   fail.
 
 **Dependencies:** None

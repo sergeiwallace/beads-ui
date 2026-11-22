@@ -133,15 +133,25 @@ describe("the pre-commit test hooks' path filter", () => {
     assert.equal(hook(dir, ["-e", "process.exit(3)"]).status, 3);
   });
 
-  test("should put both test hooks of .pre-commit-config.yaml behind the filter", () => {
+  test("should put the commit's test hook behind the filter and run the mod's loop only inside it", () => {
     const config = readFileSync(join(ROOT, ".pre-commit-config.yaml"), "utf8");
-    const entryOf = (id) =>
-      config.match(new RegExp(`- id: ${id}\\n(?: {8}.*\\n)*? {8}entry: (.*)`))?.[1];
-    assert.equal(entryOf("npm-test"), "node scripts/test-hook.mjs npm test");
+    const hooks = config
+      .split(/^ {6}- id: /m)
+      .slice(1)
+      .map((block) => ({
+        id: block.split("\n")[0],
+        entry: block.match(/^ {8}entry: (.*)$/m)?.[1] ?? "",
+      }));
     assert.equal(
-      entryOf("plugin-test"),
-      "node scripts/test-hook.mjs node scripts/plugin-test.mjs plugins/beads-ui",
+      hooks.find((hook) => hook.id === "npm-test")?.entry,
+      "node scripts/test-hook.mjs npm test",
     );
+    assert.deepEqual(
+      hooks.filter((hook) => hook.entry.includes("plugin-test.mjs")).map((hook) => hook.id),
+      [],
+    );
+    const mod = JSON.parse(readFileSync(join(ROOT, "plugins", "beads-ui", "package.json"), "utf8"));
+    assert.match(mod.scripts.test, /&& node \.\.\/\.\.\/scripts\/plugin-test\.mjs \.$/);
   });
 });
 
