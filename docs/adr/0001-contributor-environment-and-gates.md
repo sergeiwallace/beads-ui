@@ -43,7 +43,10 @@ plugin also updates only when its manifest version increases.
   Vitest suite that imports the server or a store factory: those took
   most of a 17-minute hook on a loaded host. The pre-push `test-gate`
   hook clears the variable and runs every Vitest suite, so a push still
-  runs them.
+  runs them. The pre-push `mod-and-script-tests` hook runs the mod's loop
+  and the script tests (`npm run test:push`) with the variable cleared,
+  because neither `test-gate` nor `e2e` runs them, and a push whose last
+  change no commit hook ran would otherwise carry neither.
   Empty staged input runs the suite. For deletes and renames the filter
   includes the old path. The old docs-index gate was retired because the
   generated index had no consumers and could not be regenerated correctly

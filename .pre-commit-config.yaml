@@ -101,6 +101,13 @@ repos:
         stages: [pre-push]
         pass_filenames: false
         always_run: true
+      - id: mod-and-script-tests
+        name: the mod's claude plugin test loop and the script tests, with no scope
+        entry: env -u BEADS_UI_TEST_SCOPE npm run test:push
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true
       - id: e2e
         name: npm run test:e2e (the web app's Playwright suites, in full)
         entry: npm run test:e2e

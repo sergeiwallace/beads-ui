@@ -47,7 +47,9 @@ npx tsc --noEmit    # type check of the whole repository
 The pre-commit hook runs `npm test`, the mod's tests included, with `BEADS_UI_TEST_SCOPE=commit`, under
 which `apps/web` runs only its suites that start no server and make no store. Its server suites and
 the Playwright specs take much longer, so they run at pre-push, in full, and not at commit: the
-`test-gate` hook runs every Vitest suite and the `e2e` hook every Playwright spec. Run `npm test`
+`test-gate` hook runs every Vitest suite and the `e2e` hook every Playwright spec. The pre-push
+`mod-and-script-tests` hook runs the mod's `claude plugin test` loop and the script tests again
+(`npm run test:push`), so a push carries them even when no commit hook ran on its last change. Run `npm test`
 (no scope: every suite) and `npm run test:e2e` yourself when you want their answer before you push.
 
 `BEADS_UI_TEST_JOBS` (default 1, at most 2) bounds how many test processes `npm test`,

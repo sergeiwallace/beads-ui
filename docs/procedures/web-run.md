@@ -614,5 +614,7 @@ passes to each package: under it `apps/web`'s Vitest config leaves out every sui
 server (`../server/server.ts`) or a store factory (`./store.ts`, `./host-stores.ts`) and runs the
 rest. Any other value fails the run before turbo starts; unset, every suite runs. The pre-push
 hooks run every Vitest suite, the web server suites and the ones that read documentation included
-(`test-gate` runs `npx vitest run` with `BEADS_UI_TEST_SCOPE` cleared), and then the Playwright specs in full
-(`npm run test:e2e`), so no push skips them.
+(`test-gate` runs `npx vitest run` with `BEADS_UI_TEST_SCOPE` cleared), then the mod's
+`claude plugin test` loop and the script tests (`mod-and-script-tests` runs `npm run test:push`,
+turbo's `test:mod` and `//#test:scripts` tasks, with `BEADS_UI_TEST_SCOPE` cleared), and then the
+Playwright specs in full (`npm run test:e2e`), so no push skips them.

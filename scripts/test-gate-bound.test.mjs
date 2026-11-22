@@ -407,6 +407,109 @@ else setTimeout(end, Number(ms));
   }
 });
 
+describe("the pre-push hook for the mod's loop and the script tests", () => {
+  const MOD = "@sergeiwallace/beads-ui-plugin";
+  const rootScripts = () => JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).scripts;
+
+  function hookEntry() {
+    const config = readFileSync(join(ROOT, ".pre-commit-config.yaml"), "utf8");
+    const block = config
+      .split(/^ {6}- id: /m)
+      .slice(1)
+      .find((b) => b.startsWith("mod-and-script-tests\n"));
+    assert.ok(block, "no mod-and-script-tests hook in .pre-commit-config.yaml");
+    assert.match(block, /^ {8}stages: \[pre-push\]$/m);
+    return block.match(/^ {8}entry: (.*)$/m)?.[1];
+  }
+
+  test("should run the mod's loop and the script tests, and nothing else, at pre-push", () => {
+    assert.equal(hookEntry(), "env -u BEADS_UI_TEST_SCOPE npm run test:push");
+    const [node, script, turbo, ...rest] = rootScripts()["test:push"].split(" ");
+    assert.deepEqual([node, script, turbo], ["node", "scripts/test-jobs.mjs", "turbo"]);
+    const result = run(
+      process.execPath,
+      [join(ROOT, script), join(BIN, "turbo"), ...rest, "--dry=json"],
+      { jobs: 2 },
+    );
+    assert.equal(result.status, 0, result.stderr);
+    const tasks = JSON.parse(result.stdout)
+      .tasks.filter((task) => task.command !== "<NONEXISTENT>")
+      .map((task) => [task.taskId, task.command])
+      .sort();
+    assert.deepEqual(tasks, [
+      ["//#test:scripts", rootScripts()["test:scripts"]],
+      [`${MOD}#test:mod`, "node ../../scripts/plugin-test.mjs ."],
+    ]);
+  });
+
+  function pushWorkspace({ loop, scripts }) {
+    const dir = fresh("push");
+    const log = join(dir, "ran.log");
+    const step = (name, status) =>
+      `node -e "require('fs').appendFileSync('${log}', '${name} ' + process.env.BEADS_UI_TEST_SCOPE + ' ' + process.env.BEADS_UI_TEST_JOBS + '\\n'); process.exit(${status})"`;
+    write(
+      dir,
+      "package.json",
+      JSON.stringify({
+        name: "fixture",
+        private: true,
+        packageManager: "npm@11.19.0",
+        workspaces: ["plugins/*"],
+        scripts: {
+          "test:push": rootScripts()["test:push"],
+          "test:scripts": step("scripts", scripts),
+        },
+      }),
+    );
+    write(dir, "turbo.json", readFileSync(join(ROOT, "turbo.json"), "utf8"));
+    write(
+      dir,
+      "scripts/test-jobs.mjs",
+      readFileSync(join(ROOT, "scripts", "test-jobs.mjs"), "utf8"),
+    );
+    write(
+      dir,
+      "plugins/mod/package.json",
+      JSON.stringify({ name: MOD, scripts: { "test:mod": step("loop", loop) } }),
+    );
+    appendFileSync(log, "");
+    return { dir, log };
+  }
+
+  const push = (dir) =>
+    spawnSync("sh", ["-c", hookEntry()], {
+      cwd: dir,
+      env: {
+        ...ENV,
+        PATH: `${BIN}:${ENV.PATH}`,
+        BEADS_UI_TEST_SCOPE: "commit",
+        BEADS_UI_TEST_JOBS: "2",
+      },
+      encoding: "utf8",
+    });
+
+  test("should pass the push when the loop and the script tests pass, with the scope cleared", () => {
+    const { dir, log } = pushWorkspace({ loop: 0, scripts: 0 });
+    const result = push(dir);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.deepEqual(readFileSync(log, "utf8").split("\n").filter(Boolean).sort(), [
+      "loop undefined 2",
+      "scripts undefined 2",
+    ]);
+  });
+
+  for (const [failing, outcome] of [
+    ["a mod test", { loop: 1, scripts: 0 }],
+    ["a script test", { loop: 0, scripts: 1 }],
+  ]) {
+    test(`should fail the push when ${failing} fails`, () => {
+      const { dir } = pushWorkspace(outcome);
+      const result = push(dir);
+      assert.notEqual(result.status, 0, result.stdout + result.stderr);
+    });
+  }
+});
+
 describe("Vitest's worker cap", () => {
   const PROBE = `import { createVitest } from "vitest/node";
 const vitest = await createVitest("test", { root: process.argv[1], watch: false }, {}, {});
