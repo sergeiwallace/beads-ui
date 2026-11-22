@@ -44,6 +44,18 @@ which module may use the engine interface.
   original entry. Only exact warnings with a recorded reason qualify
   for an exception. The engine type list comes from the generated
   Claude Code declarations.
+- When `claude plugin validate` reports the warning "not type-checked:
+  the check ended without an answer", its type check gave no verdict,
+  which says nothing about the plugin. It was seen on a loaded host and
+  while another process reinstalled the Claude Code package under the
+  running check (BU-pqm). The allow-list gate then runs validate again,
+  up to 3 attempts, pausing 10 s before the second and 20 s before the
+  third so a package reinstall can finish. When no attempt answers it
+  exits 2 (could not check), not 1, because nothing was compared.
+  Rejected: treating the warning as an ordinary difference, which turns
+  host load into a red gate that names no real change. The live-CLI
+  cases in `plugins/beads-ui/test/allowlist.spec.ts` get a 180 s timeout
+  to leave room for all three attempts.
 
 ## Consequences
 

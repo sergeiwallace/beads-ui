@@ -60,7 +60,21 @@ function splitTopLevel(values) {
   return parts;
 }
 
-function validate(pluginDir) {
+const NO_ANSWER = "not type-checked: the check ended without an answer";
+const VALIDATE_ATTEMPTS = 3;
+const RETRY_PAUSES_MS = [10_000, 20_000];
+
+function pause(ms) {
+  if (ms > 0) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+function unanswered(report) {
+  return [report.manifest, ...(report.contents ?? [])].some((part) =>
+    (part?.warnings ?? []).some((warning) => warning.message === NO_ANSWER),
+  );
+}
+
+function validateOnce(pluginDir) {
   const result = spawnSync("claude", ["plugin", "validate", "--strict", "--json", pluginDir], {
     encoding: "utf8",
   });
@@ -77,6 +91,18 @@ function validate(pluginDir) {
     console.log(result.stdout + result.stderr);
     process.exit(2);
   }
+}
+
+function validate(pluginDir) {
+  for (let attempt = 1; attempt <= VALIDATE_ATTEMPTS; attempt++) {
+    if (attempt > 1) pause(RETRY_PAUSES_MS[attempt - 2]);
+    const report = validateOnce(pluginDir);
+    if (!unanswered(report)) return report;
+  }
+  console.log(
+    `check-plugin-allowlist: claude plugin validate's type check ended without an answer on all ${VALIDATE_ATTEMPTS} attempts; nothing was checked`,
+  );
+  process.exit(2);
 }
 
 function reportedOf(report, problems) {

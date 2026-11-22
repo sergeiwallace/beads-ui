@@ -37,7 +37,7 @@ const runGate = (dir: string) =>
 const SESSION_START = "for (const spec of COMMAND_SPECS) await $.command.register(spec);";
 const IMPORT_ANCHOR = 'import { drawBand } from "./bands.js";';
 
-describe("the validate allow-list gate", () => {
+describe("the validate allow-list gate", { timeout: 180_000 }, () => {
   it("should pass when run on the real plugin", () => {
     const result = runGate(pluginDir);
 
