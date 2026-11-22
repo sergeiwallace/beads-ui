@@ -107,6 +107,13 @@ repos:
         stages: [pre-push]
         pass_filenames: false
         always_run: true
+      - id: e2e
+        name: npm run test:e2e (the web app's Playwright suites, in full)
+        entry: npm run test:e2e
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true
       - id: bd-precommit-validate
         name: bd dual-ID invariant (a staged .beads/issues.jsonl mirror, if tracked)
         entry: bd-precommit-validate

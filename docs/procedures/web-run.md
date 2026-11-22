@@ -552,7 +552,8 @@ other address. This needs a Linux Docker host, or Docker Desktop with host netwo
 
 ```sh
 npm run e2e:install -w apps/web   # once: apps/web/e2e's own install, the harness library and Chromium
-npm test                          # includes the web server suite and the Playwright specs
+npm test                          # the Vitest suites, the web server suite included
+npm run test:e2e                  # the Playwright specs, in full
 ```
 
 `apps/web/e2e/` is its own install root, outside the npm workspaces, because it alone depends on the
@@ -587,6 +588,8 @@ A value outside 1 to 2 fails the run before any test starts.
 BEADS_UI_TEST_JOBS=2 npm test     # a faster run on a quiet host, at most 4 test processes
 ```
 
-The pre-commit test hooks skip a commit whose staged paths are all under `docs/` or end in `.md`,
-and run the suite for any other staged path, a deleted or renamed one included. The pre-push test
-gate still runs the Vitest suites, the ones that read documentation included.
+The pre-commit test hooks run `npm test` and the mod's tests, never the Playwright specs, and skip
+a commit whose staged paths are all under `docs/` or end in `.md`; any other staged path, a
+deleted or renamed one included, runs them. The pre-push hooks run the Vitest suites, the ones that
+read documentation included, and then the Playwright specs in full (`npm run test:e2e`), so no push
+skips them.

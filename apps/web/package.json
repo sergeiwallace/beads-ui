@@ -10,7 +10,7 @@
     "build": "vite build",
     "start": "node bin/beads-ui-web.mjs",
     "typecheck": "tsc -p .",
-    "test": "vitest run && npm run test:e2e",
+    "test": "vitest run",
     "test:e2e": "node e2e/check-install.mjs && tsc -p e2e && cd e2e && PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH:-0} ./node_modules/.bin/playwright test -c frontend-harness.config.ts",
     "e2e:install": "node e2e/check-install.mjs --install && cd e2e && PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH:-0} ./node_modules/.bin/playwright install chromium"
   },

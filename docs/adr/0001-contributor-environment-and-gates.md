@@ -25,6 +25,10 @@ plugin also updates only when its manifest version increases.
   because gitleaks ignores low-entropy and example keys.
 - `scripts/test-hook.mjs` skips the two pre-commit test suites for staged
   docs-only changes. Pre-push still checks documentation-linked tests.
+- The pre-commit `npm-test` hook runs `npm test`: Vitest and the script
+  tests, with no Playwright. The web app's Playwright specs run in full at
+  pre-push, in the `e2e` hook (`npm run test:e2e`), because they took over
+  an hour on a loaded host and made every commit wait for them.
   Empty staged input runs the suite. For deletes and renames the filter
   includes the old path. The old docs-index gate was retired because the
   generated index had no consumers and could not be regenerated correctly

@@ -54,14 +54,37 @@ test("should name the private library in no package.json or package-lock.json ou
   assert.equal(found.stdout, "");
 });
 
-test("should run the install check, then tsc -p e2e, then Playwright, in npm run test:e2e, and run it after Vitest in npm test", () => {
+test("should run the install check, then tsc -p e2e, then Playwright, in npm run test:e2e, and keep it out of npm test", () => {
   const { scripts } = json(join(web, "package.json"));
   const steps = scripts["test:e2e"].split("&&").map((step) => step.trim());
   assert.equal(steps[0], "node e2e/check-install.mjs");
   assert.equal(steps[1], "tsc -p e2e");
   assert.match(steps.at(-1), /playwright test -c frontend-harness\.config\.ts$/);
-  assert.equal(scripts.test, "vitest run && npm run test:e2e");
+  assert.equal(scripts.test, "vitest run");
   assert.match(scripts["e2e:install"], /^node e2e\/check-install\.mjs --install && /);
+  const rootScripts = json(join(root, "package.json")).scripts;
+  assert.equal(rootScripts["test:e2e"], "npm run test:e2e -w apps/web");
+  assert.doesNotMatch(rootScripts.test, /test:e2e|playwright/);
+});
+
+test("should run npm run test:e2e as a pre-push hook and as no pre-commit hook", () => {
+  const config = readFileSync(join(root, ".pre-commit-config.yaml"), "utf8");
+  const defaults = config.match(/^default_stages: \[(.*)\]$/m)?.[1].split(/,\s*/) ?? [];
+  const hooks = config
+    .split(/^ {6}- id: /m)
+    .slice(1)
+    .map((block) => ({
+      id: block.split("\n")[0],
+      entry: block.match(/^ {8}entry: (.*)$/m)?.[1] ?? "",
+      stages: block.match(/^ {8}stages: \[(.*)\]$/m)?.[1].split(/,\s*/) ?? defaults,
+    }));
+  const e2e = hooks.filter((hook) => /test:e2e|playwright/.test(hook.entry));
+  assert.deepEqual(
+    e2e.map(({ id, entry, stages }) => ({ id, entry, stages })),
+    [{ id: "e2e", entry: "npm run test:e2e", stages: ["pre-push"] }],
+  );
+  const atCommit = hooks.filter((hook) => hook.stages.includes("pre-commit"));
+  assert.ok(atCommit.some((hook) => hook.id === "npm-test"));
 });
 
 test("should exit non-zero naming the library repo, the credential route and npm run e2e:install when the e2e install is missing", () => {

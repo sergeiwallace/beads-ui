@@ -28,9 +28,10 @@ The browser suites live in their own install root, `apps/web/e2e/`, outside the 
 its `package.json` and lockfile hold Playwright and the frontend test harness library, which is a
 private repository (`https://github.com/sergeiwallace/frontend-test-harness`). `npm run e2e:install`
 installs that root and Chromium, through your git's credential for that repository. Without read
-access to it, `npm ci`, `npm run lint` and the Vitest suites still work, but `npm test` and the
-pre-commit `npm-test` hook fail after Vitest, naming the library and how to get access, so a
-commit is refused until you have it.
+access to it, `npm ci`, `npm run lint` and the Vitest suites still work. `npm run test:e2e` and
+the pre-push `e2e` hook fail before any browser starts, naming the library and how to get access,
+and the script tests `npm test` runs after Vitest fail where they read that install, so a commit
+and a push are refused until you have it.
 
 ## Checks
 
@@ -38,13 +39,19 @@ Run these before you push. The hooks run them too.
 
 ```sh
 npm run lint        # Biome, the core purity gate and the core type check
-npm test            # Vitest, the web app's Playwright specs, then claude plugin test for the mod
+npm test            # Vitest, the script tests, then claude plugin test for the mod
+npm run test:e2e    # the web app's Playwright specs, in full
 npx tsc --noEmit    # type check of the whole repository
 ```
 
-`BEADS_UI_TEST_JOBS` (default 1, at most 2) bounds how many test processes `npm test` and the
-test hooks start; a commit that stages only `docs/**` or `*.md` paths skips the test hooks. The
-setting and how its bounds multiply: [web-run.md, Test it](docs/procedures/web-run.md#test-it).
+The pre-commit hooks run `npm test` and the mod's tests, which take minutes. The Playwright specs
+take much longer, so they run at pre-push, in full, and not at commit: run `npm run test:e2e`
+yourself when you want their answer before you push.
+
+`BEADS_UI_TEST_JOBS` (default 1, at most 2) bounds how many test processes `npm test`,
+`npm run test:e2e` and the test hooks start; a commit that stages only `docs/**` or `*.md` paths
+skips the commit's test hooks. The setting and how its bounds multiply:
+[web-run.md, Test it](docs/procedures/web-run.md#test-it).
 
 The mod's gates need Claude Code (`claude`) on your `PATH`: `npm test` runs `claude plugin test`,
 and the pre-commit hooks run `claude plugin validate` on the repository root and on

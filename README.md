@@ -197,6 +197,7 @@ directory. The design doc records when the core moves to its own package.
 npm ci
 npm run lint
 npm test
+npm run test:e2e   # the browser suites; the pre-push hook runs them too
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the rules on the shared core and on secrets.
