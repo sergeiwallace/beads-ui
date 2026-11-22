@@ -16,7 +16,8 @@
     "forceConsistentCasingInFileNames": true,
     "paths": {
       "@beads-ui/core": ["./plugins/beads-ui/core/src/index.ts"],
-      "@beads-ui/core/*": ["./plugins/beads-ui/core/src/*"]
+      "@beads-ui/core/*": ["./plugins/beads-ui/core/src/*"],
+      "@/*": ["./apps/web/client/*"]
     }
   }
 }

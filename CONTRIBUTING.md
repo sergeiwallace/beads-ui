@@ -76,6 +76,17 @@ See [docs/procedures/releasing.md](docs/procedures/releasing.md).
 The plugin at `plugins/beads-ui` has no runtime dependencies. Development tools go in the root
 `package.json` as dev dependencies.
 
+## Styling the web app
+
+The web app is built on Tailwind CSS v4 and shadcn/ui components on Base UI (D-10 in the design).
+`apps/web/components.json` is shadcn's configuration: run `npx shadcn@4.23.0 add <component>` in
+`apps/web` to copy a component into `apps/web/client/components/ui`, then delete the comments it
+brings, which the comment ratchet refuses. `apps/web/client/shell.css` loads Tailwind's theme and
+utilities without its Preflight reset, so the older hand CSS (`packages/web-ui/src/web-ui.css`,
+`apps/web/client/app.css`) renders as it did, and it sets shadcn's colour variables to the D-19
+tokens in `packages/web-ui/src/theme.css`. Change a colour in `theme.css`, never in `shell.css`;
+`apps/web/test/shell-theme.test.ts` fails when a shadcn variable names no token.
+
 ## No secrets
 
 Never commit credentials, tokens, private keys, `.env` files or private data. The gitleaks hook

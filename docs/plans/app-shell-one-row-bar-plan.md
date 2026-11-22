@@ -47,9 +47,9 @@ Tailwind v4 through `@tailwindcss/vite`, with its theme and utilities layers and
 
 **Acceptance criteria:**
 
-- [ ] When the client is built, the system shall emit Tailwind's theme and utilities layers and no Preflight rules.
-- [ ] Every shadcn semantic variable shall be set to a `--bu-*` token that `theme.css` defines, and a test shall fail when one is missing or names an undefined token.
-- [ ] After this step, the main views (Board, Backlog, Roadmap, Analytics, Sessions, Review, Sprints, Queue, an issue's detail and the open palette) shall render pixel-identical at 1280 px and at 390 px to their render before it.
+- [x] When the client is built, the system shall emit Tailwind's theme and utilities layers and no Preflight rules.
+- [x] Every shadcn semantic variable shall be set to a `--bu-*` token that `theme.css` defines, and a test shall fail when one is missing or names an undefined token.
+- [x] After this step, the main views (Board, Backlog, Roadmap, Analytics, Sessions, Review, Sprints, Queue, an issue's detail and the open palette) shall render pixel-identical at 1280 px and at 390 px to their render before it.
 - [ ] The Vitest and browser suites shall pass with the same counts as before.
 
 ### T-02: The icon-rail sidebar
@@ -109,7 +109,28 @@ The bar is a `flex-wrap: nowrap` row and a size container. It holds the sidebar 
 
 ## Measurements
 
-Filled in as the build runs.
+Every run is on the same loaded 16-core host, where the host's contention reading stayed at LOOK
+(load 28 to 33 on 16 cores).
+
+### T-01: no visual change
+
+A throwaway Playwright spec, kept out of the repository, served one store with fixed issue ids
+and a fixed repository name and took a full-page screenshot of the Board, Backlog, Roadmap,
+Analytics, Sessions, Review, Sprints, Queue, an issue's detail and the open palette, at 1280 by 800
+with a mouse and at 390 by 844 on touch, with the clock text masked. Captured twice on the build
+before T-01, the screenshots matched each other pixel for pixel once the issue detail's Created and
+Updated times were masked too; they were then compared with `maxDiffPixels: 0` against the build
+after T-01.
+
+| Project | Identical | Different |
+|---|---|---|
+| 1280 by 800 | 10 of 10 | none |
+| 390 by 844 | 9 of 10 | the issue detail: 124 px, all in the digits of its Created and Updated times, which the mask missed at 390 px and which differ because the issues were made at another minute |
+
+The built stylesheet holds Tailwind's base, components and utilities layers with no Preflight
+rule: its base layer is the three rules for shadcn's `data-slot` elements, and its utilities are
+the three Tailwind found as words in the client (`relative`, `inline`, `filter`), none of which is
+an existing class name.
 
 ## Decisions
 

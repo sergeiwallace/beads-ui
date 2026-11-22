@@ -1,4 +1,5 @@
 import "./trusted-types.ts";
+import "./shell.css";
 import "@sergeiwallace/beads-ui-web-ui/theme.css";
 import "@sergeiwallace/beads-ui-web-ui/web-ui.css";
 import "./app.css";
