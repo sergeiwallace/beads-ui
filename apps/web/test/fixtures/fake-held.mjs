@@ -1,8 +1,4 @@
 #!/usr/bin/env node
-// A stand-in for the held store's tool in the server suites: `fake-held.mjs <dir> <verb> ...`
-// prints what `<dir>` holds for the verb, as the real tool's `review --json`, `options` and
-// `show --json` print it. A `<verb>.exit` file sets the exit code, and a `<verb>.stderr` file
-// what goes to stderr. `calls.jsonl` records every call.
 
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";

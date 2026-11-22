@@ -10,8 +10,6 @@ import { expect, it } from "vitest";
 const exec = promisify(execFile);
 const launcher = fileURLToPath(new URL("../bin/launch.mjs", import.meta.url));
 
-// Exercise the real tmux/process boundary: a launcher-only mock cannot detect duplicate panes.
-// Only bd data is a fixture; every terminal and process belongs to this isolated socket.
 async function fixture(
   run: (context: {
     composer: string;
@@ -55,7 +53,6 @@ async function fixture(
       );
       const id = result.stdout.trim();
       expect(id).toMatch(/^%\d+$/);
-      // Readiness matters: a failed child disappearing must not masquerade as deduplication.
       const deadline = Date.now() + 5_000;
       while (!(await tmux("capture-pane", "-p", "-t", id)).includes(`Beads: ${session}`)) {
         if (Date.now() >= deadline) throw new Error("companion did not render its session");

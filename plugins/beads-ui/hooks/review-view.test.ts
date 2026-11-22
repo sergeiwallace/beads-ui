@@ -2,13 +2,13 @@ import type { On } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
-import { REVIEW_FILTER_KEYS } from "../core/src/index.ts";
-import { ISSUE_KEY, REVIEW_FILTER_KEY, reviewItemKey } from "./components/review.ts";
-import { OVERVIEW_KEY } from "./levels.ts";
-import { PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
-import { ME } from "./tests/mine.ts";
-import { render } from "./tests/render.ts";
+import { REVIEW_FILTER_KEYS } from "../core/src/index.js";
+import { ISSUE_KEY, REVIEW_FILTER_KEY, reviewItemKey } from "./components/review.js";
+import { OVERVIEW_KEY } from "./levels.js";
+import { PANE_ID, PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
+import { ME } from "./tests/mine.js";
+import { render } from "./tests/render.js";
 import {
   BAND_PROPS,
   CWD,
@@ -29,12 +29,7 @@ import {
   STORE_LIST,
   VIEWPORT,
   world,
-} from "./tests/world.ts";
-
-// T-2C.6 and T-2C.7 (D-38, D-40, D-41): the Review view in the pane (key 7) and the band's
-// overview, its scope, filter, sorts and groups, and the review indicator on task rows, at the
-// hooks entry point. A host refresher is played running, its review snapshot written under its
-// token; the held store's command is a stub argv the world answers.
+} from "./tests/world.js";
 
 const PYTHON = "/opt/fleet/.venv/bin/python";
 const HELD = "/opt/fleet/scripts/held_cli.py";

@@ -1,7 +1,5 @@
-import type { BdArgv } from "./model.ts";
+import type { BdArgv } from "./model.js";
 
-// Free-text values go in `--flag=value` form so a value that starts with "-" is never read as a
-// flag. A positional id or a status name cannot be protected that way, so it is checked instead.
 function checked(kind: string, value: string): string {
   if (value === "" || value.startsWith("-") || /\s/.test(value)) {
     throw new RangeError(`invalid ${kind} for a bd argument: ${JSON.stringify(value)}`);

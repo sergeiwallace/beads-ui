@@ -6,10 +6,6 @@ import {
   PASTE_COMMAND,
 } from "lexical";
 
-// Drives the ported Lexical composer in jsdom the way the ai-core dashboard's own tests do: jsdom
-// has no composition or clipboard, so text goes in through the editor's own API, the path typing,
-// dictation, completion and paste all funnel into.
-
 /** jsdom has neither constructor, and Lexical's paste path narrows on both. */
 export function installClipboardStubs(): void {
   const scope = globalThis as Record<string, unknown>;

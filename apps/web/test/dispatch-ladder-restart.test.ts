@@ -15,10 +15,6 @@ import {
 } from "./auth-env.ts";
 import { createStore, type TestStore } from "./store.ts";
 
-// The dispatch ladder across a server restart (web app design T-W2.1, D-6): a coalescing window
-// or a shown deadline that was running when the server stopped is planned again when it starts,
-// rather than left to the turn-end pickup alone. The carriers are the stand-in fleet tools.
-
 const FAKE_TOOL = fileURLToPath(new URL("./fixtures/fake-fleet-tool.mjs", import.meta.url));
 const HOST = "host-b";
 
@@ -117,8 +113,6 @@ describe("the ladder across a restart (T-W2.1)", () => {
   });
 
   it("should try the next rung for a carried dispatch whose shown deadline was running when the server stopped", async () => {
-    // The first server's shown deadline is far off, so it cannot try the next rung before it
-    // stops however slow the stop is; the second reads the short one at its start.
     await env.write(config(0, 600));
     const task = await ownedTask();
     const before = (await calls("agent-mail")).length;
@@ -131,8 +125,6 @@ describe("the ladder across a restart (T-W2.1)", () => {
     await env.write(config(0, 2));
     const second = await start();
     try {
-      // Every carried dispatch whose deadline the stop cut short is planned again, the first
-      // test's included, so this one is found by its own claim key.
       const claim = `beads-ui-dispatch-${dispatch}`;
       const keyOf = (call: { args: string[] }) => call.args[call.args.indexOf("--key") + 1];
       await waitFor(async () =>

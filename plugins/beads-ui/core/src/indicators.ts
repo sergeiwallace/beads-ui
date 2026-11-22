@@ -1,14 +1,8 @@
-// The row indicator registry (D-41, D-42, T-2C.3): an ordered list of indicators, each a
-// detection over the issue and the read it came from, a glyph of the glyph table and a meaning.
-// Every task row draws a left gutter of one cell per enabled indicator, in registry order; the
-// help and Settings draw their legend and switches from the same list, so a new indicator is one
-// entry here and one glyph in glyphs.ts.
-
-import { type GlyphId, glyphOf } from "./glyphs.ts";
-import type { Issue } from "./model.ts";
-import type { ReviewItem } from "./review.ts";
-import { openItemsOf } from "./reviewList.ts";
-import type { Token } from "./tokens.ts";
+import { type GlyphId, glyphOf } from "./glyphs.js";
+import type { Issue } from "./model.js";
+import type { ReviewItem } from "./review.js";
+import { openItemsOf } from "./reviewList.js";
+import type { Token } from "./tokens.js";
 
 /** The issues of the read a row comes from, by id and by parent. */
 export interface IndicatorRead {

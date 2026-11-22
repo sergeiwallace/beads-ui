@@ -2,12 +2,12 @@ import type { On } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
-import { asOf, type BoardEntry, boardFileName, boardRow, clockStamp } from "../core/src/index.ts";
-import list from "../core/test/fixtures/bd-list-all-brief.json.ts";
-import statuses from "../core/test/fixtures/bd-statuses.json.ts";
-import { NO_NAME_TEXT, PREFS_KEY, SCOPE_KEY } from "./pane.ts";
-import { PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
+import { asOf, type BoardEntry, boardFileName, boardRow, clockStamp } from "../core/src/index.js";
+import list from "../core/test/fixtures/bd-list-all-brief.json.js";
+import statuses from "../core/test/fixtures/bd-statuses.json.js";
+import { NO_NAME_TEXT, PREFS_KEY, SCOPE_KEY } from "./pane.js";
+import { PANE_ID, PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
 import {
   BU,
   CLOSED_PAGE,
@@ -26,10 +26,7 @@ import {
   VIEWPORT,
   type WorldOptions,
   world,
-} from "./tests/world.ts";
-
-// T-1B.8 and D-29: the first paint from the host refresher's board snapshot, the Mine and All
-// default and its memory, and the board's bounded read.
+} from "./tests/world.js";
 
 const ROWS = JSON.parse(list) as Record<string, unknown>[];
 const boardFile = (token: string) => `${STATE_DIR}/boards/${token}/${boardFileName(CWD)}`;
@@ -76,7 +73,6 @@ function snapshotFiles(
     stores: [],
     boards: [entry],
   };
-  // The refresher writes its own token's files, and publishes the same counts as counts.json.
   return {
     [boardFile(token)]: JSON.stringify(board),
     [countsOf(token)]: JSON.stringify(counts),
@@ -124,14 +120,11 @@ describe("the first paint (T-1B.8)", () => {
     const opening = START_MS;
     const { w, ui } = await opened($, on, { files: snapshotFiles(), script: listsHang });
 
-    // No bd list has answered: every card on the board came from the snapshot.
     expect(await cards(ui)).toHaveLength(30);
     expect((await ui.find({ key: "column::open" }))?.text).toBe("open 20");
     expect((await ui.find({ key: "header" }))?.text).toContain(stamp(CHECKED_AT));
     expect((await ui.find({ key: "header" }))?.text).not.toContain("loading");
-    // Drawn at the moment /bu ran, on the test clock.
     expect(await w.clock.now()).toBe(opening);
-    // And then it reads bd: the open issues and one closed page.
     expect(lists(w)).toContain(OPEN_LIST);
     expect(lists(w)).toContain(CLOSED_PAGE);
   });
@@ -167,7 +160,6 @@ describe("the first paint (T-1B.8)", () => {
     const ousted = snapshotFiles({ rows: ROWS.slice(0, 5), token: "ousted-token-1" });
     const files = {
       ...snapshotFiles(),
-      // The ousted refresher replaced counts.json, and the board file it names, after the holder.
       [COUNTS]: ousted[COUNTS] ?? "",
       [`${STATE_DIR}/boards/${boardFileName(CWD)}`]: ousted[boardFile("ousted-token-1")] ?? "",
       [boardFile("ousted-token-1")]: ousted[boardFile("ousted-token-1")] ?? "",
@@ -236,7 +228,6 @@ describe("Mine and All (D-29)", () => {
     expect(await cards(ui)).toHaveLength(30);
     await ui.press({ key: "scope" });
     expect(w.store.get(SCOPE_KEY)).toEqual({ "ops-vm-3": "mine", "qa-vm-1": "mine" });
-    // The view key the other preferences live in carries no scope.
     expect(Object.keys((w.store.get(PREFS_KEY) as object | undefined) ?? {})).not.toContain(
       "scope",
     );
@@ -252,7 +243,6 @@ describe("Mine and All (D-29)", () => {
   test("should say how to see every issue when the session owns no open one", async ($, on) => {
     const { ui } = await opened($, on, named("ops-3"));
 
-    // ops-3's seven issues are all closed: the board draws them and says so.
     expect((await ui.find({ key: "mine-empty" }))?.text).toBe(
       "No open issues are assigned to ops-3; a shows all 22 open.",
     );

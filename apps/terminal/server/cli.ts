@@ -8,7 +8,6 @@ import { createBdClient } from "../../../packages/bd-node/src/index.ts";
 import { monitorCompanion } from "./companion-lifecycle.ts";
 import { SessionBoard } from "./session-board.ts";
 
-// Issue text is data, never terminal instructions, line breaks or prompt controls.
 function text(value: string): string {
   return stripVTControlCharacters(value).replace(/\p{Cc}/gu, " ");
 }

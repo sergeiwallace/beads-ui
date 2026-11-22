@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   type BoardState,
@@ -19,8 +17,8 @@ import {
   resolveRank,
   type Status,
   WEB_RANK_DEFAULT,
-} from "../src/index.ts";
-import { unwrap } from "./helpers.ts";
+} from "../src/index.js";
+import { unwrap } from "./helpers.js";
 
 const STATUSES: Status[] = [
   { name: "open", category: "active", builtin: true },
@@ -62,7 +60,6 @@ const column = (state: BoardState, status = "open"): string[] =>
 const rankOf = (state: BoardState, id: string): unknown =>
   state.issues.find((entry) => entry.id === id)?.metadata[RANK_KEY];
 
-// A seeded draw in [0, 1), so a jittered test is repeatable.
 function seeded(seed: number): () => number {
   let x = seed;
   return () => {

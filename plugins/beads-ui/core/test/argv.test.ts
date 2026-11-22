@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   boardReadArgvs,
@@ -14,7 +12,7 @@ import {
   reopenArgv,
   showArgv,
   statusesArgv,
-} from "../src/index.ts";
+} from "../src/index.js";
 
 describe("bd argv builders", () => {
   test("should build the read commands with --json when asked for the board's inputs", () => {

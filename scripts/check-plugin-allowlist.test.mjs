@@ -1,10 +1,9 @@
-// Exercise the gate with validator protocol fixtures: no child process is needed. The real
-// plugin sources and allow-list are still scanned; allowlist.spec.ts covers the live CLI.
 import assert from "node:assert/strict";
 import childProcess from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
-import { resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { test } from "node:test";
 
 const plugin = resolve(import.meta.dirname, "../plugins/beads-ui");
@@ -17,8 +16,6 @@ const notes = Object.entries(JSON.parse(readFileSync(allowlist, "utf8")).modules
       ([kind, values]) => `${module} ${kind}: ${values.length ? values.join(", ") : "nothing"}`,
     ),
 );
-// Reassembled from beads-ui-hook-after-round1.log: the comma in ui.focus's annotation
-// was incorrectly reported as a separate `component)` registration.
 const currentHooks =
   "./register.ts hooks: session.start, command.run{command=show-beads-ui|bu}, turn.complete, ui.close{id=beads|beads-confirm}, ui.fault{requestId=beads}, ui.focus{requestId=beads} (default matcher key: plugin, component), ui.message{requestId=beads}, ui.render{component=AbovePrompt} (default matcher key: plugin), ui.render{component=Pane} (default matcher key: plugin)";
 const currentNotes = notes.map((note) =>
@@ -26,12 +23,33 @@ const currentNotes = notes.map((note) =>
 );
 
 let runs = 0;
+function allowlistWithWarnings(t, messages) {
+  const dir = mkdtempSync(join(tmpdir(), "allowlist-"));
+  t.after(() => rmSync(dir, { recursive: true }));
+  const path = join(dir, "validate-allowlist.json");
+  const real = JSON.parse(readFileSync(allowlist, "utf8"));
+  const warnings = messages.map((message) => ({ message, reason: "a fixture's reason" }));
+  writeFileSync(path, JSON.stringify({ ...real, warnings }));
+  return path;
+}
+
 async function runGate(
   t,
-  { warnings = [TS5097], errors = [], extraNotes = [], reportedNotes = notes, before = [] } = {},
+  {
+    warnings = [],
+    errors = [],
+    success = warnings.length === 0 && errors.length === 0,
+    allowedWarnings = [],
+    extraNotes = [],
+    reportedNotes = notes,
+    before = [],
+  } = {},
 ) {
+  const gateAllowlist = allowedWarnings.length
+    ? allowlistWithWarnings(t, allowedWarnings)
+    : allowlist;
   const report = {
-    success: false,
+    success,
     contents: [
       {
         type: "hooks",
@@ -45,17 +63,16 @@ async function runGate(
   const stopped = new Error("gate exited");
   let status = 0;
   const argv = process.argv;
-  // `before` are reports returned, in order, ahead of `report`, which answers every later call.
   const queued = [...before];
   let calls = 0;
   t.mock.method(childProcess, "spawnSync", (command, args) => {
     assert.equal(command, "claude");
     assert.deepEqual(args, ["plugin", "validate", "--strict", "--json", plugin]);
     calls++;
-    return { status: 1, stdout: JSON.stringify(queued.shift() ?? report), stderr: "" };
+    const next = queued.shift() ?? report;
+    return { status: next.success ? 0 : 1, stdout: JSON.stringify(next), stderr: "" };
   });
   t.mock.method(console, "log", (line) => lines.push(line));
-  // The gate pauses between validate attempts; the reports here are canned, so record the pauses.
   const pauses = [];
   t.mock.method(Atomics, "wait", (_array, _index, _value, ms) => {
     pauses.push(ms);
@@ -66,7 +83,7 @@ async function runGate(
     throw stopped;
   });
   syncBuiltinESMExports();
-  process.argv = [process.execPath, "check-plugin-allowlist.mjs", plugin, allowlist];
+  process.argv = [process.execPath, "check-plugin-allowlist.mjs", plugin, gateAllowlist];
   try {
     await import(`./check-plugin-allowlist.mjs?regression=${runs++}`);
   } catch (error) {
@@ -85,40 +102,52 @@ const unanswered = {
   contents: [{ type: "hooks", notes, warnings: [{ message: NO_ANSWER }], errors: [] }],
 };
 
-test("should pass the real footprint when the only warning is the documented TS5097", async (t) => {
+test("should pass the real footprint when validate reports no warning", async (t) => {
   const result = await runGate(t);
   assert.equal(result.status, 0, result.output);
   assert.match(result.output, /matches .*validate-allowlist.json/);
 });
 
-test("should reject an additional type warning beside the documented warning", async (t) => {
+test("should reject TS5097 on the real allow-list", async (t) => {
+  const result = await runGate(t, { warnings: [TS5097] });
+  assert.equal(result.status, 1);
+  assert.ok(result.output.includes(`validate warning: ${TS5097}`), result.output);
+});
+
+test("should pass when the only warning is one the allow-list names with a reason", async (t) => {
+  const result = await runGate(t, { warnings: [TS5097], allowedWarnings: [TS5097] });
+  assert.equal(result.status, 0, result.output);
+  assert.match(result.output, /matches .*validate-allowlist.json/);
+});
+
+test("should reject an additional type warning beside an allowed warning", async (t) => {
   const warning = "error TS2345: a required input field is missing";
-  const result = await runGate(t, { warnings: [TS5097, warning] });
+  const result = await runGate(t, { warnings: [TS5097, warning], allowedWarnings: [TS5097] });
   assert.equal(result.status, 1);
   assert.ok(result.output.includes(warning), result.output);
 });
 
 test("should reject a different message from the same warning class", async (t) => {
   const warning = TS5097.replace("'.ts'", "'.tsx'");
-  const result = await runGate(t, { warnings: [warning] });
+  const result = await runGate(t, { warnings: [warning], allowedWarnings: [TS5097] });
   assert.equal(result.status, 1);
   assert.ok(result.output.includes(warning), result.output);
 });
 
 test("should reject errors even when their message is an allowed warning", async (t) => {
-  const result = await runGate(t, { errors: [TS5097] });
+  const result = await runGate(t, { errors: [TS5097], allowedWarnings: [TS5097] });
   assert.equal(result.status, 1);
   assert.ok(result.output.includes(`validate error: ${TS5097}`), result.output);
 });
 
-test("should still reject a new engine call when the warning is documented", async (t) => {
+test("should reject a new engine call", async (t) => {
   const result = await runGate(t, { extraNotes: ["./register.ts calls: $.store.delete"] });
   assert.equal(result.status, 1);
   assert.match(result.output, /\$\.store.delete is not in the allow-list/);
 });
 
 test("should reject unexplained validator failure", async (t) => {
-  const result = await runGate(t, { warnings: [] });
+  const result = await runGate(t, { success: false });
   assert.equal(result.status, 1);
   assert.match(result.output, /claude plugin validate reported failure/);
 });

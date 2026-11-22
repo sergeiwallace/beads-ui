@@ -1,14 +1,14 @@
-import { DEFAULT_ID_POLICY, type IdPolicy, parseIdPolicy } from "./mint.ts";
-import type { Result } from "./model.ts";
-import { windowMs } from "./snapshot.ts";
+import { DEFAULT_ID_POLICY, type IdPolicy, parseIdPolicy } from "./mint.js";
+import type { Result } from "./model.js";
+import { windowMs } from "./snapshot.js";
 import {
   DEFAULT_QUIET_SECONDS,
   DEFAULT_SYNC_TIMEOUT_SECONDS,
   MAX_SYNC_TIMEOUT_SECONDS,
   STORE_TOKEN,
   type SyncSettings,
-} from "./sync.ts";
-import { isToken, TOKENS, type Token } from "./tokens.ts";
+} from "./sync.js";
+import { isToken, TOKENS, type Token } from "./tokens.js";
 import {
   BAND_LEVELS,
   BAND_PARTS,
@@ -20,7 +20,7 @@ import {
   isBandPart,
   isBandRows,
   MAX_BAND_ROWS,
-} from "./views/band.ts";
+} from "./views/band.js";
 import {
   COLLAPSE_RULES,
   DEFAULT_PANEL_SETTINGS,
@@ -30,8 +30,8 @@ import {
   MAX_SHOWN,
   PANEL_MODES,
   type PanelSettings,
-} from "./views/panel.ts";
-import { isSurfaceSetting, SURFACE_SETTINGS, type SurfaceSetting } from "./views/surfaces.ts";
+} from "./views/panel.js";
+import { isSurfaceSetting, SURFACE_SETTINGS, type SurfaceSetting } from "./views/surfaces.js";
 
 /** The settings the mod reads from `beads-ui.toml` (design, Configuration), at call time. */
 export interface BeadsUiConfig {
@@ -63,7 +63,6 @@ export interface TomlError {
 }
 
 const BARE_KEY = /^[A-Za-z0-9_-]+$/;
-// A quoted key with no escapes and no `=` inside, such as a directory name holding a dot.
 const QUOTED_KEY = /^"([^"\\=]+)"$|^'([^'=]+)'$/;
 const INTEGER = /^[+-]?(?:0|[1-9](?:_?[0-9])*)$/;
 const FLOAT = /^[+-]?(?:0|[1-9](?:_?[0-9])*)\.[0-9](?:_?[0-9])*$/;
@@ -78,7 +77,6 @@ class TomlInvalid {
 const isTable = (value: TomlValue | undefined): value is TomlTable =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-// Removes a `#` comment that is not inside a string.
 function withoutComment(line: string): string {
   let quote: string | undefined;
   for (let i = 0; i < line.length; i++) {
@@ -103,7 +101,6 @@ const ESCAPES: Readonly<Record<string, string>> = {
   r: "\r",
 };
 
-// Reads one value from the start of `text`; returns it and what follows.
 function readValue(text: string): [TomlValue, string] {
   const s = text.trimStart();
   if (s.startsWith('"')) {
@@ -665,7 +662,6 @@ function withTable(text: string | undefined, name: string, lines: readonly strin
   if (start === -1) return `${[...all, "", ...table].join("\n")}\n`;
   let end = start + 1;
   while (end < all.length && !HEADER.test(all[end] ?? "")) end++;
-  // Blank lines before the next table stay where they were.
   while (end > start + 1 && (all[end - 1] ?? "").trim() === "") end--;
   return `${[...all.slice(0, start), ...table, ...all.slice(end)].join("\n")}\n`;
 }

@@ -1,8 +1,3 @@
-// The MCP App's board view (beads-ui design T-4.1 and T-4.2, web app design Phase W4): a draft
-// the model asked for, shown with the Confirm control that sends it, and a Send control for a
-// prompt the user types here. Both call the server's app-only tools; nothing here posts into the
-// Claude conversation. Every text is set with textContent, never parsed as HTML.
-
 const { App, applyDocumentTheme, applyHostStyleVariables } = globalThis.McpApps;
 
 const app = new App(
@@ -61,8 +56,6 @@ app.ontoolresult = (result) => {
 };
 app.onhostcontextchanged = (context) => applyHost(context);
 
-// Send is a write, so it is confirmed here before the tool is called (T-4.2): the form only fills
-// the confirmation, and "Send it" makes the call.
 const confirmBox = document.getElementById("send-confirm");
 const confirmYes = document.getElementById("send-confirm-yes");
 let pending;

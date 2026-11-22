@@ -1,11 +1,8 @@
 import type { ClientKeyEvent, ClientPointerEvent, ClientSurface, JsonValue } from "claude-code";
 import { describe, expect, test } from "claude-code/testing";
 
-import type { TaskClientProps } from "../core/src/views/menu.ts";
-import TaskList, { rowAt } from "./tasks.ts";
-
-// The task list's Client (T-2B.5) called as Claude Code calls it, with a fake surface that keeps
-// what it was handed: the tree drawn, the pointer and key listeners, and every post.
+import type { TaskClientProps } from "../core/src/views/menu.js";
+import TaskList, { rowAt } from "./tasks.js";
 
 interface Drawn {
   type: string;

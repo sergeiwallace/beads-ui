@@ -2,12 +2,12 @@ import type { On, RenderPropsOf } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
-import { clockStamp, RASTER_COLORS, RASTER_DEFAULT_COLOR } from "../core/src/index.ts";
-import list from "../core/test/fixtures/bd-list-all-brief.json.ts";
-import { PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
-import { ME, MINE } from "./tests/mine.ts";
-import { overflows } from "./tests/width.ts";
+import { clockStamp, RASTER_COLORS, RASTER_DEFAULT_COLOR } from "../core/src/index.js";
+import list from "../core/test/fixtures/bd-list-all-brief.json.js";
+import { PANE_ID, PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
+import { ME, MINE } from "./tests/mine.js";
+import { overflows } from "./tests/width.js";
 import {
   exit,
   ok,
@@ -20,12 +20,7 @@ import {
   VIEWPORT,
   type WorldOptions,
   world,
-} from "./tests/world.ts";
-
-// T-2B.9: the Timeline view, driven through the pane as Claude Code mounts it. The store is the
-// fixture's, with due dates on three epics and one `Sprint 7` milestone (D-5); its six other
-// epics have none. The world's clock reads 2026-10-21 01:12 UTC, before every due date. The
-// session is a firstmate, which opens on every owner's issues; the scope suite names its own.
+} from "./tests/world.js";
 
 /** The day of the pane's read in the host's own time zone, which starts the axis. */
 const TODAY = clockStamp(START_MS, new Date(START_MS).getTimezoneOffset()).slice(0, 10);
@@ -128,12 +123,10 @@ describe("the Timeline view (T-2B.9)", () => {
       expect(decode(cells)).toHaveLength(Number(bar?.props.columns));
       filled.push(filledOf(cells));
     }
-    // Each bar runs from the axis start to its due date, the latest the full width.
     expect([...filled].sort((a, b) => a - b)).toEqual(filled);
     expect(filled[filled.length - 1]).toBe(
       Number((await ui.find({ key: bars[0] ?? "" }))?.props.columns),
     );
-    // BU-mg2.3 is in progress: its bar takes the wip colour; Sprint 7 is open.
     const wip = decode(String((await ui.find({ key: "timeline-bar:BU-mg2.3" }))?.props.cells));
     expect(wip[0]?.[2]).toBe(RASTER_COLORS.wip);
     const open = decode(String((await ui.find({ key: "timeline-bar:BU-ms7" }))?.props.cells));
@@ -319,7 +312,6 @@ describe("the Timeline's scope (BU-beads-ui-timeline-dety N-1, D-29)", () => {
 });
 
 describe("the Timeline's own read (BU-beads-ui-timeline-dety N-2)", () => {
-  // Thirty tasks closed after the old epic and milestone: the board reads only the 25 newest.
   const [first] = rows;
   const newer = Array.from({ length: 30 }, (_, i) => ({
     ...first,
@@ -398,9 +390,6 @@ describe("the Timeline's own read (BU-beads-ui-timeline-dety N-2)", () => {
 });
 
 describe("the Timeline's row window (BU-beads-ui-timeline-dety N-3, A005)", () => {
-  // 300 dated epics, each with a long title: the Timeline draws a window of rows sized from the
-  // pane's body that follows the focus, so the drawing stays under the 100,000 characters Claude
-  // Code keeps and the focus still reaches the last epic.
   const [first] = rows;
   const EPICS = Array.from({ length: 300 }, (_, i) => ({
     ...first,
@@ -449,8 +438,6 @@ describe("the Timeline's row window (BU-beads-ui-timeline-dety N-3, A005)", () =
   });
 });
 
-// T-2C.13: the Timeline's picture, in the form the surface profile gives it. The world's
-// terminal reads TERM, TERM_PROGRAM and TMUX from its env, and tmux answers from the script.
 const TMUX_PASSTHROUGH = "tmux show-options -gv allow-passthrough";
 const TMUX_TERMTYPE = "tmux display-message -p #{client_termtype}";
 const ALT = `Picture: 4 due ${TODAY} to 2026-12-15, today ${TODAY}`;
@@ -487,7 +474,6 @@ describe("the Timeline's picture (T-2C.13)", () => {
     expect(Number(image?.props.columns)).toBeLessThanOrEqual(PANE_PROPS.bodyColumns);
     expect(image?.props.alt).toBe(ALT);
     expect(await ui.findAll({ type: "Svg" })).toEqual([]);
-    // The bars are still drawn under it.
     expect(await keysOf(ui, "timeline-bar:", "Raster")).toHaveLength(DATED_ORDER.length);
   });
 

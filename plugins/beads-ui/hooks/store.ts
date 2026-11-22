@@ -11,8 +11,8 @@ import {
   type StoreResolution,
   userConfigPath,
   whereArgv,
-} from "../core/src/index.ts";
-import type { Host, SessionEnv } from "./host.ts";
+} from "../core/src/index.js";
+import type { Host, SessionEnv } from "./host.js";
 
 const WHERE_TIMEOUT_MS = 8_000;
 
@@ -157,7 +157,6 @@ export class StoreResolver {
           () => undefined,
         )
         .then((answer) => {
-          // bd did not say: ask again on the next refresh rather than keep a non-answer.
           if (answer === undefined && this.where === asked) this.where = undefined;
           return answer;
         });

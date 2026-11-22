@@ -1,9 +1,4 @@
 #!/bin/sh
-# The container's start (T-3.5). The /work volume holds the checkout and its .beads Dolt state;
-# the beads-ui-home volume holds the host's beads-ui.toml and the server's credentials. On the
-# first start an empty /work is filled, from BEADS_UI_REPO (a git URL) when set, else with a new
-# repository and store, and a host config is written that allows that one repository; every
-# later start serves what the volumes already hold.
 set -eu
 
 port="${BEADS_UI_PORT:-4810}"

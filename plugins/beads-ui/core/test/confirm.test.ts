@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   type ConfirmEvent,
@@ -10,16 +8,15 @@ import {
   openDeleteConfirm,
   reduceConfirm,
   undoArgv,
-} from "../src/index.ts";
-import cascadePreview from "./fixtures/bd-delete-cascade-dry-run.json.ts";
-import refusedJson from "./fixtures/bd-delete-dry-run-dependents.json.ts";
-import refusedText from "./fixtures/bd-delete-dry-run-dependents.txt.ts";
-import leafText from "./fixtures/bd-delete-dry-run-leaf.txt.ts";
-import { allIssues, byId } from "./helpers.ts";
+} from "../src/index.js";
+import cascadePreview from "./fixtures/bd-delete-cascade-dry-run.json.js";
+import refusedJson from "./fixtures/bd-delete-dry-run-dependents.json.js";
+import refusedText from "./fixtures/bd-delete-dry-run-dependents.txt.js";
+import leafText from "./fixtures/bd-delete-dry-run-leaf.txt.js";
+import { allIssues, byId } from "./helpers.js";
 
 const run = (state: ConfirmState, ...events: ConfirmEvent[]) => events.reduce(reduceConfirm, state);
 const openFor = (id: string) => openDeleteConfirm(byId(allIssues(), id), allIssues());
-// `bd delete BU-mg2.3 --dry-run` exits 1 and prints the refusal on stdout and stderr alike.
 const refused: ConfirmEvent = {
   type: "preview-loaded",
   exitCode: 1,
@@ -272,7 +269,6 @@ describe("the delete confirmation", () => {
     expect(nextCommand(rechecked)).toBeUndefined();
   });
 
-  // bd's own field names in `bd delete --cascade --dry-run --json`, each changed on its own.
   const changedFields: readonly [string, unknown][] = [
     ["issue_ids", ["BU-mg2.3", "BU-mg2.3.5"]],
     ["cascade", false],

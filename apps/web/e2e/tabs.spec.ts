@@ -5,8 +5,6 @@ import type { Page } from "@playwright/test";
 import { createStore } from "../test/store.ts";
 import { card, expect, loginLink, serve, test } from "./fixtures.ts";
 
-// T-W3.1: one Server-Sent Events connection per browser, shared by its tabs, and taken over
-// when the tab holding it closes. The served store's poll interval is the default, 10 seconds.
 const POLL_INTERVAL_MS = 10_000;
 /** How long one poll may take on a loaded host: the heads, then the moved store's board read. */
 const POLL_TAKES_MS = 30_000;
@@ -24,7 +22,6 @@ const seen = async (page: Page) =>
 test.describe("live updates across tabs", () => {
   test.beforeEach(({ isMobile }) => {
     test.skip(isMobile, "tabs are a desktop browser's; the feed is the same at 390 px");
-    // Each case waits out a first poll and then hears a change: two poll intervals and more.
     test.setTimeout(150_000);
   });
 
@@ -49,7 +46,6 @@ test.describe("live updates across tabs", () => {
     await expect.poll(() => seen(page), heard).toBeGreaterThan(before[0] ?? 0);
     await expect.poll(() => seen(second), heard).toBeGreaterThan(before[1] ?? 0);
     for (const tab of [page, second]) await expect(card(tab, id)).toBeVisible();
-    // The second tab got both changes through the first tab's stream, never one of its own.
     expect(streams).toEqual([]);
     await second.close();
   });
@@ -85,7 +81,6 @@ test.describe("live updates across tabs", () => {
   });
 });
 
-// T-W3.2: the member duties a browser sees, the base path app-portal mounts the app at included.
 test.describe("the app as an app-portal member", () => {
   test("should load the Board under /beads with every asset and API call under it, and register no service worker", async ({
     page,
@@ -102,14 +97,12 @@ test.describe("the app as an app-portal member", () => {
       const outside: string[] = [];
       page.on("request", (request) => {
         const path = new URL(request.url()).pathname;
-        // The browser asks for /favicon.ico on its own; everything the app asks for is below /beads/.
         if (!path.startsWith("/beads/") && path !== "/favicon.ico") outside.push(path);
       });
       const link = await loginLink(served);
       expect(new URL(link).pathname.startsWith("/beads/api/auth/")).toBe(true);
       await page.goto(link);
       await expect(card(page, id)).toBeVisible();
-      // A deep link below the base gets the shell, and the shell's assets and API calls follow it.
       await page.goto(new URL("backlog", root).href);
       await expect(page.locator(`tr[data-row-id="${id}"]`)).toBeVisible();
       await page.goto(new URL(`issues/${encodeURIComponent(id)}`, root).href);
@@ -124,7 +117,6 @@ test.describe("the app as an app-portal member", () => {
           : 0,
       );
       expect(registrations).toBe(0);
-      // The link's href as the browser resolves it, against the shell's <base>.
       const href = await page.evaluate(
         () => document.querySelector<HTMLLinkElement>('link[rel="manifest"]')?.href ?? "",
       );
@@ -134,7 +126,6 @@ test.describe("the app as an app-portal member", () => {
     } finally {
       await served.stop();
       await store.remove();
-      // bd may still be writing its event log under the private HOME (fixtures.ts, configHome).
       await rm(configHome, { recursive: true, maxRetries: 10, retryDelay: 200 });
     }
   });

@@ -10,9 +10,6 @@ import { BIN, hostConfig } from "./auth-env.ts";
 
 const exec = promisify(execFile);
 
-// The supervised run (web app design T-W3.2's deploy step): `beads-ui-web install-service`
-// writes the systemd user unit from the host's settings and reloads systemd.
-
 let root: string;
 let configHome: string;
 let fakeBin: string;
@@ -134,13 +131,10 @@ describe("beads-ui-web install-service", () => {
   });
 });
 
-// `install-service --enable`: the one command that takes a host from an ad hoc run to an enabled,
-// supervised service that answers. The fake systemctl starts nothing; a listener on a free port
-// plays the started server's /healthz.
 describe("beads-ui-web install-service --enable", () => {
   let listener: Server;
   let port: number;
-  let health: { status: number; hits: number };
+  let health: { status: number; hits: number; delayMs: number };
 
   const probeConfig = (timeout: number, interval: number) =>
     writeFile(
@@ -152,12 +146,14 @@ describe("beads-ui-web install-service --enable", () => {
     );
 
   beforeEach(async () => {
-    health = { status: 200, hits: 0 };
+    health = { status: 200, hits: 0, delayMs: 0 };
     listener = createServer((request, response) => {
       if (request.url === "/healthz") health.hits += 1;
       const status = request.url === "/healthz" ? health.status : 404;
-      response.writeHead(status, { "content-type": "application/json" });
-      response.end(JSON.stringify({ status: status === 200 ? "ok" : "unavailable" }));
+      setTimeout(() => {
+        response.writeHead(status, { "content-type": "application/json" });
+        response.end(JSON.stringify({ status: status === 200 ? "ok" : "unavailable" }));
+      }, health.delayMs);
     });
     await new Promise<void>((resolve) => listener.listen(0, "127.0.0.1", resolve));
     port = (listener.address() as AddressInfo).port;
@@ -195,6 +191,16 @@ describe("beads-ui-web install-service --enable", () => {
     const log = await readFile(calls, "utf8");
     expect(log).toContain("--user enable --now beads-ui-web.service\n");
     expect(log).not.toMatch(/disable|stop/);
+  });
+
+  it("should report the answer, not an abort, when the server answers after the window has closed", async () => {
+    health.status = 503;
+    health.delayMs = 300;
+    await probeConfig(0.2, 0.05);
+    const result = await install(["--enable", "--port", String(port)]);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain(`last probe: HTTP 503 {"status":"unavailable"}`);
+    expect(result.stderr).not.toContain("aborted");
   });
 
   it("should name a refused connection as the last probe error when nothing listens", async () => {

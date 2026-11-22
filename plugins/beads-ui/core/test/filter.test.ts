@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   applyFilter,
@@ -9,9 +7,9 @@ import {
   parseBdReady,
   parseFilter,
   submitFilter,
-} from "../src/index.ts";
-import ready from "./fixtures/bd-ready.json.ts";
-import { allIssues, ids, unwrap } from "./helpers.ts";
+} from "../src/index.js";
+import ready from "./fixtures/bd-ready.json.js";
+import { allIssues, ids, unwrap } from "./helpers.js";
 
 const readyIds = new Set(ids(unwrap(parseBdReady(ready))));
 const filterOf = (text: string): Filter => unwrap(parseFilter(text));

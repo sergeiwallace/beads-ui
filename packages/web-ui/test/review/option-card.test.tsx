@@ -13,11 +13,6 @@ import {
   status,
 } from "./fixtures.tsx";
 
-// T-W1.2 through the rendered Review view: option cards from the structured-options command, the
-// recommended option preselected and the card focused, one key to choose, the five-second undo
-// window, a text field that keeps its keys, the Markdown fallback, a malformed payload that draws
-// no partial card, and the receiver's refusal shown on the item.
-
 const held = item("d-3");
 const stdout = optionsStdout([{ path: held.path, decisions: [DECISION] }]);
 

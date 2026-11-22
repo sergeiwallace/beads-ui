@@ -15,9 +15,6 @@ const LINK_WORDS: Readonly<Record<RoadmapLink["kind"], string>> = {
   "parent-child": "is the parent of",
 };
 
-// Frappe builds CSS selectors from a task id unescaped (`.highlight-${id}`), so a hierarchical
-// issue id such as `BU-a.1` breaks it. Each bar gets its index as Frappe's id instead, and the
-// issue id goes on the drawn bar and its lines as data attributes.
 const ganttId = (index: number) => `bar-${index}`;
 
 function tasksOf(bars: readonly RoadmapBar[]): GanttTask[] {
@@ -34,7 +31,6 @@ function tasksOf(bars: readonly RoadmapBar[]): GanttTask[] {
         return at === undefined ? [] : [ganttId(at)];
       })
       .join(","),
-    // Frappe adds this with classList.add, so it must be one class.
     custom_class: `bu-roadmap-${bar.category}`,
   }));
 }

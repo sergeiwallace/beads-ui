@@ -7,16 +7,12 @@ import {
   SPACE,
   stampText,
   truncate,
-} from "../../core/src/index.ts";
-import type { ReaderState } from "../review.ts";
-import { has, type Surface } from "./adapters.ts";
-import { field, markdown } from "./elements.ts";
-import { emptyState, errorState, stateBox } from "./frame.ts";
-import { colorOf, rowHover, weight } from "./look.ts";
-
-// The Review section of a Detail and the reader of one held item (D-40, T-2C.5), drawn once for
-// both surfaces: the pane's Detail draws the section and the reader, the band's overview the
-// section's rows within its row budget.
+} from "../../core/src/index.js";
+import type { ReaderState } from "../review.js";
+import { has, type Surface } from "./adapters.js";
+import { field, markdown } from "./elements.js";
+import { emptyState, errorState, stateBox } from "./frame.js";
+import { colorOf, rowHover, weight } from "./look.js";
 
 export const REVIEW_SECTION_KEY = "review";
 /** A held item's row button: pressing it opens the item in the reader. */
@@ -170,7 +166,6 @@ export function reviewList(
   const compact = surface.short;
   const width = surface.columns;
   const key = (hotkey: string) => (pane ? { hotkey } : {});
-  // A short surface cuts each line at its columns, since a wrapped line takes a row it lacks.
   const dim = (k: string, text: string) =>
     Box({
       key: k,
@@ -237,8 +232,6 @@ export function reviewList(
       ],
     }),
   ];
-  // T-2C.12: the filter's refusal and the snapshot's note draw as warning states, an unset
-  // command and an empty list as empty states, each in its compact form on a short surface.
   if (view.filterError !== undefined) {
     rows.push(
       stateBox(surface, {

@@ -1,4 +1,4 @@
-import type { Issue, Result } from "./model.ts";
+import type { Issue, Result } from "./model.js";
 
 export const SORT_KEYS = ["priority", "created", "updated", "due", "assignee"] as const;
 export type SortKey = (typeof SORT_KEYS)[number];
@@ -24,7 +24,6 @@ function time(value: string | undefined): number | undefined {
   return Number.isNaN(ms) ? undefined : ms;
 }
 
-// Missing values sort last in both directions, so a descending sort never floats blanks to the top.
 function compareOptional<T extends string | number>(
   a: T | undefined,
   b: T | undefined,

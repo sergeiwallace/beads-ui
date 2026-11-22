@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   decodeQueueFilters,
@@ -17,9 +15,7 @@ import {
   reviewQueueView,
   taskEntry,
   withQueueFilters,
-} from "../src/index.ts";
-
-// T-W1.1 of the web app design: the Review queue's model half.
+} from "../src/index.js";
 
 const issue = (id: string, extra: Partial<Issue> = {}): Issue => ({
   id,

@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   type ActionContext,
@@ -9,11 +7,8 @@ import {
   parseTaskMessage,
   taskClientProps,
   taskListView,
-} from "../src/index.ts";
-import { allIssues, storeStatuses } from "./helpers.ts";
-
-// The task list's Client props and posts (T-2B.5, D-31): the same rows and keys the element tree
-// draws, and every post read as untrusted input.
+} from "../src/index.js";
+import { allIssues, storeStatuses } from "./helpers.js";
 
 const CTX: ActionContext = {
   view: "tasks",

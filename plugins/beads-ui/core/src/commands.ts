@@ -25,11 +25,9 @@ const hotkey = (key: string): KeyBinding => ({ kind: "hotkey", key });
 
 /** Every user action in the MVP, as data. */
 export const COMMANDS: readonly Command[] = [
-  // T-2B.1: the task panel's own views, beside the board's tabs in the nav.
   { id: "tab.tasks", label: "Tasks", scope: "pane", binding: hotkey("t"), hint: "t Tasks" },
   { id: "tab.board", label: "Board", scope: "pane", binding: hotkey("1"), hint: "1 Board" },
   { id: "tab.backlog", label: "Backlog", scope: "pane", binding: hotkey("2"), hint: "2 Backlog" },
-  // D-28: 3 is the Sprint tab Phase 2 builds; until then it is drawn dimmed and says so.
   {
     id: "tab.sprint",
     label: "Sprint (planned, not built yet)",
@@ -38,7 +36,6 @@ export const COMMANDS: readonly Command[] = [
     hint: "3 Sprint",
   },
   { id: "tab.detail", label: "Detail", scope: "pane", binding: hotkey("4"), hint: "4 Detail" },
-  // T-2B.9: the store's epics and milestones by due date.
   {
     id: "tab.timeline",
     label: "Timeline",
@@ -53,9 +50,7 @@ export const COMMANDS: readonly Command[] = [
     binding: hotkey("6"),
     hint: "6 Settings",
   },
-  // T-2C.6 (D-40): every held item in the session's scope, filtered, sorted and grouped.
   { id: "tab.review", label: "Review", scope: "pane", binding: hotkey("7"), hint: "7 Review" },
-  // T-2B.4: every action this pane draws a key for is also in this menu.
   {
     id: "panel.menu",
     label: "Options menu: every action here, each with its key",
@@ -79,7 +74,6 @@ export const COMMANDS: readonly Command[] = [
     hint: "s swimlane",
   },
   { id: "view.sort", label: "Sort", scope: "pane", binding: hotkey("o"), hint: "o sort" },
-  // D-29: a session opens on its own issues (a firstmate on every issue); a switches.
   {
     id: "view.scope",
     label: "Mine or All: this session's own issues, or every issue",

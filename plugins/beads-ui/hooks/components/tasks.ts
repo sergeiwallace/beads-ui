@@ -9,13 +9,11 @@ import {
   type TaskRowView,
   type Token,
   truncate,
-} from "../../core/src/index.ts";
-import type { Surface } from "./adapters.ts";
-import { emptyState } from "./frame.ts";
-import { gutter } from "./indicators.ts";
-import { rowHover, weight } from "./look.ts";
-
-// The task row and the task list (T-2B.2, D-35): drawn from core's TaskListView on any surface.
+} from "../../core/src/index.js";
+import type { Surface } from "./adapters.js";
+import { emptyState } from "./frame.js";
+import { gutter } from "./indicators.js";
+import { rowHover, weight } from "./look.js";
 
 /** The menu button each task row carries, so a left click reaches the options menu (T-2B.4). */
 export const ROW_MENU_LABEL = glyphOf("row.menu");
@@ -177,14 +175,11 @@ export function taskList(
               ]),
             }),
           ];
-  // At short height (the band always) a line that wrapped would take a row the list does not
-  // have, so the count and the empty line are cut to the surface's columns instead.
   const line = (text: string) => (surface.short ? truncate(text, surface.columns) : text);
   const menuElsewhere =
     options.menu !== undefined && !list.rows.some((row) => row.id === options.menuFor);
   const scroll = surface.scroll;
   const page = Math.max(1, list.rows.length);
-  // Where the surface scrolls the list itself, the rows above and below are buttons that move it.
   const edge = (key: "above" | "below", count: number) => {
     const text = `${glyphOf(key === "above" ? "list.above" : "list.below")} ${count} ${key}`;
     if (scroll === undefined) {

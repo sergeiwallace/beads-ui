@@ -1,13 +1,6 @@
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 
-// An in-process stand-in for ai-core's work queue, answering the routes the queue adapter calls
-// with the shapes ai-core's router returns (src/ai_core/queue/router.py and models.py):
-// GET /api/queue/sessions (SessionOut[]), GET /api/queue/tasks?queue_state= (TaskOut[]),
-// GET /api/queue/tasks/{repo}/{task_id} (TaskDetailOut) and
-// POST /api/queue/tasks/{repo}/{task_id}/status (202 TaskStatusOut, 409 on a stale
-// expected_status, 422 for a status outside BeadsStatus, 404 for an unknown task).
-
 export interface FakeSession {
   id: string;
   machine: string;
@@ -103,7 +96,6 @@ export async function startFakeQueue(): Promise<FakeQueue> {
       response.end(JSON.stringify(body));
     };
     const parts = url.pathname.split("/").map(decodeURIComponent);
-    // ["", "api", "queue", "tasks", repo, task_id, "status"]
     const find = () => state.tasks.find((t) => t.repo === parts[4] && t.task_id === parts[5]);
     if (request.method === "GET" && url.pathname === "/api/queue/sessions") {
       send(200, state.sessions.map(sessionOut));

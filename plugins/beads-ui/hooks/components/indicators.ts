@@ -12,14 +12,9 @@ import {
   openItemsOf,
   type ReviewItem,
   type TaskClientSpan,
-} from "../../core/src/index.ts";
-import type { Surface } from "./adapters.ts";
-import { colorOf } from "./look.ts";
-
-// The row indicators both surfaces draw (D-41, D-42, T-2C.3): the switches `[indicators]` and
-// Settings set, the sessions the host's registry holds live, the gutter every task row starts
-// with, and the legend the help and Settings draw. Like the look, one module holds the state, so
-// the band and the pane draw the same gutter from the same redraw.
+} from "../../core/src/index.js";
+import type { Surface } from "./adapters.js";
+import { colorOf } from "./look.js";
 
 let switches: Readonly<Record<string, boolean>> = {};
 let live: ReadonlySet<string> | undefined;

@@ -1,8 +1,3 @@
-// Where the MCP server finds the web server and its own credential (web app design D-17, Phase
-// W4). Read again on every call, so an edit to `beads-ui.toml` or a rotated token applies to the
-// next tool call. The server holds no signing key: it reads only the MCP token and the
-// configured user, and the web server signs every dispatch.
-
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseToml, stateDirOf, type TomlValue, userConfigPath } from "@beads-ui/core";

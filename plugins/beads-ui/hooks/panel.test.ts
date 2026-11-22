@@ -2,14 +2,14 @@ import type { On, RenderPropsOf } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
-import { COMMANDS, NAV_ENTRIES, wakeFileName } from "../core/src/index.ts";
-import list from "../core/test/fixtures/bd-list-all-brief.json.ts";
-import { SPRINT_PLANNED_TEXT } from "./pane.ts";
-import { PANEL_SETTINGS_KEY } from "./panel.ts";
-import { CONFIRM_ID, PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
-import { ME, MINE, MINE_ORDER, ownStore } from "./tests/mine.ts";
-import { overflows } from "./tests/width.ts";
+import { COMMANDS, NAV_ENTRIES, wakeFileName } from "../core/src/index.js";
+import list from "../core/test/fixtures/bd-list-all-brief.json.js";
+import { SPRINT_PLANNED_TEXT } from "./pane.js";
+import { PANEL_SETTINGS_KEY } from "./panel.js";
+import { CONFIRM_ID, PANE_ID, PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
+import { ME, MINE, MINE_ORDER, ownStore } from "./tests/mine.js";
+import { overflows } from "./tests/width.js";
 import {
   CWD,
   ok,
@@ -21,13 +21,7 @@ import {
   VIEWPORT,
   type WorldOptions,
   world,
-} from "./tests/world.ts";
-
-// Phase 2B's task panel, slice 1 (T-2B.1 to T-2B.4 and T-2B.8): the nav and its width tiers, the
-// Tasks view's shown and collapsed tasks, opening and editing a task, the options menu, and the
-// Settings view, each driven through the pane as Claude Code mounts it. They mount it in VS Code,
-// which draws no Client, so the list is the element tree's: the path the terminal and the desktop
-// fall back to (T-2B.5). mouse.test.ts drives the Client path.
+} from "./tests/world.js";
 
 type PaneProps = RenderPropsOf["Pane"];
 
@@ -164,7 +158,6 @@ describe("the frame, nav bar and width tiers (T-2B.1)", () => {
 
       expect((await ui.find({ key: "nav" }))?.props.borderStyle).toBeUndefined();
       expect((await ui.find({ key: "tab:backlog" }))?.props.label).toBe("Bklg");
-      // The window round the focus follows each step down the list to its last task.
       for (const id of MINE_ORDER) {
         await focusOn($, `task:${id}`);
         const drawn = await taskIds(ui);
@@ -211,16 +204,6 @@ describe("the task list, shown and collapsed (T-2B.2)", () => {
     expect(w.keys()).toContain("bd show BU-2zw");
   });
 
-  // 300 open tasks of the session's, each with a long title: expanded, the list draws a window of
-  // rows that follows the focus, so the drawing stays under the 100,000 characters Claude Code
-  // keeps and Down still reaches the last task.
-  //
-  // Its time is the stepping loop: each of the 300 focus steps redraws the pane, an 80-row window
-  // near the drawing limit, about 30 ms a step alone, half in the pane's own draw and half in
-  // Claude Code's; the 300 rows' first draw is about 0.5 s. Measured on 16 cores: about 10 s
-  // alone, 17 to 20 s beside 8 busy processes, 27 to 36 s inside the whole suite beside them,
-  // and past 60 s twice with about four times as many runnable threads as cores. 120 s is twice
-  // that, the budget the Timeline's stepping test has.
   test(
     "should keep an expanded list of 300 tasks under the drawing limit and reach the last one by stepping down",
     { timeoutMs: 120_000 },
@@ -307,7 +290,6 @@ describe("the task list, shown and collapsed (T-2B.2)", () => {
     await w.clock.advance(10_000);
     await w.clock.settle();
 
-    // Open collapses; the in-progress and blocked tasks stay drawn.
     expect(await taskIds(ui)).toEqual(["BU-mg2", "BU-mg2.3", "BU-mg2.3.9"]);
     expect((await ui.find({ key: "tasks:more" }))?.props.label).toBe("+12 more");
 
@@ -421,8 +403,6 @@ describe("open, read and edit a task (T-2B.3)", () => {
 });
 
 describe("every action by menu and by key (T-2B.4)", () => {
-  // The parity test: in each view, the keys the drawn controls carry and the keys the options
-  // menu lists are the same set, so no action is reachable only by key or only by menu.
   const VIEWS: {
     name: string;
     reach: (ui: Mounted, $: Engine, w: { clock: { settle(): Promise<unknown> } }) => Promise<void>;
@@ -505,8 +485,6 @@ describe("every action by menu and by key (T-2B.4)", () => {
 
     await ui.press({ key: "taskmenu:BU-mg2.3.9" });
     const keys = (await ui.findAll({})).map((element) => element.key ?? "");
-    // Under that row: after its menu button and before the next row (each button now sits in
-    // its affordance frame, T-2C.14, so the elements between are not counted).
     const at = keys.indexOf("options-menu");
     expect(at).toBeGreaterThan(keys.indexOf("taskmenu:BU-mg2.3.9"));
     expect(

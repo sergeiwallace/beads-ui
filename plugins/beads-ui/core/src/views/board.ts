@@ -1,13 +1,13 @@
-import { CLOSED_PAGE_SIZE, moveArgv } from "../argv.ts";
-import { buildColumns, buildSwimlanes, type SwimlaneMode } from "../columns.ts";
-import { applyFilter, type Filter } from "../filter.ts";
-import { GUTTER_TREE_CHARS } from "../indicators.ts";
-import { CARD_FRAME_TREE_CHARS, PRESS_TREE_CHARS } from "../layout.ts";
-import type { BdArgv, Issue, RandomSource, Result, Status, StatusCategory } from "../model.ts";
-import { keyBetween, RANK_KEY, type RankError, rankNeighbours, readRank } from "../rank.ts";
-import type { SortSpec } from "../sort.ts";
-import { priorityToken, statusToken, type Token } from "../tokens.ts";
-import { asOf, priorityBadge, truncate } from "./text.ts";
+import { CLOSED_PAGE_SIZE, moveArgv } from "../argv.js";
+import { buildColumns, buildSwimlanes, type SwimlaneMode } from "../columns.js";
+import { applyFilter, type Filter } from "../filter.js";
+import { GUTTER_TREE_CHARS } from "../indicators.js";
+import { CARD_FRAME_TREE_CHARS, PRESS_TREE_CHARS } from "../layout.js";
+import type { BdArgv, Issue, RandomSource, Result, Status, StatusCategory } from "../model.js";
+import { keyBetween, RANK_KEY, type RankError, rankNeighbours, readRank } from "../rank.js";
+import type { SortSpec } from "../sort.js";
+import { priorityToken, statusToken, type Token } from "../tokens.js";
+import { asOf, priorityBadge, truncate } from "./text.js";
 
 /** bd's exit status for a refused `--if-status` guard: the shown status was stale. */
 export const STALE_WRITE_EXIT = 13;
@@ -95,7 +95,6 @@ function withRank(issues: readonly Issue[], id: string, rank: unknown): Issue[] 
   });
 }
 
-// A new write clears whatever the last one reported.
 function withoutOutcomes(state: BoardState): BoardState {
   const { conflict: _c, moveError: _m, rankConflict: _rc, rankError: _re, ...rest } = state;
   return rest;
@@ -212,7 +211,6 @@ export function reduceBoard(state: BoardState, event: BoardEvent): BoardState {
   }
 }
 
-// One write in flight a card: a move and a reorder of the same card never race each other.
 const busy = (state: BoardState, id: string): boolean =>
   state.pending[id] !== undefined || state.ranking?.[id] !== undefined;
 
@@ -588,8 +586,6 @@ function planPages(
 function errorLine(state: BoardState): string | undefined {
   const error = state.loadError;
   if (error === undefined) return undefined;
-  // exitCode null: bd never finished (a deadline, a signal, no start); 0: it finished but what it
-  // wrote cannot be read (cut short, or not the JSON bd list writes). The message says which.
   const what =
     error.exitCode === null
       ? `${error.command} did not finish`
@@ -667,7 +663,6 @@ export function boardView(state: BoardState, options: BoardViewOptions): BoardVi
     unplacedPage.from === 0 ? 0 : unplacedPage.from - 1,
     unplacedPage.to,
   );
-  // An unplaced card's Move to also carries its own status, which no column holds.
   const unplacedCost =
     limit === undefined || costs === undefined || unplaced.length === 0
       ? 0

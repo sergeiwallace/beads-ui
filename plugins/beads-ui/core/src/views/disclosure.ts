@@ -1,13 +1,9 @@
-// The band's disclosure levels (D-36, T-2C.2): the summary line, whose counts are buttons; a
-// count's task rows under its line, band.rows at a time; and the overview of the views the band
-// draws. Pure: a reducer over the person's presses, and the layouts the band draws from it.
-
-import { glyphOf } from "../glyphs.ts";
-import type { GutterCell } from "../indicators.ts";
-import { buttonWidth, PRESS_FRAME_COLUMNS, textWidth } from "../layout.ts";
-import type { Issue } from "../model.ts";
-import { sortIssues } from "../sort.ts";
-import { priorityToken, type Token } from "../tokens.ts";
+import { glyphOf } from "../glyphs.js";
+import type { GutterCell } from "../indicators.js";
+import { buttonWidth, PRESS_FRAME_COLUMNS, textWidth } from "../layout.js";
+import type { Issue } from "../model.js";
+import { sortIssues } from "../sort.js";
+import { priorityToken, type Token } from "../tokens.js";
 import {
   type BandLevel,
   type BandLine,
@@ -15,8 +11,8 @@ import {
   type BandSegment,
   isBandLevel,
   isBandPart,
-} from "./band.ts";
-import { truncate } from "./text.ts";
+} from "./band.js";
+import { truncate } from "./text.js";
 
 /** What the band shows (D-36), kept per session in `$.store`. */
 export interface Disclosure {
@@ -170,8 +166,6 @@ export function disclosureOf(value: unknown): Disclosure | undefined {
   };
 }
 
-// ---- the summary line ---------------------------------------------------------------------
-
 /** The statuses a count's rows are of, in the Tasks view's order, the done count last. */
 export const ROW_GROUPS = ["in_progress", "blocked", "open", "done"] as const;
 export type RowGroup = (typeof ROW_GROUPS)[number];
@@ -262,8 +256,6 @@ export function summaryPieces(line: BandLine, columns: number): SummaryPiece[] {
   out.push({ kind: "text", segment: { text: more } });
   return out;
 }
-
-// ---- a count's rows -----------------------------------------------------------------------
 
 /** A task the band read for a count's rows: the issue and the store it is in. */
 export interface BandTask {

@@ -46,7 +46,6 @@ it("should draw only the named session through the real CLI and bd-node when rea
       },
     );
     expect(out.stdout).toContain("friendly-task-name");
-    // Commands need the untruncated primary id even when the shared view shows an alias.
     expect(out.stdout).toContain("BU-0123456789abcdef0123456789abcdef");
     expect(out.stdout).toContain("Own task");
     expect(out.stdout).not.toContain("BU-peer");

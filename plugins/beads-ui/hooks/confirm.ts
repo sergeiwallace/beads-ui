@@ -11,10 +11,10 @@ import {
   openDeleteConfirm,
   reduceConfirm,
   type UndoClose,
-} from "../core/src/index.ts";
-import { colorOf, styledUi } from "./components/look.ts";
-import type { Host } from "./host.ts";
-import type { PaneUi } from "./pane.ts";
+} from "../core/src/index.js";
+import { colorOf, styledUi } from "./components/look.js";
+import type { Host } from "./host.js";
+import type { PaneUi } from "./pane.js";
 
 const MORE = glyphOf("text.more");
 
@@ -25,7 +25,6 @@ const RUN_TIMEOUT_MS = 15_000;
 const messageOf = (reason: unknown): string =>
   reason instanceof Error ? reason.message : String(reason);
 
-// The event each phase's bd command answers with.
 function answerOf(phase: ConfirmPhase, result: ProcessRunResult): ConfirmEvent | undefined {
   const { exitCode, stdout, stderr } = result;
   const message = stderr.trim() || stdout.trim();

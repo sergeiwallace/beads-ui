@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   type BoardState,
@@ -14,10 +12,10 @@ import {
   reduceBoard,
   submitFilter,
   truncate,
-} from "../src/index.ts";
-import ready from "./fixtures/bd-ready.json.ts";
-import show5 from "./fixtures/bd-show-BU-mg2.3.5.json.ts";
-import { allIssues, ids, storeStatuses, unwrap } from "./helpers.ts";
+} from "../src/index.js";
+import ready from "./fixtures/bd-ready.json.js";
+import show5 from "./fixtures/bd-show-BU-mg2.3.5.json.js";
+import { allIssues, ids, storeStatuses, unwrap } from "./helpers.js";
 
 const AT = "2026-10-21T01:12:04Z";
 const loaded = (): BoardState =>

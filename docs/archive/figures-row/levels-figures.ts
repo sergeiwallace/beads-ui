@@ -1,18 +1,9 @@
-// Archived 2026-10-27 from plugins/beads-ui/hooks/levels.ts at 45d7da1 (see README.md).
-// Imports it used there, beyond what levels.ts still imports:
-//   type BandFigures, bandFigures, figureCells, sparkBuckets, windowMs from "../core/src/index.ts"
-//   type RasterElement from "./components/adapters.ts"
-//   FIGURES_RASTER_KEY, figuresRow from "./components/band.ts"
-//   isAscii, rasterColorOf from "./components/look.ts"
-
-// The band site's Raster, at the top of the module:
 /** The band site's Raster, on the terminal, and the site's id a blit names (T-2C.11). */
 export interface BandRaster {
   Raster: RasterElement;
   requestId: string;
 }
 
-// Fields of BandLevels:
   /**
    * The figures row's done tasks (T-2C.11): by store, the done count their close times were
    * read at and the times, for the line the figures draw. A store is read while its count is
@@ -27,10 +18,6 @@ export interface BandRaster {
   /** The band's columns at the last redraw that drew the figures Raster. */
   private drawnColumns = 0;
 
-// In recount(), after `if (!this.loaded) return;`:
-//   this.readDone();
-
-// Methods of BandLevels:
   /** The line the figures row draws: the band's first, the one its controls follow. */
   private figuresLine(): string | undefined {
     return this.tally.lines[0]?.key;
@@ -113,7 +100,6 @@ export interface BandRaster {
     });
   }
 
-// In draw(): the parameter `raster?: BandRaster`, the resets at its start, and the summary branch:
     this.drawnRaster = undefined;
     this.blitted = false;
     } else if (state.level === "summary" && left >= 1) {

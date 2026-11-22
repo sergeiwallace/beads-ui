@@ -58,8 +58,6 @@ export interface WrappedBd {
   remove(): Promise<void>;
 }
 
-// A `bd` that runs `special` for the subcommands it names and hands every other call to the
-// real bd; `special` may run the real bd too, through "$REAL".
 async function wrappedBd(subcommands: readonly string[], special: string): Promise<WrappedBd> {
   const real = (await exec("sh", ["-c", "command -v bd"], { encoding: "utf8" })).stdout.trim();
   const dir = await mkdtemp(join(tmpdir(), "beads-ui-web-wrapped-bd-"));

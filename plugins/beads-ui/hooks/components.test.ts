@@ -16,27 +16,22 @@ import {
   SIDE_NAV_COLUMNS,
   settingsView,
   taskListView,
-} from "../core/src/index.ts";
-import { allIssues, storeStatuses } from "../core/test/helpers.ts";
-import { actionBar } from "./components/actions.ts";
-import { bandSurface, paneSurface, type Surface } from "./components/adapters.ts";
-import { choice, field, markdown } from "./components/elements.ts";
-import { colorOf, pressKey } from "./components/look.ts";
-import { bandNav, navBar } from "./components/nav.ts";
-import { drawSettings } from "./components/settings.ts";
-import { taskList, taskRow } from "./components/tasks.ts";
-import type { Host } from "./host.ts";
-import { BandLevels } from "./levels.ts";
-import { BeadsPane, type PaneUi } from "./pane.ts";
-import { StoreResolver } from "./store.ts";
-import type { BandTally } from "./tally.ts";
-import { test } from "./tests/kit.ts";
-import { CWD } from "./tests/world.ts";
-
-// D-35 and T-2C.1: the component layer. A component draws a core model through a surface's
-// adapter; these draw one model through the band's and the pane's and compare what each draws.
-// The elements are the kit's shape, `{ type, props }`, from constructors of the test's own, as
-// mouse.test.ts draws the pane; the hooks-entry tests of [surfaces] are surfaces.test.ts.
+} from "../core/src/index.js";
+import { allIssues, storeStatuses } from "../core/test/helpers.js";
+import { actionBar } from "./components/actions.js";
+import { bandSurface, paneSurface, type Surface } from "./components/adapters.js";
+import { choice, field, markdown } from "./components/elements.js";
+import { colorOf, pressKey } from "./components/look.js";
+import { bandNav, navBar } from "./components/nav.js";
+import { drawSettings } from "./components/settings.js";
+import { taskList, taskRow } from "./components/tasks.js";
+import type { Host } from "./host.js";
+import { BandLevels } from "./levels.js";
+import { BeadsPane, type PaneUi } from "./pane.js";
+import { StoreResolver } from "./store.js";
+import type { BandTally } from "./tally.js";
+import { test } from "./tests/kit.js";
+import { CWD } from "./tests/world.js";
 
 interface Node {
   type: string;
@@ -73,7 +68,6 @@ const textOf = (tree: unknown): string[] => {
     else if (Array.isArray(value)) for (const child of value) walk(child);
     else if (isNode(value)) {
       if (value.type === "Button") out.push(String(value.props.label));
-      // A button's clickable brackets (T-2C.14) are its frame, not text; bareButtons checks them.
       if (String(value.props.key ?? "").startsWith(pressKey(""))) {
         walk(
           (value.props.children as unknown[]).filter(
@@ -434,7 +428,6 @@ describe("the view registry (D-35, T-2C.1)", () => {
     expect(pane.menuOpen).toBe(true);
     expect(pane.menuOn).toBe("band");
     expect(pane.menuFor).toBe(String(menuKey).slice("taskmenu:".length));
-    // A menu opened on the band draws there, in the overview, and not in the pane.
     expect(
       keysOf(pane.drawBandMenu(windowedBand(VIEW_COLUMNS, 80), "tasks"), "menu:item:"),
     ).toEqual(keysOf(pane.drawBandMenu(band(VIEW_COLUMNS), "tasks"), "menu:item:"));
@@ -538,7 +531,6 @@ describe("the view registry (D-35, T-2C.1)", () => {
     const drawn = pane.draw(UI, FRAME);
     expect(navIn(drawn)).not.toContain("probe");
     expect(navIn(bandNavOf(pane))).toContain("probe");
-    // The open view moved off the pane at this redraw.
     expect(pane.tab).toBe("tasks");
     expect(keysOf(drawn, "probe-view")).toEqual([]);
 

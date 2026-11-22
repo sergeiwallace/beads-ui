@@ -1,13 +1,11 @@
 import type { RenderElement, RenderNode } from "claude-code";
 
-import { type SettingsView, SPACE, type Token, textWidth } from "../../core/src/index.ts";
-import type { Surface } from "./adapters.ts";
-import { choice, field } from "./elements.ts";
-import { emptyState, stateBox } from "./frame.ts";
-import { weight } from "./look.ts";
-import { lineWindow, textLine, windowed } from "./window.ts";
-
-// The Settings view (T-2B.8, D-35, T-2C.8), drawn from core's SettingsView on either surface.
+import { type SettingsView, SPACE, type Token, textWidth } from "../../core/src/index.js";
+import type { Surface } from "./adapters.js";
+import { choice, field } from "./elements.js";
+import { emptyState, stateBox } from "./frame.js";
+import { weight } from "./look.js";
+import { lineWindow, textLine, windowed } from "./window.js";
 
 export interface SettingsHandlers {
   shown: (text: string) => void;

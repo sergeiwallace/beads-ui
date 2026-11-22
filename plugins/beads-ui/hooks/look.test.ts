@@ -2,11 +2,11 @@ import type { On } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
-import { isTableGlyph, PRESS_CLOSE, PRESS_OPEN } from "../core/src/index.ts";
-import { colorOf, pressKey } from "./components/look.ts";
-import { CONFIRM_ID, PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
-import { ME, MINE } from "./tests/mine.ts";
+import { isTableGlyph, PRESS_CLOSE, PRESS_OPEN } from "../core/src/index.js";
+import { colorOf, pressKey } from "./components/look.js";
+import { CONFIRM_ID, PANE_ID, PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
+import { ME, MINE } from "./tests/mine.js";
 import {
   BAND_PROPS,
   CWD,
@@ -16,11 +16,7 @@ import {
   SHOW,
   VIEWPORT,
   world,
-} from "./tests/world.ts";
-
-// D-43: the look of every drawing, walked over the drawn tree as Claude Code mounts it, on the
-// band and on the pane in the terminal and in VS Code, each view and each overlay in turn.
-// T-2C.10: every glyph drawn comes from the glyph table, in the form [indicators] ascii names.
+} from "./tests/world.js";
 
 const USER_CONFIG = "/home/me/.config/beads-ui/beads-ui.toml";
 const ASCII = { [USER_CONFIG]: "[indicators]\nascii = true\n" };

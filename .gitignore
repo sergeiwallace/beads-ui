@@ -1,31 +1,24 @@
 
-# Beads / Dolt files (added by bd init)
 .dolt/
 *.db
 .beads-credential-key
 .beads/proxieddb/
 *.gate.lock*
 
-# Per-machine Dolt server state (runtime)
 .beads/.dolt-server-state.json
 
-# Node and build output
 node_modules/
 dist/
 coverage/
 *.tsbuildinfo
 .turbo/
 
-# Claude Code plugin types and the tsconfig `claude plugin` generates at the plugin
-# root; the core's own tsconfig (plugins/beads-ui/core/tsconfig.json) is committed.
 **/.claude-plugin/types/
 /plugins/beads-ui/tsconfig.json
 
-# Local environment (never commit secrets)
 .env
 .env.local
 .direnv/
 
-# Playwright (apps/web/e2e)
 test-results/
 playwright-report/

@@ -14,9 +14,6 @@ import {
 import { scriptedBd, shQuote } from "./host-stores.ts";
 import { createStore, type TestStore } from "./store.ts";
 
-// T-3.2's reorder guard: the key written lies between the neighbours as they stand at the write,
-// so a neighbour reordered after its key was read makes the reorder stale.
-
 let store: TestStore;
 let env: HostEnv;
 let clientDir: string;

@@ -15,7 +15,6 @@ afterEach(() => {
   for (const dir of scratch.splice(0)) rmSync(dir, { recursive: true });
 });
 
-// A repository root holding the real marketplace and plugin manifest, the marketplace edited.
 function rootWith(edit: (marketplace: { plugins: { source: string }[] }) => void): string {
   const dir = mkdtempSync(join(tmpdir(), "beads-ui-marketplace-"));
   scratch.push(dir);

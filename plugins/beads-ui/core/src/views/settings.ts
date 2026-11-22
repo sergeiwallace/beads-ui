@@ -1,8 +1,4 @@
-// The Settings view (T-2B.8): the panel's shown count, its collapse rule, panel.mode, open at start, debug
-// mode, each view's surfaces (D-35), and the band's parts, order and done window, as rows a
-// surface draws as controls.
-
-import type { BandSettings } from "./band.ts";
+import type { BandSettings } from "./band.js";
 import {
   COLLAPSE_LABELS,
   COLLAPSE_RULES,
@@ -10,9 +6,9 @@ import {
   PANEL_MODE_LABELS,
   PANEL_MODES,
   type PanelSettings,
-} from "./panel.ts";
-import { SURFACE_LABELS, SURFACE_SETTINGS, type SurfaceSetting } from "./surfaces.ts";
-import { truncate } from "./text.ts";
+} from "./panel.js";
+import { SURFACE_LABELS, SURFACE_SETTINGS, type SurfaceSetting } from "./surfaces.js";
+import { truncate } from "./text.js";
 
 export interface SettingOption {
   value: string;

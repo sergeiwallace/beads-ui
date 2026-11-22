@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   type ActionContext,
@@ -17,9 +15,7 @@ import {
   surfaceOf,
   surfaceOverridesOf,
   withSurfacesTable,
-} from "../src/index.ts";
-
-// D-35 and T-2C.1: which surface draws each view, from the entry, `[surfaces]` and Settings.
+} from "../src/index.js";
 
 const PROBE: NavEntry = {
   view: "probe",

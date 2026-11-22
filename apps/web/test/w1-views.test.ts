@@ -7,9 +7,6 @@ import { type HostEnv, hostConfig, hostEnv, repoName, signIn } from "./auth-env.
 import { type FakeQueue, startFakeQueue } from "./queue-fake.ts";
 import { createStore, type TestStore } from "./store.ts";
 
-// Phase W1's Sprint, inline-edit, Queue and detail routes (web app design T-W1.0, T-W1.5,
-// T-W1.7), each through the running server and a real bd store.
-
 let store: TestStore;
 let host: HostEnv;
 let clientDir: string;
@@ -50,8 +47,6 @@ async function settings(extra?: string) {
   await host.write(hostConfig({ allowRepos: [repo()], ...(extra === undefined ? {} : { extra }) }));
 }
 
-// A stand-in for the held store's tool: `review --scope pair --json`, `show <path> --json` and
-// `options <path>`, each answering from the scenario file a test writes.
 const HELD = `#!/usr/bin/env node
 const { readFileSync } = require("node:fs");
 const scenario = JSON.parse(readFileSync(${JSON.stringify("SCENARIO")}, "utf8"));
@@ -254,8 +249,6 @@ describe("the owner picker's routes", () => {
       status: "in_progress",
     });
 
-    // T-W2.2: session-h names no host and the queue does not place it, so its liveness cannot be
-    // established; the handoff path writes nothing and offers a retry.
     expect(reply.status).toBe(409);
     expect(reply.body.error.kind).toBe("owner-unknown");
     expect(reply.body.error.message).toMatch(/^owner state unknown: .*session-h/);

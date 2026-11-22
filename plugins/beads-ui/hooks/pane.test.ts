@@ -10,14 +10,14 @@ import {
   parseBdList,
   parseBdShow,
   sortIssues,
-} from "../core/src/index.ts";
-import historyMg23 from "../core/test/fixtures/bd-history-BU-mg2.3.json.ts";
-import list from "../core/test/fixtures/bd-list-all-brief.json.ts";
-import show from "../core/test/fixtures/bd-show.json.ts";
-import minted from "../core/test/fixtures/bd-show-minted.json.ts";
-import statusesFixture from "../core/test/fixtures/bd-statuses.json.ts";
-import { PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
+} from "../core/src/index.js";
+import historyMg23 from "../core/test/fixtures/bd-history-BU-mg2.3.json.js";
+import list from "../core/test/fixtures/bd-list-all-brief.json.js";
+import show from "../core/test/fixtures/bd-show.json.js";
+import minted from "../core/test/fixtures/bd-show-minted.json.js";
+import statusesFixture from "../core/test/fixtures/bd-statuses.json.js";
+import { PANE_ID, PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
 import {
   CWD,
   exit,
@@ -34,7 +34,7 @@ import {
   VIEWPORT,
   type WorldOptions,
   world,
-} from "./tests/world.ts";
+} from "./tests/world.js";
 
 const issues = (): Issue[] => {
   const parsed = parseBdList(list);
@@ -85,8 +85,6 @@ const keysOf = async (ui: Mounted, prefix: string, type = "Box") =>
     .map((element) => element.key ?? "")
     .filter((key) => key.startsWith(prefix));
 
-// A store of 600 issues, a third each open, in progress and closed, spread over `assignees`:
-// bd's own records, renamed, from the first record of `bd list --json --all --brief --limit 0`.
 const largeStore = (assignees: number) => {
   const [first] = JSON.parse(list) as Record<string, unknown>[];
   return Array.from({ length: 600 }, (_, i) => ({
@@ -111,8 +109,6 @@ const drawnMoves = (rows: readonly Record<string, unknown>[]) =>
     .map((row) => `move:${String(row.id)}`)
     .sort();
 
-// A walk over every page of a 600-card store: about 0.7 s on an idle host, past the kit's default
-// 5,000 ms on a loaded one (measured 2026-10-21), so it gets room that does not depend on load.
 const WALK = { timeoutMs: 30_000 };
 
 const openLarge = ($: Engine, on: On, assignees: number) =>
@@ -181,8 +177,6 @@ describe("the Board tab", () => {
     await w.clock.settle();
 
     expect((await ui.find({ key: "move:BU-mg2.3" }))?.props.value).toBe("in_progress");
-    // The side nav and its gap take 16 of the 117 columns, so the card's display id is cut in its
-    // column.
     expect((await ui.find({ key: "group::wip" }))?.text).toContain("BU-beads-ui-claude-c");
     expect((await ui.find({ key: "conflict-line" }))?.text).toBe(
       "BU-mg2.3 changed elsewhere before the move to review; restored to in_progress and refreshed",
@@ -279,8 +273,6 @@ describe("the Board tab", () => {
     );
   });
 
-  // The store this bug was found on (ai-harness, 2026-10-23): bd list --json --all --brief
-  // --limit 0 wrote 7,141,443 bytes for 6964 issues, past the 4194304 $.process.run keeps.
   const STORE_ISSUES = 6964;
   const sevenMegabyteStore = () => {
     const [first] = JSON.parse(list) as Record<string, unknown>[];
@@ -310,7 +302,6 @@ describe("the Board tab", () => {
 
       expect(await ui.find({ key: "error-line" })).toBeUndefined();
       expect((await ui.find({ key: "column::open" }))?.text).toBe("open 2322");
-      // 4642 closed in the store: the board reads one done page of them, never all.
       expect((await ui.find({ key: "column::closed" }))?.text).toBe("closed 25");
       const { moves, largest } = await walkBoard(ui);
       expect(moves).toEqual(drawnMoves(rows));
@@ -351,7 +342,6 @@ describe("the Board tab", () => {
       }
       if ((await ui.find({ key: "lanes-next" })) === undefined) break;
       await ui.press({ key: "lanes-next" });
-      // Back round to the first lane page: every page's range differs, a column window's too.
       if ((await ui.find({ key: "lane-pager" }))?.text === firstPage) break;
     }
     return { moves: [...moves].sort(), largest };
@@ -378,7 +368,6 @@ describe("the Board tab", () => {
     "should reach every card's Move to through lane pages when the assignee lanes outgrow one drawing",
     WALK,
     async ($, on) => {
-      // 200 assignees, three cards each: the most lanes, and so the most column headers, per card.
       const { ui } = await openLarge($, on, 200);
       await ui.press({ key: "swimlane" });
 
@@ -397,8 +386,6 @@ describe("the Board tab", () => {
     "should reach every card's Move to within the drawing limit when the store has 30 custom statuses of 40 characters",
     { timeoutMs: 120_000 },
     async ($, on) => {
-      // bd statuses for this store with 30 custom statuses of 40 characters beside its own, and
-      // the 600 cards spread over all 30: every card's Move to carries 39 statuses.
       const custom = Array.from({ length: 30 }, (_, i) => ({
         category: ["active", "wip", "done", "frozen"][i % 4],
         name: `custom-status-${String(i).padStart(2, "0")}-`.padEnd(40, "x"),
@@ -432,9 +419,6 @@ describe("the Board tab", () => {
     },
   );
 
-  // The kit answers the mod's own $.ui.focus inside the mounted drawing without raising it to the
-  // test's hooks, so the focus ring itself is checked in the live run. This test shows the card p
-  // and b act on follows onto the page they open: the second p steps the same column again.
   test("should step the focused card's column with p and b, acting on the new page's card after each step", async ($, on) => {
     const { w, ui } = await openLarge($, on, 1);
     await $.ui.focus({
@@ -579,7 +563,6 @@ describe("the Backlog tab", () => {
   });
 
   test("should keep exactly the open issues assigned to that person when an assignee filter is entered", async ($, on) => {
-    // The store with two open issues claimed by ops-vm-3; the fixture's open issues have no assignee.
     const claimed = new Set(["BU-2zw", "BU-mg2.3.6"]);
     const assigned = (JSON.parse(list) as Record<string, unknown>[]).map((record) =>
       claimed.has(String(record.id)) ? { ...record, assignee: "ops-vm-3" } : record,
@@ -756,10 +739,8 @@ describe("the Detail tab", () => {
 });
 
 describe("quick-add", () => {
-  // BU-2zw as bd create --json would return it: its record from `bd show ... BU-2zw --json`.
   const created = () =>
     JSON.stringify((JSON.parse(minted) as { id: string }[]).find((one) => one.id === "BU-2zw"));
-  // The store as it stood before BU-2zw existed: the list without it.
   const before = () =>
     JSON.stringify((JSON.parse(list) as { id: string }[]).filter((one) => one.id !== "BU-2zw"));
   const LINE =
@@ -826,8 +807,6 @@ describe("quick-add", () => {
     expect((await ui.find({ key: "notice" }))?.text).toBe("created BU-2zw as BU-npm-audit-10-2zw");
   });
 
-  // The store once bd create has run and before the display id is written: BU-2zw as bd lists it,
-  // without its metadata.display_id and id: label.
   const MINTED = "BU-npm-audit-10-dev-only-advisories-2zw";
   const ATTACH = `bd update BU-2zw --set-metadata display_id=${MINTED} --add-label id:${MINTED}`;
   const unattached = () =>
@@ -836,7 +815,6 @@ describe("quick-add", () => {
         record.id === "BU-2zw" ? { ...record, metadata: {}, labels: [] } : record,
       ),
     );
-  // `bd show BU-2zw --json` as the retry re-reads it just before its write, with `change` applied.
   const SHOW = "bd show BU-2zw";
   const shownWith = (change: Record<string, unknown>) =>
     JSON.stringify([
@@ -879,7 +857,6 @@ describe("quick-add", () => {
       `BU-2zw has no display id yet (writing its display id failed (exit 1): Error: database is locked); writing ${MINTED} again on the next refresh`,
     );
     const failedTries = w.keys().filter((key) => key === ATTACH).length;
-    // What a pane reopened in a later session reads back from the plugin store.
     expect(w.store.get("pending-display-ids")).toEqual([{ id: "BU-2zw", displayId: MINTED }]);
 
     await w.clock.advance(10_000);

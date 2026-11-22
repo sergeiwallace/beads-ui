@@ -1,20 +1,16 @@
-// Runners: Vitest only. It reads docs/procedures/mod-install.md, which the mod environment cannot.
-// The install doc names each field by the label the pane draws on it, and it and README.md carry
-// the usage section the pane's help draws.
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import type { Host } from "../hooks/host.ts";
-import { BeadsPane, KEYBINDINGS_BLOCK, type PaneUi, type Tab, USAGE_LINES } from "../hooks/pane.ts";
-import { StoreResolver } from "../hooks/store.ts";
+import type { Host } from "../hooks/host.js";
+import { BeadsPane, KEYBINDINGS_BLOCK, type PaneUi, type Tab, USAGE_LINES } from "../hooks/pane.js";
+import { StoreResolver } from "../hooks/store.js";
 
 const repoRoot = resolve(import.meta.dirname, "../../..");
 const doc = () => readFileSync(join(repoRoot, "docs/procedures/mod-install.md"), "utf8");
 
 type Drawn = { type: string; props: Record<string, unknown> };
 
-// Each element as a plain record of its props, so the tree can be walked without the engine.
 const element =
   (type: string) =>
   (props: Record<string, unknown>): Drawn => ({ type, props });

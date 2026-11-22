@@ -6,12 +6,7 @@ import type {
   RenderNode,
 } from "claude-code";
 
-import type { TaskClientMessage, TaskClientProps, TaskClientRow } from "../core/src/views/menu.ts";
-
-// The Tasks view's task list as a Client (T-2B.5, D-31): it draws the rows the hooks hand it and
-// posts what the pointer or a key did to a row. The hooks decide what each post does, with the
-// same functions the panel's keys and buttons run. Hover is a style the surface applies, so a
-// pointer move draws no frame of ours and posts nothing.
+import type { TaskClientMessage, TaskClientProps, TaskClientRow } from "../core/src/views/menu.js";
 
 /** The row a region row `y` falls on; the room left for the options menu holds none. */
 export function rowAt(props: TaskClientProps, y: number): TaskClientRow | undefined {
@@ -85,7 +80,6 @@ export default function TaskList(props: unknown, surface: ClientSurface): Render
   surface.onKey((event) => send(keyMessage(props, event)));
   const children = props.rows.flatMap((row): RenderNode[] => {
     const selected = row.id === props.selected;
-    // The row's indicator gutter (D-41) leads its label, each glyph in the colour it was handed.
     const gutter: RenderNode[] = (row.gutter ?? []).map((span) =>
       span.color === undefined && span.dim !== true
         ? span.text

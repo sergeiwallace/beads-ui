@@ -4,11 +4,6 @@ import { PromptComposer } from "../../src/composer/PromptComposer.tsx";
 import type { DispatchStatus, DispatchSummary } from "../../src/composer/types.ts";
 import { editorOf, FAKE_AWS_KEY, installClipboardStubs, typeIntoEditor } from "./harness.ts";
 
-// T-W1.3 through the rendered composer: one send writes one dispatch and shows "queued"; the
-// secret guard refuses before anything is sent and names the rule without the text; the submit
-// state and the server's refusal show; and an outstanding dispatch shows three indicators, each
-// naming its source.
-
 const SENT: DispatchSummary = {
   id: "01JD0000000000000000000001",
   kind: "prompt",

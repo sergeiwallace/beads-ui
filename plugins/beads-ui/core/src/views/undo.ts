@@ -1,6 +1,6 @@
-import { moveArgv } from "../argv.ts";
-import type { BdArgv, Status } from "../model.ts";
-import { truncate } from "./text.ts";
+import { moveArgv } from "../argv.js";
+import type { BdArgv, Status } from "../model.js";
+import { truncate } from "./text.js";
 
 /** The status `bd close` writes. */
 export const CLOSED_STATUS = "closed";

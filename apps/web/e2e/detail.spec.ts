@@ -142,7 +142,6 @@ test.describe("Markdown and the Content Security Policy", () => {
     const outcome = await page.evaluate(() => {
       const results: string[] = [];
       try {
-        // Trusted Types refuses the text outright; were it taken, CSP would block the run.
         const inline = document.createElement("script");
         inline.textContent = "window.__inline = 1";
         document.body.append(inline);

@@ -13,16 +13,12 @@ import {
   type Token,
   textWidth,
   truncate,
-} from "../../core/src/index.ts";
-import type { Surface } from "./adapters.ts";
-import { choice } from "./elements.ts";
-import { gutter } from "./indicators.ts";
-import { colorOf, rowHover, weight } from "./look.ts";
-import { lineWindow, textLine, windowed } from "./window.ts";
-
-// The Board (T-1.1, T-2C.12, D-35, T-2C.8), drawn from core's BoardView on either surface: on
-// the pane its columns side by side and each card framed in its status's accent; on a windowed
-// surface (the band) one line a lane, a column's header, a card or a pager, in its window.
+} from "../../core/src/index.js";
+import type { Surface } from "./adapters.js";
+import { choice } from "./elements.js";
+import { gutter } from "./indicators.js";
+import { colorOf, rowHover, weight } from "./look.js";
+import { lineWindow, textLine, windowed } from "./window.js";
 
 const MOVE_LABEL = "Move to";
 /** The columns a Select draws round its value: its open mark and the gap before it. */
@@ -319,7 +315,6 @@ export function board(surface: Surface, model: BoardModel): RenderElement {
         lane.label === ""
           ? undefined
           : Text({ ...weight("heading"), underline: true, children: lane.label }),
-        // perRow groups to a row; a narrow pane stacks the rest below (T-1B.9).
         ...Array.from({ length: Math.ceil(groups.length / perRow) }, (_, row) =>
           Box({
             flexDirection: "row",

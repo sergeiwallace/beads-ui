@@ -1,20 +1,16 @@
-// The Timeline view (T-2B.9, R-24): the store's epics and milestone issues placed by due date on
-// one axis, and the ones with no due date listed apart. Pure: the terminal draws each item as a
-// Raster bar, every other surface as a Text row, both from this model (D-31).
-
-import { PRESS_FRAME_COLUMNS, tierOf } from "../layout.ts";
-import type { Issue, Status, StatusCategory } from "../model.ts";
-import { sortIssues } from "../sort.ts";
-import { statusToken, type Token } from "../tokens.ts";
-import { rowWindow } from "./panel.ts";
+import { PRESS_FRAME_COLUMNS, tierOf } from "../layout.js";
+import type { Issue, Status, StatusCategory } from "../model.js";
+import { sortIssues } from "../sort.js";
+import { statusToken, type Token } from "../tokens.js";
+import { rowWindow } from "./panel.js";
 import {
   RASTER_DEFAULT_COLOR,
   RASTER_TRACK_COLOR,
   type RasterCell,
   rasterCells,
   rasterColorFor,
-} from "./raster.ts";
-import { truncate } from "./text.ts";
+} from "./raster.js";
+import { truncate } from "./text.js";
 
 /** The issue types the Timeline places: epics, and milestones such as D-5's `Sprint <name>`. */
 export const TIMELINE_TYPES: readonly string[] = ["epic", "milestone"];
@@ -104,7 +100,6 @@ export function timelineView(
     if (day === undefined) undated.push(issue);
     else dated.push({ issue, day });
   }
-  // sortIssues ordered by priority then age; a stable sort by day keeps that within a day.
   dated.sort((a, b) => a.day - b.day);
   const first = dated[0]?.day;
   const last = dated[dated.length - 1]?.day;
@@ -195,8 +190,6 @@ export function timelineLayout(
   const placement = timelinePlacement(columns);
   const labelColumns =
     placement === "beside" ? Math.min(28, Math.max(10, Math.floor(columns * 0.3))) : columns;
-  // Beside: label, a space, the bar, a space, the due date. Above: the bar, a space, the date.
-  // Each label is a button, cut to leave room for its clickable brackets (T-2C.14).
   const room = columns - DUE_COLUMNS - 1 - (placement === "beside" ? labelColumns + 1 : 0);
   const barColumns = Math.min(RASTER_MAX_COLUMNS, Math.max(1, room));
   const total = view.items.length + view.undated.length;

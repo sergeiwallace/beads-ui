@@ -11,16 +11,11 @@ const viewRead = (page: Page, path: string) =>
     timeout: 60_000,
   });
 
-// T-3.4: the Sessions view from the work queue where `[queue] url` is set, from the store's
-// assignees without it, and a status change on a leased task written through the queue. The
-// queue is an in-process fake answering ai-core's routes with its shapes (test/queue-fake.ts).
-
 const QUEUE_REPO = "demo";
 
 const withQueue = test.extend<{ queue: FakeQueue }>({
   queue: async ({ app, configHome }, use) => {
     const queue = await startFakeQueue();
-    // `[queue]` is read from the host's own file, beside its allowlist and `[auth]`.
     await writeFile(
       join(configHome, "beads-ui", "beads-ui.toml"),
       hostConfig({

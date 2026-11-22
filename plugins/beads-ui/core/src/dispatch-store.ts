@@ -1,15 +1,11 @@
-// The dispatch store (web app design D-14, T-W0.5, Data Model → Dispatch record): where a signed
-// dispatch, its receipts and its tombstone live. The queue-backed and the local store keep the same
-// entries and read them through the one fold below, so both answer every question the same way.
-
 import {
   type DeliveryMachine,
   type DeliveryState,
   deliveryMachine,
   isFinalDelivery,
   reduceDelivery,
-} from "./delivery-state.ts";
-import type { RungAttempt, RungName } from "./dispatch-policy.ts";
+} from "./delivery-state.js";
+import type { RungAttempt, RungName } from "./dispatch-policy.js";
 
 export const DISPATCH_KINDS = ["prompt", "answer", "unblock", "handoff-request"] as const;
 export type DispatchKind = (typeof DISPATCH_KINDS)[number];

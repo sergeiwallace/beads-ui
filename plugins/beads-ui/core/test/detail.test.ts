@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   DESCRIPTION_EDIT_MAX_CHARS,
@@ -11,14 +9,13 @@ import {
   parseBdShow,
   parseFieldEdit,
   reduceDetail,
-} from "../src/index.ts";
-import historyMg22 from "./fixtures/bd-history-BU-mg2.2.json.ts";
-import historyMg23 from "./fixtures/bd-history-BU-mg2.3.json.ts";
-import historyMg2 from "./fixtures/bd-history-BU-mg2.json.ts";
-import show from "./fixtures/bd-show.json.ts";
-import { allIssues, byId, unwrap } from "./helpers.ts";
+} from "../src/index.js";
+import historyMg22 from "./fixtures/bd-history-BU-mg2.2.json.js";
+import historyMg23 from "./fixtures/bd-history-BU-mg2.3.json.js";
+import historyMg2 from "./fixtures/bd-history-BU-mg2.json.js";
+import show from "./fixtures/bd-show.json.js";
+import { allIssues, byId, unwrap } from "./helpers.js";
 
-// `bd show BU-mg2.3 --json` and `bd history BU-mg2.3 --events --json`.
 const epic = (): Issue => {
   const [issue] = unwrap(parseBdShow(show));
   if (issue === undefined) throw new Error("bd show fixture is empty");
@@ -258,8 +255,6 @@ describe("parseFieldEdit", () => {
     });
   });
 
-  // A multi-line description with every character the one-line form escapes, including a
-  // backslash before n that is not a line break.
   const MULTI_LINE =
     "First line.\n\n- a list item\n- C:\\new\\path and a literal \\n\r\n\tindented\\\\ end\n";
 

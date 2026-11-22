@@ -150,7 +150,6 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
       response.writeHead(503).end();
       return;
     }
-    // A read this request queued is dropped if the client goes away before it starts (bd-queue.ts).
     const abandoned = new AbortController();
     response.once("close", () => {
       if (!response.writableFinished) abandoned.abort();
@@ -166,7 +165,7 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     });
   });
   const { port } = server.address() as AddressInfo;
-  const auth = new AuthLayer({
+  const auth = await AuthLayer.open({
     settings,
     port,
     ...(options.clock === undefined ? {} : { clock: options.clock }),
@@ -187,7 +186,6 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     configEnv: options.configEnv,
     clock,
   });
-  // The last run's coalescing windows and shown deadlines were only in memory.
   void ladder.resume();
   const context: ApiContext = {
     repoRoot: options.repoRoot,
@@ -211,8 +209,6 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
   });
   app = started;
   feed.start();
-  // Expiry tombstones a dispatch nobody fetches, and a rotated key is published before its first
-  // signature; one pass at a time, and a failed pass waits for the next.
   let sweeping: Promise<unknown> = Promise.resolve();
   const sweep = setInterval(() => {
     sweeping = sweeping
@@ -234,14 +230,9 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     dispatchProblems,
     dispatchNotices,
     feed,
-    // Requests in flight finish, with the bd calls they run, so a stop never leaves a bd writing
-    // to the store after the server has gone: event streams end first, idle connections close at
-    // once, whatever is still open at the deadline is cut, and then every handler settles, one
-    // whose client went away included (each bd call ends within bd-node's timeout).
     close: async () => {
       clearInterval(sweep);
       ladder.close();
-      // Streams first: with none open the feed starts no further bd, so its stop is quick.
       started.closeStreams();
       await feed.stop();
       await new Promise<void>((resolve, reject) => {
@@ -254,6 +245,7 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
         server.closeIdleConnections();
       });
       await started.settled();
+      await auth.close();
       await sweeping;
       await ladder.idle();
     },

@@ -16,10 +16,6 @@ import {
   type World,
 } from "./harness.ts";
 
-// Web app design Phase W4, its six criteria, through the MCP server started over stdio and the
-// running web server: every dispatch is read back through the receiver API with the receiving
-// host's own token, and every carrier the ladder runs is a stand-in that records its call.
-
 let world: World;
 let app: Connected;
 let text: Connected;
@@ -151,8 +147,6 @@ describe("a prompt a model asks for (W4)", () => {
   });
 });
 
-// The web server's own refusals (no token, another user, a repeated id) are pinned at its routes
-// in apps/web/test/mcp.test.ts; these are the ones the MCP server's callers meet.
 describe("an MCP dispatch request the web server refuses (W4)", () => {
   it("should answer a Send that repeats its request id with the web server's refusal, and send it once", async () => {
     const { id, owner, repo } = await ownedTask();
@@ -199,10 +193,12 @@ describe("delivery of an MCP dispatch (W4)", () => {
       );
       expect(flag(mail, "--subject")).toBe(`beads-ui dispatch ${dispatch}`);
     });
-    const status = (
-      await send(world.server, `/api/dispatch/${dispatch}`, { headers: { cookie: world.cookie } })
-    ).json() as { ladder: { rungs: { rung: string; outcome: string }[] } };
-    expect(status.ladder.rungs[0]).toMatchObject({ rung: "agent-mail", outcome: "sent" });
+    await waitFor(async () => {
+      const status = (
+        await send(world.server, `/api/dispatch/${dispatch}`, { headers: { cookie: world.cookie } })
+      ).json() as { ladder: { rungs: { rung: string; outcome: string }[] } };
+      expect(status.ladder.rungs[0]).toMatchObject({ rung: "agent-mail", outcome: "sent" });
+    });
   });
 });
 

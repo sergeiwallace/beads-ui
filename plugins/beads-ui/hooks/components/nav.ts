@@ -9,10 +9,8 @@ import {
   packRows,
   SIDE_NAV_COLUMNS,
   SIDE_NAV_GAP,
-} from "../../core/src/index.ts";
-import type { Surface } from "./adapters.ts";
-
-// The nav each surface draws (T-2B.1, D-35), from the view registry's entries on that surface.
+} from "../../core/src/index.js";
+import type { Surface } from "./adapters.js";
 
 const navButton = (surface: Surface, item: NavItem, press: (item: NavItem) => void) =>
   surface.ui.Button({

@@ -8,11 +8,6 @@ import { openQueueDispatchStore } from "../server/dispatch-store/queue.ts";
 import { bodyDigest, signDispatch, signingKeySource } from "../server/envelope.ts";
 import { type FakeQueue, startFakeQueue } from "./fake-queue.ts";
 
-// The dispatch ladder's entries in both dispatch stores (web app design T-W2.1, T-W2.3, D-14):
-// a delivery move with the record that proves it, a hold the receiver API does not serve, each
-// rung's attempt and a note, all kept across a reopen, and a move the dispatch's state forbids
-// refused with nothing written. The queue store runs against the fake built from the live API.
-
 /** RFC 8032 section 7.1 TEST 1, the golden vectors' published test seed; it signs nothing real. */
 const TEST_SEED = "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60";
 const source = signingKeySource(async () => ({ keyId: "host-a-20261109", secret: TEST_SEED }));

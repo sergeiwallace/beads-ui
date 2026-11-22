@@ -2,14 +2,14 @@ import type { On } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
-import comments from "../core/test/fixtures/bd-comments-BU-mg2.3.json.ts";
-import show from "../core/test/fixtures/bd-show.json.ts";
-import { ANSWER_KEY, CLOSE_KEY, ISSUE_KEY, SEND_KEY } from "./components/review.ts";
-import { PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { ANSWERS_DIR } from "./review.ts";
-import { test } from "./tests/kit.ts";
-import { ME, MINE } from "./tests/mine.ts";
-import { render } from "./tests/render.ts";
+import comments from "../core/test/fixtures/bd-comments-BU-mg2.3.json.js";
+import show from "../core/test/fixtures/bd-show.json.js";
+import { ANSWER_KEY, CLOSE_KEY, ISSUE_KEY, SEND_KEY } from "./components/review.js";
+import { PANE_ID, PLUGIN_NAME } from "./register.js";
+import { ANSWERS_DIR } from "./review.js";
+import { test } from "./tests/kit.js";
+import { ME, MINE } from "./tests/mine.js";
+import { render } from "./tests/render.js";
 import {
   BAND_PROPS,
   CWD,
@@ -29,11 +29,7 @@ import {
   STATE_DIR,
   VIEWPORT,
   world,
-} from "./tests/world.ts";
-
-// T-2C.5 (D-37 to D-40): an issue's review items in its Detail, the reader and the answer, at the
-// hooks entry point. A host refresher is played running, its review snapshot written under its
-// token, and the held store's command is a stub argv the world answers.
+} from "./tests/world.js";
 
 const PYTHON = "/opt/fleet/.venv/bin/python";
 const HELD = "/opt/fleet/scripts/held_cli.py";
@@ -415,7 +411,6 @@ describe("answering from the reader (T-2C.5, D-39)", () => {
       "answered in commit abc1234; the session was handed the follow-through",
     );
     expect(await textOf(ui, "reader-status")).toContain("answered 2026-10-21 01:13");
-    // The refresher runs the review verb again at once (D-37).
     expect(JSON.parse(w.files.get(`${STATE_DIR}/wake/review.json`) ?? "{}").path).toBe(
       `${STORE}/docs/held/${DECISION_ROW}`,
     );

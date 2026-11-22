@@ -1,4 +1,4 @@
-import type { Priority, StatusCategory } from "./model.ts";
+import type { Priority, StatusCategory } from "./model.js";
 
 /** One semantic token set (D-19); each surface maps the names to its own colour system. */
 export const TOKENS = [

@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   COMMANDS,
@@ -12,7 +10,7 @@ import {
   TERMINAL_THEME,
   TOKENS,
   terminalColor,
-} from "../src/index.ts";
+} from "../src/index.js";
 
 describe("COMMANDS", () => {
   test("should give every action a keyboard path when the catalog is read", () => {

@@ -112,7 +112,6 @@ const LINKS: Components = {
         {children}
       </a>
     ),
-  // An image would fetch from wherever its source points; its alt text stands in for it.
   img: ({ alt }) => (alt === undefined || alt === "" ? null : <span>{alt}</span>),
 };
 

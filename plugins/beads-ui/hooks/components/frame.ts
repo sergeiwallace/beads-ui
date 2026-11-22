@@ -1,13 +1,8 @@
 import type { RenderElement, RenderNode } from "claude-code";
 
-import { SPACE, type Token } from "../../core/src/index.ts";
-import type { Surface } from "./adapters.ts";
-import { colorOf, weight } from "./look.ts";
-
-// The pane's frames and states (D-43, T-2C.12): a framed section a view, the header bar, and the
-// empty and error state every view draws. On a short surface (the band always, and the pane
-// inline or under SHORT_ROWS) a frame's three rows are rows the view lacks, so each draws its
-// compact form there: the same text in the same colour, unframed.
+import { SPACE, type Token } from "../../core/src/index.js";
+import type { Surface } from "./adapters.js";
+import { colorOf, weight } from "./look.js";
 
 type Framing = Pick<Surface, "ui" | "short">;
 

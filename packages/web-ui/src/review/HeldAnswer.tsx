@@ -8,13 +8,6 @@ import { Markdown } from "../detail/Markdown.tsx";
 import { OptionCard } from "./OptionCard.tsx";
 import type { AnswerInput, BodyRead } from "./types.ts";
 
-// A held item's answer (web app design D-2, D-3, T-W1.2). With option cards, one key chooses an
-// option; once every decision on the item has one, a five-second undo window starts, and Escape
-// or Undo inside it cancels and writes nothing. When the window closes the answer is written as a
-// dispatch of kind answer to the session holding the item. Without cards (the options command is
-// unavailable, printed none, or reported an error) the item's Markdown body is shown and only a
-// typed answer is taken. The body is drawn below the card either way.
-
 /** How long a one-key answer can be taken back before it is written. */
 export const UNDO_MS = 5_000;
 
@@ -58,8 +51,6 @@ function Body({ body }: { body: BodyRead }) {
       </p>
     );
   }
-  // The same sanitizing renderer as the held item's detail (T-W1.2, T-W1.7): headings, safe links
-  // and an option card's `#` anchor work, and raw HTML never reaches the page.
   return (
     <div data-testid="held-body">
       <Markdown text={body.text} className="bu-held-body" />

@@ -1,9 +1,4 @@
-import type { Result } from "./model.ts";
-
-// Option cards (web app design D-2, T-W1.2): the held store's structured-options command
-// (`held_cli.py options`) prints each review item's decisions as JSON, and this reads it into
-// cards. A malformed decision gives its item no card at all and an error naming the field, so a
-// partial card is never drawn; the view falls back to the item's Markdown body.
+import type { Result } from "./model.js";
 
 /** The payload version this reads; any other is refused. */
 export const OPTIONS_VERSION = 1;

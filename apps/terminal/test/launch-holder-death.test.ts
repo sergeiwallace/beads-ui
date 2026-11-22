@@ -53,7 +53,6 @@ it("should retain serialization when the production lock supervisor dies during 
   let first: ReturnType<typeof spawn> | undefined;
   let mutationWorker: number | undefined;
   try {
-    // Real tmux does the split; only the first reply is held to expose the publication boundary.
     await writeFile(
       join(dir, "tmux"),
       `#!/usr/bin/python3
@@ -127,8 +126,6 @@ sys.stdout.buffer.write(result.stdout);sys.stderr.buffer.write(result.stderr);sy
         )
       ];
     expect(mutationWorker).toBeDefined();
-    // The real split reply is gated, so the mutator cannot publish or finish before release.
-    // Do not SIGSTOP: orphan-group job control would add SIGHUP to the lifecycle under test.
     process.kill(supervisor ?? 0, "SIGKILL");
     await waitFor(async () => (await command(supervisor ?? 0)) === "");
     expect(await command(mutationWorker ?? 0)).toContain(workerPath);

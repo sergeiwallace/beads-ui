@@ -1,10 +1,6 @@
-// An issue's comments (BU-mg2.3.15): every comment `bd comments <id> --json` returned, oldest
-// first and newest last, each with its author and time, and the draft a new comment is typed
-// into. Pure: the Detail view draws it, and the task panel opens a task into that view.
-
-import type { Comment, Result } from "../model.ts";
-import { fromOneLine } from "./detail.ts";
-import { BLOCK_MAX_CHARS, truncate } from "./text.ts";
+import type { Comment, Result } from "../model.js";
+import { fromOneLine } from "./detail.js";
+import { BLOCK_MAX_CHARS, truncate } from "./text.js";
 
 /**
  * The most characters the comment bodies take together: a mod tree is cut off past 100,000

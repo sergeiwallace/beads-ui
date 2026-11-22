@@ -29,8 +29,8 @@ import {
   summaryPieces,
   taskRowView,
   truncate,
-} from "../core/src/index.ts";
-import { bandSurface, type Surface, type SurfaceUi } from "./components/adapters.ts";
+} from "../core/src/index.js";
+import { bandSurface, type Surface, type SurfaceUi } from "./components/adapters.js";
 import {
   aboveNote,
   controlsRow,
@@ -39,14 +39,14 @@ import {
   moreLabel,
   ROW_INDENT,
   summaryLine,
-} from "./components/band.ts";
-import { enabledIndicators, gutterFor } from "./components/indicators.ts";
-import { colorOf } from "./components/look.ts";
-import { bandNav, navBar } from "./components/nav.ts";
-import { textLine } from "./components/window.ts";
-import type { Host } from "./host.ts";
-import type { BeadsPane } from "./pane.ts";
-import type { BandTally } from "./tally.ts";
+} from "./components/band.js";
+import { enabledIndicators, gutterFor } from "./components/indicators.js";
+import { colorOf } from "./components/look.js";
+import { bandNav, navBar } from "./components/nav.js";
+import { textLine } from "./components/window.js";
+import type { Host } from "./host.js";
+import type { BeadsPane } from "./pane.js";
+import type { BandTally } from "./tally.js";
 
 /** Where each session's chosen level lives in `$.store`, by session name (D-36). */
 export const BAND_LEVEL_KEY = "band-level";
@@ -136,14 +136,11 @@ export class BandLevels {
   /** A press on the band: the new state, kept for the session, and its rows read. */
   press(event: DisclosureEvent): void {
     this.kept = reduceDisclosure(this.state(), event, this.settings);
-    // A task's Detail draws its review items (T-2C.5): it is read, with the host's snapshot, as
-    // it opens.
     if (event.type === "open") {
       this.asked = undefined;
       this.askDetail(event.id);
       void this.pane.review.load().then(() => this.host?.invalidate());
     }
-    // Leaving the overview closes the menu and the help it drew.
     if (event.type === "summary" || event.type === "overview" || event.type === "view") {
       if (this.pane.menuOn === "band") this.pane.menuOpen = false;
       this.pane.bandHelp = false;
@@ -177,8 +174,6 @@ export class BandLevels {
    * or (`wrote`) after this session's write. Each read redraws the band when it lands.
    */
   private recount(wrote: boolean): void {
-    // After a write every read is stale, one under way too, but its tasks stay drawn (and a
-    // detail stays readable) until the next read lands: NaN matches no count.
     if (wrote) {
       for (const [key, read] of this.reads) {
         this.reads.set(key, { ...read, count: Number.NaN, reading: false });
@@ -202,7 +197,6 @@ export class BandLevels {
       void this.tally
         .readTasks(state.line, group)
         .then((read) => {
-          // A write since cleared this read, and a newer one is under way: it draws instead.
           if (this.reads.get(key) !== pending) return;
           this.reads.set(key, {
             tasks: read?.tasks ?? [],
@@ -452,8 +446,6 @@ export class BandLevels {
         : textLine(plain, "band-overview:notice", notice.text, { token: notice.token }),
       ...(menuOpen || pane.bandHelp ? [] : (entry?.controls?.(sized(room)) ?? [])),
     ]);
-    // The view's own rows come first: at a height that leaves the view too few, the notice and
-    // the fields give theirs up.
     const kept = room - above.length >= MIN_VIEW_ROWS ? above : [];
     const bodyRows = room - kept.length;
     if (bodyRows < 1) {

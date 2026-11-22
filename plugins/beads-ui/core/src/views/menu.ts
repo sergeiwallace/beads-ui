@@ -1,11 +1,7 @@
-// Every action the task panel offers, as data (T-2B.4): the toolbar, the list's own controls and
-// the nav draw their keys from it, and the options menu lists the same actions with those keys,
-// so no action is reachable only one way. A Client drawing (T-2B.5) reads the same lists.
-
-import { commandById } from "../commands.ts";
-import { type Labels, labels } from "../layout.ts";
-import { hotkeyOf, isPanelView, type NavEntry, navEntries } from "./nav.ts";
-import type { TaskListView } from "./panel.ts";
+import { commandById } from "../commands.js";
+import { type Labels, labels } from "../layout.js";
+import { hotkeyOf, isPanelView, type NavEntry, navEntries } from "./nav.js";
+import type { TaskListView } from "./panel.js";
 
 export interface PanelAction {
   /** The COMMANDS id: its hotkey and the help's line. */
@@ -225,9 +221,6 @@ export function menuView(ctx: ActionContext, task?: string, reviewItems = 0): Me
 /** A menu row as drawn: its key, then its label, as a plain Button with a hotkey reads. */
 export const menuItemText = (item: MenuItem): string =>
   item.hotkey === "" ? item.label : `${item.hotkey}: ${item.label}`;
-
-// The Tasks view's Client (T-2B.5, D-31): the rows it draws and the keys it hands back, as the
-// plain data a Client's props carry, and the messages it posts, read back as untrusted input.
 
 /** A key the Client hands back while it has the focus, and the command it runs. */
 export interface ClientKey {

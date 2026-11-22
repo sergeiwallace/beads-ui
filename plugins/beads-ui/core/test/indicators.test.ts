@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   boardRow,
@@ -19,10 +17,8 @@ import {
   type ReviewItem,
   resolveGlyphs,
   withIndicatorsTable,
-} from "../src/index.ts";
-import { unwrap } from "./helpers.ts";
-
-// D-41, D-42 and T-2C.3: the row indicator registry, its blocked and agent entries, and the gutter.
+} from "../src/index.js";
+import { unwrap } from "./helpers.js";
 
 const issue = (id: string, fields: Partial<Issue> = {}): Issue => ({
   id,

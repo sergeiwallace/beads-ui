@@ -38,7 +38,6 @@ async function fixture(
   const tmux = async (...args: string[]) =>
     (await exec(realTmux, ["-L", socket, ...args], { env, timeout: 2000 })).stdout.trim();
   try {
-    // Only failure injection is simulated. Pane lifecycle, child processes and identity are real.
     await writeFile(
       join(dir, "tmux"),
       `#!/usr/bin/python3
@@ -136,7 +135,6 @@ it("should exit the old companion without touching a replacement at the same com
   await fixture(async ({ composer, sibling, launch, tmux, panes }) => {
     const companion = await launch();
     const oldPid = await tmux("display-message", "-p", "-t", composer, "#{pane_pid}");
-    // Linux start identity exists; replacing the process keeps the pane id but changes its owner.
     expect((await readFile(`/proc/${oldPid}/stat`, "utf8")).length).toBeGreaterThan(0);
     await tmux("respawn-pane", "-k", "-t", composer, "sleep", "20");
     const replacementPid = await tmux("display-message", "-p", "-t", composer, "#{pane_pid}");
@@ -165,7 +163,6 @@ it("should override remain-on-exit only on its own pane and remove that pane on 
     expect(await tmux("show-options", "-p", "-A", "-v", "-t", composer, "remain-on-exit")).toBe(
       "on",
     );
-    // Input is solely to the newly created test companion on this isolated socket.
     await tmux("send-keys", "-t", companion, "-l", "quit");
     await tmux("send-keys", "-t", companion, "Enter");
     try {

@@ -16,11 +16,6 @@ import {
 import { type FakeQueue, startFakeQueue } from "./queue-fake.ts";
 import { createStore, failingBd, slowBd, type TestStore } from "./store.ts";
 
-// Phase 3's remaining routes through the real server and a real bd store: GET /api/roadmap
-// (T-3.2), GET /api/analytics (T-3.3), GET /api/sessions and the queue-routed status write
-// (T-3.4). The work queue is an in-process fake answering ai-core's real routes and shapes
-// (queue-fake.ts); set BEADS_UI_LIVE_QUEUE_URL to also read a live queue on loopback.
-
 let store: TestStore;
 let host: HostEnv;
 let clientDir: string;
@@ -234,7 +229,6 @@ describe("GET /api/analytics (T-3.3)", () => {
   });
 
   it("should read no bd history for an issue untouched since before the window, dating it by its own fields", async () => {
-    // Imported with its own January dates: bd keeps them, and stamps its one `created` event now.
     const old = "views-stale1";
     const dir = await mkdtemp(join(tmpdir(), "beads-ui-import-"));
     cleanup.push(() => rm(dir, { recursive: true }));
@@ -265,13 +259,11 @@ describe("GET /api/analytics (T-3.3)", () => {
     expect(reply.body.histories.skipped).toBeGreaterThanOrEqual(1);
     const aging = reply.body.view.aging.find((item: { id: string }) => item.id === old);
     expect(aging.days).toBeGreaterThan(200);
-    // In progress on every day of the window, never "created" on the day it was imported.
     const first = reply.body.view.cumulativeFlow[0].counts;
     expect(first.wip).toBeGreaterThanOrEqual(1);
   });
 
   it("should wait out a bd history read slower than bd-node's 10-second default", async () => {
-    // Its own one-issue store, so the slow reads are few; an embedded store queues them.
     const small = await createStore("slow");
     cleanup.push(small.remove);
     await small.create("Slow history");

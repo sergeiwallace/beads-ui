@@ -1,10 +1,4 @@
-// Cost per closed issue (T-3.3, R-9): Claude Code exports `claude_code.cost.usage` (USD) and
-// `claude_code.token.usage` (tokens, by `type`) over OpenTelemetry, each tagged with `session.id`;
-// `bd close --session` records the session that closed an issue (`closed_by_session`). Joining the
-// two gives cost and tokens per closed issue. The export is read as OTLP JSON Lines, the format an
-// OpenTelemetry Collector's file exporter writes. Pure: the server reads the file.
-
-import type { Issue } from "./model.ts";
+import type { Issue } from "./model.js";
 
 export const COST_METRIC = "claude_code.cost.usage";
 export const TOKEN_METRIC = "claude_code.token.usage";
@@ -53,7 +47,6 @@ function attributes(value: unknown): Map<string, string> {
   return found;
 }
 
-// OTLP JSON writes an int64 as a string, a double as a number.
 function pointValue(point: Json): number | undefined {
   const raw = point.asDouble ?? point.asInt;
   const value = typeof raw === "string" ? Number(raw) : raw;
@@ -74,7 +67,6 @@ const TOKEN_TYPES: Readonly<Record<string, keyof TokenCounts>> = {
  * A blank line is skipped; a line that is not JSON fails the read and names the line.
  */
 export function parseCostExport(text: string): CostExportResult {
-  // One series is a metric, a session and its other attributes; a cumulative one keeps its last.
   const cumulative = new Map<string, { at: number; value: number; apply: (v: number) => void }>();
   const usage = new Map<string, SessionUsage>();
   const of = (sessionId: string): SessionUsage => {

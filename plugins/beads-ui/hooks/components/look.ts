@@ -5,11 +5,7 @@ import {
   PRESS_OPEN,
   type ThemeOverrides,
   type Token,
-} from "../../core/src/index.ts";
-
-// The look both surfaces draw with (D-43): the `[theme]` colours and the glyph form read at the
-// last config read, and the clickable affordance every pressable element draws. One module
-// holds them, so the band and the pane draw the same look from the same redraw.
+} from "../../core/src/index.js";
 
 let theme: ThemeOverrides = {};
 let ascii = false;

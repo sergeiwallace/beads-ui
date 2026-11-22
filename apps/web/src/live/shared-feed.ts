@@ -1,9 +1,3 @@
-// One Server-Sent Events connection per browser, shared by every tab of the app (web app design
-// T-W3.1). The tab holding a Web Lock opens the stream and passes each event on over a
-// BroadcastChannel; every other tab waits on the same lock, so when the holding tab closes the
-// browser grants it to one of them at once and that tab opens the stream. A browser with neither
-// API gives each tab its own stream.
-
 /** What the server's change feed pushes (server/heads-feed.ts FeedEvent). */
 export type FeedMessage =
   | { type: "change"; data: { stores: string[]; asOf: string } }
@@ -66,8 +60,6 @@ export function createSharedFeed(
   } else {
     setRole("follower");
     channel.onmessage = (event: MessageEvent<FeedMessage>) => deliver(event.data);
-    // Held for the life of the tab: the promise never settles, so the lock is released only
-    // when the tab goes away, and the next waiting tab is granted it.
     void platform.locks.request(
       name,
       () =>

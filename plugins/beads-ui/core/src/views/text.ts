@@ -1,5 +1,5 @@
-import { glyphOf } from "../glyphs.ts";
-import type { Priority } from "../model.ts";
+import { glyphOf } from "../glyphs.js";
+import type { Priority } from "../model.js";
 
 /**
  * Fits text to `width` columns on one line: whitespace runs become one space, and an overlong

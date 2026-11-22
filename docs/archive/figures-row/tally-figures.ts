@@ -1,6 +1,3 @@
-// Archived 2026-10-27 from plugins/beads-ui/hooks/tally.ts at 45d7da1 (see README.md).
-// Methods of BandTally, the class the band reads its counts from.
-
   /** Line `key`'s counts as last drawn. */
   totalOf(key: string): BandTotal | undefined {
     const at = this.last?.reads.findIndex((read) => read.key === key) ?? -1;

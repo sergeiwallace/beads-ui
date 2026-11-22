@@ -1,18 +1,18 @@
 import type { On } from "claude-code";
 
-import { isTaskPanelRetired, pictureForm } from "../core/src/index.ts";
-import { BandSettingsPanel } from "./bandSettings.ts";
-import { drawBand } from "./bands.ts";
-import type { SurfacePicture } from "./components/adapters.ts";
-import { CONFIRM_ID, DeleteConfirm } from "./confirm.ts";
-import type { Host } from "./host.ts";
-import { BandLevels } from "./levels.ts";
-import { BeadsPane, PANE_ID, type TasksRegion } from "./pane.ts";
-import { TASKS_CLIENT_KEY } from "./panel.ts";
-import { StoreResolver } from "./store.ts";
-import { readStream } from "./stream.ts";
-import { BandTally, EditSync } from "./tally.ts";
-import { readTerminal } from "./terminal.ts";
+import { isTaskPanelRetired, pictureForm } from "../core/src/index.js";
+import { BandSettingsPanel } from "./bandSettings.js";
+import { drawBand } from "./bands.js";
+import type { SurfacePicture } from "./components/adapters.js";
+import { CONFIRM_ID, DeleteConfirm } from "./confirm.js";
+import type { Host } from "./host.js";
+import { BandLevels } from "./levels.js";
+import { BeadsPane, PANE_ID, type TasksRegion } from "./pane.js";
+import { TASKS_CLIENT_KEY } from "./panel.js";
+import { StoreResolver } from "./store.js";
+import { readStream } from "./stream.js";
+import { BandTally, EditSync } from "./tally.js";
+import { readTerminal } from "./terminal.js";
 
 export const PLUGIN_NAME = "beads-ui";
 export const COMMAND_NAME = "show-beads-ui";
@@ -46,8 +46,6 @@ export function register(on: On) {
   tally.sync = sync.state;
   sync.onChange = () => tally.syncChanged();
   bandSettings.onChange = () => void tally.settingsChanged();
-  // Each write the pane or the confirmation makes names the store it ran in: that store is
-  // woken and published, even when the pane has re-resolved its store since.
   const wrote = (store: string) => {
     tally.afterWrite(store);
     sync.wrote(store);
@@ -124,15 +122,12 @@ export function register(on: On) {
     await tally.bind(host);
     await levels.bind(host);
     sync.bind(host);
-    // Whether the terminal draws an Image (T-2C.13): read once, the pane drawn again with it.
     void readTerminal(host)
       .then((verdict) => {
         pane.images = verdict;
         host.invalidate();
       })
       .catch(() => undefined);
-    // T-2B.7: the task panel opens at session start under panel.mode. Claude Code's own task
-    // panel is retired when the settings deny TaskCreate by name, as ai-harness's switch does (D-21).
     if (e.isInteractive) {
       void $.settings
         .read({ key: "permissions" })
@@ -150,7 +145,6 @@ export function register(on: On) {
     return {};
   }).catch(() => ({ text: OPEN_FAILED_TEXT }));
 
-  // A turn the session refused or dropped is sent again once a turn ends (T-2B.6).
   on("turn.complete", ($, e, next) => {
     sync.turnComplete((text) => $.prompt.submit({ text }));
 
@@ -173,8 +167,6 @@ export function register(on: On) {
     return next(e);
   }).catch((_$, e, next) => next(e));
 
-  // The band draws on the two surfaces Claude Code 2.1.310 draws the site on, the terminal and
-  // the desktop.
   on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
     if ((e.surface !== "terminal" && e.surface !== "desktop") || e.props.hasSurvey) {
       return next(e);
@@ -211,15 +203,11 @@ export function register(on: On) {
     const width = Math.max(20, e.props.bodyColumns - 1);
     if (e.requestId === CONFIRM_ID) return confirm.draw(ui, width);
 
-    // A Client draws in the terminal and the desktop; VS Code draws none (D-31). Only the
-    // terminal draws a Raster, the Timeline's bars (T-2B.9).
     const Client =
       e.surface === "terminal" || e.surface === "desktop"
         ? (await $.ui.resolve(e)).Client
         : undefined;
     const Raster = e.surface === "terminal" ? (await $.ui.resolve(e)).Raster : undefined;
-    // A view's picture (T-2C.13): an Image only where the terminal draws one, an Svg off the
-    // terminal, its alt text elsewhere.
     const elements = await $.ui.resolve(e);
     const form = pictureForm(e.surface, pane.images.images);
     const picture: SurfacePicture =
@@ -234,8 +222,6 @@ export function register(on: On) {
         ? undefined
         : (props, width, height) =>
             Client({ key: TASKS_CLIENT_KEY, module: "../client/tasks.ts", props, width, height });
-    // The tier and the short-height rule come from the props, which Claude Code redraws with on
-    // every resize (T-1B.9).
     const frame = {
       width,
       bodyColumns: e.props.bodyColumns,
@@ -245,8 +231,6 @@ export function register(on: On) {
     return pane.draw(ui, frame, help, tasks, Raster, picture);
   });
 
-  // The task list's Client (T-2B.5): what it posts runs the pane's own actions, and a fault drops
-  // it for the rest of the session, the element tree drawing the list in its place.
   on("ui.message", { requestId: "beads" }, async (_$, e, next) => {
     if (e.element === TASKS_CLIENT_KEY) await pane.clientMessage(e.data);
 

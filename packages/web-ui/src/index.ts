@@ -6,8 +6,6 @@ export type { BoardProps } from "./Board.tsx";
 export { Board, dropOutcome } from "./Board.tsx";
 export type { CommandPaletteProps, PaletteCommand } from "./CommandPalette.tsx";
 export { CommandPalette, isPaletteChord, usePaletteChord } from "./CommandPalette.tsx";
-// The composer and its status indicators (web app design D-4, D-5, T-W1.3); the Lexical editor
-// itself is loaded by PromptComposer on first focus, so it is not exported here.
 export type { PromptComposerProps } from "./composer/PromptComposer.tsx";
 export { PromptComposer, STATUS_POLL_MS, useDispatchStatus } from "./composer/PromptComposer.tsx";
 export type { StatusIndicatorsProps } from "./composer/StatusIndicators.tsx";
@@ -21,7 +19,6 @@ export type {
   Indicator,
   SendOptions,
 } from "./composer/types.ts";
-// Phase W1's Sprint view, inline edits, Queue view and detail views.
 export type { HeldDetailProps, HeldItemSummary, HeldReadFailure } from "./detail/HeldDetail.tsx";
 export { HeldDetail } from "./detail/HeldDetail.tsx";
 export type { IssueLinksProps } from "./detail/IssueLinks.tsx";
@@ -44,7 +41,6 @@ export type { QueueOrderView, QueueRowView, QueueViewProps } from "./queue/Queue
 export { QUEUE_FILTER_LABELS, QueueView } from "./queue/QueueView.tsx";
 export type { RoadmapProps } from "./Roadmap.tsx";
 export { Roadmap } from "./Roadmap.tsx";
-// The Review queue (web app design D-1, D-2, D-3, D-12, T-W1.1, T-W1.2, T-W1.4, T-W1.6).
 export type { DraftListProps, PromptDraft } from "./review/DraftList.tsx";
 export { DraftList } from "./review/DraftList.tsx";
 export { HeldAnswer, UNDO_MS } from "./review/HeldAnswer.tsx";

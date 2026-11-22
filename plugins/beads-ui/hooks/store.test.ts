@@ -1,10 +1,10 @@
 import type { On } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
-import { BEAT_MS } from "../core/src/index.ts";
-import { SCOPE_KEY, SPRINT_PLANNED_TEXT } from "./pane.ts";
-import { PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
+import { BEAT_MS } from "../core/src/index.js";
+import { SCOPE_KEY, SPRINT_PLANNED_TEXT } from "./pane.js";
+import { PANE_ID, PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
 import {
   BAND_PROPS,
   CWD,
@@ -25,7 +25,7 @@ import {
   VIEWPORT,
   type WorldOptions,
   world,
-} from "./tests/world.ts";
+} from "./tests/world.js";
 
 const LIST = OPEN_LIST;
 /** A qa session's directory: a repository that holds no Beads store, and must never get one. */
@@ -210,7 +210,6 @@ describe("the store a session reads", () => {
     expect(await ui.find({ key: "error-line" })).toBeUndefined();
     expect(text).not.toContain("retrying");
 
-    // The band's own reads and its refresher start are not the pane's.
     const paneReads = () =>
       w.keys().filter((key) => !key.startsWith("bd count ") && !key.startsWith("node ")).length;
     const before = paneReads();

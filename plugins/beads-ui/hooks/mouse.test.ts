@@ -7,23 +7,17 @@ import {
   INITIAL_BOARD_STATE,
   reduceBoard,
   type TaskClientProps,
-} from "../core/src/index.ts";
-import { allIssues, storeStatuses } from "../core/test/helpers.ts";
-import type { Host } from "./host.ts";
-import { BeadsPane, type PaneUi, type TasksRegion } from "./pane.ts";
-import { ROW_OPEN_LABEL, TASKS_CLIENT_KEY } from "./panel.ts";
-import { PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { StoreResolver } from "./store.ts";
-import { test } from "./tests/kit.ts";
-import { MINE, MINE_ORDER } from "./tests/mine.ts";
-import { overflows } from "./tests/width.ts";
-import { CWD, PANE_PROPS, SESSION, SHOW, VIEWPORT, world } from "./tests/world.ts";
-
-// Phase 2B's task panel, slice 2 (T-2B.5, D-31): the mouse. In the terminal and the desktop a
-// Client draws the Tasks view's rows and posts what a click or a key did; the hooks run the
-// pane's own actions for each post. In VS Code, and after a Client fault, the element tree draws
-// the same list. Each test drives the pane as Claude Code mounts it, but for the fault, which the
-// kit cannot raise.
+} from "../core/src/index.js";
+import { allIssues, storeStatuses } from "../core/test/helpers.js";
+import type { Host } from "./host.js";
+import { BeadsPane, type PaneUi, type TasksRegion } from "./pane.js";
+import { ROW_OPEN_LABEL, TASKS_CLIENT_KEY } from "./panel.js";
+import { PANE_ID, PLUGIN_NAME } from "./register.js";
+import { StoreResolver } from "./store.js";
+import { test } from "./tests/kit.js";
+import { MINE, MINE_ORDER } from "./tests/mine.js";
+import { overflows } from "./tests/width.js";
+import { CWD, PANE_PROPS, SESSION, SHOW, VIEWPORT, world } from "./tests/world.js";
 
 type Surface = "terminal" | "desktop" | "vscode";
 
@@ -56,8 +50,6 @@ async function openOn(
   props: Partial<RenderPropsOf["Pane"]> = {},
 ) {
   const w = world(on, MINE);
-  // Beneath the plugin: each redraw the pane asks for. A Client post that reaches the pane's
-  // state asks for one; nothing else in these tests does once the pane is drawn.
   let invalidated = 0;
   on("ui.invalidate", (_engine, e, next) => {
     invalidated++;
@@ -121,7 +113,6 @@ describe("the Client path, chosen by surface (T-2B.5)", () => {
 
     await focusOn($, "task:BU-mg2.3");
     expect((await clientProps(ui))?.selected).toBe("BU-mg2.3");
-    // Enter on the focused element presses it.
     await ui.press({ key: "task:BU-mg2.3" });
     await w.clock.settle();
 
@@ -182,7 +173,6 @@ describe("the mouse on the Client (T-2B.5)", () => {
     expect((await ui.find({ key: "menu:item:card.detail" }))?.props.label).toBe("d: Detail");
     const anchor = await ui.find({ key: "menu-anchor" });
     expect(anchor?.props).toMatchObject({ position: "absolute", top: 3, left: 9 });
-    // The Client leaves the menu's rows empty under that task, and the rows below move down.
     const props = await clientProps(ui);
     expect(props?.gapAfter).toBe("BU-mg2.3.9");
     expect((await ui.find({ key: "menu-room", ...IN }))?.props.height).toBe(props?.gapRows);
@@ -220,7 +210,6 @@ describe("the mouse on the Client (T-2B.5)", () => {
       before,
     );
 
-    // The control: a click on the same rows reaches the pane, which asks for a redraw.
     await click(ui, 0, "left");
     expect(invalidated()).toBeGreaterThan(before.redraws);
     expect((await clientProps(ui))?.selected).toBe("BU-mg2");
@@ -236,7 +225,6 @@ describe("each post runs what its key or button runs (T-2B.5)", () => {
     await w.clock.settle();
     return {
       ran: w.keys().slice(runs),
-      // Where the pane moved the ring; the person's own Tab is the act, not its effect.
       focused: w.focused
         .slice(focused)
         .filter((one) => (one.origin as { kind?: string } | undefined)?.kind !== "person")
@@ -306,7 +294,6 @@ describe("each post runs what its key or button runs (T-2B.5)", () => {
 
   for (const one of CASES) {
     test(`should run ${one.name}`, async ($, on) => {
-      // One pane drawn twice: in VS Code by the element tree, in the terminal with the Client.
       const { w, ui: terminal } = await openOn($, on, "terminal");
       const vscode = await mountOn($, "vscode");
       await reset($, vscode);
@@ -315,7 +302,6 @@ describe("each post runs what its key or button runs (T-2B.5)", () => {
       await reset($, vscode);
       const client = await after(w, terminal, () => one.client($, terminal));
 
-      // The act did something to compare: bd ran, the ring moved or the menu opened.
       expect(element.ran.length + element.focused.length + element.menu.length).toBeGreaterThan(0);
       expect(client).toEqual(element);
     });
@@ -350,9 +336,6 @@ describe("the element tree in VS Code (T-2B.5)", () => {
   });
 });
 
-// The kit raises no `ui.fault` of a test's making, and the task list's Client has no input it
-// fails on, so these drive the pane as register.ts's `ui.fault` hook does: `clientFault` with the
-// faulted instance's key, then the next draw.
 describe("the element tree in place of the Client after a fault (T-2B.5)", () => {
   interface Node {
     type: string;
@@ -393,7 +376,6 @@ describe("the element tree in place of the Client after a fault (T-2B.5)", () =>
       storeSet: async () => undefined,
       focus: async () => ({}),
     } as unknown as Host;
-    // Bound without the first refresh bind starts: the board and the store are the fixture's.
     pane.host = host;
     await pane.panel.bind(host);
     pane.store = { ok: true, path: CWD, via: "directory" };
@@ -458,7 +440,6 @@ describe("the element tree in place of the Client after a fault (T-2B.5)", () =>
 
 describe("both paths from one view model (T-2B.5, D-31)", () => {
   test("should list the same tasks and expose the same actions on a task in the Client and the element tree", async ($, on) => {
-    // One pane, so one view model, drawn by both paths: the terminal's Client, VS Code's tree.
     const { ui: terminal } = await openOn($, on, "terminal");
     const vscode = await mountOn($, "vscode");
     const toolbar = async (ui: Mounted) =>
@@ -485,7 +466,6 @@ describe("both paths from one view model (T-2B.5, D-31)", () => {
 
     await click(terminal, 2, "right");
     const clientMenu = await menuOf(terminal);
-    // The keys a focused Client hands back: every key its menu lists.
     const clientKeys = ((await clientProps(terminal))?.keys ?? []).map((key) => key.key).sort();
     await terminal.press({ key: "menu:close" });
     await vscode.press({ key: "taskmenu:BU-mg2.3.9" });

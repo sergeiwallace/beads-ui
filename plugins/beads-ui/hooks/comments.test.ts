@@ -2,11 +2,11 @@ import type { On } from "claude-code";
 import type { Engine } from "claude-code/testing";
 import { describe, expect } from "claude-code/testing";
 
-import { parseBdComments } from "../core/src/index.ts";
-import comments from "../core/test/fixtures/bd-comments-BU-mg2.3.json.ts";
-import { PANE_ID, PLUGIN_NAME } from "./register.ts";
-import { test } from "./tests/kit.ts";
-import { ME, MINE } from "./tests/mine.ts";
+import { parseBdComments } from "../core/src/index.js";
+import comments from "../core/test/fixtures/bd-comments-BU-mg2.3.json.js";
+import { PANE_ID, PLUGIN_NAME } from "./register.js";
+import { test } from "./tests/kit.js";
+import { ME, MINE } from "./tests/mine.js";
 import {
   CWD,
   exit,
@@ -17,11 +17,7 @@ import {
   SHOW,
   VIEWPORT,
   world,
-} from "./tests/world.ts";
-
-// BU-mg2.3.15: an issue's comments in the Detail view, which the task panel opens a task into,
-// and a comment added from the pane with bd comments add as the session's actor, published by
-// the panel's sync.command (D-33).
+} from "./tests/world.js";
 
 const PROGRAM = "/opt/fleet/bin/publish-store";
 const CONFIG = "/home/me/.config/beads-ui/beads-ui.toml";

@@ -41,9 +41,10 @@ tasks, from unblocking a task to planning a sprint, are in
 
 ## Validation
 
-`claude plugin validate plugins/beads-ui`, run from the repository root on Claude Code 2.1.322,
-passes. The manifest and hooks validate; the one plugin directory warning is the missing listing
-icon. An excerpt of its output:
+`claude plugin validate plugins/beads-ui`, run from the repository root on Claude Code 2.1.328,
+passes, and so does `--strict`. The manifest and hooks validate, and the hooks module and every
+file it imports type-check with no finding; the one plugin directory warning is the missing
+listing icon. An excerpt of its output:
 
 ```text
 Validating plugin manifest: plugins/beads-ui/.claude-plugin/plugin.json

@@ -1,6 +1,3 @@
-// The web server's `/api/mcp/v1/` routes, called with the MCP token (web app design D-17). Every
-// failure comes back as a reply the tool can answer with: an unreachable server is a reply too.
-
 import { connection, type McpEnv, NotConfigured } from "./config.ts";
 
 export const MCP_API = "api/mcp/v1/";

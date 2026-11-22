@@ -5,8 +5,6 @@ import { dirname, join } from "node:path";
 import { parseToml, type TomlTable, type TomlValue } from "@beads-ui/core";
 import { type ConfigEnv, readUserConfig, serverStateDir } from "./config.ts";
 
-// Request authentication and write authorization (web app design D-17, T-W0.1).
-
 export const AUTH_TABLE = "auth";
 /** A one-time sign-in code works for five minutes. */
 export const CODE_TTL_MS = 5 * 60_000;
@@ -398,15 +396,42 @@ export function writeRefusal(
 
 const isWrite = (method: string | undefined) => method !== "GET" && method !== "HEAD";
 
-interface Session {
-  id: string;
+const SESSION_FILE = "browser-sessions.json";
+const SESSION_SAVE_INTERVAL_MS = 60_000;
+
+interface StoredSession {
   /** What the host's commands list and revoke by; never the cookie's value. */
   publicId: string;
   /** The cookie's MAC under the secret it was issued with; a rotation stops it matching. */
   mac: string;
   createdAt: number;
   seenAt: number;
-  identity: string | undefined;
+  identity: string | null;
+}
+
+interface Session {
+  saved: StoredSession;
+  seenAt: number;
+  /** Kept in memory for stream heartbeats, learned from a verified cookie on a restored session. */
+  id?: string;
+}
+
+function isSessionTime(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(new Date(value).getTime());
+}
+
+function isStoredSession(value: unknown): value is StoredSession {
+  if (typeof value !== "object" || value === null || Object.keys(value).length !== 5) return false;
+  const session = value as Partial<Record<keyof StoredSession, unknown>>;
+  return (
+    typeof session.publicId === "string" &&
+    /^[0-9a-f]{12}$/.test(session.publicId) &&
+    typeof session.mac === "string" &&
+    /^[A-Za-z0-9_-]{43}$/.test(session.mac) &&
+    isSessionTime(session.createdAt) &&
+    isSessionTime(session.seenAt) &&
+    (session.identity === null || typeof session.identity === "string")
+  );
 }
 
 export interface SessionInfo {
@@ -470,16 +495,81 @@ export class AuthLayer {
   readonly cookieName: string;
   readonly basePath: string;
   readonly #clock: () => number;
+  readonly #sessionFile: string;
+  /** The SHA-256 of each cookie ID is the storage key, on disk and in memory. */
   readonly #sessions = new Map<string, Session>();
+  #saving = Promise.resolve(true);
+  #closing = false;
   /** SHA-256 of each outstanding one-time code, to its expiry. */
   readonly #codes = new Map<string, number>();
   readonly #ended = new Map<string, Set<() => void>>();
 
-  constructor(options: AuthOptions) {
+  private constructor(options: AuthOptions) {
     this.settings = options.settings;
     this.cookieName = `beads_ui_session_${options.port}`;
     this.basePath = options.basePath ?? "/";
     this.#clock = options.clock ?? Date.now;
+    this.#sessionFile = join(options.settings.stateDir, SESSION_FILE);
+  }
+
+  static async open(options: AuthOptions): Promise<AuthLayer> {
+    const auth = new AuthLayer(options);
+    await auth.#restoreSessions();
+    return auth;
+  }
+
+  /** Once requests settle, stop heartbeat checks from writing during the next start. */
+  async close(): Promise<void> {
+    this.#closing = true;
+    await this.#saving;
+  }
+
+  async #restoreSessions(): Promise<void> {
+    let entries: [string, StoredSession][];
+    try {
+      const info = await stat(this.#sessionFile);
+      if (!info.isFile() || (info.mode & 0o777) !== 0o600) throw new Error();
+      const data: unknown = JSON.parse(await readFile(this.#sessionFile, "utf8"));
+      if (typeof data !== "object" || data === null || Array.isArray(data)) throw new Error();
+      const rows = Object.entries(data);
+      if (
+        !rows.every(
+          (row): row is [string, StoredSession] =>
+            SHA256_HEX.test(row[0]) && isStoredSession(row[1]),
+        )
+      ) {
+        throw new Error();
+      }
+      entries = rows;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.warn(
+          `beads-ui web: warning: could not load ${SESSION_FILE}. Starting with no browser sessions`,
+        );
+      }
+      return;
+    }
+    const now = this.#clock();
+    for (const [hash, saved] of entries) {
+      const session = { saved, seenAt: saved.seenAt };
+      if (!this.#expired(session, now)) this.#sessions.set(hash, session);
+    }
+    if (this.#sessions.size !== entries.length) await this.#saveSessions();
+  }
+
+  #saveSessions(): Promise<boolean> {
+    const entries = Array.from(this.#sessions, ([hash, session]) => [hash, session.saved]);
+    const content = `${JSON.stringify(Object.fromEntries(entries))}\n`;
+    this.#saving = this.#saving.then(async () => {
+      try {
+        await replaceCredential(this.#sessionFile, content);
+        return true;
+      } catch {
+        console.warn(`beads-ui web: warning: could not save ${SESSION_FILE}`);
+        return false;
+      }
+    });
+    return this.#saving;
   }
 
   /** Mints a one-time sign-in code; the link carrying it works once, within CODE_TTL_MS. */
@@ -493,29 +583,32 @@ export class AuthLayer {
   }
 
   /** The live sessions, for the host's sessions command. */
-  sessions(): SessionInfo[] {
+  async sessions(): Promise<SessionInfo[]> {
     const now = this.#clock();
     const live: SessionInfo[] = [];
-    for (const session of [...this.#sessions.values()]) {
+    let expired = false;
+    for (const [hash, session] of this.#sessions) {
       if (this.#expired(session, now)) {
-        this.#end(session.id);
+        this.#forget(hash);
+        expired = true;
         continue;
       }
       live.push({
-        id: session.publicId,
-        createdAt: new Date(session.createdAt).toISOString(),
+        id: session.saved.publicId,
+        createdAt: new Date(session.saved.createdAt).toISOString(),
         seenAt: new Date(session.seenAt).toISOString(),
-        identity: session.identity ?? null,
+        identity: session.saved.identity,
       });
     }
+    if (expired) await this.#saveSessions();
     return live;
   }
 
   /** Ends the one session the host's revoke command names; false when none has that id. */
-  revoke(publicId: string): boolean {
-    for (const session of this.#sessions.values()) {
-      if (session.publicId === publicId) {
-        this.#end(session.id);
+  async revoke(publicId: string): Promise<boolean> {
+    for (const [hash, session] of this.#sessions) {
+      if (session.saved.publicId === publicId) {
+        if (!(await this.#end(hash))) throw new Error("the server cannot save browser sessions");
         return true;
       }
     }
@@ -524,23 +617,25 @@ export class AuthLayer {
 
   /** Calls `listener` once when the session ends (logout, revoke, expiry); returns an unsubscribe. */
   onEnd(sessionId: string, listener: () => void): () => void {
-    const listeners = this.#ended.get(sessionId) ?? new Set();
+    const hash = sha256Hex(sessionId);
+    const listeners = this.#ended.get(hash) ?? new Set();
     listeners.add(listener);
-    this.#ended.set(sessionId, listeners);
+    this.#ended.set(hash, listeners);
     return () => listeners.delete(listener);
   }
 
   /** Whether a session still holds, without counting as activity: for a long-lived stream. */
   async stillValid(sessionId: string): Promise<boolean> {
-    const session = this.#sessions.get(sessionId);
-    if (session === undefined) return false;
+    const hash = sha256Hex(sessionId);
     const secret = await this.#secret();
-    if (secret === undefined || !sameDigest(hmac(secret, `session:${session.id}`), session.mac)) {
-      this.#end(session.id);
-      return false;
-    }
-    if (this.#expired(session, this.#clock())) {
-      this.#end(session.id);
+    const session = this.#sessions.get(hash);
+    if (this.#closing || session === undefined) return false;
+    if (
+      secret === undefined ||
+      !sameDigest(hmac(secret, `session:${sessionId}`), session.saved.mac) ||
+      this.#expired(session, this.#clock())
+    ) {
+      await this.#end(hash);
       return false;
     }
     return true;
@@ -550,7 +645,7 @@ export class AuthLayer {
   sessionIdOf(caller: Caller): string | undefined {
     if (caller.kind !== "browser") return undefined;
     for (const session of this.#sessions.values()) {
-      if (session.publicId === caller.session) return session.id;
+      if (session.saved.publicId === caller.session) return session.id;
     }
     return undefined;
   }
@@ -582,7 +677,6 @@ export class AuthLayer {
     const isApi = url.pathname === "/api" || url.pathname.startsWith("/api/");
     const refuse = (status: number, errorKind: string, message: string, extra = {}) => {
       if (kind === "receiver") {
-        // Every receiver refusal is the same empty 404, whatever its cause (Receiver API).
         response.writeHead(404, { "cache-control": "no-store", "content-length": 0 });
         response.end();
       } else if (isApi) {
@@ -644,14 +738,21 @@ export class AuthLayer {
   }
 
   #expired(session: Session, now: number): boolean {
-    return now - session.createdAt >= SESSION_MAX_AGE_MS || now - session.seenAt >= SESSION_IDLE_MS;
+    return (
+      now - session.saved.createdAt >= SESSION_MAX_AGE_MS || now - session.seenAt >= SESSION_IDLE_MS
+    );
   }
 
-  #end(sessionId: string): void {
-    this.#sessions.delete(sessionId);
-    const listeners = this.#ended.get(sessionId);
-    this.#ended.delete(sessionId);
+  #forget(hash: string): void {
+    this.#sessions.delete(hash);
+    const listeners = this.#ended.get(hash);
+    this.#ended.delete(hash);
     for (const listener of listeners ?? []) listener();
+  }
+
+  #end(hash: string): Promise<boolean> {
+    this.#forget(hash);
+    return this.#saveSessions();
   }
 
   async #secret(): Promise<string | undefined> {
@@ -664,29 +765,41 @@ export class AuthLayer {
   }
 
   /** The request's live session, "ended" for one that just expired, or undefined for none. */
-  async #session(request: IncomingMessage): Promise<Session | "ended" | undefined> {
+  async #session(
+    request: IncomingMessage,
+  ): Promise<{ hash: string; publicId: string } | "ended" | undefined> {
     const value = cookie(request, this.cookieName);
     if (value === undefined) return undefined;
     const dot = value.indexOf(".");
     if (dot === -1) return undefined;
     const id = value.slice(0, dot);
     const mac = value.slice(dot + 1);
+    const hash = sha256Hex(id);
     const secret = await this.#secret();
-    if (secret === undefined || !sameDigest(hmac(secret, `session:${id}`), mac)) {
-      if (this.#sessions.has(id)) this.#end(id);
+    const session = this.#sessions.get(hash);
+    if (session === undefined) return undefined;
+    if (
+      secret === undefined ||
+      !sameDigest(hmac(secret, `session:${id}`), session.saved.mac) ||
+      !sameDigest(mac, session.saved.mac)
+    ) {
+      await this.#end(hash);
       return undefined;
     }
-    const session = this.#sessions.get(id);
-    if (session === undefined) return undefined;
     const now = this.#clock();
     if (this.#expired(session, now)) {
-      this.#end(id);
+      await this.#end(hash);
       return "ended";
     }
+    session.id = id;
     session.seenAt = now;
     const identity = header(request, IDENTITY_HEADER);
-    if (identity !== undefined) session.identity = identity;
-    return session;
+    if (identity !== undefined) session.saved.identity = identity;
+    if (now - session.saved.seenAt >= SESSION_SAVE_INTERVAL_MS) {
+      session.saved.seenAt = now;
+      await this.#saveSessions();
+    }
+    return this.#sessions.has(hash) ? { hash, publicId: session.saved.publicId } : undefined;
   }
 
   #cookie(value: string, maxAgeSeconds: number): string {
@@ -760,12 +873,12 @@ export class AuthLayer {
       return;
     }
     if (request.method === "GET" && path === "sessions") {
-      sendJson(response, 200, { sessions: this.sessions() });
+      sendJson(response, 200, { sessions: await this.sessions() });
       return;
     }
     const revoke = /^sessions\/([^/]+)\/revoke$/.exec(path);
     if (request.method === "POST" && revoke?.[1] !== undefined) {
-      if (this.revoke(decodeURIComponent(revoke[1]))) {
+      if (await this.revoke(decodeURIComponent(revoke[1]))) {
         response.writeHead(204, { "cache-control": "no-store" });
         response.end();
       } else {
@@ -801,7 +914,12 @@ export class AuthLayer {
         refuse(403, "forbidden", refusal);
         return;
       }
-      this.#end(found.id);
+      if (!(await this.#end(found.hash))) {
+        refuse(503, "failed", "the server cannot save browser sessions", {
+          "set-cookie": this.#clearCookie(),
+        });
+        return;
+      }
       response.writeHead(204, { "cache-control": "no-store", "set-cookie": this.#clearCookie() });
       response.end();
       return;
@@ -837,14 +955,23 @@ export class AuthLayer {
     }
     const id = randomBytes(32).toString("base64url");
     const mac = hmac(secret, `session:${id}`);
-    this.#sessions.set(id, {
+    const key = sha256Hex(id);
+    this.#sessions.set(key, {
       id,
-      publicId: randomBytes(6).toString("hex"),
-      mac,
-      createdAt: now,
       seenAt: now,
-      identity: header(request, IDENTITY_HEADER),
+      saved: {
+        publicId: randomBytes(6).toString("hex"),
+        mac,
+        createdAt: now,
+        seenAt: now,
+        identity: header(request, IDENTITY_HEADER) ?? null,
+      },
     });
+    if (!(await this.#saveSessions())) {
+      await this.#end(key);
+      sendPage(response, 503, "Refused", "the server cannot save browser sessions");
+      return;
+    }
     response.writeHead(303, {
       location: this.basePath,
       "cache-control": "no-store",

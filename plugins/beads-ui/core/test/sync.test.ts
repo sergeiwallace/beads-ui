@@ -1,5 +1,3 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import {
   DEDUPE_WINDOW_MS,
@@ -13,7 +11,7 @@ import {
   sessionText,
   stepOf,
   syncArgv,
-} from "../src/index.ts";
+} from "../src/index.js";
 
 const STORE = "/data/projects/beads-ui";
 const COMMAND = ["/home/me/bin/bd_dolt_publish.py", "--repo", "{store}", "--attest", "--json"];

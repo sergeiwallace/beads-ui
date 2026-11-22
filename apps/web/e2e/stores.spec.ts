@@ -9,15 +9,11 @@ import {
 } from "../test/host-stores.ts";
 import { card, expect, loginLink, type Served, serve, test } from "./fixtures.ts";
 
-// The web server's store registry in the browser: every allowlisted store on the host, a store
-// picker whose choice is in the URL, and each card addressed by its repository and id.
-
 let host: StoreHost;
 let served: Served | undefined;
 
 test.beforeEach(async ({ isMobile }) => {
   test.skip(isMobile, "the store registry is exercised once, at 1280 px");
-  // Each spec makes two or three real stores with bd init before its server starts.
   test.setTimeout(180_000);
   host = await storeHost();
 });
