@@ -110,11 +110,13 @@ from the root.
 The `served`, `app` and `signedIn` fixtures take their server from a worker-scoped fixture. The
 worker makes one store with `bd init`, copies it aside as its pristine image, starts
 `beads-ui-web` in it and copies its config home (config, state, HOME) aside after the start. Before
-each test it waits for the server's `bd` calls to finish, ends every browser session through the
-admin API, puts the store back to its pristine image and the config file and write log back to
-theirs. If the server has exited, stays busy, or holds any other changed state (a dispatch, a
-draft, an owner handoff), the worker stops it and starts a fresh one for the test. Specs that
-start their own server with their own options (`serve()`) are unchanged.
+each test it waits until the server's process group has run no child process for 300 ms, ends
+every browser session through the admin API, and puts the store back to its pristine image and the
+config file, the write log and HOME back to theirs. It then waits for quiet again and checks that
+no file changed and no session appeared during the reset. If the server has exited, stays busy for
+15 s, holds any other changed state (a dispatch, a draft, an owner handoff), or anything moved
+during the reset, the worker stops it and starts a fresh one for the test. Specs that start their
+own server with their own options (`serve()`) are unchanged.
 
 **Deliverables:**
 
@@ -315,10 +317,20 @@ Each test must still see only its own data.
 > **Decision:** ✅ Resolved: (a) One server per worker with the store and config reset between tests
 <!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=us.anthropic.claude-opus-5-5; ai-effort=medium; ai-profile=engineer -->
 
-The two Cons are mitigated in the reset itself: it compares the config home with its image taken
+The two Cons are mitigated in the reset itself. It compares the config home with its image taken
 after the server started and starts a fresh server when anything other than the config file, the
-write log or the session file changed, and it waits until the server's process group runs no `bd`
-call before it touches the store, starting a fresh server when that does not happen within 15 s.
+write log, HOME or the session file changed. It waits until the server's process group has run no
+child for 300 ms before it touches the store, and starts a fresh server when that does not happen
+within 15 s. After restoring it waits for quiet again and checks that no file changed and no
+session appeared, so a request still in flight when the previous test ended (a sign-in exchange, a
+write not yet at `bd`) sends the next test to a fresh server instead of into its store. What stays
+is memory the server keeps outside files and sessions, such as an unused sign-in code or a cache
+keyed by an issue id; no test can name another test's code or id, so none can read it. Clearing it
+too would need a test-only reset route in the server, which this plan does not add.
+
+Cross-family review (Codex, gpt-5.6-sol, high effort) raised the in-flight race and the `pgrep`
+error case; both are fixed as above. It also asked for a server-owned reset of all memory; that is
+the residue named above, left as it is.
 
 ## Open Questions
 

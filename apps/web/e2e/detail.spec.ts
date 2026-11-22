@@ -169,7 +169,6 @@ test.describe("held item detail", () => {
   test("should render a held item's full Markdown body with its option card above it", async ({
     app,
     page,
-    configHome,
   }) => {
     const dir = await mkdtemp(join(tmpdir(), "beads-ui-e2e-held-"));
     try {
@@ -223,7 +222,7 @@ test.describe("held item detail", () => {
         `#!/usr/bin/env node\nconst replies = ${JSON.stringify(replies)};\nprocess.stdout.write(JSON.stringify(replies[process.argv[2]]));\n`,
       );
       await chmod(tool, 0o755);
-      const settings = join(configHome, "beads-ui", "beads-ui.toml");
+      const settings = join(app.configHome, "beads-ui", "beads-ui.toml");
       await writeFile(
         settings,
         `${await readFile(settings, "utf8")}\n[review]\ncommand = ["${tool}"]\n`,

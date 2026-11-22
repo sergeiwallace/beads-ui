@@ -45,6 +45,8 @@ export interface Served {
   env: NodeJS.ProcessEnv;
   cwd: string;
   output(): string;
+  /** How many characters of output the command has printed, the ones `output()` dropped included. */
+  logged(): number;
   stop(): Promise<void>;
 }
 
@@ -123,6 +125,7 @@ export async function serve(
     detached: true,
   });
   let output = "";
+  let logged = 0;
   const exited = () => child.exitCode !== null || child.signalCode !== null;
   const stop = () =>
     new Promise<void>((resolve) => {
@@ -152,7 +155,9 @@ export async function serve(
       void stop();
     }, START_DEADLINE_MS);
     const onData = (chunk: Buffer) => {
-      output = (output + chunk.toString()).slice(-LOG_CAP);
+      const text = chunk.toString();
+      logged += text.length;
+      output = (output + text).slice(-LOG_CAP);
       const match = /at (http:\/\/127\.0\.0\.1:\d+\/)/.exec(output);
       if (match?.[1] !== undefined) {
         clearTimeout(late);
@@ -174,6 +179,7 @@ export async function serve(
     env,
     cwd: dir,
     output: () => output,
+    logged: () => logged,
     stop,
   };
   if (register) currentTest()?.registerApp(servedApp({ served, configHome }));
@@ -215,14 +221,22 @@ export interface BeadsCtx {
 
 const redact = (text: string) => defaultRedact(text);
 
-function servedApp(
+const outputSince = (served: Served | undefined, from: number) => {
+  if (served === undefined) return "";
+  const grown = served.logged() - from;
+  return grown <= 0 ? "" : served.output().slice(-grown);
+};
+
+/** A served server as the harness's app; its log starts at `from`, a count `logged()` gave. */
+export function servedApp(
   ctx: Omit<BeadsCtx, "labels" | "sessionLabels"> & { served: Served },
+  from = 0,
 ): RunningApp<BeadsCtx> {
   const full: BeadsCtx = { ...ctx, labels: 0, sessionLabels: [] };
   return {
     url: new URL(ctx.served.url),
     ctx: full,
-    serverLog: () => redact(full.served?.output() ?? "").slice(-LOG_CAP),
+    serverLog: () => redact(outputSince(full.served, from)).slice(-LOG_CAP),
     stop: async () => {
       await full.served?.stop();
       const queue = full.queue;

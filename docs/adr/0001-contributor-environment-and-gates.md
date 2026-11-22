@@ -28,7 +28,9 @@ plugin also updates only when its manifest version increases.
 - The pre-commit `npm-test` hook runs `npm test`: Vitest and the script
   tests, with no Playwright. The web app's Playwright specs run in full at
   pre-push, in the `e2e` hook (`npm run test:e2e`), because they took over
-  an hour on a loaded host and made every commit wait for them.
+  an hour on a loaded host and made every commit wait for them. Each
+  Playwright worker serves one store and resets it between tests; a test
+  that leaves other server state behind gets the next test a fresh server.
   Empty staged input runs the suite. For deletes and renames the filter
   includes the old path. The old docs-index gate was retired because the
   generated index had no consumers and could not be regenerated correctly

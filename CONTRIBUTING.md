@@ -102,7 +102,8 @@ It drives every write through a stub `bd` in a temporary directory and never wri
 
 The web app's suites build their own store. `apps/web/test/*.test.ts` (Vitest) call the server's
 routes over HTTP against a temporary store made with `bd init`; `apps/web/e2e/*.spec.ts`
-(Playwright) run the documented command against one store each and drive a browser at 1280 px with
+(Playwright) run the documented command, one server per Playwright worker whose store is reset
+before each test, and drive a browser at 1280 px with
 a mouse and at 390 px on a touch screen, with the frontend test harness capturing and probing each
 screen a spec reaches (`apps/web/e2e/frontend-harness.config.ts`, adapter and screens under
 `apps/web/e2e/harness/`). `npm run e2e:install -w apps/web` installs `apps/web/e2e/` and puts

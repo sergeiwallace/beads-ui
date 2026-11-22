@@ -566,9 +566,17 @@ with `FTH_HEAVY_HOSTS` unset, no host runs them.
 
 The Playwright specs under `apps/web/e2e/` run the Board, Backlog, Issue detail, palette,
 Roadmap, Analytics, Sessions, Sprints and Queue specs at 1280 px with a mouse and at 390 px on a touch screen; the
-pointer drags run at 1280 px and the touch Move to menu at 390 px. Each spec gets its own server
-and a temporary store made with `bd init`; the store registry's spec (`stores.spec.ts`) serves
-several such stores from a private home's store inventory. The change feed's suite
+pointer drags run at 1280 px and the touch Move to menu at 390 px. Each Playwright worker starts
+one server on a temporary store made with `bd init`. Before each test it waits until the server
+runs no `bd` call, ends every browser session, puts the store, the config file, the write log and
+the server's HOME back as they were after the start, then waits again and checks that nothing
+changed meanwhile, so a test sees no other test's issues, config or sessions. A test that leaves
+the server stopped or busy, or leaves any other server state behind (a dispatch, a draft, an
+owner handoff), gets the next test a fresh server (`apps/web/e2e/fixtures.ts`). Memory the server
+keeps outside those files, such as an unused sign-in link, outlives a test; no test can reach
+another test's. A spec that needs its own options starts its own server with
+`serve()`; the store registry's spec (`stores.spec.ts`) serves several stores from a private home's
+store inventory that way. The change feed's suite
 (`apps/web/test/heads-feed.test.ts`) also starts its own Dolt sql-server on a free loopback port,
 when `dolt` is on `PATH`, to read two stores' heads in one query; without `dolt` that case is
 skipped and the embedded-store cases still run. The work-queue cases run against an
