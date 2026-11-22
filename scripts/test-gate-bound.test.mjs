@@ -133,7 +133,7 @@ describe("the pre-commit test hooks' path filter", () => {
     assert.equal(hook(dir, ["-e", "process.exit(3)"]).status, 3);
   });
 
-  test("should put the commit's test hook behind the filter and run the mod's loop only inside it", () => {
+  test("should put the commit's test hook behind the filter and run the mod's loop in no commit hook", () => {
     const config = readFileSync(join(ROOT, ".pre-commit-config.yaml"), "utf8");
     const hooks = config
       .split(/^ {6}- id: /m)
@@ -144,7 +144,7 @@ describe("the pre-commit test hooks' path filter", () => {
       }));
     assert.equal(
       hooks.find((hook) => hook.id === "npm-test")?.entry,
-      "node scripts/test-hook.mjs npm test",
+      "node scripts/test-hook.mjs npm run test:commit",
     );
     assert.deepEqual(
       hooks.filter((hook) => hook.entry.includes("plugin-test.mjs")).map((hook) => hook.id),
@@ -163,8 +163,8 @@ function peak(lines, startOf, endOf) {
   return max;
 }
 
-function turboCommand() {
-  const script = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).scripts.test;
+function turboCommand(name = "test") {
+  const script = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).scripts[name];
   const segment = script.split(" && ").find((part) => part.includes(" turbo "));
   assert.ok(segment, `no turbo command in the root test script: ${script}`);
   const [node, ...args] = segment.split(" ");
@@ -191,7 +191,13 @@ describe("turbo's concurrency", () => {
     write(
       dir,
       "turbo.json",
-      JSON.stringify({ tasks: { test: { cache: false }, "test:mod": { cache: false } } }),
+      JSON.stringify({
+        tasks: {
+          test: { cache: false },
+          "test:mod": { cache: false },
+          "//#test:scripts": { cache: false },
+        },
+      }),
     );
     write(
       dir,
@@ -282,67 +288,68 @@ appendFileSync(process.argv[2], \`JOBS=\${process.env.BEADS_UI_TEST_JOBS} SCOPE=
   });
 });
 
-describe("the mod's loop as its own turbo task", () => {
+describe("which tasks npm test and the commit's test hook run", () => {
   const MOD = "@sergeiwallace/beads-ui-plugin";
   const rootScripts = () => JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).scripts;
 
-  test("should run the mod's loop once, as its test:mod task, and the script tests, when npm test runs", () => {
-    const args = turboCommand();
-    const result = run(process.execPath, [...args, "--dry=json"], { jobs: 2 });
+  const planned = (name) => {
+    const result = run(process.execPath, [...turboCommand(name), "--dry=json"], { jobs: 2 });
     assert.equal(result.status, 0, result.stderr);
-    const tasks = JSON.parse(result.stdout).tasks.filter(
-      (task) => task.command !== "<NONEXISTENT>",
-    );
-    const command = (id) => tasks.find((task) => task.taskId === id)?.command;
-    assert.equal(command(`${MOD}#test:mod`), "node ../../scripts/plugin-test.mjs .");
+    return JSON.parse(result.stdout)
+      .tasks.filter((task) => task.command !== "<NONEXISTENT>")
+      .map((task) => [task.taskId, task.command]);
+  };
+
+  test("should run every package's suite, the mod's loop once and the script tests when npm test runs", () => {
+    const tasks = planned("test");
+    const ids = tasks.map(([id]) => id);
+    assert.ok(ids.filter((id) => id.endsWith("#test")).length >= 6, ids.join(", "));
     assert.deepEqual(
-      tasks.filter((task) => task.command.includes("plugin-test.mjs")).map((task) => task.taskId),
-      [`${MOD}#test:mod`],
+      tasks.filter(([, command]) => command.includes("plugin-test.mjs")),
+      [[`${MOD}#test:mod`, "node ../../scripts/plugin-test.mjs ."]],
     );
-    assert.equal(command("//#test:scripts"), rootScripts()["test:scripts"]);
+    assert.ok(ids.includes("//#test:scripts"));
     assert.match(
       rootScripts()["test:scripts"],
       /node --test --test-concurrency=\{jobs\} scripts\/\*\.test\.mjs$/,
     );
   });
 
-  function workspace(log, loop) {
-    const dir = fresh("turbo-loop");
-    const root = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
-    const hold = (name, ms, until) =>
-      `node ../../hold.mjs ${log} ${name} ${ms}${until ? ` "${until}"` : ""}`;
+  test("should run what npm test runs but the mod's loop when the commit's test hook runs", () => {
+    const full = planned("test").map(([id]) => id);
+    const commit = planned("test:commit").map(([id]) => id);
+    assert.deepEqual(commit.sort(), full.filter((id) => id !== `${MOD}#test:mod`).sort());
+  });
+
+  function workspace(log) {
+    const dir = fresh("turbo-gates");
+    const hold = (name) => `node ../../hold.mjs ${log} ${name}`;
     write(
       dir,
       "package.json",
       JSON.stringify({
         name: "fixture",
         private: true,
-        packageManager: root.packageManager,
+        packageManager: "npm@11.19.0",
         workspaces: ["packages/*", "plugins/*"],
-        scripts: { "test:scripts": `node hold.mjs ${log} scripts 400` },
+        scripts: { "test:scripts": `node hold.mjs ${log} scripts` },
       }),
     );
     write(dir, "turbo.json", readFileSync(join(ROOT, "turbo.json"), "utf8"));
     write(
       dir,
       "hold.mjs",
-      `import { appendFileSync, readFileSync } from "node:fs";
-const [log, name, ms, until] = process.argv.slice(2);
+      `import { appendFileSync } from "node:fs";
+const [log, name] = process.argv.slice(2);
 appendFileSync(log, \`start \${name} \${process.env.BEADS_UI_TEST_JOBS}\\n\`);
-const end = () => appendFileSync(log, \`end \${name}\\n\`);
-const other = () => readFileSync(log, "utf8").split("\\n").some((l) => l.startsWith(until));
-const deadline = Date.now() + Number(ms);
-const poll = () => (other() || Date.now() > deadline ? end() : setTimeout(poll, 20));
-if (until) poll();
-else setTimeout(end, Number(ms));
+setTimeout(() => appendFileSync(log, \`end \${name}\\n\`), 800);
 `,
     );
-    const packages = ["a", "b", "c", "d", "e", "f", "g", "h"];
-    for (const name of packages) {
+    for (const name of ["a", "b", "c"]) {
       write(
         dir,
         `packages/${name}/package.json`,
-        JSON.stringify({ name, scripts: { test: hold(name, 200) } }),
+        JSON.stringify({ name, scripts: { test: hold(name) } }),
       );
     }
     write(
@@ -350,60 +357,44 @@ else setTimeout(end, Number(ms));
       "plugins/mod/package.json",
       JSON.stringify({
         name: MOD,
-        scripts: { test: hold("mod-vitest", 200), "test:mod": hold("mod-loop", ...loop) },
+        scripts: { test: hold("mod-vitest"), "test:mod": hold("mod-loop") },
       }),
     );
     appendFileSync(log, "");
-    return { dir, packages: [...packages, "mod-vitest"] };
+    return dir;
   }
 
-  for (const [jobs, expected, loop] of [
-    [undefined, 1, [200]],
-    [2, 2, [20000, "start a "]],
+  for (const [name, ran] of [
+    ["test", ["a", "b", "c", "mod-loop", "mod-vitest", "scripts"]],
+    ["test:commit", ["a", "b", "c", "mod-vitest", "scripts"]],
+    ["test:push", ["mod-loop", "scripts"]],
   ]) {
-    test(`should start the loop and the script tests first, and run ${expected} task(s) at a time, when BEADS_UI_TEST_JOBS is ${jobs ?? "unset"}`, () => {
-      const log = join(fresh("turbo-loop-log"), "events.log");
-      const { dir, packages } = workspace(log, loop);
-      const result = run(process.execPath, turboCommand(), { cwd: dir, jobs });
-      assert.equal(result.status, 0, result.stdout + result.stderr);
-      const lines = readFileSync(log, "utf8").split("\n").filter(Boolean);
-      const starts = lines.filter((l) => l.startsWith("start ")).map((l) => l.split(" "));
-      assert.equal(starts.length, packages.length + 2);
-      assert.deepEqual(
-        starts.map(([, , seen]) => seen),
-        starts.map(() => String(jobs ?? "undefined")),
-      );
-      assert.equal(starts.filter(([, name]) => name === "mod-loop").length, 1);
-      const scriptsEnd = lines.indexOf("end scripts");
-      for (const name of packages) {
-        assert.ok(
-          lines.findIndex((l) => l.startsWith(`start ${name} `)) > scriptsEnd,
-          `${name} started before the script tests ended`,
-        );
-      }
-      if (expected === 2) {
+    for (const [jobs, expected] of [
+      [undefined, 1],
+      [2, 2],
+    ]) {
+      test(`should run ${ran.join(", ")}, ${expected} at a time, when npm run ${name} runs with BEADS_UI_TEST_JOBS ${jobs ?? "unset"}`, () => {
+        const log = join(fresh("turbo-gates-log"), "events.log");
+        const dir = workspace(log);
+        const result = run(process.execPath, turboCommand(name), { cwd: dir, jobs });
+        assert.equal(result.status, 0, result.stdout + result.stderr);
+        const lines = readFileSync(log, "utf8").split("\n").filter(Boolean);
+        const starts = lines.filter((l) => l.startsWith("start ")).map((l) => l.split(" "));
+        assert.deepEqual(starts.map(([, task]) => task).sort(), ran);
         assert.deepEqual(
-          starts
-            .slice(0, 2)
-            .map(([, name]) => name)
-            .sort(),
-          ["mod-loop", "scripts"],
+          starts.map(([, , seen]) => seen),
+          starts.map(() => String(jobs ?? "undefined")),
         );
-        const loopEnd = lines.indexOf("end mod-loop");
-        assert.ok(
-          packages.some((name) => lines.findIndex((l) => l.startsWith(`start ${name} `)) < loopEnd),
-          "no package test ran beside the loop",
+        assert.equal(
+          peak(
+            lines,
+            (l) => l.startsWith("start "),
+            (l) => l.startsWith("end "),
+          ),
+          expected,
         );
-      }
-      assert.equal(
-        peak(
-          lines,
-          (l) => l.startsWith("start "),
-          (l) => l.startsWith("end "),
-        ),
-        expected,
-      );
-    });
+      });
+    }
   }
 });
 

@@ -19,7 +19,6 @@
       "outputs": []
     },
     "test": {
-      "dependsOn": ["//#test:scripts"],
       "cache": false,
       "outputs": []
     },

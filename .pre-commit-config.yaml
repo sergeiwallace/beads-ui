@@ -62,8 +62,8 @@ repos:
         pass_filenames: false
         always_run: true
       - id: npm-test
-        name: npm test (Vitest, the mod's tests file by file and the script tests)
-        entry: node scripts/test-hook.mjs npm test
+        name: npm run test:commit (Vitest and the script tests; the mod's loop runs at pre-push)
+        entry: node scripts/test-hook.mjs npm run test:commit
         language: system
         pass_filenames: false
         always_run: true

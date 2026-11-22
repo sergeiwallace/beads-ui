@@ -593,7 +593,9 @@ from 1 to 2, default 1 when unset. It sets turbo's `--concurrency` (test tasks a
 loop and the script tests among them), each Vitest config's `maxWorkers`, Playwright's `workers` and how many mod test files
 `scripts/plugin-test.mjs` runs at once (one by one at 1). The bounds multiply: turbo runs up to
 `BEADS_UI_TEST_JOBS` tasks and each runs up to `BEADS_UI_TEST_JOBS` workers, so one run
-starts at most `BEADS_UI_TEST_JOBS` squared test processes, 1 by default and 4 at the maximum of 2.
+starts at most `BEADS_UI_TEST_JOBS` squared test workers, 1 by default and 4 at the maximum of 2.
+That counts the workers, not what a test itself starts: a web server suite's `bd` calls, or a script
+test's own fixture runs of turbo and of the loop.
 A value outside 1 to 2 fails the run before any test starts.
 
 ```sh
@@ -601,13 +603,12 @@ BEADS_UI_TEST_JOBS=2 npm test     # a faster run on a quiet host, at most 4 test
 ```
 
 `npm test` runs turbo over three tasks: every package's `test` (its Vitest suite), the mod's
-`test:mod` (its `claude plugin test` loop) and the root's `test:scripts` (the script tests). Every
-`test` task waits for `test:scripts`, so the loop and the script tests are the only tasks ready
-when turbo starts: the loop, the longest task, starts at once and runs beside all the others
-(`turbo.json`).
+`test:mod` (its `claude plugin test` loop) and the root's `test:scripts` (the script tests).
+`npm run test:commit` runs the same but `test:mod`, and `npm run test:push` only `test:mod` and
+`test:scripts`.
 
-The pre-commit test hook runs `npm test`, the mod's `claude plugin test` loop included, never the
-Playwright specs, and skips
+The pre-commit test hook runs `npm run test:commit`, never the mod's `claude plugin test` loop or
+the Playwright specs, and skips
 a commit whose staged paths are all under `docs/` or end in `.md`; any other staged path, a
 deleted or renamed one included, runs it. It runs with `BEADS_UI_TEST_SCOPE=commit`, which turbo
 passes to each package: under it `apps/web`'s Vitest config leaves out every suite that imports the
