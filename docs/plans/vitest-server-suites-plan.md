@@ -104,13 +104,13 @@ is unchanged.
 
 **Acceptance criteria:**
 
-- [ ] When two stores are made in one run, the second shall be a copy of the run's image (its
+- [x] When two stores are made in one run, the second shall be a copy of the run's image (its
   project id is the image's) and shall hold none of the first one's issues.
-- [ ] When a store asks for a prefix other than the image's, the issues it creates shall carry
+- [x] When a store asks for a prefix other than the image's, the issues it creates shall carry
   that prefix.
-- [ ] If the image differs from what it held when it was made, then the next store shall be made
+- [x] If the image differs from what it held when it was made, then the next store shall be made
   with `bd init`, not copied, and shall not hold what changed in the image.
-- [ ] When `apps/web`'s Vitest suite runs, its pass count shall match the baseline's, with any
+- [x] When `apps/web`'s Vitest suite runs, its pass count shall match the baseline's, with any
   difference explained test by test.
 
 **Dependencies:** None
@@ -207,6 +207,23 @@ the pre-commit stage run with `pre-commit run`.
 The hook exited 1: three script tests failed because this fresh worktree had no `apps/web/e2e`
 install yet, which those tests read (`CONTRIBUTING.md`, Setup). Each failed within 1.5 s; the
 install was added before every later run.
+
+### After T-01 (the store image)
+
+`apps/web`'s Vitest suite alone, as before:
+
+| What | Before | After |
+|---|---|---|
+| Contention, start and end | LOOK, load 26.2 and 30.5 | LOOK, load 33.4 and 36.4, 125k to 146k swap-outs a minute |
+| Wall time | 659 s | 525 s |
+| Tests | 26 files; 394 passed, 1 skipped | 27 files; 397 passed, 1 skipped |
+| Summed file time outside any test | 325 s | 172 s |
+| `csp.test.ts` (five tests, 0.1 s together) | 12.3 s | 1.2 s |
+
+Every one of the 395 tests the two runs share kept its result. The three tests only the after run
+has are `store-image.test.ts`'s. What is left outside the tests is the seeding the suites do
+themselves (`dispatch.test.ts` makes six issues and two receiver tokens), the `repoStore` stores
+(`registry`, `receiver-api`, `heads-feed`) and `heads-feed`'s Dolt sql-server.
 
 ## Human Gates
 

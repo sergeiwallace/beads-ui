@@ -101,7 +101,9 @@ Beads store with `bd list`, `show`, `statuses` and `ready`, so `npm test` needs 
 It drives every write through a stub `bd` in a temporary directory and never writes to the store.
 
 The web app's suites build their own store. `apps/web/test/*.test.ts` (Vitest) call the server's
-routes over HTTP against a temporary store made with `bd init`; `apps/web/e2e/*.spec.ts`
+routes over HTTP against a temporary store: the run makes one store with `bd init` and copies it
+for each suite that asks, and makes the store with `bd init` instead when that image no longer
+holds what it held when it was made (`apps/web/test/store.ts`); `apps/web/e2e/*.spec.ts`
 (Playwright) run the documented command, one server per Playwright worker whose store is reset
 before each test, and drive a browser at 1280 px with
 a mouse and at 390 px on a touch screen, with the frontend test harness capturing and probing each

@@ -574,7 +574,11 @@ changed meanwhile, so a test sees no other test's issues, config or sessions. A 
 the server stopped or busy, or leaves any other server state behind (a dispatch, a draft, an
 owner handoff), gets the next test a fresh server (`apps/web/e2e/fixtures.ts`). Memory the server
 keeps outside those files, such as an unused sign-in link, outlives a test; no test can reach
-another test's. A spec that needs its own options starts its own server with
+another test's. The Vitest suites under `apps/web/test/` start the server in the test process, one per
+file or per test as each suite needs. Their stores come from one store the run makes with `bd init`
+and copies for each suite, renamed to the suite's prefix; when that image has changed since it was
+made, the next store is made with `bd init` instead (`apps/web/test/store.ts`, its global setup in
+`apps/web/test/global-setup.ts`). A spec that needs its own options starts its own server with
 `serve()`; the store registry's spec (`stores.spec.ts`) serves several stores from a private home's
 store inventory that way. The change feed's suite
 (`apps/web/test/heads-feed.test.ts`) also starts its own Dolt sql-server on a free loopback port,

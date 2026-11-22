@@ -15,6 +15,7 @@ export default defineConfig({
     maxWorkers: testJobs(),
     fsModuleCachePath: fileURLToPath(new URL("node_modules/.vitest-cache/", import.meta.url)),
     include: ["test/**/*.test.ts"],
+    globalSetup: ["test/global-setup.ts"],
     testTimeout: 60_000,
     hookTimeout: 60_000,
   },
