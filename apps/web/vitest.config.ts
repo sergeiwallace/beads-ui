@@ -15,6 +15,10 @@ export default defineConfig({
   test: {
     // BEADS_UI_TEST_JOBS bounds the workers (docs/procedures/web-run.md, Test it).
     maxWorkers: testJobs(),
+    // Each package keeps its own module cache: turbo runs two packages' Vitest at once under
+    // BEADS_UI_TEST_JOBS=2, and on the shared workspace-root default one run's cleanup removed
+    // the directory the other was writing (ENOTEMPTY on node_modules/.vitest-cache).
+    fsModuleCachePath: fileURLToPath(new URL("node_modules/.vitest-cache/", import.meta.url)),
     // The server suites; the browser specs under e2e/ are Playwright's.
     include: ["test/**/*.test.ts"],
     // Each suite runs real bd processes against a temporary store.
