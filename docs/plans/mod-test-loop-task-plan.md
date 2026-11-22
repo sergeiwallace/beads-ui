@@ -20,7 +20,7 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 
 | Entry | Clause | Coverage and disposition |
 |---|---|---|
-| A001 | "why is the test job taking 2 hours? that's insane. way too long..." | [T-01](#t-01-the-mods-loop-runs-as-its-own-turbo-task-from-the-start) takes the mod's loop off the end of the mod's Vitest suite and starts it first; [T-02](#t-02-the-engine-start-measured-against-the-test-time) measures the engine start and records why the loop is not batched; [Measurements](#measurements) records each step; no test leaves the commit gate |
+| A001 | "why is the test job taking 2 hours? that's insane. way too long..." | [T-01](#t-01-the-mods-loop-runs-as-its-own-turbo-task-from-the-start) takes the mod's loop off the end of the mod's Vitest suite and starts it first; [T-02](#t-02-the-engine-start-measured-against-the-test-time) measures the engine start and records why the loop is not batched; [T-04](#t-04-the-pre-push-stage-runs-the-mods-loop-and-the-script-tests) makes the pre-push stage run the loop and the script tests; [T-03](#t-03-the-loop-leaves-the-commit-gate-only-if-still-needed) then moves the loop out of the commit gate, declared in [D-2](#d-2) with the measurement that forced it; [Measurements](#measurements) records each step |
 
 **Status:** ACTIVE
 
@@ -35,6 +35,7 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
   - [T-01: The mod's loop runs as its own turbo task, from the start](#t-01-the-mods-loop-runs-as-its-own-turbo-task-from-the-start)
   - [T-02: The engine start, measured against the test time](#t-02-the-engine-start-measured-against-the-test-time)
   - [T-03: The loop leaves the commit gate, only if still needed](#t-03-the-loop-leaves-the-commit-gate-only-if-still-needed)
+  - [T-04: The pre-push stage runs the mod's loop and the script tests](#t-04-the-pre-push-stage-runs-the-mods-loop-and-the-script-tests)
 - [Batch Plan](#batch-plan)
 - [Measurements](#measurements)
 - [Implementation Audit](#implementation-audit)
@@ -48,8 +49,11 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 The [second part](vitest-server-suites-plan.md) brought a commit's hook on a loaded 16-core host
 to about 6 minutes. What was left was one turbo task: the mod's Vitest suite and then, in the same
 task, its `claude plugin test` loop, which nothing else overlapped once the other packages were
-done. This part runs that loop as its own turbo task, started first, so it runs beside everything
-else. Every test stays in the commit gate.
+done. This part runs that loop as its own turbo task. Started first, beside everything else, it
+took the hook from 6.2 to 4.5 to 5.5 minutes on that host, and was then most of what was left. So
+the loop now runs before every push instead of at every commit, as the web app's server suites
+already do, and a commit's hook runs every other suite. The pre-push stage did not run the loop or
+the repository's script tests before; now it runs both.
 
 ## Overview
 
@@ -98,14 +102,17 @@ squared test processes, as before.
 
 **Acceptance criteria:**
 
-- [ ] When `npm test` runs, turbo shall run the mod's loop once, as the `test:mod` task, and the
+- [x] When `npm test` runs, turbo shall run the mod's loop once, as the `test:mod` task, and the
   mod's `test` task shall not run it.
-- [ ] When `npm test` runs at `BEADS_UI_TEST_JOBS=2`, the loop task and the script tests shall be
+- [x] When `npm test` runs at `BEADS_UI_TEST_JOBS=2`, the loop task and the script tests shall be
   the first two tasks started, no package's `test` task shall start before the script tests end,
-  and no more than 2 tasks shall run at once.
-- [ ] When the loop task runs, it shall get `BEADS_UI_TEST_JOBS`, and its pass count shall match
+  and no more than 2 tasks shall run at once. Built and measured; then removed by T-03, which
+  takes the loop out of the commit run, where the dependency would leave a slot idle
+  ([D-2](#d-2)).
+- [x] When the loop task runs, it shall get `BEADS_UI_TEST_JOBS`, and its pass count shall match
   the baseline's 978.
-- [ ] If the commit hook stops running the loop, then the script tests shall fail.
+- [x] If the commit hook stops running the loop, then the script tests shall fail. Superseded by
+  T-03: the script tests now fail if the commit hook runs it.
 
 **Dependencies:** None
 
@@ -119,7 +126,7 @@ times, and probe whether the CLI can run several files in one process.
 
 **Acceptance criteria:**
 
-- [ ] The measurement and the batching outcome are recorded in [Measurements](#measurements), with
+- [x] The measurement and the batching outcome are recorded in [Measurements](#measurements), with
   the evidence for the outcome.
 
 **Dependencies:** None
@@ -129,16 +136,64 @@ times, and probe whether the CLI can run several files in one process.
 **Size:** S
 **Batch:** 2
 
-Applied only if the commit hook is still above a few minutes at LOOK after T-01 and T-02.
+Applied only if the commit hook is still above a few minutes at LOOK after T-01 and T-02, and
+only once T-04 is in. It was: 271 to 332 s ([D-2](#d-2)).
 
-**Dependencies:** T-01, T-02 and the measurement after them
+The commit hook runs `npm run test:commit`, a root script that runs
+`turbo run test //#test:scripts --concurrency={jobs}`: every package's Vitest suite and the script
+tests, not `test:mod`. `npm test` runs all three tasks, `test:mod` included, and `npm run test:push`
+runs `test:mod` and `//#test:scripts`. The `test` task no longer depends on `//#test:scripts`:
+without the loop in the commit run, that dependency would hold every package's suite until the
+script tests end, with one slot idle.
+
+**Deliverables:**
+
+- Files modified: `package.json`, `turbo.json`, `.pre-commit-config.yaml`,
+  `scripts/test-gate-bound.test.mjs`, `CONTRIBUTING.md`, `docs/procedures/web-run.md`,
+  `docs/adr/0001-contributor-environment-and-gates.md`
+
+**Acceptance criteria:**
+
+- [ ] When the commit hook runs, it shall run every task `npm test` runs except the mod's loop.
+- [ ] When `npm test`, `npm run test:commit` or `npm run test:push` runs, no more than
+  `BEADS_UI_TEST_JOBS` tasks shall run at once, and each shall get `BEADS_UI_TEST_JOBS`.
+- [ ] If the commit hook runs `npm test` again, or `test:commit` runs `test:mod`, then the script
+  tests shall fail.
+
+**Dependencies:** T-01, T-02, T-04 and the measurement after them
+
+### T-04: The pre-push stage runs the mod's loop and the script tests
+
+**Size:** S
+**Batch:** 2
+
+Found while building T-01: the pre-push stage ran `test-gate` (every Vitest project, through
+`npx vitest run`) and `e2e`, but neither the mod's loop nor the script tests, which ran only inside
+the commit hook's `npm test`. A new pre-push hook, `mod-and-script-tests`, runs
+`npm run test:push` with `BEADS_UI_TEST_SCOPE` cleared, as `test-gate` does. It does not run the
+Vitest suites again. This is the precondition for T-03.
+
+**Deliverables:**
+
+- Files modified: `.pre-commit-config.yaml`, `package.json`, `scripts/test-gate-bound.test.mjs`,
+  `CONTRIBUTING.md`, `docs/procedures/web-run.md`,
+  `docs/adr/0001-contributor-environment-and-gates.md`
+
+**Acceptance criteria:**
+
+- [x] When a push runs its hooks, the `mod-and-script-tests` hook shall run exactly the mod's loop
+  and the script tests, with `BEADS_UI_TEST_SCOPE` cleared.
+- [x] If a mod test or a script test fails, then the push shall fail.
+- [x] If the hook is removed or moved to another stage, then the script tests shall fail.
+
+**Dependencies:** T-01
 
 ## Batch Plan
 
 | Batch | Tasks | Focus | Exit gate |
 |-------|-------|-------|-----------|
 | 1 | T-01, T-02 | The loop as its own task; the engine start measured | ACs checked; the commit hook measured |
-| 2 | T-03 | Only if the hook is still above a few minutes | The commit hook measured |
+| 2 | T-04, then T-03 | The loop and the script tests at pre-push; then, only if the hook is still above a few minutes, the loop out of the commit gate | ACs checked; the commit hook and the new pre-push hook measured |
 
 ## Measurements
 
@@ -179,9 +234,27 @@ and its folder mode, per its own help, runs "each file in a child of this binary
 process across files either, and has no bound on how many children it starts at once. The loop is
 not batched.
 
-### After T-01
+### After T-01 and T-04
 
-Recorded once T-01 is built.
+The commit hook on the branch after T-04 (f9dc5b2) against the base (7506ba1), measured in turn on
+the same host: before, after, after, before. The first two pairs:
+
+| Run | Contention, start and end | Commit hook | Turbo | The mod's loop | The mod's Vitest | Script tests |
+|---|---|---|---|---|---|---|
+| Base, first | LOOK, load 26.2 and 26.1 | 372 s | 324 s, then the script tests | 232 s, after its Vitest | 89 s | 33 s, 73 passed, after turbo |
+| After, first | LOOK, load 26.1 and 25.6 | 271 s | 258 s, the script tests inside | 244 s, from the start | 91 s | 56 s, 80 passed |
+| After, second | LOOK, load 25.6 and 39.5 | 332 s | 320 s | 313 s | 129 s | 43 s, 80 passed |
+| After, at the T-04 commit | LOOK, load 24.3 and 35.0 | 281 s | 269 s | 256 s | 90 s | 61 s, 80 passed |
+
+Every run passed. The loop's 978 tests, the mod's Vitest suite's 584 and every other package's
+counts (`web-ui` 149, `apps/web` 92 under the commit scope, `bd-node` 47, `terminal` 21,
+`mcp-server` 16) match the base. The script tests went from 73 to 80: the seven are the new tests
+of the turbo wiring and of the pre-push hook.
+
+Running the loop beside everything else took the hook from 372 to 271 s at the same load, and
+turbo now ends a few seconds after the loop does: the loop is the hook's floor. At this host's
+LOOK the loop alone takes 244 to 313 s, so no commit hook that runs it can finish in a few minutes.
+T-03 applies ([D-2](#d-2)).
 
 ## Implementation Audit
 
@@ -192,7 +265,7 @@ Recorded once T-01 is built.
 | Gate | After | Decision needed |
 |------|-------|-----------------|
 | Plan approval | Before coding | None: every decision below is settled and none needs the maintainer first |
-| Built review | After it is merged | The maintainer reviews D-1 once the change is live |
+| Built review | After it is merged | The maintainer reviews D-1 and D-2 once the change is live |
 
 ## Decisions
 
@@ -200,7 +273,8 @@ Recorded once T-01 is built.
 
 | # | Decision | Options Considered | Recommended (AI) | Chosen | Diverged? | Rationale | Status |
 |---|----------|-------------------|------------------|--------|-----------|-----------|--------|
-| <a id="d-1"></a>D-1 | How the loop task gets to start first | (a) A `test:mod` task alone, (b) `test:mod` plus the script tests as a root task every `test` task depends on, (c) the loop beside turbo, outside it | (b) | (b) | No | Turbo's start order changes per run; (b) leaves the loop and the script tests the only tasks ready at the start, inside one concurrency bound | `Resolved` |
+| <a id="d-1"></a>D-1 | How the loop task gets to start first | (a) A `test:mod` task alone, (b) `test:mod` plus the script tests as a root task every `test` task depends on, (c) the loop beside turbo, outside it | (b) | (b) | No | Turbo's start order changes per run; (b) leaves the loop and the script tests the only tasks ready at the start, inside one concurrency bound | `Superseded by D-2` |
+| <a id="d-2"></a>D-2 | Whether the mod's loop leaves the commit gate | Decided before this plan: only if the hook is above a few minutes at LOOK after T-01 and T-02 | Move it | Move it | No | The hook took 271 to 332 s at LOOK after T-01, and the loop alone 244 to 313 s of it | `Resolved` |
 
 ### Decision Details
 
@@ -256,6 +330,27 @@ before this change a failing package test stopped the run before the script test
 commit already reported one side's failures first, and this change only swaps the side; the
 pre-push `test-gate` hook still runs every Vitest suite whatever the script tests do.
 
+#### D-2: Whether the mod's loop leaves the commit gate (✅ Resolved: move it to pre-push)
+
+Decided before this plan: T-03 applies only if the commit hook is still above a few minutes at
+LOOK after T-01 and T-02, and only with a pre-push hook that runs the loop (T-04). After T-01 the
+hook took 271, 281 and 332 s at LOOK (load 24 to 40), and the loop alone 244, 256 and 313 s of
+those, with turbo ending within 15 s of the loop. T-02 found no saving inside the loop worth its
+risk. So T-03 applies.
+
+This narrows the commit gate, and is declared here: a commit no longer runs the mod's
+`claude plugin test` loop (978 tests in 63 files). It still runs every package's Vitest suite, the
+mod's 584 Vitest tests among them, which cover the shared core and the parts of the mod Vitest can
+load, and the script tests. Nothing reaches the remote without the loop: the pre-push
+`mod-and-script-tests` hook runs it and the script tests, and `npm test` run by hand runs it too.
+The cost is that a failure only `claude plugin test` sees (a hook's `$` call, the engine's own
+environment) shows at push, not at commit, as the web app's server suites already do.
+
+It also retires D-1's dependency: with the loop gone from the commit run, holding every package's
+suite until the script tests end would leave one slot idle, so `test` no longer depends on
+`//#test:scripts`. The pre-push run has only the loop and the script tests, which start together
+at `BEADS_UI_TEST_JOBS=2`.
+
 ## Open Questions
 
 None.
@@ -265,5 +360,6 @@ None.
 | Date | Decision | Actor | Notes |
 |------|----------|-------|-------|
 | 2026-11-22 | D-1 | AI (Claude Opus, engineer) | Resolved from the turbo start-order probe; built on, for the maintainer's review after it is live |
+| 2026-11-22 | D-2 | AI (Claude Opus, engineer) | Resolved from the measurement after T-01; the narrowed commit gate is for the maintainer's review after it is live; superseded D-1 |
 
 <!-- /doc:region name="overview" -->
