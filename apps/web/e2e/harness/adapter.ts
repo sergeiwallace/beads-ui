@@ -23,6 +23,7 @@ import {
   UnsupportedShape,
 } from "@sergeiwallace/frontend-test-harness";
 import { hostConfig } from "../../test/auth-env.ts";
+import { storeEnv } from "../../test/exec.ts";
 import { CREATED_STORES } from "../../test/run-stores.ts";
 import { createStore } from "../../test/store.ts";
 import { DECLARED_STATES, INTERACTIONS, inventory } from "./journey-inventory.ts";
@@ -84,7 +85,7 @@ async function hostSettings(
   );
   await mkdir(join(configHome, "home"), { recursive: true });
   return {
-    ...process.env,
+    ...storeEnv(),
     HOME: join(configHome, "home"),
     XDG_CONFIG_HOME: configHome,
     XDG_STATE_HOME: join(configHome, "state"),

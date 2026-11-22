@@ -1,4 +1,3 @@
-import { execFile } from "node:child_process";
 import {
   chmod,
   lstat,
@@ -12,10 +11,8 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
-import { promisify } from "node:util";
+import { exec, storeEnv } from "./exec.ts";
 import { recordCreatedStore } from "./run-stores.ts";
-
-const exec = promisify(execFile);
 
 export const STORE_IMAGE_VAR = "BEADS_UI_TEST_STORE_IMAGE";
 const IMAGE_PREFIX = "web";
@@ -34,8 +31,7 @@ async function tree(root: string): Promise<string> {
   return JSON.stringify(entries.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
 }
 
-const bdIn = (dir: string, ...args: string[]) =>
-  exec("bd", args, { cwd: dir, encoding: "utf8", timeout: 60_000 });
+const bdIn = (dir: string, ...args: string[]) => exec("bd", args, { cwd: dir, timeout: 60_000 });
 
 const bdInit = (dir: string, prefix: string) =>
   bdIn(dir, "init", "--non-interactive", "--skip-hooks", "-p", prefix);
@@ -123,7 +119,7 @@ export interface WrappedBd {
 }
 
 async function wrappedBd(subcommands: readonly string[], special: string): Promise<WrappedBd> {
-  const real = (await exec("sh", ["-c", "command -v bd"], { encoding: "utf8" })).stdout.trim();
+  const real = (await exec("sh", ["-c", "command -v bd"])).stdout.trim();
   const dir = await mkdtemp(join(tmpdir(), "beads-ui-web-wrapped-bd-"));
   const marker = join(dir, "reached");
   const quote = (text: string) => `'${text.replaceAll("'", `'\\''`)}'`;
@@ -139,7 +135,7 @@ async function wrappedBd(subcommands: readonly string[], special: string): Promi
   await writeFile(join(dir, "bd"), script);
   await chmod(join(dir, "bd"), 0o755);
   return {
-    env: { ...process.env, PATH: `${dir}:${process.env.PATH ?? ""}` },
+    env: { ...storeEnv(), PATH: `${dir}:${process.env.PATH ?? ""}` },
     marker,
     remove: () => rm(dir, { recursive: true }),
   };

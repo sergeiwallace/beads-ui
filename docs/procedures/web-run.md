@@ -578,7 +578,10 @@ another test's. The Vitest suites under `apps/web/test/` start the server in the
 file or per test as each suite needs. Their stores come from one store the run makes with `bd init`
 and copies for each suite, renamed to the suite's prefix; when that image, or the copy, differs
 from what the image held when it was made, the store is made with `bd init` instead (`apps/web/test/store.ts`, its global setup in
-`apps/web/test/global-setup.ts`). A spec that needs its own options starts its own server with
+`apps/web/test/global-setup.ts`). Every command a suite or spec starts for a store or a served host
+(`bd`, `git`, `beads-ui-web`) runs without the repository variables git exports to its hooks
+(`GIT_DIR`, `GIT_INDEX_FILE` and the rest, `apps/web/test/exec.ts`), so a store made while a hook
+runs is never the hook's repository. A spec that needs its own options starts its own server with
 `serve()`; the store registry's spec (`stores.spec.ts`) serves several stores from a private home's
 store inventory that way. The change feed's suite
 (`apps/web/test/heads-feed.test.ts`) also starts its own Dolt sql-server on a free loopback port,
