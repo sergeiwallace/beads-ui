@@ -8,7 +8,17 @@ import { navLink, TABS } from "./harness/journeys.ts";
 // The browser suites' config (frontend test harness design, D-16). FTH_TIER picks the tier:
 // smoke (the default, what npm run test:e2e and the pre-commit and pre-push gates run) is every
 // spec at 1280 px with a mouse and at 390 px on a touch screen, with the cheap probes at each
-// screen a spec reaches. The sweep and budget tiers run on fw-lnx alone, through fth run.
+// screen a spec reaches. The sweep and budget tiers run only on the hosts FTH_HEAVY_HOSTS names,
+// through fth run; anywhere else they stop and print FTH_HEAVY_ROUTE, the way to ask such a host.
+// Both are read from the environment, so no host is named in this repository.
+const heavyHosts = (process.env.FTH_HEAVY_HOSTS ?? "")
+  .split(",")
+  .map((name) => name.trim())
+  .filter((name) => name !== "");
+const heavyRoute =
+  process.env.FTH_HEAVY_ROUTE ??
+  "Heavy runs need a host named in FTH_HEAVY_HOSTS. Ask its operator to run the step, naming the beads-ui commit, the library tag and where the results should go, or set FTH_HEAVY_ROUTE on this host to the route your team uses.";
+
 export default defineHarnessConfig({
   adapter: beadsUiAdapter,
   root: fileURLToPath(new URL(".", import.meta.url)),
@@ -29,9 +39,8 @@ export default defineHarnessConfig({
     budget: { cells: "budget-step", probes: ["timing"], budgets: "absolute" },
   },
   budgets: "./qa/budgets.json",
-  heavyHosts: ["fw-lnx"],
-  heavyRoute:
-    "Heavy runs go through the cross-host route (design D-17): one git-inbox send to aih-fw-firstmate-hal@fw-lnx with subject `RE: fth request <request-id>`, naming the host, the step, the beads-ui commit, the library tag, the branch any files go to and your address for the reply.",
+  heavyHosts,
+  heavyRoute,
   contention: { command: "machine-contention status --json" },
   tabs: {
     home: "board",
