@@ -1396,6 +1396,14 @@ Criterion 2: a create path is foundation code every surface shares, and the flee
 
 Criterion 2 (consistency with app-portal and the MCP App examples) and the measured signals decide it. Dependencies are not weighed as a cost. The second design spike (`docs/research/findings/beads-ui-spike-harness-switch-and-core-libs.md`) settled the shared-store question: `zustand/vanilla` runs in a mod unmodified and is the view-model store copied into the core; `@tanstack/query-core` stays on the DOM surfaces, where its `process.env` guard and timers exist; `xstate` is excluded because it reads `console` at import. Mitigation for the Con: `cmdk` is isolated behind one component so a Base UI combobox can replace it. External adoption evidence is recorded in the research doc's section 2.1.
 
+**Implementation correction (2026-11-22).** The decision stands; the build did not follow it. Measured at `cc766ed`, the web app installs React 19, Vite, Pragmatic drag and drop, Recharts, Frappe Gantt and three Base UI primitives (Menu, Toast, Dialog), but no shadcn/ui, Tailwind, TanStack Query, Table or Virtual, Zustand or cmdk. In their place are about 1,000 lines of hand CSS, hand refetch and polling, hand tables, eight native selects and a hand palette matcher. The top bar's wrap (Sign out starting a second line at a 1470 px viewport) is one symptom. The research behind this correction is [docs/research/beads-ui-ui-libraries-and-responsive-shell.md](../research/beads-ui-ui-libraries-and-responsive-shell.md). The build finishes D-10 in this order:
+
+1. Tailwind v4 without Preflight, and `shadcn init` on Base UI with its variables mapped to D-19's tokens.
+2. The shell: shadcn's Sidebar with `collapsible="icon"` as the left rail, a top bar that never wraps (`flex-wrap: nowrap`, a short fixed set of controls, Sign out inside an account menu, container queries that drop labels to icons), and a local overflow hook over Base UI Menu wherever a variable set of actions must stay in the bar. A Playwright viewport matrix, 1470 x 956 included, tests it.
+3. The rest of the drift: TanStack Query for fetching, Base UI Select for the native selects, shadcn Table on TanStack Table, the palette on shadcn Command, and the remaining CSS.
+
+Open work that contradicts this is changed to match it: the app-shell work keeps the bar on one row with overflow instead of wrapping and uses shadcn's Sidebar, and the sign-in work uses `otpauth` with Base UI's OTP Field instead of a local TOTP implementation.
+
 ---
 
 <a id="d-11"></a>
