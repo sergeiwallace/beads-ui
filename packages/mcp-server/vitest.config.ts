@@ -13,6 +13,7 @@ export default defineConfig({
   },
   test: {
     maxWorkers: testJobs(),
+    fsModuleCachePath: fileURLToPath(new URL("node_modules/.vitest-cache/", import.meta.url)),
     include: ["test/**/*.test.ts"],
     testTimeout: 60_000,
     hookTimeout: 60_000,
