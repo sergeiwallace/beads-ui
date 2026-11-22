@@ -1,5 +1,6 @@
 {
   "$schema": "https://turborepo.com/schema.json",
+  "globalPassThroughEnv": ["BEADS_UI_TEST_JOBS"],
   "tasks": {
     "lint": {
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/check-core-purity.mjs"],

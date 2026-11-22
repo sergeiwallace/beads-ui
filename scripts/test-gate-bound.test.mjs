@@ -214,6 +214,37 @@ setTimeout(() => appendFileSync(log, \`end \${name}\\n\`), 800);
     assert.match(result.stderr, /BEADS_UI_TEST_JOBS=3: expected a whole number from 1 to 2/);
     assert.equal(readFileSync(log, "utf8"), "");
   });
+
+  test("should hand BEADS_UI_TEST_JOBS to each package task under the repository's turbo.json", () => {
+    const dir = fresh("turbo-env");
+    const log = join(dir, "env.log");
+    write(
+      dir,
+      "package.json",
+      JSON.stringify({
+        name: "fixture",
+        private: true,
+        packageManager: "npm@11.19.0",
+        workspaces: ["packages/*"],
+      }),
+    );
+    write(dir, "turbo.json", readFileSync(join(ROOT, "turbo.json"), "utf8"));
+    write(
+      dir,
+      "env.mjs",
+      `import { appendFileSync } from "node:fs";
+appendFileSync(process.argv[2], \`JOBS=\${process.env.BEADS_UI_TEST_JOBS}\\n\`);
+`,
+    );
+    write(
+      dir,
+      "packages/a/package.json",
+      JSON.stringify({ name: "a", scripts: { test: `node ../../env.mjs ${log}` } }),
+    );
+    const result = run(process.execPath, turboCommand(), { cwd: dir, jobs: 2 });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal(readFileSync(log, "utf8"), "JOBS=2\n");
+  });
 });
 
 describe("Vitest's worker cap", () => {
