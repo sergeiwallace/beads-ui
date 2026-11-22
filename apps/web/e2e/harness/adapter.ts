@@ -583,7 +583,7 @@ export const beadsUiAdapter: AppAdapter<BeadsCtx> = {
   async signIn(app, page: Page): Promise<Session> {
     const { url, session } = await beadsUiAdapter.signInUrl(app);
     await page.goto(url);
-    await page.getByRole("button", { name: "Sign out" }).waitFor();
+    await page.getByRole("button", { name: "Account" }).waitFor();
     return session;
   },
   async signOut(app, session) {

@@ -1402,6 +1402,8 @@ Criterion 2 (consistency with app-portal and the MCP App examples) and the measu
 2. The shell: shadcn's Sidebar with `collapsible="icon"` as the left rail, a top bar that never wraps (`flex-wrap: nowrap`, a short fixed set of controls, Sign out inside an account menu, container queries that drop labels to icons), and a local overflow hook over Base UI Menu wherever a variable set of actions must stay in the bar. A Playwright viewport matrix, 1470 x 956 included, tests it.
 3. The rest of the drift: TanStack Query for fetching, Base UI Select for the native selects, shadcn Table on TanStack Table, the palette on shadcn Command, and the remaining CSS.
 
+Steps 1 and 2 are built ([the app shell plan](../plans/app-shell-one-row-bar-plan.md)): Tailwind v4 without Preflight and shadcn on Base UI with its variables on D-19's tokens; shadcn's Sidebar as an icon rail holding the views; and a top bar that stays one row at every width and zoom level, with Sign out in an account menu and a priority+ More menu for what does not fit. Step 3 is open.
+
 Open work that contradicts this is changed to match it: the app-shell work keeps the bar on one row with overflow instead of wrapping and uses shadcn's Sidebar, and the sign-in work uses `otpauth` with Base UI's OTP Field instead of a local TOTP implementation.
 
 ---

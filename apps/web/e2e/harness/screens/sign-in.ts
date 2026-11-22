@@ -41,7 +41,7 @@ export const SIGN_IN_SCREENS: readonly Screen<unknown>[] = [
       const { beadsUiAdapter } = await import("../adapter.ts");
       const { url } = await beadsUiAdapter.signInUrl(app as never);
       await page.goto(url);
-      await page.getByRole("button", { name: "Sign out" }).waitFor();
+      await page.getByRole("button", { name: "Account" }).waitFor();
       await page.goto(url);
     },
     ready: (page) => headingReady(page, LINK_GONE_HEADING),

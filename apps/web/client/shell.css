@@ -99,6 +99,7 @@
 @layer base {
   [data-slot] {
     box-sizing: border-box;
+    border-color: var(--border);
   }
 
   button[data-slot],

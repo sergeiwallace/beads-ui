@@ -61,10 +61,10 @@ shadcn's Sidebar with `collapsible="icon"` holds the eight views, each with an i
 
 **Acceptance criteria:**
 
-- [ ] When the sidebar is collapsed, each view link shall show only its icon and keep its view's name as its accessible name.
-- [ ] When the user presses the sidebar toggle or Ctrl+B outside an editable field, the sidebar shall collapse to the rail or expand back.
-- [ ] If Ctrl+B is pressed in an editable field, then the sidebar shall not toggle.
-- [ ] While the viewport is under 768 px, the views shall be in a sheet the toggle opens, and choosing a view shall close it.
+- [x] When the sidebar is collapsed, each view link shall show only its icon and keep its view's name as its accessible name.
+- [x] When the user presses the sidebar toggle or Ctrl+B outside an editable field, the sidebar shall collapse to the rail or expand back.
+- [x] If Ctrl+B is pressed in an editable field, then the sidebar shall not toggle.
+- [x] While the viewport is under 768 px, the views shall be in a sheet the toggle opens, and choosing a view shall close it.
 
 ### T-03: A top bar that never wraps
 
@@ -75,22 +75,22 @@ The bar is a `flex-wrap: nowrap` row and a size container. It holds the sidebar 
 
 **Acceptance criteria:**
 
-- [ ] At every size of the viewport matrix, the bar shall be one row tall and no control shall sit below its first row.
-- [ ] At every size, Sign out shall be reachable through the account menu and shall end the session.
-- [ ] When a control of the priority+ group does not fit, it shall be hidden from the bar and listed in the More menu, and choosing it there shall do what it does in the bar.
-- [ ] When every control fits, the bar shall show no More menu.
-- [ ] Every icon-only control shall have an accessible name; Escape shall close an open menu and return focus to its trigger.
+- [x] At every size of the viewport matrix, the bar shall be one row tall and no control shall sit below its first row.
+- [x] At every size, Sign out shall be reachable through the account menu and shall end the session.
+- [x] When a control of the priority+ group does not fit, it shall be hidden from the bar and listed in the More menu, and choosing it there shall do what it does in the bar.
+- [x] When every control fits, the bar shall show no More menu.
+- [x] Every icon-only control shall have an accessible name; Escape shall close an open menu and return focus to its trigger.
 
 ### T-04: The viewport matrix
 
 **Size:** M
 **Batch:** 1
 
-`apps/web/e2e/shell.spec.ts` drives the shell at 1470 by 956 (the reporter's laptop at 100% zoom, scale 2), 1470 by 956 at 200% zoom (735 by 478), at 400% (368 by 239), 1280 by 800, 1920 by 1080, 390 by 844 on touch, and 1280 at 500% zoom (256 by 160). Specs that pressed Sign out in the bar, or found the views in the first navigation landmark, move to the account menu and to the sidebar, which opens first under 768 px.
+`apps/web/e2e/shell.spec.ts` drives the shell at 1470 by 956 (the reporter's laptop at 100% zoom, scale 2), 1470 by 956 at 200% zoom (735 by 478), at 400% (368 by 239), 1280 by 800, 1920 by 1080, 390 by 844 on touch, and 1280 at 500% zoom (256 by 160). Specs that pressed Sign out in the bar, or found the views in the first navigation landmark, move to the account menu and to the sidebar, which opens first under 768 px. The harness inventory (`e2e/harness/journey-inventory.ts`) lists the spec's two fixed titles, as it lists every spec title.
 
 **Acceptance criteria:**
 
-- [ ] Each matrix assertion shall fail on the build before T-02 and T-03 (recorded in [Measurements](#measurements)).
+- [x] Each matrix assertion shall fail on the build before T-02 and T-03 (recorded in [Measurements](#measurements)).
 - [ ] The browser suite's pass count shall match the count before this plan, plus the new spec, with every difference explained test by test.
 
 ### T-05: Docs
@@ -111,6 +111,28 @@ The bar is a `flex-wrap: nowrap` row and a size container. It holds the sidebar 
 
 Every run is on the same loaded 16-core host, where the host's contention reading stayed at LOOK
 (load 28 to 33 on 16 cores).
+
+### T-02 to T-04: the matrix before and after
+
+The matrix serves one store whose repository is named `a-repository-with-a-name-as-long-as-many-real-ones`, so the store picker is as wide as it is with real repository names; the suite's own fixture store already wraps the old bar at 1280 px. Each cell opens its own browser window. `expect.soft` lets every assertion of a cell report on the build before the fix.
+
+| Cell | Before (step 1 build, old bar) | After |
+|---|---|---|
+| 1470 by 956, scale 2 (the reported laptop at 100%) | fails: bar 73 px against a one-row limit under 48, Sign out on the second row | passes: one row, nothing in More |
+| 735 by 478 (that laptop at 200%) | fails: bar 105 px | passes: views in the sheet, labels as icons |
+| 368 by 239 (that laptop at 400%) | fails: bar 105 px | passes: the stamp moves into More |
+| 1280 by 800 | fails: bar 73 px | passes |
+| 1920 by 1080 | fails: the bar fits on one row, but there is no account menu, so Sign out is not reachable through one | passes |
+| 390 by 844 on touch | fails: bar 165 px against a limit under 88 (44 px targets) | passes: the stamp moves into More |
+| 256 by 160 (1280 at 500%) | fails: bar 137 px, and Commands is not in a More menu | passes: Commands and the stamp move into More, and Commands opens the palette from there |
+| Ctrl+B toggles outside a text field, not inside one | fails: there is no sidebar | passes |
+| Bar names, focus order, Escape | fails: the first bar control is the store picker, not the sidebar toggle | passes |
+
+The Ctrl+B guard is tested in the palette's text input; it also skips a contenteditable target such as the composer, which no test drives yet.
+
+### What the shell looks like
+
+At 1470 by 956 the sidebar is open at 16rem with an icon and a label per view, and the bar holds, left to right, the sidebar toggle, the store picker, the `as of` stamp, Commands with its Ctrl K hint and the account icon; the store picker stops at 16rem and truncates. Collapsed, the sidebar is a 3rem rail of icons and the board takes the width. Under 768 px the sidebar is a panel over the page. At 256 px wide the bar holds the toggle, the store picker, the More button and the account icon, and More lists Commands and the stamp.
 
 ### T-01: no visual change
 
@@ -142,6 +164,10 @@ an existing class name.
 | <a id="d-2"></a>D-2 | How shadcn components get the resets Preflight would give them | (a) A small base layer scoped to shadcn's `data-slot` elements, (b) Preflight on now | (a) | (a) | No | (b) restyles every hand-CSS screen at once, which step 3 does view by view | `Resolved` |
 | <a id="d-3"></a>D-3 | What the priority+ group holds | (a) The bar's variable right-hand controls: Commands and the freshness stamp, (b) the view links as well | (a) | (a) | No | The views move to the sidebar (research section 2, the app-shell design's D-1 (a)); Sign out and the sidebar toggle never collapse | `Resolved` |
 
+| <a id="d-4"></a>D-4 | Where the views go under 768 px | (a) shadcn's Sheet, which the toggle opens, (b) keep the icon rail on phones | (a) | (a) | No | (a) is the library's own behaviour; the specs open the sheet first through one helper (`showViews` in `e2e/harness/journeys.ts`) | `Resolved` |
+| <a id="d-5"></a>D-5 | Edits to the copied shadcn components | (a) Only the research's two fixes and what the repo's gates need, (b) none | (a) | (a) | No | `SidebarInset` renders a `div`, since the app already has its `main`; the cookie path and the shortcut guard; a `biome-ignore` on shadcn's cookie write and two stable setters out of hook dependency lists for Biome; comments removed for the ratchet | `Resolved` |
+| <a id="d-6"></a>D-6 | Where the `shadcn` package goes | (a) `dependencies`, as `shadcn init` put it, (b) `devDependencies` | (a) | (a) | No | The server builds the client when it starts, and the build imports `shadcn/tailwind.css`; it adds the CLI's packages to the lockfile | `Resolved` |
+
 ## Open Questions
 
 None.
@@ -150,6 +176,6 @@ None.
 
 | Date | Decision | Actor | Notes |
 |------|----------|-------|-------|
-| 2026-11-22 | D-1 to D-3 | AI (Claude Opus, engineer) | Resolved; built on, for the maintainer's review after it is live |
+| 2026-11-22 | D-1 to D-6 | AI (Claude Opus, engineer) | Resolved; built on, for the maintainer's review after it is live |
 
 <!-- /doc:region name="overview" -->

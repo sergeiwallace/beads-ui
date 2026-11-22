@@ -66,7 +66,7 @@ test("should land the page signed in through a labelled beads-ui-web login-link"
 }) => {
   const app = (await unbudgeted(() => fth.boot())) as RunningApp<BeadsCtx>;
   const session = await unbudgeted(() => fth.signIn(page));
-  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Account" })).toBeVisible();
   await expect(page.locator(".app-main .bu-board[aria-busy='false']")).toBeVisible({
     timeout: 60_000,
   });
@@ -117,12 +117,12 @@ test("should end only the run's own session when signOut runs with a second, unl
   const other = await browser.newContext();
   const second = await other.newPage();
   await second.goto(await unbudgeted(() => loginLink(served)));
-  await expect(second.getByRole("button", { name: "Sign out" })).toBeVisible();
+  await expect(second.getByRole("button", { name: "Account" })).toBeVisible();
   await unbudgeted(() => beadsUiAdapter.signOut(app, session));
   await page.reload();
   await expect(page.getByRole("heading", { name: "Sign in to beads-ui" })).toBeVisible();
   await second.reload();
-  await expect(second.getByRole("button", { name: "Sign out" })).toBeVisible();
+  await expect(second.getByRole("button", { name: "Account" })).toBeVisible();
   await other.close();
 });
 

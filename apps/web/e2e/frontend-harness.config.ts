@@ -3,7 +3,7 @@ import { defineHarnessConfig } from "@sergeiwallace/frontend-test-harness/test";
 import { testJobs } from "../../../scripts/test-jobs.mjs";
 import { beadsUiAdapter } from "./harness/adapter.ts";
 import { beadsUiFaults } from "./harness/faults.ts";
-import { navLink, TABS } from "./harness/journeys.ts";
+import { navLink, showViews, TABS } from "./harness/journeys.ts";
 
 const heavyHosts = (process.env.FTH_HEAVY_HOSTS ?? "")
   .split(",")
@@ -42,6 +42,7 @@ export default defineHarnessConfig({
     async open(page, screen) {
       const tab = TABS.find((entry) => entry.screen === screen);
       if (tab === undefined) throw new Error(`no nav tab for ${screen}`);
+      await showViews(page);
       await navLink(tab.label)(page).click();
     },
     controls: TABS.map((tab) => navLink(tab.label)),

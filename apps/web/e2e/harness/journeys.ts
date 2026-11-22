@@ -23,12 +23,19 @@ export const TABS: readonly { screen: string; label: string }[] = [
 ];
 
 export const navLink = (label: string) => (page: Page) =>
-  page.getByRole("navigation").first().getByRole("link", { name: label, exact: true });
+  page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: label, exact: true });
+
+export async function showViews(page: Page): Promise<void> {
+  if (await page.getByRole("navigation", { name: "Views" }).isVisible()) return;
+  await page.getByRole("button", { name: "Toggle Sidebar" }).click();
+  await page.getByRole("navigation", { name: "Views" }).waitFor();
+}
 
 /** Opens a nav tab and waits for its screen's terminal state. */
 export async function openTab(page: Page, screen: string): Promise<void> {
   const tab = TABS.find((entry) => entry.screen === screen);
   if (tab === undefined) throw new Error(`no nav tab for ${screen}`);
+  await showViews(page);
   await navLink(tab.label)(page).click();
   await screens.get(screen).ready(page);
 }
@@ -163,14 +170,15 @@ export const journeys: readonly Journey[] = [
   },
   {
     id: "sign-out",
-    goal: "Sign out from the header and land on the sign-in page",
+    goal: "Sign out from the account menu and land on the sign-in page",
     screens: ["board", "signed-out"],
     mutability: "mutating",
     tags: ["smoke"],
     async run({ go, step, page }) {
       await go("board");
       await step("press Sign out", async () => {
-        await page.getByRole("button", { name: "Sign out" }).click();
+        await page.getByRole("button", { name: "Account" }).click();
+        await page.getByRole("menuitem", { name: "Sign out" }).click();
         await screens.get("signed-out").ready(page);
       });
     },

@@ -147,7 +147,8 @@ test.describe("signing out", () => {
     await page.goto(await loginLink(served));
     await expect(column(page, "open")).toBeVisible();
     const session = (await page.context().cookies()).find((cookie) => SESSION.test(cookie.name));
-    await page.getByRole("button", { name: "Sign out" }).click();
+    await page.getByRole("button", { name: "Account" }).click();
+    await page.getByRole("menuitem", { name: "Sign out" }).click();
     await expect(page.getByRole("heading", { name: "Sign in to beads-ui" })).toBeVisible();
     expect((await page.context().cookies()).filter((cookie) => SESSION.test(cookie.name))).toEqual(
       [],

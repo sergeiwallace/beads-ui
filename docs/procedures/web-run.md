@@ -96,7 +96,8 @@ beads-ui-web login-link
 It prints a link; open it in your browser for the Board. The link works once, for five minutes,
 and the server trades it for a session cookie (HttpOnly, SameSite=Strict), so the browser's
 address bar and storage never hold a token. A session ends 12 hours after sign-in, or after 2
-hours with no request; Sign out in the app bar ends it at once. Run `login-link` with
+hours with no request; Sign out, in the account menu at the right of the top bar, ends it at
+once. Run `login-link` with
 `--port <n>` for a server on another port, and with `--origin <url>` when your browser reaches the
 server at another address than the first `[auth] origins` entry (through a port forward, say).
 
@@ -216,6 +217,15 @@ fallback while its stream is down.
 
 ## Use it
 
+- The views are in the sidebar on the left. Its toggle at the left of the top bar, or Ctrl+B
+  (Cmd+B on a Mac) outside a text field, collapses it to a rail of icons, each named in a tooltip,
+  and expands it again; the browser remembers the choice for the app's path. Under 768 px wide,
+  which a 1470 px window reaches at 200% zoom, the sidebar is a panel the toggle opens over the
+  page, and choosing a view closes it.
+- The top bar stays one row at every width and zoom level. It holds the sidebar toggle, the store
+  picker, the live-updates notice, Commands, the time of the last read and the account menu, where
+  Sign out is. Labels give way to icons as the bar narrows, and what still does not fit moves into
+  the More menu at the bar's right.
 - With no store chosen, the Board and the Backlog show every open store's issues, and each card
   and row names its repository. The store picker in the app bar narrows the view to one store,
   and the choice is in the URL (`?store=my-repo`), so a narrowed view can be shared or reloaded.
@@ -566,7 +576,12 @@ with `FTH_HEAVY_HOSTS` unset, no host runs them.
 
 The Playwright specs under `apps/web/e2e/` run the Board, Backlog, Issue detail, palette,
 Roadmap, Analytics, Sessions, Sprints and Queue specs at 1280 px with a mouse and at 390 px on a touch screen; the
-pointer drags run at 1280 px and the touch Move to menu at 390 px. Each Playwright worker starts
+pointer drags run at 1280 px and the touch Move to menu at 390 px. The app shell's spec
+(`apps/web/e2e/shell.spec.ts`) opens its own browser windows instead: a 1470 by 956 laptop window
+at 100%, 200% and 400% zoom, 1280 and 1920 px desktops, a 390 px phone and 1280 px at 500% zoom
+(256 px), and checks at each that the top bar is one row, that Commands works from the bar or the
+More menu, that Sign out is in the account menu and that the sidebar collapses and expands; a
+keyboard test checks the bar's focus order, its names and Escape. Each Playwright worker starts
 one server on a temporary store made with `bd init`. Before each test it waits until the server
 runs no `bd` call, ends every browser session, puts the store, the config file, the write log and
 the server's HOME back as they were after the start, then waits again and checks that nothing
