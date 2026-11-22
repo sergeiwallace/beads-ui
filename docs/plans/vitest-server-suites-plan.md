@@ -22,7 +22,7 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 |---|---|---|
 | A001 | "why is the test job taking 2 hours? that's insane. way too long..." | [T-01](#t-01-every-web-store-starts-as-a-copy-of-one-pristine-image) cuts the cost of each web suite's store; [T-02](#t-02-the-commit-gate-leaves-the-web-server-suites-to-pre-push) moves the web server suites to pre-push, declared in [D-2](#d-2) with the measurement that forced it; [T-03](#t-03-the-mods-test-loop-runs-once-per-commit) runs the mod's test loop once per commit instead of twice; [Measurements](#measurements) records each step |
 
-**Status:** IN PROGRESS
+**Status:** BUILT
 
 **Created:** 2026-11-22
 
@@ -37,6 +37,7 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
   - [T-03: The mod's test loop runs once per commit](#t-03-the-mods-test-loop-runs-once-per-commit)
 - [Batch Plan](#batch-plan)
 - [Measurements](#measurements)
+- [Implementation Audit](#implementation-audit)
 - [Human Gates](#human-gates)
 - [Decisions](#decisions)
 - [Open Questions](#open-questions)
@@ -45,9 +46,12 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 ## Summary for a wide audience
 
 The first part of this work took the browser suites out of `git commit`, which brought a commit's
-hook on a loaded 16-core host from over an hour to 15 to 17 minutes. This part goes after what was
-left: the web app's server suites, which call a real `bd` store on every test, and the mod's
-`claude plugin test` loop, which a commit ran twice.
+hook on a loaded 16-core host from over an hour to 15 to 17 minutes. This part takes it to about 6
+minutes on the same host. A commit no longer runs the web app's server suites, which call a real
+`bd` store on every test, or the mod's `claude plugin test` loop a second time. The pre-push hook
+still runs every Vitest suite, so nothing reaches the remote without them, and those suites now
+copy one prepared store instead of making a new one each. Run `npm test` yourself for every suite
+before a push.
 
 ## Overview
 
@@ -237,6 +241,84 @@ has are `store-image.test.ts`'s. What is left outside the tests is the seeding t
 themselves (`dispatch.test.ts` makes six issues and two receiver tokens), the `repoStore` stores
 (`registry`, `receiver-api`, `heads-feed`) and `heads-feed`'s Dolt sql-server.
 
+### After T-02 and T-03
+
+Each commit's hook, timed around `git commit` with `BEADS_UI_TEST_JOBS=2`; every one passed.
+
+| Commit | What the hook ran | Contention, start and end | Wall time |
+|---|---|---|---|
+| T-02 | the commit scope; the mod's loop still twice | LOOK, load 33.4 and 25.9 | 622 s |
+| The composer test fix | as T-02 | LOOK, load 25.9 and 38.7 | 589 s |
+| The review fixes | as T-02 | LOOK, load 34.3 and 36.8 | 667 s |
+| T-03 | the commit scope; the mod's loop once | LOOK, load 36.9 and 33.1 | 349 s (5.8 min) |
+
+The same small change as the before row, `pre-commit run --verbose` on the final branch:
+
+| What | Before | After |
+|---|---|---|
+| Contention, start and end | LOOK, load 28.5 and 30.8 | LOOK, load 36.2 and 30.2 |
+| Commit hook, wall time | 1,077 s (17.9 min) | 398 s (6.6 min) |
+| `npm-test` hook | 822 s | 377 s |
+| `plugin-test` hook | 238 s | gone |
+| `apps/web` Vitest inside it | 676 s, 26 files | 20 s, 5 files, 92 tests |
+| The mod's Vitest, then its loop (one turbo task) | 116 s, then 370 s | 89 s, then 243 s |
+| Other packages | `mcp-server` 52 s, `web-ui` 48 s, `terminal` 24 s, `bd-node` 8 s | 62 s, 34 s, 21 s, 5 s |
+| Script tests | 31 s, 3 failed (no e2e install) | 43 s, 73 passed |
+
+`apps/web`'s whole suite, as the pre-push `test-gate` hook runs it, on the final branch: 569 s at
+LOOK (load 33.1 to 36.2), 27 files, 397 passed, 1 skipped, 0 failed. Every one of the 395 tests it
+shares with the baseline kept its result; the 3 others are `store-image.test.ts`'s.
+
+### What the Done-when asked, and what it got
+
+The commit hook fell from 17.9 min to 5.8 to 6.6 min at LOOK, passing, with every suite still run
+before a push. That is not quite the "few minutes" asked for. What is left is one turbo task: the
+mod's Vitest suite (89 s) and then its `claude plugin test` loop (243 s, 63 files, each in its own
+engine process), which no other task overlaps once the other packages finish. Running the loop as
+its own turbo task beside the mod's Vitest, or cutting the per-file engine start, is the next
+saving; it is recorded as a follow-up in the repository's issue tracker with these numbers.
+
+## Implementation Audit
+
+Checked against the branch at 28a6b1a; each item names the test or the measurement that shows it.
+
+### T-01: Every web store starts as a copy of one pristine image
+
+- [x] A second store is a copy of the image and holds none of the first one's issues:
+  `store-image.test.ts`, first test; it fails when the reuse is removed.
+- [x] A store gets the prefix it asked for: the second test.
+- [x] A changed image gives the next store `bd init`: the third test, on a private image, after it
+  first shows a copy from it; it fails when the image and copy checks are removed.
+- [x] Pass count matches, explained test by test: [After T-01](#after-t-01-the-store-image) and
+  the final run above.
+
+### T-02: The commit gate leaves the web server suites to pre-push
+
+- [x] Under the commit scope `apps/web` runs exactly its non-server suites, and every suite with
+  no scope: `test-gate-bound.test.mjs`, "apps/web's suites under the commit scope"; it fails when
+  the exclude is removed.
+- [x] The hook sets the scope, turbo passes it, and the pre-push `test-gate` clears it: the same
+  file; each fails when its part is removed.
+- [x] A wrong value fails before turbo starts and when the config loads: the same file.
+
+### T-03: The mod's test loop runs once per commit
+
+- [x] The loop runs once, inside `npm test`: the final hook's output above has one
+  `Ran 978 tests` line and no `plugin-test` hook.
+- [x] A second hook running the loop fails the script tests: `test-gate-bound.test.mjs`, checked
+  by adding one back.
+
+### Review
+
+Cross-family review (Codex, high effort) of T-01 and T-02 found a push that inherits
+`BEADS_UI_TEST_SCOPE=commit` skipping the server suites at push too, the scope checked only after
+other packages' tests had started, no check of the copy after copying, and a commit-scope test that
+only repeated the config's own pattern. All four are fixed in the review-fix commit. Its two notes
+(the CONTRIBUTING checks list ordering the mod's loop after the script tests, and the tamper test
+not first showing a copy) are fixed too. It agreed that removing the `plugin-test` hook is sound.
+
+**Audit completed:** 2026-11-22.
+
 ## Human Gates
 
 | Gate | After | Decision needed |
@@ -282,7 +364,8 @@ log and HOME put back between tests, as the browser suites do.
 
 **Cons:**
 
-- 19 of the 21 store-serving files already share one server per file, so nothing is started less.
+- A file that serves one store already shares one server across its tests, so nothing is started
+  less.
 - The reset adds a tree walk and a copy to every test, and the tests pass on a shared store today.
 
 ##### (c) One served process per worker across files
