@@ -1,15 +1,13 @@
-import { type ChildProcess, execFile, spawn } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { promisify } from "node:util";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { CLOSE_GRACE_MS, type RunningServer, startServer } from "../server/server.ts";
 import { type HostEnv, hostConfig, hostEnv, signIn } from "./auth-env.ts";
+import { exec } from "./exec.ts";
 import { type RepoStore, repoStore, type ScriptedBd, scriptedBd, shQuote } from "./host-stores.ts";
-
-const exec = promisify(execFile);
 
 /** The poll interval the suites configure: short, so a test waits seconds, not the default. */
 const INTERVAL_MS = 1_000;

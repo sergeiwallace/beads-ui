@@ -21,5 +21,5 @@ const run = promisify(execFile);
 export const exec = (
   command: string,
   args: readonly string[],
-  options: { cwd?: string; timeout?: number; env?: NodeJS.ProcessEnv } = {},
+  options: { cwd?: string; timeout?: number; env?: NodeJS.ProcessEnv; encoding?: "utf8" } = {},
 ) => run(command, args, { encoding: "utf8", ...options, env: storeEnv(options.env) });
