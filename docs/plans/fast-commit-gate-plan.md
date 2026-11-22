@@ -22,7 +22,7 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 |---|---|---|
 | A001 | "why is the test job taking 2 hours? that's insane. way too long..." | [T-01](#t-01-the-commit-gate-runs-no-browser-suite) takes the browser suites out of the commit gate; [T-02](#t-02-one-server-per-playwright-worker) cuts the suite's own wall time; [Measurements](#measurements) records both before and after |
 
-**Status:** ACTIVE
+**Status:** BUILT
 
 **Created:** 2026-11-22
 
@@ -38,7 +38,14 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
   - [T-04: The adapter spec captures a ready screen on a loaded host](#t-04-the-adapter-spec-captures-a-ready-screen-on-a-loaded-host)
 - [Batch Plan](#batch-plan)
 - [Measurements](#measurements)
+  - [Before (origin/main at ff718cc)](#before-originmain-at-ff718cc)
+  - [After](#after)
+  - [What the Done-when asked, and what it got](#what-the-done-when-asked-and-what-it-got)
 - [Implementation Audit](#implementation-audit)
+  - [T-01: The commit gate runs no browser suite](#t-01-the-commit-gate-runs-no-browser-suite-1)
+  - [T-02: One server per Playwright worker](#t-02-one-server-per-playwright-worker-1)
+  - [T-03: `BEADS_UI_TEST_JOBS` reaches the package tasks under turbo](#t-03-beads_ui_test_jobs-reaches-the-package-tasks-under-turbo-1)
+  - [T-04: The adapter spec captures a ready screen on a loaded host](#t-04-the-adapter-spec-captures-a-ready-screen-on-a-loaded-host-1)
 - [Human Gates](#human-gates)
 - [Decisions](#decisions)
   - [Decision Summary](#decision-summary)
@@ -51,8 +58,8 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 ## Summary for a wide audience
 
 A commit no longer waits for the web app's browser suites. `git commit` runs the lint, the Vitest
-suites and the mod's tests, which take minutes. The browser suites run when you push, so nothing
-reaches the remote without them. They also run faster, because each Playwright worker now starts
+suites and the mod's tests: on a loaded 16-core host that took 15 to 17 minutes, down from over an
+hour. The browser suites run when you push, so nothing reaches the remote without them. They also run faster, because each Playwright worker now starts
 one server and resets its store between tests, instead of starting a server for every test. Run
 `npm run test:e2e` yourself when you want the browser suites before a push.
 
@@ -92,12 +99,12 @@ from the root.
 
 **Acceptance criteria:**
 
-- [ ] When `npm test` runs, the system shall run no Playwright test (`apps/web`'s `test` script is
+- [x] When `npm test` runs, the system shall run no Playwright test (`apps/web`'s `test` script is
   `vitest run`).
-- [ ] When a push runs the pre-push hooks, the system shall run `npm run test:e2e`, the full
+- [x] When a push runs the pre-push hooks, the system shall run `npm run test:e2e`, the full
   browser suite (`.pre-commit-config.yaml` hook `e2e`, stage `pre-push`).
-- [ ] If the commit-stage hooks are listed, then no hook in them shall run `test:e2e`.
-- [ ] When the browser suite runs at push, its pass count shall match the count before this change,
+- [x] If the commit-stage hooks are listed, then no hook in them shall run `test:e2e`.
+- [x] When the browser suite runs at push, its pass count shall match the count before this change,
   with any difference explained test by test.
 
 **Dependencies:** None
@@ -127,15 +134,15 @@ own server with their own options (`serve()`) are unchanged.
 
 **Acceptance criteria:**
 
-- [ ] When two tests run one after the other in one worker, the second shall run on the same server
+- [x] When two tests run one after the other in one worker, the second shall run on the same server
   process as the first.
-- [ ] When a test leaves an issue, a file in the store, an edit to the config file or a signed-in
+- [x] When a test leaves an issue, a file in the store, an edit to the config file or a signed-in
   session behind, the next test in that worker shall see none of them.
-- [ ] If a test leaves the worker's server stopped, then the next test shall get a fresh, running
+- [x] If a test leaves the worker's server stopped, then the next test shall get a fresh, running
   server.
-- [ ] If the server holds changed state the reset cannot put back, then the next test shall get a
+- [x] If the server holds changed state the reset cannot put back, then the next test shall get a
   fresh server rather than that state.
-- [ ] The log a test's record carries shall hold only the server output printed during that test.
+- [x] The log a test's record carries shall hold only the server output printed during that test.
 
 **Dependencies:** None
 
@@ -158,9 +165,9 @@ now passes the variable through.
 
 **Acceptance criteria:**
 
-- [ ] When `npm test` runs with `BEADS_UI_TEST_JOBS=2`, each package task turbo starts shall see
+- [x] When `npm test` runs with `BEADS_UI_TEST_JOBS=2`, each package task turbo starts shall see
   `BEADS_UI_TEST_JOBS=2`.
-- [ ] If `turbo.json` names no pass-through for the variable, then the test shall fail.
+- [x] If `turbo.json` names no pass-through for the variable, then the test shall fail.
 
 **Dependencies:** None
 
@@ -183,7 +190,7 @@ its read.
 
 **Acceptance criteria:**
 
-- [ ] When the sign-in test lands on the Board, it shall end only once the Board's read has landed,
+- [x] When the sign-in test lands on the Board, it shall end only once the Board's read has landed,
   so the run holds a ready capture for the spec.
 
 **Dependencies:** None
@@ -196,8 +203,9 @@ its read.
 
 ## Measurements
 
-Every run is on the same loaded 16-core host, at `BEADS_UI_TEST_JOBS=2`, with the host's
-contention reading taken at the start and the end of the run.
+Every run is on the same loaded 16-core host, with the host's contention reading taken at the start
+and the end of the run. The host's load moved between 24 and 45 on 16 cores over the afternoon, so
+each row carries its own reading.
 
 ### Before (origin/main at ff718cc)
 
@@ -219,14 +227,84 @@ stops at turbo's failure.
 
 ### After
 
-Recorded here once the change is in, on the same host and with the same settings.
+The commit hook, timed around each `git commit` of this branch at `BEADS_UI_TEST_JOBS=2`. Every
+one ran the full commit stage (a change that is not docs-only runs every suite whatever its size),
+and every one passed.
+
+| Commit | What the hook ran | Contention, start and end | Wall time |
+|---|---|---|---|
+| T-01 | no Playwright; the bound still dropped by turbo | LOOK, load 32.5 and 35.7 | 1,587 s (26.5 min) |
+| T-03 | no Playwright; the bound reaches each package task | LOOK, load 31.7 and 24.4 | 918 s (15.3 min) |
+| T-04 (a three-line change) | as T-03 | LOOK at start (24.4), HOLD at end (43.8) | 1,027 s (17.1 min) |
+| T-02 | as T-03 | LOOK, load 34.9 and 45.4 | 982 s (16.4 min) |
+
+The full browser suite, `npm run test:e2e` at `BEADS_UI_TEST_JOBS=1`, which is the one worker the
+baseline's suite really ran on (T-03), after T-02 at 1e29a3f:
+
+| What | Before | After |
+|---|---|---|
+| Contention | LOOK, load 33.1 to 33.4 | LOOK, load 40.7 to 37.7 |
+| Wall time of the Playwright run | 41.1 min | 35.2 min (2,114 s for all of `npm run test:e2e`) |
+| Tests | 174: 134 passed, 40 skipped | 186: 140 passed, 46 skipped |
+| Harness run verdict | failed (no-capture, T-04) | passed; 151 captures written, 1 refused by the live-target policy |
+| Summed time of the 90 tests on the shared fixtures | 1,491 s | 979 s |
+| Summed time of the 50 tests that start their own server | 528 s | 654 s |
+
+Every one of the 140 tests the two runs share kept its result: no test went from passed to skipped
+or back. The 12 tests only the after run has are `harness-worker-server.spec.ts`: 6 pass at
+1280 px and 6 skip at 390 px by design. The 8 the before run names alone are
+`harness-adapter.spec.ts` tests whose line numbers moved by the T-04 edit; they ran and passed in
+both runs.
+
+The tests that start their own server ran 24 % slower in the after run, which is the heavier load;
+the tests on the shared fixtures ran 34 % faster in spite of it. The wall time fell less than the
+fixture tests did because those 50 tests and the harness's own specs are unchanged.
+
+### What the Done-when asked, and what it got
+
+The commit hook fell from 65.8 min, failing, to 15 to 17 min, passing, at LOOK. That is not the
+"few minutes at LOOK" the task asked for. What is left is the Vitest suites themselves:
+`apps/web`'s alone took 1,197.8 s in the baseline, because its server suites start real servers on
+`bd init` stores. Speeding those up, or moving them to pre-push as well, is its own change; it is
+recorded as a follow-up in the repository's issue tracker with these numbers.
 
 ## Implementation Audit
 
-Checked against the branch once every task is in; each item names the test or the measurement
-that shows it.
+Checked against the branch at 1e29a3f; each item names the test or the measurement that shows it.
 
-**Audit completed:** not yet.
+### T-01: The commit gate runs no browser suite
+
+- [x] `npm test` runs no Playwright test: `scripts/e2e-install-root.test.mjs` pins `apps/web`'s
+  `test` as `vitest run` and the root `test` naming no `test:e2e`; the four commit hooks above ran
+  in 15 to 27 min with no Playwright output.
+- [x] A push runs `npm run test:e2e`: the same file pins exactly one hook running it, `e2e`, at
+  `pre-push`; it fails when the hook is moved to the commit stage (checked by hand).
+- [x] No commit-stage hook runs `test:e2e`: the same test.
+- [x] Pass count matches before and after, explained test by test: [After](#after).
+
+### T-02: One server per Playwright worker
+
+- [x] Same server for the next test in a worker: `harness-worker-server.spec.ts`, second test; it
+  fails when the reuse is switched off.
+- [x] No issue, store file, config edit or session from the test before: the same test; it fails
+  when the store restore or the session revoke is removed.
+- [x] A stopped server gives the next test a fresh one: third and fourth tests.
+- [x] Unrestorable state gives the next test a fresh server: fifth and sixth tests.
+- [x] A test's log starts at the test: the second test (no boot line) and the fourth (a fresh
+  server's boot line).
+
+### T-03: `BEADS_UI_TEST_JOBS` reaches the package tasks under turbo
+
+- [x] A package task sees `BEADS_UI_TEST_JOBS=2`: `scripts/test-gate-bound.test.mjs`, under the
+  repository's own `turbo.json`.
+- [x] The test fails on the old `turbo.json`: it read `JOBS=undefined` there.
+
+### T-04: The adapter spec captures a ready screen on a loaded host
+
+- [x] With a `bd list` slowed by 6 s, the unfixed spec passed and the run failed with
+  `no-capture`; with the fix the run passed with one capture. The after run's verdict passed.
+
+**Audit completed:** 2026-11-22.
 
 ## Human Gates
 
