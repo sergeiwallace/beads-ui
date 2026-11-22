@@ -10,7 +10,8 @@
   ],
   "scripts": {
     "lint": "biome check . && turbo run lint typecheck",
-    "test": "node scripts/test-jobs.mjs turbo run test --concurrency={jobs} && node scripts/test-jobs.mjs node --test --test-concurrency={jobs} scripts/*.test.mjs",
+    "test": "node scripts/test-jobs.mjs turbo run test test:mod --concurrency={jobs}",
+    "test:scripts": "node scripts/test-jobs.mjs node --test --test-concurrency={jobs} scripts/*.test.mjs",
     "test:e2e": "npm run test:e2e -w apps/web",
     "typecheck": "turbo run typecheck"
   },

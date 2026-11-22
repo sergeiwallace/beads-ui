@@ -39,7 +39,7 @@ Run these before you push. The hooks run them too.
 
 ```sh
 npm run lint        # Biome, the core purity gate and the core type check
-npm test            # Vitest and claude plugin test for the mod, then the script tests
+npm test            # Vitest, claude plugin test for the mod and the script tests, through turbo
 npm run test:e2e    # the web app's Playwright specs, in full
 npx tsc --noEmit    # type check of the whole repository
 ```

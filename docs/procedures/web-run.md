@@ -589,10 +589,10 @@ in-process queue that answers the queue service's routes with its shapes
 `BEADS_UI_LIVE_QUEUE_URL` set to its URL.
 
 One setting bounds how many test processes a run starts: `BEADS_UI_TEST_JOBS`, a whole number
-from 1 to 2, default 1 when unset. It sets turbo's `--concurrency` (package test tasks at once),
-each Vitest config's `maxWorkers`, Playwright's `workers` and how many mod test files
+from 1 to 2, default 1 when unset. It sets turbo's `--concurrency` (test tasks at once, the mod's
+loop and the script tests among them), each Vitest config's `maxWorkers`, Playwright's `workers` and how many mod test files
 `scripts/plugin-test.mjs` runs at once (one by one at 1). The bounds multiply: turbo runs up to
-`BEADS_UI_TEST_JOBS` package tasks and each runs up to `BEADS_UI_TEST_JOBS` workers, so one run
+`BEADS_UI_TEST_JOBS` tasks and each runs up to `BEADS_UI_TEST_JOBS` workers, so one run
 starts at most `BEADS_UI_TEST_JOBS` squared test processes, 1 by default and 4 at the maximum of 2.
 A value outside 1 to 2 fails the run before any test starts.
 
@@ -600,8 +600,14 @@ A value outside 1 to 2 fails the run before any test starts.
 BEADS_UI_TEST_JOBS=2 npm test     # a faster run on a quiet host, at most 4 test processes
 ```
 
-The pre-commit test hook runs `npm test`, the mod's `claude plugin test` loop included (the mod's
-`test` script runs it after its Vitest suite), never the Playwright specs, and skips
+`npm test` runs turbo over three tasks: every package's `test` (its Vitest suite), the mod's
+`test:mod` (its `claude plugin test` loop) and the root's `test:scripts` (the script tests). Every
+`test` task waits for `test:scripts`, so the loop and the script tests are the only tasks ready
+when turbo starts: the loop, the longest task, starts at once and runs beside all the others
+(`turbo.json`).
+
+The pre-commit test hook runs `npm test`, the mod's `claude plugin test` loop included, never the
+Playwright specs, and skips
 a commit whose staged paths are all under `docs/` or end in `.md`; any other staged path, a
 deleted or renamed one included, runs it. It runs with `BEADS_UI_TEST_SCOPE=commit`, which turbo
 passes to each package: under it `apps/web`'s Vitest config leaves out every suite that imports the

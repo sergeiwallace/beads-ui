@@ -62,7 +62,7 @@ repos:
         pass_filenames: false
         always_run: true
       - id: npm-test
-        name: npm test (Vitest, then the mod's tests file by file)
+        name: npm test (Vitest, the mod's tests file by file and the script tests)
         entry: node scripts/test-hook.mjs npm test
         language: system
         pass_filenames: false

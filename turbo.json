@@ -14,7 +14,16 @@
       ],
       "outputs": []
     },
+    "//#test:scripts": {
+      "cache": false,
+      "outputs": []
+    },
     "test": {
+      "dependsOn": ["//#test:scripts"],
+      "cache": false,
+      "outputs": []
+    },
+    "test:mod": {
       "cache": false,
       "outputs": []
     }

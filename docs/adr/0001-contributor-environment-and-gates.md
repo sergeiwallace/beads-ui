@@ -25,11 +25,15 @@ plugin also updates only when its manifest version increases.
   because gitleaks ignores low-entropy and example keys.
 - `scripts/test-hook.mjs` skips the pre-commit test suite for staged
   docs-only changes. Pre-push still checks documentation-linked tests.
-  The mod's `claude plugin test` loop runs inside that suite, through the
-  mod's own `test` script; no other hook runs it, because a second hook
-  ran the whole loop again after `npm test`.
-- The pre-commit `npm-test` hook runs `npm test`: Vitest and the script
-  tests, with no Playwright. The web app's Playwright specs run in full at
+  The mod's `claude plugin test` loop runs inside that suite, as the
+  mod's own `test:mod` turbo task; no other hook runs it, because a second
+  hook ran the whole loop again after `npm test`.
+- The pre-commit `npm-test` hook runs `npm test`: Vitest, the mod's loop
+  and the script tests, with no Playwright. Turbo runs the script tests as
+  the root task `test:scripts`, which every package's `test` task depends
+  on, so the loop and the script tests start first and the loop, the
+  longest task, overlaps every other; started wherever turbo's run-to-run
+  order put it, it often followed most of them. The web app's Playwright specs run in full at
   pre-push, in the `e2e` hook (`npm run test:e2e`), because they took over
   an hour on a loaded host and made every commit wait for them. Each
   Playwright worker serves one store and resets it between tests; a test
@@ -46,7 +50,7 @@ plugin also updates only when its manifest version increases.
   from a linked worktree.
 - Set `BEADS_UI_TEST_JOBS` to 1 or 2 to bound Turbo, Vitest, Playwright and
   `scripts/plugin-test.mjs`. The default is 1. Turbo and worker limits
-  multiply. `node scripts/test-jobs.mjs <command> [args...]` substitutes
+  multiply, and turbo's limit counts the loop and script-test tasks too. `node scripts/test-jobs.mjs <command> [args...]` substitutes
   the bound for `{jobs}` and returns the command's status. The mod test
   wrapper runs `claude plugin test --file <file> <dir>` in bounded groups
   because the unsplit command starts one child per file without a limit.
