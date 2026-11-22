@@ -1,10 +1,6 @@
 import { Dialog } from "@base-ui/react/dialog";
 import type { OptionCard } from "@beads-ui/core";
 
-// "Approve recommendations" over a selection (web app design D-1, D-3, T-W1.2): the confirm lists
-// every selected decision and its recommended option, and nothing is written until it is
-// confirmed.
-
 export interface BulkItem {
   key: string;
   title: string;

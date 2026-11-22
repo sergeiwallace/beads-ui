@@ -83,7 +83,6 @@ it("should time out without splitting and recover after an OS lock holder is kil
     await mkdir(lockDir, { mode: 0o700, recursive: true });
     const lock = join(lockDir, `${binding}.lock`);
     await writeFile(lock, "", { mode: 0o600 });
-    // --no-fork execs bounded sleep: killing this owned process releases the kernel lock.
     holder = spawn("flock", ["-F", lock, "sleep", "20"], { stdio: "ignore" });
     const deadline = Date.now() + 2000;
     while (true) {

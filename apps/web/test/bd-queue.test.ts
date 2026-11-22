@@ -6,10 +6,6 @@ import { type RunningServer, startServer } from "../server/server.ts";
 import { type HostEnv, hostConfig, hostEnv, repoName, signIn } from "./auth-env.ts";
 import { createStore, type LockedBd, lockedBd, type TestStore } from "./store.ts";
 
-// The web server's bd calls on one store, through its HTTP routes, against a bd that runs one call
-// at a time, as an embedded store does, and takes 3 s per `bd list` (beads-ui design, the bd-node
-// adapter).
-
 let store: TestStore;
 let host: HostEnv;
 let clientDir: string;
@@ -79,7 +75,6 @@ describe("one store's bd calls", () => {
     await host.write(hosts());
     slow = await lockedBd(["list"], 3);
     const on = await start();
-    // Set after the start: the bound is read at each call.
     await host.write(hosts("[web]\nbd_queue_wait_seconds = 2"));
 
     const replies = await Promise.all([board(on), board(on)]);
@@ -99,7 +94,6 @@ describe("one store's bd calls", () => {
     await expect.poll(listCalls, { timeout: 20_000 }).toBe(1);
     const abandoned = new AbortController();
     const second = board(on, abandoned.signal).catch(() => undefined);
-    // The second read is in line behind the first's bd list when its client goes away.
     await new Promise((resolve) => setTimeout(resolve, 500));
     abandoned.abort();
     await second;

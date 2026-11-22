@@ -1,11 +1,5 @@
 import type { Result } from "./model.js";
 
-// The web app's key map (web app design D-12, T-W1.4): single-key shortcuts on by default, a
-// setting that turns them off while modified shortcuts keep working, and remaps that refuse to
-// give one key to two commands. A single-key shortcut is one printable character with no Ctrl, Alt
-// or Meta (WCAG 2.1.4); Enter, Escape and the arrows are named keys and stay on with the setting
-// off. Nothing but a Ctrl, Alt or Meta chord runs while focus is in a text field.
-
 /** A key press as the surface reads it from its keyboard event. */
 export interface KeyPress {
   key: string;
@@ -93,8 +87,6 @@ function canonical(chord: Chord): string {
   return parts.join("+");
 }
 
-// A printable key's value already says whether Shift was held (`?`, `J`), so Shift is folded into
-// it: `Shift+j` is `J`. A named key keeps Shift as a modifier: `Shift+Enter`.
 function settle(chord: Chord): Chord {
   if (!printable(chord.key) || !chord.shift) return chord;
   return { ...chord, shift: false, key: chord.key.toUpperCase() };

@@ -94,7 +94,6 @@ it("should keep the composer active and guard user updates when a companion runs
     expect((await tmux("display-message", "-p", "-t", "test", "#{pane_id}")).stdout.trim()).toBe(
       before,
     );
-    // Input goes only to this test's isolated server, never a user's composer.
     await tmux("send-keys", "-t", companion, "-l", "move BU-own blocked");
     await tmux("send-keys", "-t", companion, "Enter");
     await until(async () => {

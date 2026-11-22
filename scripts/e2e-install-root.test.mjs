@@ -1,6 +1,3 @@
-// The browser suites' install root (frontend test harness design, D-16, T-1.9): apps/web/e2e alone
-// depends on the private library, so a clone without access to it still installs, lints,
-// type-checks and runs Vitest, and its e2e run says why it cannot run, never a module-not-found.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { copyFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -53,7 +50,6 @@ test("should name the private library in no package.json or package-lock.json ou
     ],
     { cwd: root, encoding: "utf8" },
   );
-  // git grep exits 1 when nothing matches; anything else is a match or a failure to search.
   assert.equal(found.status, 1, `matches outside apps/web/e2e:\n${found.stdout}${found.stderr}`);
   assert.equal(found.stdout, "");
 });
@@ -98,7 +94,6 @@ test("should fail npm run test:e2e at the type-check, before any browser starts,
       encoding: "utf8",
       env: { ...process.env, FORCE_COLOR: "0" },
     });
-    // tsc colours its report; the assertions read the text.
     const ansi = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
     const said = (ran.stdout + ran.stderr).replace(ansi, "");
     assert.notEqual(ran.status, 0, said);

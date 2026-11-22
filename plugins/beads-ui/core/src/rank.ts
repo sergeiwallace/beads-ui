@@ -13,7 +13,6 @@ export const RANK_KEY = "rank";
 const DIGITS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 const ZERO = "0";
 const LAST = "z";
-// The smallest integer part; a key equal to it leaves no room below.
 const SMALLEST_INTEGER = `A${ZERO.repeat(26)}`;
 const SHAPE = /^[0-9A-Za-z]+$/;
 
@@ -66,7 +65,6 @@ export function readRank(issue: Issue): RankRead {
   return { kind: "ranked", key: value as string };
 }
 
-// The digit string strictly between fractions `a` and `b` (b undefined: no upper bound).
 function midpoint(a: string, b: string | undefined): string {
   if (b !== undefined) {
     let n = 0;
@@ -116,7 +114,6 @@ function split(key: string): [integer: string, fraction: string] {
   return [key.slice(0, length), key.slice(length)];
 }
 
-// Both bounds are valid keys and above < below when both are set.
 function between(above: string | undefined, below: string | undefined): string {
   if (above === undefined) {
     if (below === undefined) return `a${ZERO}`;

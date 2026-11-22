@@ -7,10 +7,6 @@ import type { Page } from "@playwright/test";
 import { createStore, type TestStore } from "../test/store.ts";
 import { authorize, expect, serve, test, unbudgeted, unbudgetedStore } from "./fixtures.ts";
 
-// The Review view in a real browser at 1280 px and 390 px (web app design T-W1.1 to T-W1.4,
-// T-W1.6): the served command reads a held store through a stand-in tool, and every write goes
-// through the running server's dispatch routes.
-
 const FAKE_HELD = fileURLToPath(new URL("../test/fixtures/fake-held.mjs", import.meta.url));
 
 interface ReviewApp {
@@ -106,7 +102,6 @@ async function heldFiles(dir: string, repo: string) {
 
 const reviewTest = test.extend<{ review: ReviewApp }>({
   review: async ({ configHome, page }, use) => {
-    // Seven bd processes and the server's start are the spec's setup, outside its budget.
     const { store, ids, queue, served } = await unbudgeted(async () => {
       const store = await createStore("e2e");
       const ids = {
@@ -131,8 +126,6 @@ const reviewTest = test.extend<{ review: ReviewApp }>({
       });
       return { store, ids, queue, served };
     });
-    // The page opens the Review view first: a Board landing would start a read the server goes on
-    // running beside the Review view's own, on a store that runs one bd process at a time.
     await authorize(page, served);
     const read = page.waitForResponse(
       (response) => new URL(response.url()).pathname === "/api/review",

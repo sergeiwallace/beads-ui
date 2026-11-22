@@ -1,6 +1,3 @@
-// Runners: Vitest only. It reads the mod's source files, which the mod environment cannot list.
-// D-43, T-2C.9: every colour the band and the pane draw is a token from core's token map, so no
-// raw colour (a hex value or a named colour) sits in hooks/ or client/.
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -62,8 +59,6 @@ function glyphsWritten(text: string): string[] {
     .map(({ line, at }) => `${at}: ${line.trim()}`);
 }
 
-// D-43, T-2C.10: a glyph reaches a drawing only from core/src/glyphs.ts, so no other source
-// file of the mod writes one; the hooks-entry walk (hooks/look.test.ts) checks what is drawn.
 describe("glyphs written outside the table (D-43, T-2C.10)", () => {
   it("should find a glyph in a string and pass one in a comment", () => {
     expect(glyphsWritten('const MENU = "⋮";')).toHaveLength(1);

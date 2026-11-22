@@ -38,7 +38,6 @@ async function fixture(
   const tmux = async (...args: string[]) =>
     (await exec(realTmux, ["-L", socket, ...args], { env, timeout: 2000 })).stdout.trim();
   try {
-    // Only failure injection is simulated. Pane lifecycle, child processes and identity are real.
     await writeFile(
       join(dir, "tmux"),
       `#!/usr/bin/python3

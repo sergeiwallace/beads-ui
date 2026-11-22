@@ -4,10 +4,6 @@ import { PromptComposer } from "../../src/composer/PromptComposer.tsx";
 import type { DispatchStatus, DispatchSummary } from "../../src/composer/types.ts";
 import { editorOf, installClipboardStubs, typeIntoEditor } from "./harness.ts";
 
-// T-W2.3 through the rendered composer: every prompt asks the receiver to arm a goal unless the
-// user clears the control for that one dispatch, and a dispatch waiting on a paused goal offers
-// "Deliver now", which releases it.
-
 const SENT: DispatchSummary = {
   id: "01JD0000000000000000000009",
   kind: "prompt",

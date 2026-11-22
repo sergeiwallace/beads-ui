@@ -25,12 +25,6 @@ import {
   world,
 } from "./tests/world.js";
 
-// The band's figures row (T-2C.11) was removed on 2026-10-27 at Sergei's request; its code is in
-// docs/archive/figures-row/. A session owning tasks in two stores, four of them done in the
-// window, draws its summary line alone at every height and on both surfaces, and the band makes
-// none of the row's own reads or repaints. The band reads its counts from each store itself here
-// (no refresher runs), so each line ends with `*`.
-
 const HOUR = 3_600_000;
 const MINUTE = 60_000;
 const HARNESS = "/work/ai-harness";
@@ -139,7 +133,6 @@ describe("the band draws no figures row (removed 2026-10-27)", () => {
       STORES[HARNESS]?.pop();
     }
 
-    // The count moved, so the row would have read the store's close times and repainted.
     expect(render(await ui.drawn(), 120)[0]).toContain("✓[d: 5 done last 24h]");
     expect(doneReads(w)).toEqual([]);
     expect(w.blits).toEqual([]);
@@ -148,7 +141,6 @@ describe("the band draws no figures row (removed 2026-10-27)", () => {
 
 describe("the band's overview draws no picture (T-2C.13)", () => {
   test("should draw the Timeline in the overview with no Image, Svg or alt line, its rows kept for the levels", async ($, on) => {
-    // An epic with a due date, which the pane's Timeline draws a picture of.
     const dated = (JSON.parse(list) as Record<string, unknown>[]).map((row) =>
       row.id === "BU-mg2" ? { ...row, due_at: "2026-12-15T00:00:00Z" } : row,
     );

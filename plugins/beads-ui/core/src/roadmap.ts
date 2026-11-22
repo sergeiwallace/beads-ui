@@ -1,7 +1,3 @@
-// The Roadmap view (T-3.2): the store's epics and milestones placed by due date, each a bar from
-// its start to its due date, and the blocks and parent-child dependencies between them as lines.
-// Pure: the web app draws it with Frappe Gantt (D-10); the placement is the Timeline's (T-2B.9).
-
 import type { Issue, Status, StatusCategory } from "./model.js";
 import { milestoneSprintOf, sprintLabelsOf, startsAtOf } from "./sprint-view.js";
 import { statusToken, type Token } from "./tokens.js";

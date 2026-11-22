@@ -1,10 +1,4 @@
 #!/usr/bin/env node
-// `node scripts/plugin-test.mjs <mod folder>`: the mod's tests, at most BEADS_UI_TEST_JOBS files at
-// a time (one by one by default). `claude plugin test <dir>` starts one child per test file all at
-// once and has no option to bound that, so this runs the same children itself: each
-// `claude plugin test --file <file> <dir>` runs one file in the mod environment and prints one
-// `claude-plugin-test-report` line. The run fails, naming the file, when a test fails, when a child
-// exits non-zero, or when a child prints no report.
 import { spawn } from "node:child_process";
 import { readdirSync } from "node:fs";
 import { join, relative, resolve } from "node:path";

@@ -2,12 +2,6 @@ import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 
-// An in-process stand-in for the work queue's `/api/queue` routes the queue-backed dispatch store
-// calls, answering with the request and response shapes of the queue's own models (PromptIn,
-// PromptOut, EventIn, TaskDetailOut with PromptSummaryOut and QueueEventOut rows): uuid4-hex ids,
-// ISO timestamps with a +00:00 offset, FastAPI's `{"detail": ...}` refusals, and task detail's
-// cap of the 200 most recent events.
-
 const PROMPT_KINDS = ["start", "next", "unblock", "review", "custom", "continue", "reconcile"];
 const TASK_EVENT_LIMIT = 200;
 

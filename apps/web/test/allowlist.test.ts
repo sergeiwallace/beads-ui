@@ -7,8 +7,6 @@ import { startServer } from "../server/server.ts";
 import { type HostEnv, hostConfig, hostEnv, repoName, runCli, send, signIn } from "./auth-env.ts";
 import { createStore, slowBd, type TestStore } from "./store.ts";
 
-// T-W0.2: the per-host repository allowlist, through requests to the running server.
-
 const UNLISTED = "private-notes";
 
 interface QueueRow {
@@ -127,7 +125,6 @@ describe("opening stores", () => {
     expect(board.text).not.toContain(repoName(store.dir));
     expect(await reached(watched.marker)).toBe(false);
 
-    // Read at call time: listing the repository opens the store without a restart.
     await env.write(listing([repoName(store.dir)]));
     expect((await send(server, "/api/board", { headers: { cookie } })).status).toBe(200);
     expect(await reached(watched.marker)).toBe(true);

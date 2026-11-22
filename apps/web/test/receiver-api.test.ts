@@ -28,9 +28,6 @@ import { type FakeQueue, startFakeQueue } from "./fake-queue.ts";
 import { repoStore, type StoreHost, storeHost } from "./host-stores.ts";
 import { createStore, type TestStore } from "./store.ts";
 
-// T-W0.3 (the receiver API), T-W0.2's last two criteria and T-W0.4's rotation, server side: each
-// criterion through requests to the running server, with receiver tokens the host's CLI issued.
-
 /** RFC 8032 section 7.1 TESTS 1 and 2: published test seeds that sign nothing real. */
 const SEED_A = "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60";
 const SEED_B = "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb";
@@ -278,7 +275,6 @@ describe("fetching a dispatch (T-W0.3)", () => {
       dispatch.record.body_digest,
     );
 
-    // Another host's token, or another session on the target host, sees no such dispatch.
     expect(listed(await list(host, host.tokens["host-c"]))).toEqual([]);
     expect(listed(await list(host, host.tokens["host-b"], "session-2"))).toEqual([]);
     expect((await body(host, dispatch.record.id, host.tokens["host-c"])).status).toBe(404);
@@ -312,10 +308,8 @@ describe("fetching a dispatch (T-W0.3)", () => {
       await receipt(host, unknownId, host.tokens["host-b"], taken),
     ].map(observable);
     for (const reply of receipts) expect(reply).toEqual(bodies[0]);
-    // The refused list call is the same answer too.
     expect(observable(await list(host, undefined))).toEqual(bodies[0]);
 
-    // None of them touched the dispatch: its target still gets it, untaken.
     expect((await body(host, id, host.tokens["host-b"])).status).toBe(200);
     expect((await host.server.dispatches.store.get(id))?.state).toBe("queued");
   });
@@ -370,7 +364,6 @@ describe("receipts (T-W0.3)", () => {
       await receipt(host, id, token, { session: TARGET.session, state: "failed", reason: 7 }),
       await receipt(host, id, token, "{not json"),
       await receipt(host, id, token, { session: TARGET.session, state: "taken" }, "text/plain"),
-      // acted needs taken first.
       await receipt(host, id, token, { session: TARGET.session, state: "acted" }),
     ];
     for (const reply of refused) expect(observable(reply)).toMatchObject({ status: 404, text: "" });
@@ -602,9 +595,7 @@ describe("published keys and rotation (T-W0.4, server side)", () => {
       },
     ]);
     expect(second.envelope.signing_key_id).toBe(KEY_B);
-    // Published at the moment of its first signature, never after it.
     expect(rotatedAt <= second.created_at).toBe(true);
-    // Both still outstanding: the one signed before the rotation verifies with the old key.
     const records = listed(await list(host, host.tokens["host-b"]));
     expect(records.map((record) => record.id)).toEqual([first.id, second.id]);
     for (const record of records) expect(verifiesWith(record, keys)).toBe(true);

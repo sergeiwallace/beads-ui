@@ -1,6 +1,3 @@
-// Unicode's East Asian Width classes A (ambiguous), W (wide) and F (fullwidth), above ASCII and
-// below U+30000, as [first, last] code point ranges: generated from Unicode 16.0.0 by Python's
-// unicodedata.east_asian_width. A glyph in one of these may draw two cells on some terminal (D-41).
 export const WIDE_OR_AMBIGUOUS: readonly (readonly [number, number])[] = [
   [0xa1, 0xa1],
   [0xa4, 0xa4],

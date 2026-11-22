@@ -1,9 +1,6 @@
 import type { Result } from "./model.js";
 import type { ReviewItem, ReviewSnapshot } from "./review.js";
 
-// The Review view's rules (D-38, D-40, T-2C.6): the pair boundary, whose items a session lists,
-// the filter grammar, the sorts and the groups. Pure: both surfaces draw the same list from them.
-
 /**
  * The machines whose items any session may draw: the snapshot's pair, or this host alone when the
  * verb named no pair. With neither, none: an item is drawn only inside a pair the verb named.

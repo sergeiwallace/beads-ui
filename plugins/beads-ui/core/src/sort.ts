@@ -24,7 +24,6 @@ function time(value: string | undefined): number | undefined {
   return Number.isNaN(ms) ? undefined : ms;
 }
 
-// Missing values sort last in both directions, so a descending sort never floats blanks to the top.
 function compareOptional<T extends string | number>(
   a: T | undefined,
   b: T | undefined,

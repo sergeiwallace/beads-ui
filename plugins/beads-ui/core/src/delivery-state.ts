@@ -1,7 +1,3 @@
-// The composer's delivery state (web app design D-5, T-W1.3, Data Model → Dispatch record): one
-// dispatch's state over the dispatch record's states, each move carrying the record that proves
-// it. A move its state does not allow keeps the state and is recorded as rejected, never thrown.
-
 export const DELIVERY_STATES = [
   "queued",
   "waiting",

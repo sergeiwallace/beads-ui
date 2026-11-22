@@ -5,12 +5,6 @@ import { beadsUiAdapter } from "./harness/adapter.ts";
 import { beadsUiFaults } from "./harness/faults.ts";
 import { navLink, TABS } from "./harness/journeys.ts";
 
-// The browser suites' config (frontend test harness design, D-16). FTH_TIER picks the tier:
-// smoke (the default, what npm run test:e2e and the pre-commit and pre-push gates run) is every
-// spec at 1280 px with a mouse and at 390 px on a touch screen, with the cheap probes at each
-// screen a spec reaches. The sweep and budget tiers run only on the hosts FTH_HEAVY_HOSTS names,
-// through fth run; anywhere else they stop and print FTH_HEAVY_ROUTE, the way to ask such a host.
-// Both are read from the environment, so no host is named in this repository.
 const heavyHosts = (process.env.FTH_HEAVY_HOSTS ?? "")
   .split(",")
   .map((name) => name.trim())
@@ -55,14 +49,9 @@ export default defineHarnessConfig({
   playwright: {
     testDir: ".",
     globalSetup: "./global-setup.ts",
-    // The budget for what the page and the server do. Every spec also makes a real store and
-    // server and runs bd itself; fixtures.ts runs that setup outside the budget (`unbudgeted`),
-    // since on a loaded host each bd process can take seconds.
     timeout: 90_000,
     expect: { timeout: 15_000 },
     fullyParallel: true,
-    // Each test runs its own bd store and server; bd's embedded Dolt is heavy, so
-    // BEADS_UI_TEST_JOBS bounds the workers (docs/procedures/web-run.md, Test it).
     workers: testJobs(),
     reporter: [["list"]],
   },

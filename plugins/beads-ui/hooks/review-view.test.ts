@@ -31,11 +31,6 @@ import {
   world,
 } from "./tests/world.js";
 
-// T-2C.6 and T-2C.7 (D-38, D-40, D-41): the Review view in the pane (key 7) and the band's
-// overview, its scope, filter, sorts and groups, and the review indicator on task rows, at the
-// hooks entry point. A host refresher is played running, its review snapshot written under its
-// token; the held store's command is a stub argv the world answers.
-
 const PYTHON = "/opt/fleet/.venv/bin/python";
 const HELD = "/opt/fleet/scripts/held_cli.py";
 const CONFIG = "/home/me/.config/beads-ui/beads-ui.toml";

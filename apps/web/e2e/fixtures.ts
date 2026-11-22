@@ -6,10 +6,6 @@ import { expect, test as harness } from "@sergeiwallace/frontend-test-harness/te
 import { createStore, type TestStore } from "../test/store.ts";
 import { BIN, loginLink, type Served, type ServeOptions, serve } from "./harness/adapter.ts";
 
-// The specs' fixtures, backed by the frontend test harness's beads-ui adapter (harness/adapter.ts):
-// `serve` and `loginLink` are the adapter's, and `test` is the harness's, so every spec runs the
-// tier's probes at each screen it reaches without a change of its own.
-
 export { BIN, loginLink, type Served, type ServeOptions, serve };
 
 /**
@@ -74,12 +70,9 @@ export const test = harness.extend<{
   configHome: async ({}, use) => {
     const dir = await mkdtemp(join(tmpdir(), "beads-ui-e2e-config-"));
     await use(dir);
-    // bd writes its event log under the private HOME (`.beads/eventsData`) for a moment after the
-    // served command has exited, so a one-shot removal can meet a directory still filling.
     await rm(dir, { recursive: true, maxRetries: 10, retryDelay: 200 });
   },
   served: async ({ configHome }, use) => {
-    // bd init and the server's start are the spec's setup; run.spec.ts holds the start to its time.
     const { store, served } = await unbudgeted(async () => {
       const store = await createStore("e2e");
       return { store, served: await serve(store.dir, configHome) };

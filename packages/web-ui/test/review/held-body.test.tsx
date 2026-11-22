@@ -3,10 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { installClipboardStubs } from "../composer/harness.ts";
 import { actions, heldOf, item, loaded, renderReview } from "./fixtures.tsx";
 
-// T-W1.2 and T-W1.7 through the rendered Review view: a held item's body is drawn by the same
-// sanitizing Markdown renderer as its detail, so its headings and safe links work, an option
-// card's `#` anchor lands on its decision, and raw HTML never reaches the page.
-
 const held = item("d-3");
 
 const BODY = [

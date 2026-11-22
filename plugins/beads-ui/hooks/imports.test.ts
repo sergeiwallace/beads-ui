@@ -2,10 +2,6 @@ import { describe, expect } from "claude-code/testing";
 import { test } from "./tests/kit.js";
 import { PANE_PROPS, SESSION, SHOW, VIEWPORT, world } from "./tests/world.js";
 
-// The import probe (design T-0.1). It imports nothing from the plugin's hooks module, so the
-// engine's own load of the plugin is what meets a refused import, and the probe's failure names
-// the import it relies on. The core import shows in the help panel's columns line, drawn from
-// the core's STATUS_CATEGORIES; the Client's sibling import in the line the Client draws there.
 const HOOKS_IMPORT = 'hooks/pane.ts imports "../core/src/index.js"';
 const CLIENT_IMPORT = 'client/hello.ts imports "./greeting.js"';
 
@@ -19,7 +15,6 @@ const messageOf = (reason: unknown): string =>
 const refused = (name: string, reason: unknown): Error =>
   new Error(`import refused: ${name}: ${messageOf(reason)}`);
 
-// The engine's load refusal says which file's import it refused: "(from <file>)".
 const importOf = (reason: unknown): string => {
   const message = messageOf(reason);
   if (/\(from hooks\/[\w-]+\.ts\)/.test(message)) return HOOKS_IMPORT;

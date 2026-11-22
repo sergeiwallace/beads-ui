@@ -10,8 +10,6 @@ import { type BeadsCtx, BIN, beadsUiAdapter } from "./harness/adapter.ts";
 
 const exec = promisify(execFile);
 
-// The beads-ui adapter of the frontend test harness (design T-1.2, T-1.5, T-1.8).
-
 test.beforeEach(({ isMobile }) => {
   test.skip(isMobile, "the adapter is exercised once, at 1280 px");
 });
@@ -47,12 +45,10 @@ test("should boot beads-ui-web --port 0 with a private config, state and HOME an
 test("should stop a server that does not answer SIGTERM within seconds, and seed again after it", async ({
   fth,
 }) => {
-  // Boot, a 30 s stop grace and a seed on a loaded host.
   test.setTimeout(180_000);
   const app = (await unbudgeted(() => fth.boot())) as RunningApp<BeadsCtx>;
   const first = app.ctx.served;
   if (first === undefined) throw new Error("no served server");
-  // A stopped process runs no SIGTERM handler, as a server stuck closing never finishes one.
   first.child.kill("SIGSTOP");
   const started = Date.now();
   await unbudgeted(() => fth.seed("typical"));
@@ -82,7 +78,6 @@ test("should refuse uploads on a live target and sign it out through revoke-sess
   const local = (await unbudgeted(() => fth.boot())) as RunningApp<BeadsCtx>;
   const served = local.ctx.served;
   if (served === undefined) throw new Error("no served server");
-  // The served server stands in for the live deployment; its private homes are the host's.
   const target = {
     kind: "live" as const,
     origin: new URL(served.url).origin,

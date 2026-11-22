@@ -7,10 +7,6 @@ import { type RunningServer, startServer } from "../server/server.ts";
 import { type HostEnv, hostConfig, hostEnv, repoName } from "./auth-env.ts";
 import { createStore, type TestStore } from "./store.ts";
 
-// The build decision on the signing key's source: a `state:` file absent at server start is
-// generated there as an Ed25519 key of mode 0600 and published under `[auth] signing_key_id`;
-// a file that exists is never overwritten, whatever is wrong with it. Each case through a start.
-
 const KEY_FILE = "dispatch-signing-key";
 const KEY_ID = "host-a-20261109";
 

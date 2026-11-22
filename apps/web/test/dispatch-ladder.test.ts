@@ -17,13 +17,6 @@ import {
 } from "./auth-env.ts";
 import { createStore, type TestStore } from "./store.ts";
 
-// The dispatch ladder through the running server (web app design T-W2.1 and T-W2.3, server and
-// composer side; D-6, D-7, D-10). Every carrier and local rung is a stand-in for the real fleet
-// tool that checks the server called it with that tool's own arguments (fixtures/fake-fleet-tool
-// .mjs) and records the call; the wake policy is the idle wake's own file; each dispatch's state
-// and rungs are read back through the status route, and what a receiver sees through the
-// receiver API with the receiving host's own token. No test sends a real message.
-
 const FAKE_TOOL = fileURLToPath(new URL("./fixtures/fake-fleet-tool.mjs", import.meta.url));
 const FAKE_HELD = fileURLToPath(new URL("./fixtures/fake-held.mjs", import.meta.url));
 const FAKE_UNBLOCK = fileURLToPath(new URL("./fixtures/fake-unblock.mjs", import.meta.url));
@@ -245,14 +238,11 @@ describe("rung 1, Agent Mail through the notifier (T-W2.1)", () => {
     await env.write(config({ coalesce: 10, shownWithin: 5 }));
     const { id, owner } = await ownedTask();
     const first = await prompt(id, "One");
-    // The window opens when the first is admitted, as its request returns; its own bd work
-    // before that is not inside the window.
     const started = Date.now();
     const second = await prompt(id, "Two");
     const third = await prompt(id, "Three");
     expect(Date.now() - started).toBeLessThan(10_000);
     await waitFor(async () => expect(await calls("agent-mail")).toHaveLength(1));
-    // The board cuts a subject at 60 characters, so the receiving host knows the first id only.
     const reply = await receiver(`/dispatches/${first}/shown`, { session: owner });
     expect(reply.status).toBe(204);
     await settle();
@@ -267,7 +257,6 @@ describe("rung 1, Agent Mail through the notifier (T-W2.1)", () => {
 
   it("should show every dispatch of a coalesced event when the shown receipt arrives while its carrier is still running", async () => {
     await env.write(config({ coalesce: 10, shownWithin: 5 }));
-    // The carrier has delivered and records its call, then takes 3 s to exit.
     await writeFile(join(tools, "agent-mail.delay-ms"), "3000");
     const { id, owner } = await ownedTask();
     const first = await prompt(id, "One");
@@ -286,7 +275,6 @@ describe("rung 1, Agent Mail through the notifier (T-W2.1)", () => {
     await env.write(config({ coalesce: 10 }));
     const { id } = await ownedTask();
     const first = await prompt(id, "One");
-    // The window opens when the first is admitted, as its request returns.
     const started = Date.now();
     const second = await prompt(id, "Two");
     expect(Date.now() - started).toBeLessThan(10_000);
@@ -461,7 +449,6 @@ describe("coalescing and the rate cap (T-W2.1)", () => {
     const started = Date.now();
     const first = await prompt(id, "One");
     const second = await prompt(id, "Two");
-    // The criterion's precondition: both were written within the window.
     expect(Date.now() - started).toBeLessThan(10_000);
     expect(await calls("agent-mail")).toEqual([]);
     await waitFor(async () => expect(await calls("agent-mail")).toHaveLength(1));
@@ -627,8 +614,6 @@ describe("goal arming (T-W2.3)", () => {
     const dispatch = await prompt(id, "Released by the clock");
     await settle();
     expect((await status(dispatch)).state).toBe("waiting");
-    // The window ends only once the dispatch is seen waiting: a window set before the prompt can
-    // end before a loaded host has made and held the dispatch.
     const until = new Date(Date.now() + 500).toISOString();
     expect(
       (await receiver("/sessions/goal", { session: owner, state: "paused", until })).status,

@@ -95,7 +95,6 @@ function withRank(issues: readonly Issue[], id: string, rank: unknown): Issue[] 
   });
 }
 
-// A new write clears whatever the last one reported.
 function withoutOutcomes(state: BoardState): BoardState {
   const { conflict: _c, moveError: _m, rankConflict: _rc, rankError: _re, ...rest } = state;
   return rest;
@@ -212,7 +211,6 @@ export function reduceBoard(state: BoardState, event: BoardEvent): BoardState {
   }
 }
 
-// One write in flight a card: a move and a reorder of the same card never race each other.
 const busy = (state: BoardState, id: string): boolean =>
   state.pending[id] !== undefined || state.ranking?.[id] !== undefined;
 
@@ -588,8 +586,6 @@ function planPages(
 function errorLine(state: BoardState): string | undefined {
   const error = state.loadError;
   if (error === undefined) return undefined;
-  // exitCode null: bd never finished (a deadline, a signal, no start); 0: it finished but what it
-  // wrote cannot be read (cut short, or not the JSON bd list writes). The message says which.
   const what =
     error.exitCode === null
       ? `${error.command} did not finish`
@@ -667,7 +663,6 @@ export function boardView(state: BoardState, options: BoardViewOptions): BoardVi
     unplacedPage.from === 0 ? 0 : unplacedPage.from - 1,
     unplacedPage.to,
   );
-  // An unplaced card's Move to also carries its own status, which no column holds.
   const unplacedCost =
     limit === undefined || costs === undefined || unplaced.length === 0
       ? 0

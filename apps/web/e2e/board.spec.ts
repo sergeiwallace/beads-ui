@@ -53,7 +53,6 @@ test.describe("the Board", () => {
     const id = await app.store.create("Raced card");
     await page.goto(app.url);
     await expect(column(page, "open").locator(`[data-card-id="${id}"]`)).toBeVisible();
-    // Another actor moves it after the Board drew it as open.
     await app.store.bd("update", id, "--status", "deferred");
 
     const write = written(page, id, "status");
@@ -63,7 +62,6 @@ test.describe("the Board", () => {
     const toast = page.locator(".bu-toast[data-kind='conflict']");
     await expect(toast).toBeVisible();
     await expect(toast).toContainText(`${id} changed elsewhere before the move to in_progress`);
-    // Rolled back off the target column, then re-read into the status the store holds.
     await expect(column(page, "in_progress").locator(`[data-card-id="${id}"]`)).toHaveCount(0);
     await expect(column(page, "deferred").locator(`[data-card-id="${id}"]`)).toBeVisible();
     expect((await app.store.show(id)).status).toBe("deferred");

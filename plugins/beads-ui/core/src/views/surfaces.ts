@@ -1,6 +1,3 @@
-// Which surface draws each view (D-35, T-2C.1): every view is registered once and drawn on the
-// band and the pane unless its entry, `[surfaces]` in beads-ui.toml or Settings limits it to one.
-
 import type { NavEntry } from "./nav.js";
 
 /** The two terminal surfaces a view draws on: the band above the prompt and the pane. */

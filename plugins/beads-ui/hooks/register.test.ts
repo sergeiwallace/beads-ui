@@ -31,7 +31,6 @@ describe("register", () => {
 
   test("should leave the old /beads name alone when it runs, so it no longer opens the pane", async ($, on) => {
     const w = world(on);
-    // Beneath the plugin: Claude Code's own answer to a command no plugin matched.
     on("command.run", (_engine, e) => ({ text: `unknown command /${e.command}` }));
     await $.session.start(SESSION);
 

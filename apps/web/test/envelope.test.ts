@@ -12,7 +12,6 @@ import {
   type UnsignedDispatch,
 } from "../server/envelope.ts";
 
-// The receiving side's golden vectors, copied byte for byte from the verifier's repository.
 const VECTORS_URL = new URL("./fixtures/dispatch-envelope-v1.json", import.meta.url);
 const VECTORS_SHA256 = "ba1ee2f557c4adb09cac31d8e459a564727bb0fa6785c2d16a7e78acaf6dcaf9";
 const vectorsBytes = readFileSync(VECTORS_URL);

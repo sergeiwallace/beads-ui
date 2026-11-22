@@ -1,8 +1,3 @@
-// The beads-ui MCP server (beads-ui design T-4.1, web app design Phase W4): the six task tools,
-// the dispatch tools and the `ui://beads-ui/board` resource, over stdio for Claude Desktop and
-// Claude Code. A host that does not advertise the MCP Apps capability gets no app-only tool, and
-// every tool still answers with text.
-
 import {
   getUiCapability,
   RESOURCE_MIME_TYPE,

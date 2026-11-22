@@ -1,7 +1,3 @@
-// The local append-only dispatch store (web app design D-14, T-W0.5), used where no `queue.url` is
-// set. Records, receipts and tombstones are lines appended to one journal in the server's state
-// directory; bodies live apart in the body store, so a backup of the journal holds no body.
-
 import { copyFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import {

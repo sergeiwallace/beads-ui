@@ -79,7 +79,6 @@ export async function monitorCompanion(encoded: string): Promise<() => void> {
     if (!own) return false;
     const ownIdentity = JSON.parse(own) as string[];
     const expected = JSON.parse(target.incarnation) as string[];
-    // Never mutate a pane supplied only by caller/environment: establish that it runs this process.
     if (
       ownIdentity[4] !== String(process.pid) ||
       ownIdentity.slice(0, 3).join("\t") !== expected.slice(0, 3).join("\t")
@@ -112,9 +111,8 @@ export async function monitorCompanion(encoded: string): Promise<() => void> {
         return;
       }
       const current = await composerIncarnation(target);
-      if (current !== target.incarnation) process.exit(0); // Exit only this companion process.
+      if (current !== target.incarnation) process.exit(0);
     } catch {
-      // A failed command or /proc read is unknown; keep the pane and retry next interval.
     } finally {
       checking = false;
     }

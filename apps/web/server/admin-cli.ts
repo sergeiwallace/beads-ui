@@ -16,9 +16,6 @@ import {
 } from "./auth.ts";
 import { type ConfigEnv, DEFAULT_PORT, readWebConfig } from "./config.ts";
 
-// The host's own commands: each runs on the server's host, as its user, and proves it by
-// reading the browser secret from the state directory.
-
 export const ADMIN_COMMANDS = [
   "login-link",
   "sessions",

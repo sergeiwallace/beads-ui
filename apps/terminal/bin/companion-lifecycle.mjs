@@ -1,4 +1,3 @@
-// Linux companion creation is serialized by an OS lock, never a persistent tmux semaphore.
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { constants } from "node:fs";
@@ -62,9 +61,6 @@ export async function launchCompanion(values) {
   } finally {
     await handle.close();
   }
-  // Never unlink lock files: doing so would allow two callers to lock different inodes.
-  // Retain the lock in the supervisor and worker so supervisor death cannot unlock an active mutation.
-  // Node subprocess defaults keep that fd out of tmux; timeout bounds an orphaned worker.
   const result = await exec(
     "flock",
     [

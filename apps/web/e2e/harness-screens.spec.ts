@@ -4,8 +4,6 @@ import { expect, test, unbudgeted } from "./fixtures.ts";
 import type { BeadsCtx } from "./harness/adapter.ts";
 import { DETAIL_READS, screens, VIEW_READS } from "./harness/screens/index.ts";
 
-// The screen registry of the frontend test harness's beads-ui adapter (design T-1.3).
-
 test.beforeEach(({ isMobile }) => {
   test.skip(isMobile, "readiness is exercised once, at 1280 px");
 });
@@ -47,8 +45,6 @@ for (const id of REQUIRED) {
     fth,
     page,
   }) => {
-    // A store, a template copy and two server starts before the screen opens; on a loaded host
-    // the pre-commit gate measured that at well over the default budget.
     test.setTimeout(180_000);
     const screen = screens.get(id);
     const app = (await unbudgeted(() => fth.boot())) as RunningApp<BeadsCtx>;
@@ -82,8 +78,6 @@ for (const id of REQUIRED) {
     expect(early, `${id} called ready with only its shell on screen`).toBe("held");
     release();
     await unbudgeted(() => opening);
-    // The held wait spent part of the first call's deadline; readiness once the data lands is
-    // asked afresh, so a slow sign-in on a loaded host cannot use up its budget.
     const landed = await screen.ready(page).then(
       (state) => ({ state }),
       (error: unknown) => ({ error: String(error) }),

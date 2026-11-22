@@ -1,12 +1,6 @@
-// Runners: both. `claude plugin test` runs it in the mod environment, and Vitest maps
-// claude-code/testing to vitest (plugins/beads-ui/vitest.config.ts). See CONTRIBUTING.md, Tests.
 import { describe, expect, test } from "claude-code/testing";
 import { type Issue, roadmapView } from "../src/index.js";
 import { storeStatuses } from "./helpers.js";
-
-// T-3.2: "When the Roadmap renders, the system shall place epics and milestones by due date and
-// shall draw blocks and parent-child dependencies as lines." The web app draws this model with
-// Frappe Gantt; apps/web/e2e/roadmap.spec.ts drives it through the page.
 
 const issue = (id: string, fields: Partial<Issue> = {}): Issue => ({
   id,
@@ -52,7 +46,6 @@ describe("the Roadmap view model (T-3.2)", () => {
           dueAt: "2026-11-20T00:00:00Z",
           dependencies: [{ type: "blocks", id: "BU-a" }],
         }),
-        // A sub-epic: bd list records the parent both as a dependency and as `parent`; one line.
         issue("BU-c", {
           dueAt: "2026-11-30T00:00:00Z",
           parent: "BU-b",
@@ -61,13 +54,11 @@ describe("the Roadmap view model (T-3.2)", () => {
             { type: "related", id: "BU-a" },
           ],
         }),
-        // The parent as a dependency alone, and as `parent` alone: one line each.
         issue("BU-e", {
           dueAt: "2026-12-01T00:00:00Z",
           dependencies: [{ type: "parent-child", id: "BU-a" }],
         }),
         issue("BU-f", { dueAt: "2026-12-02T00:00:00Z", parent: "BU-a" }),
-        // A task blocking an epic is not on the Roadmap, so it draws no line.
         issue("BU-t", { type: "task" }),
         issue("BU-d", {
           type: "milestone",

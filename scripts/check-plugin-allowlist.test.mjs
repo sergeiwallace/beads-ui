@@ -1,5 +1,3 @@
-// Exercise the gate with validator protocol fixtures: no child process is needed. The real
-// plugin sources and allow-list are still scanned; allowlist.spec.ts covers the live CLI.
 import assert from "node:assert/strict";
 import childProcess from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -18,8 +16,6 @@ const notes = Object.entries(JSON.parse(readFileSync(allowlist, "utf8")).modules
       ([kind, values]) => `${module} ${kind}: ${values.length ? values.join(", ") : "nothing"}`,
     ),
 );
-// Reassembled from beads-ui-hook-after-round1.log: the comma in ui.focus's annotation
-// was incorrectly reported as a separate `component)` registration.
 const currentHooks =
   "./register.ts hooks: session.start, command.run{command=show-beads-ui|bu}, turn.complete, ui.close{id=beads|beads-confirm}, ui.fault{requestId=beads}, ui.focus{requestId=beads} (default matcher key: plugin, component), ui.message{requestId=beads}, ui.render{component=AbovePrompt} (default matcher key: plugin), ui.render{component=Pane} (default matcher key: plugin)";
 const currentNotes = notes.map((note) =>
@@ -27,7 +23,6 @@ const currentNotes = notes.map((note) =>
 );
 
 let runs = 0;
-// An allow-list with the real modules and the given warnings, each with a reason.
 function allowlistWithWarnings(t, messages) {
   const dir = mkdtempSync(join(tmpdir(), "allowlist-"));
   t.after(() => rmSync(dir, { recursive: true }));
@@ -97,8 +92,6 @@ test("should pass the real footprint when validate reports no warning", async (t
   assert.match(result.output, /matches .*validate-allowlist.json/);
 });
 
-// The plugin's imports name `.js` files, so validate reports no TS5097 and the real allow-list
-// accepts none.
 test("should reject TS5097 on the real allow-list", async (t) => {
   const result = await runGate(t, { warnings: [TS5097] });
   assert.equal(result.status, 1);

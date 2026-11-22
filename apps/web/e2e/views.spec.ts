@@ -2,10 +2,6 @@ import { basename } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 import { card, expect, test, written } from "./fixtures.ts";
 
-// Phase W1's Sprint view, inline edits, owner picker and Queue view (web app design T-W1.0,
-// T-W1.5), at 1280 px with a mouse and at 390 px on a touch screen. A touch run reaches every
-// reorder and edit with taps, never a drag or a hover.
-
 /** The next write the page sends to one of an issue's W1 routes. */
 const sent = (page: Page, id: string, kind: "sprint" | "owner" | "list-rank") =>
   page.waitForResponse(
@@ -27,7 +23,6 @@ const queueRead = async (page: Page) => {
   };
   return {
     status: response.status(),
-    // A failed read keeps its message, so the assertion's diff says what bd answered.
     reads: body.reads.map(({ repository, ok, error }) =>
       error === undefined ? { repository, ok } : { repository, ok, error: error.message },
     ),
@@ -159,7 +154,6 @@ test.describe("inline edits", () => {
     await page.goto(app.url);
     const picker = card(page, id).getByRole("combobox", { name: `Priority of ${id}` });
     await expect(picker).toHaveValue("2");
-    // Another actor moves it, so the page's drawn status no longer holds.
     await app.store.bd("update", id, "--status", "in_progress");
 
     const write = written(page, id, "priority");

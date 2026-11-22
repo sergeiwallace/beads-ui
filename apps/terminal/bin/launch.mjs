@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-// A detached split runs a direct argument vector. It never selects a pane or types into one.
 import { parseArgs } from "node:util";
 import { launchCompanion } from "./companion-lifecycle.mjs";
 
@@ -27,7 +26,6 @@ try {
     throw new Error("invalid tmux socket name");
   process.stdout.write(`${await launchCompanion(values)}\n`);
 } catch {
-  // Child process diagnostics may contain local context. Do not echo command strings or values.
   process.stderr.write(
     "Could not launch detached Beads companion; verify pane, repo, session, tmux and Linux flock/timeout.\n",
   );

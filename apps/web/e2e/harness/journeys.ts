@@ -176,7 +176,6 @@ export const journeys: readonly Journey[] = [
     },
   },
 
-  // Faults: each names the failure it injects; the fault judge reads what the page showed.
   fault(
     "feed-drop",
     "Lose the live feed and see the stale banner, then see it clear on reconnect",
@@ -361,7 +360,6 @@ export const journeys: readonly Journey[] = [
     },
   },
 
-  // Stress patterns.
   {
     id: "double-submit",
     goal: "Choose a move twice within 50 ms and see exactly one write",
@@ -462,7 +460,6 @@ export const journeys: readonly Journey[] = [
     mutability: "read-only",
     tags: ["stress"],
     async run() {
-      // The thousand and long-text shapes are seeded in the full tier's data-shape pass alone.
       throw new UnsupportedShape("thousand", "large data runs in the full tier's data-shape pass");
     },
   },

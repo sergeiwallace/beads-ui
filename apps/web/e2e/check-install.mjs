@@ -1,8 +1,4 @@
 #!/usr/bin/env node
-// The browser suites' install check (frontend test harness design, D-16, T-1.9). It runs before
-// anything imports the private library, so a contributor without access to it sees why, never a
-// module-not-found trace. With --install it runs the install and names the fix if it fails.
-// Node built-ins only: this file must run where nothing else is installed.
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { hostname } from "node:os";

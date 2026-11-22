@@ -14,9 +14,6 @@ import {
   signIn,
 } from "./auth-env.ts";
 
-// T-1.8 (frontend test harness design): a scripted run signs in with a run-unique label that the
-// session keeps, and signs out by that label alone, so it never ends a session someone else holds.
-
 describe("labelled browser sessions", () => {
   let env: HostEnv;
   let server: RunningServer | undefined;
@@ -72,7 +69,6 @@ describe("labelled browser sessions", () => {
     const { sessions } = reply.json() as { sessions: { label?: string | null }[] };
     expect(sessions.map((session) => session.label)).toEqual(["fth-live-smoke-7q2k"]);
 
-    // The label survives a restart with the session it belongs to.
     const { port: same } = running();
     await running().close();
     server = await start(same);

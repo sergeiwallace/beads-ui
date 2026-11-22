@@ -116,8 +116,6 @@ function unreadable(argv: BdArgv, out: Exited): Failed {
   };
 }
 
-// bd 1.3.1 on a missing id: exit 1, `Issue <id> not found` on stderr, and with --json
-// `{"error": "no issues found matching the provided IDs"}` on stdout.
 const NOT_FOUND = /\bnot found\b|no issues? found/i;
 
 function notFound(id: string, out: Exited): NotFound | undefined {
@@ -145,8 +143,6 @@ function parsed<T>(
   };
 }
 
-// Node's timer ceiling. execFile reads 0 as no timeout, throws on a negative, fractional or
-// non-finite value, and turns one above this into 1 ms.
 const MAX_TIMEOUT_MS = 2_147_483_647;
 
 function invalidTimeout(owner: string, value: number | undefined): Failed | undefined {
@@ -253,7 +249,6 @@ export function createBdClient(options: BdClientOptions): BdClient {
     },
     history(id, callOptions) {
       const argv = historyArgv(id);
-      // bd 1.3.4 prints `null`, exit 0, for an id with no events, an unknown one included.
       return call(argv, callOptions, (out) =>
         out.exitCode === 0 && out.stdout.trim() === "null"
           ? { kind: "ok", value: [] }

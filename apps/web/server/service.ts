@@ -56,7 +56,6 @@ export function renderUnit(template: string, inputs: UnitInputs): string {
     BIN: unitWord(inputs.bin),
     PORT: String(inputs.port),
   };
-  // With nothing to carry, the @ENVIRONMENT@ line goes, rather than leaving a blank one.
   const lines = environment === "" ? template.replace(/^@ENVIRONMENT@\n/m, "") : template;
   const text = lines.replace(/@([A-Z_]+)@/g, (whole, name: string) => values[name] ?? whole);
   const left = /@[A-Z_]+@/.exec(text);
@@ -287,7 +286,6 @@ export async function installServiceMain(
       );
       return 1;
     }
-    // enable --now leaves a service that was already running on its old code; restart it.
     if (before.active) {
       const restarted = await run("systemctl", ["--user", "restart", UNIT_NAME], processEnv);
       if (restarted !== undefined) {

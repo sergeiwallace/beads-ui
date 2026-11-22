@@ -63,7 +63,6 @@ export interface TomlError {
 }
 
 const BARE_KEY = /^[A-Za-z0-9_-]+$/;
-// A quoted key with no escapes and no `=` inside, such as a directory name holding a dot.
 const QUOTED_KEY = /^"([^"\\=]+)"$|^'([^'=]+)'$/;
 const INTEGER = /^[+-]?(?:0|[1-9](?:_?[0-9])*)$/;
 const FLOAT = /^[+-]?(?:0|[1-9](?:_?[0-9])*)\.[0-9](?:_?[0-9])*$/;
@@ -78,7 +77,6 @@ class TomlInvalid {
 const isTable = (value: TomlValue | undefined): value is TomlTable =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-// Removes a `#` comment that is not inside a string.
 function withoutComment(line: string): string {
   let quote: string | undefined;
   for (let i = 0; i < line.length; i++) {
@@ -103,7 +101,6 @@ const ESCAPES: Readonly<Record<string, string>> = {
   r: "\r",
 };
 
-// Reads one value from the start of `text`; returns it and what follows.
 function readValue(text: string): [TomlValue, string] {
   const s = text.trimStart();
   if (s.startsWith('"')) {
@@ -665,7 +662,6 @@ function withTable(text: string | undefined, name: string, lines: readonly strin
   if (start === -1) return `${[...all, "", ...table].join("\n")}\n`;
   let end = start + 1;
   while (end < all.length && !HEADER.test(all[end] ?? "")) end++;
-  // Blank lines before the next table stay where they were.
   while (end > start + 1 && (all[end - 1] ?? "").trim() === "") end--;
   return `${[...all.slice(0, start), ...table, ...all.slice(end)].join("\n")}\n`;
 }

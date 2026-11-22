@@ -5,11 +5,6 @@ import { describeRefusal, findSecrets } from "../composer/secrets.ts";
 import type { DispatchStatus, DispatchSummary } from "../composer/types.ts";
 import type { UnblockResult } from "./types.ts";
 
-// Unblocking a task from the Review queue (web app design T-W1.6): the resolution goes to the
-// task's owning session as a dispatch of kind unblock, and an optional next-step prompt follows it
-// to the same session once the unblock is acted on. With no owning session the server unblocks
-// the task itself. Either way the item stays in the queue until a re-read shows it unblocked.
-
 export interface UnblockFormProps {
   unblock(resolution: string, followUp: string): Promise<UnblockResult>;
   status(id: string): Promise<DispatchStatus>;

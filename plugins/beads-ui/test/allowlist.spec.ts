@@ -16,7 +16,6 @@ afterEach(() => {
   for (const dir of scratch.splice(0)) rmSync(dir, { recursive: true });
 });
 
-// A copy of the real plugin, edited by `edit`, so each case is the shipped plugin plus one change.
 function pluginWith(edit: (dir: string) => void): string {
   const dir = mkdtempSync(join(tmpdir(), "beads-ui-allowlist-"));
   scratch.push(dir);
@@ -78,8 +77,6 @@ describe("the validate allow-list gate", () => {
     );
   });
 
-  // Validate files both of these calls under ./register.ts: the first under a call name
-  // register.ts already makes, the second with no mark at all. Only the file scan sees them.
   it("should fail naming the file and line when the hooks module hands $ to a helper in another file", () => {
     const dir = pluginWith((d) => {
       writeFileSync(
@@ -121,8 +118,6 @@ describe("the validate allow-list gate", () => {
     );
   });
 
-  // The helper uses a structural type and never writes `$.`, so only the hooks module's
-  // hand-off is visible to the source scan, without an implicit-any validation warning.
   it("should fail naming the hooks module line when it passes $ to a helper with a structural parameter type", () => {
     const dir = pluginWith((d) => {
       writeFileSync(
@@ -145,7 +140,6 @@ describe("the validate allow-list gate", () => {
     );
   });
 
-  // validate --strict refuses this one itself, before the source scan runs.
   it("should fail naming the line when the hooks module aliases $ before handing it on", () => {
     const dir = pluginWith((d) => {
       writeFileSync(
@@ -209,8 +203,6 @@ describe("the validate allow-list gate", () => {
     ]);
   });
 
-  // Claude Code writes its mod types into the plugin when it loads it (`claude --plugin-dir`),
-  // and their `claude-code/testing` declarations import the registrar types `On` and `Register`.
   it("should pass when Claude Code has written its mod types into .claude-plugin/types", () => {
     const dir = pluginWith((d) => {
       mkdirSync(join(d, ".claude-plugin/types/claude-code"), { recursive: true });

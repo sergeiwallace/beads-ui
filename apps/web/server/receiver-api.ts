@@ -1,10 +1,3 @@
-// The receiver API, version 1 (web app design § Receiver API, T-W0.3, T-W0.2): the three routes a
-// receiving host's notifier calls with that host's receiver token. The authentication layer has
-// already resolved the token to its host; each route answers only for a dispatch whose target is
-// that host and the named session. Every refusal is the same empty 404, so a caller learns
-// nothing about whether a dispatch exists; a store that cannot be reached is an empty 503, which
-// the receiving client retries rather than reading as a refusal.
-
 import {
   DispatchStoreError,
   isHeld,

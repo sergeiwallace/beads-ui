@@ -19,10 +19,6 @@ import {
   world,
 } from "./tests/world.js";
 
-// BU-mg2.3.15: an issue's comments in the Detail view, which the task panel opens a task into,
-// and a comment added from the pane with bd comments add as the session's actor, published by
-// the panel's sync.command (D-33).
-
 const PROGRAM = "/opt/fleet/bin/publish-store";
 const CONFIG = "/home/me/.config/beads-ui/beads-ui.toml";
 const SYNC_CONFIG = `[sync]\ncommand = ["${PROGRAM}", "--repo", "{store}", "--json"]\n`;

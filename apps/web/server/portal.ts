@@ -3,11 +3,6 @@ import type { Allowlist } from "./allowlist.ts";
 import type { FeedStatus } from "./heads-feed.ts";
 import type { RegistryReading } from "./registry.ts";
 
-// The duties app-portal's member helper (`attach_portal()`) performs for a FastAPI member, done
-// here by beads-ui's own Node server (web app design D-15 (a), T-W3.2): the base path, the app
-// shell for every other path below it without shadowing /api or /healthz, /healthz, the header
-// set, and a manifest with no service worker (the manifest is the client build's).
-
 /**
  * The header set app-portal's member helper sends (`app_portal.portal.SECURITY_HEADERS`) on every
  * response, Content-Security-Policy aside: the CSP module sets that one. A hashed asset sets its

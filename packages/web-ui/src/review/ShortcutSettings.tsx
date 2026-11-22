@@ -1,10 +1,6 @@
 import { type Keymap, type KeymapError, remapKey, setSingleKeys } from "@beads-ui/core";
 import { useState } from "react";
 
-// The shortcut setting (web app design D-12, T-W1.4): single-key shortcuts on by default, a switch
-// to turn them off (modified shortcuts such as Ctrl+K keep working), and a remap per command that
-// refuses a key another command holds and names both commands.
-
 export interface ShortcutSettingsProps {
   keymap: Keymap;
   onChange(keymap: Keymap): void;

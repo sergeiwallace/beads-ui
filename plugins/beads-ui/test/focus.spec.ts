@@ -1,6 +1,3 @@
-// Runners: Vitest only. The band's beads button moves the focus into an open pane through
-// $.ui.focus, which `claude plugin test` answers inside its own drawing without raising it to
-// the test's hooks; so this drives the pane the button calls with a Host that records the call.
 import { describe, expect, it } from "vitest";
 
 import type { Host } from "../hooks/host.js";

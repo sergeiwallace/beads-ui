@@ -1,7 +1,3 @@
-// The dispatch store (web app design D-14, T-W0.5, Data Model → Dispatch record): where a signed
-// dispatch, its receipts and its tombstone live. The queue-backed and the local store keep the same
-// entries and read them through the one fold below, so both answer every question the same way.
-
 import {
   type DeliveryMachine,
   type DeliveryState,

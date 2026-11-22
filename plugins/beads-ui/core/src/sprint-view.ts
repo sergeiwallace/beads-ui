@@ -2,12 +2,6 @@ import { buildColumns, type ColumnsResult } from "./columns.js";
 import type { Issue, Sprint, Status } from "./model.js";
 import { DEFAULT_SORT, sortIssues } from "./sort.js";
 
-// The Sprint view (web app design T-W1.0, over D-5 of the beads-ui design): a sprint's members are
-// the issues labelled `sprint:<name>`, and its dates come from the `milestone` issue titled
-// `Sprint <name>` (`due_at`, and `sprint.starts_at` in metadata). The label is the membership
-// record and the milestone derived display data, so a sprint with no milestone still lists its
-// members and only lacks dates. The backlog is every unfinished issue in no sprint.
-
 export const SPRINT_LABEL_PREFIX = "sprint:";
 export const BACKLOG_LABEL = "Backlog";
 
@@ -99,7 +93,6 @@ export function sprintsOf(issues: readonly Issue[], statuses: readonly Status[])
     const milestone = milestoneSprintOf(issue);
     if (milestone !== undefined) {
       const sprint = entry(milestone);
-      // A second milestone for one name only fills what the first left out.
       if (sprint.milestoneId === undefined) {
         sprint.milestoneId = issue.id;
         sprint.open = !done.has(issue.status);

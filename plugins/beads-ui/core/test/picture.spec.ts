@@ -3,10 +3,6 @@ import { describe, expect, it } from "vitest";
 
 import { palettePng } from "../src/index.js";
 
-// T-2C.13: the Timeline's Image is a PNG the core writes with no compressor. A terminal drawing
-// it reads it with a real decoder, so this suite reads it with Node's zlib: each chunk's CRC,
-// the header, and the pixels back.
-
 const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
   let c = n;
   for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;

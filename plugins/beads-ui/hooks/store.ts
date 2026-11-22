@@ -157,7 +157,6 @@ export class StoreResolver {
           () => undefined,
         )
         .then((answer) => {
-          // bd did not say: ask again on the next refresh rather than keep a non-answer.
           if (answer === undefined && this.where === asked) this.where = undefined;
           return answer;
         });

@@ -33,7 +33,6 @@ export interface UpdateGuard {
   force?: boolean;
 }
 
-// bd reads a repeated label flag as a comma-separated list, so a comma would split one label.
 function labelArg(label: string): string {
   if (label === "" || label.includes(",")) {
     throw new RangeError(`invalid label for a bd argument: ${JSON.stringify(label)}`);
@@ -56,7 +55,6 @@ export function updateArgv(id: string, fields: UpdateFields, guard: UpdateGuard 
   if (fields.metadata !== undefined && Object.keys(fields.metadata).length > 0) {
     flags.push(`--metadata=${JSON.stringify(fields.metadata)}`);
   }
-  // bd refuses a guard with no field update ("Requires a field update").
   if (flags.length === 0) throw new RangeError("bd update needs at least one field to write");
   if (guard.force === true && guard.ifAssignee !== undefined) {
     throw new RangeError("bd update refuses --force together with --if-assignee");

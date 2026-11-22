@@ -23,7 +23,6 @@ test.describe("the command palette", () => {
     expect((await app.store.show(id)).status).toBe("in_progress");
   });
 
-  // The sign-in lands on the Board, which is all the shortcut needs: no card and no second load.
   test("should open on Cmd+K too", async ({ app: _signedIn, page }) => {
     await expect(page.locator("section.bu-column").first()).toBeVisible();
 

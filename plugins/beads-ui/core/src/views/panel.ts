@@ -1,7 +1,3 @@
-// The task panel's Tasks view (T-2B.2): the session's own tasks, in progress first, then
-// blocked, then open, the first `shown` drawn and the rest collapsed behind a "+M more" control,
-// as the collapse rule says. Pure: the element tree draws it now, and a Client later (D-31).
-
 import { glyphOf } from "../glyphs.js";
 import type { GutterCell } from "../indicators.js";
 import type { Issue, Status } from "../model.js";
@@ -205,8 +201,6 @@ export function taskListView(issues: readonly Issue[], options: TaskListOptions)
   );
   const above = start;
   const below = visible.length - end;
-  // Only the window's rows get a label and a gutter: the list redraws on every focus step, and
-  // a long one draws a small part of its rows.
   return {
     rows: visible.slice(start, end).map(({ issue, group }): TaskRowView => {
       const glyph = TASK_GLYPHS[group];

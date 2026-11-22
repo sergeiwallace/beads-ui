@@ -8,9 +8,6 @@ import { expect, test } from "./fixtures.ts";
 import { beadsUiAdapter } from "./harness/adapter.ts";
 import { beadsUiFaults } from "./harness/faults.ts";
 
-// The finite journey inventory (frontend test harness design, T-1.4 and T-1.7). This runs in the
-// ordinary suite on any host: it boots nothing.
-
 test.beforeEach(({ isMobile }) => {
   test.skip(isMobile, "the inventory is checked once");
 });

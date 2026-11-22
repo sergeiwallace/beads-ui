@@ -22,13 +22,6 @@ import {
   world,
 } from "./tests/world.js";
 
-// T-2C.8, D-35: every view the pane draws is drawn by both adapters, and every action a view
-// offers in the pane is reachable in the band's overview, by a button or a menu. For each view
-// this enumerates, from the drawn trees at the hooks entry point, the pane's actions (the view's
-// own controls, its Filter and New fields, its toolbar and its options menu) and the band's
-// (the same in the overview, whose menu stands for the toolbar), and fails on any action one
-// surface offers and the other does not. The surfaces are tall enough to draw each view whole.
-
 /** Every element a person presses or types into. */
 const PRESSABLE = new Set(["Button", "Select", "Input"]);
 
@@ -236,11 +229,9 @@ describe("every view's actions on both surfaces (T-2C.8, D-35)", () => {
       await openInBand($, w, view);
       const inBand = await bandActions($, w);
 
-      // Each surface draws the view, with something to press.
       expect(inPane.body.length + inPane.menu.length, `${view} in the pane`).toBeGreaterThan(0);
       expect(inBand.body).toEqual(inPane.body);
       expect(inBand.menu).toEqual(inPane.menu);
-      // The pane's toolbar is its menu's actions by key, so the band's menu reaches each of them.
       const menuKeys = new Set(inPane.menu.map(hotkeyOf));
       for (const hotkey of inPane.toolbar) {
         expect(hotkey, `a toolbar button on ${view} with no key`).toBeDefined();

@@ -4,7 +4,6 @@ import type { BdArgv } from "@beads-ui/core";
 
 export const BD_INSTALL_PAGE = "https://github.com/steveyegge/beads";
 export const DEFAULT_TIMEOUT_MS = 10_000;
-// execFile's default of 1 MiB is smaller than a whole-store `bd list` on a large store.
 const MAX_OUTPUT_BYTES = 64 * 1024 * 1024;
 
 export interface RunOptions {
@@ -52,7 +51,6 @@ async function interpret(
     return { kind: "exited", exitCode: error.code, stdout, stderr };
   }
   if (error.code === "ENOENT") {
-    // spawn reports a missing cwd as ENOENT on the binary, so check the directory first.
     const message = (await isDirectory(options.cwd))
       ? `${bin} is not on PATH. Install Beads from ${BD_INSTALL_PAGE} and put ${bin} on PATH.`
       : `the store directory ${options.cwd} does not exist`;

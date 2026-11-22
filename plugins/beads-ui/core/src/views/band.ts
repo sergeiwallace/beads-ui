@@ -205,7 +205,6 @@ export function bandReads(options: {
   const stores = bandStores(here, inventory);
   if (!isFirstmate(session)) return [{ key: "own", label: BAND_LABEL, stores, assignee: session }];
   const drift = inventory.ok ? inventory.value.filter((store) => !store.synced).length : 0;
-  // Without the inventory the totals cannot cover every store, so that line says it is partial.
   return [
     { key: "all", label: ALL_LABEL, stores, drift, ...missing },
     { key: "own", label: FIRSTMATE_LABEL, stores, assignee: session },
@@ -367,7 +366,6 @@ export function bandLine(
   const segments: BandSegment[] = [{ text: read.label, bold: true }];
   for (const group of groups) segments.push({ text: " " }, ...group);
   const rest = groups.map((group) => group.map((segment) => segment.text).join("")).join(" ");
-  // The label keeps its own spaces: `[fm]` sits under `[all]` only while they are not collapsed.
   const room = options.width - read.label.length - 1;
   const line = rest === "" || room < 1 ? read.label : `${read.label} ${truncate(rest, room)}`;
   return { key: read.key, segments, line };

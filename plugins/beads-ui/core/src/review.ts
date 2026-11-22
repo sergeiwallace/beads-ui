@@ -1,10 +1,5 @@
 import type { BdArgv, Result } from "./model.js";
 
-// Review items (D-37, T-2C.5): the held store's items of this host's pair, read once a beat by the
-// host refresher through the user's `[review] command` and written, joined to their issues, into
-// `review-<token>.json`. The refresher process imports this file through Node's type stripping, so
-// it keeps to erasable syntax, as snapshot.ts does.
-
 /** The review snapshot each refresher writes under its own lease token. */
 export const reviewFileName = (token: string): string => `review-${token}.json`;
 export const REVIEW_SNAPSHOT_SCHEMA = 1;

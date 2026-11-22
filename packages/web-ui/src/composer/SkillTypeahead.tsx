@@ -14,12 +14,6 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SkillCatalog } from "./skills.ts";
 
-// The `/skill` typeahead. Lexical's LexicalTypeaheadMenuPlugin, which the ai-core composer uses,
-// reads its query only from a plain text node, and SkillTokensPlugin turns `/i` into a
-// SkillTokenNode as soon as a letter follows the slash; the menu therefore closed at the first
-// letter and never offered a skill. This plugin reads the query from whatever text node holds the
-// caret, token or not: a `/` at the start of a word, then the name typed so far.
-
 /** The most suggestions drawn at once. */
 export const MAX_SUGGESTIONS = 10;
 

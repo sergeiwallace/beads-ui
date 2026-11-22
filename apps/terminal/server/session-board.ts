@@ -22,9 +22,6 @@ export class SessionBoard {
     return this.current;
   }
 
-  // A read started before a move must finish before that move begins. Otherwise its old
-  // snapshot could land after move-succeeded has cleared the shared core's pending overlay.
-  // Keep failures visible to their caller while allowing the next user action to proceed.
   private enqueue(action: () => Promise<void>): Promise<void> {
     const result = this.serial.then(action);
     this.serial = result.catch(() => undefined);
@@ -96,7 +93,6 @@ export class SessionBoard {
       message: "Task update was not applied",
     });
     if (result.kind === "stale") {
-      // Re-read once after a refused CAS. Never retry the write against a newer claim.
       const fresh = await this.client.show(id);
       if (fresh.kind === "ok") {
         this.current = reduceBoard(this.current, { type: "issue-refreshed", issue: fresh.value });

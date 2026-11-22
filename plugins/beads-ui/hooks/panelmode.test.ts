@@ -19,14 +19,6 @@ import {
   world,
 } from "./tests/world.js";
 
-// T-2B.7 (D-32): the task panel beside Claude Code's, then in its place. The pane opens only
-// when asked (BU-ylx.10): at session start and at each plugin reload nothing opens unless
-// panel.open_at_start is on. With it on, panel.mode both (the default) or beads opens the pane on
-// the Tasks view, unasked and so unfocused; Claude Code places it from UNASKED_COLUMNS, and below
-// that the band stays with a toast. native opens nothing and draws no Tasks view. Claude Code's
-// task panel is retired when the settings deny TaskCreate by name, as ai-harness's per-profile
-// switch (T-5.2) renders them.
-
 const WIDE = UNASKED_COLUMNS + 16;
 const USER_CONFIG = "/home/me/.config/beads-ui/beads-ui.toml";
 const RETIRED = {
@@ -182,7 +174,6 @@ describe("the task panel at session start with open_at_start on (T-2B.7)", () =>
     expect(NARROW_TEXT).toContain(`${UNASKED_COLUMNS} terminal columns`);
     expect(await (await band($)).find({ key: BEADS_BUTTON_KEY })).toBeDefined();
 
-    // The person's own open then lands on the view they kept, focused.
     await $.command.run(BU);
     await w.clock.settle();
     expect(w.opened.map((open) => open.focus)).toEqual([undefined, true]);

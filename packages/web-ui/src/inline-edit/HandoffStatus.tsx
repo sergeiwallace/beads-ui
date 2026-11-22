@@ -1,9 +1,5 @@
 import { useEffect, useState } from "react";
 
-// An owner change's handoff on a task's detail (web app design T-W2.2, D-9): where the handoff
-// stands and the record that says so (the published store, the holder's or git-inbox's receipt).
-// It is read again until the handoff can no longer change; a task with no handoff draws nothing.
-
 /** What the server's handoff route answers (apps/web/server/owner-handoff.ts). */
 export interface HandoffView {
   state: string;

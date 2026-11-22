@@ -11,9 +11,6 @@ import {
   renderReview,
 } from "./fixtures.tsx";
 
-// T-W1.2's last criterion: selecting several decisions and choosing "approve recommendations"
-// lists each decision and its recommended option for confirmation before any answer is written.
-
 const first = item("first");
 const second = item("second");
 const other = { ...DECISION, id: "D-7", title: "Cross-host carriage", recommended: "b" };

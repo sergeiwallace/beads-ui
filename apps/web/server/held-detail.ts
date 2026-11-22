@@ -1,7 +1,3 @@
-// A held item's detail (web app design T-W1.7): its whole Markdown body from the held store's
-// `show`, and its option cards from the structured-options command (D-2) when it prints any. The
-// commands are `[review] command`'s program from the user's own beads-ui.toml, run without a shell.
-
 import { execFile } from "node:child_process";
 import { realpath } from "node:fs/promises";
 import {

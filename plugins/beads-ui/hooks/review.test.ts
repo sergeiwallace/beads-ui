@@ -31,10 +31,6 @@ import {
   world,
 } from "./tests/world.js";
 
-// T-2C.5 (D-37 to D-40): an issue's review items in its Detail, the reader and the answer, at the
-// hooks entry point. A host refresher is played running, its review snapshot written under its
-// token, and the held store's command is a stub argv the world answers.
-
 const PYTHON = "/opt/fleet/.venv/bin/python";
 const HELD = "/opt/fleet/scripts/held_cli.py";
 const CONFIG = "/home/me/.config/beads-ui/beads-ui.toml";
@@ -415,7 +411,6 @@ describe("answering from the reader (T-2C.5, D-39)", () => {
       "answered in commit abc1234; the session was handed the follow-through",
     );
     expect(await textOf(ui, "reader-status")).toContain("answered 2026-10-21 01:13");
-    // The refresher runs the review verb again at once (D-37).
     expect(JSON.parse(w.files.get(`${STATE_DIR}/wake/review.json`) ?? "{}").path).toBe(
       `${STORE}/docs/held/${DECISION_ROW}`,
     );

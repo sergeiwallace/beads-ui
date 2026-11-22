@@ -2,9 +2,6 @@ import type { FaultInjector, Page, RunningApp } from "@sergeiwallace/frontend-te
 import { failingBd, type LockedBd, lockedBd, slowBd } from "../../test/store.ts";
 import { type BeadsCtx, hostCommand, restartWith, sessionLabels, stopServer } from "./adapter.ts";
 
-// beads-ui's fault catalogue (frontend test harness design, Faults and stress). `offline` is the
-// library's own; each fault here ends when the function inject() returns is called.
-
 const beads = (app: RunningApp) => app as RunningApp<BeadsCtx>;
 
 /** The bd subcommands each view reads with, so a backend fault reaches the reads a journey makes. */
@@ -31,7 +28,6 @@ export const beadsUiFaults: readonly FaultInjector[] = [
   {
     id: "feed-drop",
     async inject(_app, page) {
-      // Hold every reconnect, then end the stream already open with a short offline pulse.
       const abort = (route: import("@playwright/test").Route) => route.abort();
       await page.route("**/api/events", abort);
       await page.context().setOffline(true);
@@ -92,7 +88,6 @@ export const beadsUiFaults: readonly FaultInjector[] = [
       const wrapped = await lockedBd([...READ_SUBCOMMANDS, ...WRITE_SUBCOMMANDS], 1);
       lastLocked = wrapped;
       await restartWith(beads(app), { PATH: wrapped.env.PATH });
-      // A journey reads lockedCalls() before it ends the fault; ending it removes the wrapper.
       return async () => {
         await restartWith(beads(app), { PATH: process.env.PATH });
         await wrapped.remove();

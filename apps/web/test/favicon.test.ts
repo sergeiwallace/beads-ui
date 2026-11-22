@@ -25,7 +25,6 @@ describe("favicon assets and mount paths", () => {
   });
 
   it("serves each linked icon with the right type under both mounts, as a browser resolves it", async () => {
-    // vite copies public/ into the root of the built client, so mirror that layout.
     const clientDir = await mkdtemp(join(tmpdir(), "favicon-client-"));
     await cp(clientFile("public"), clientDir, { recursive: true });
     await cp(clientFile("index.html"), join(clientDir, "index.html"));
@@ -74,7 +73,6 @@ describe("favicon assets and mount paths", () => {
     expect([...png.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
     const svg = await readFile(clientFile("public/icon.svg"), "utf8");
     expect(svg).toContain('viewBox="0 0 64 64"');
-    // The shipped mark is FAV-01 dark-tile, an opaque rounded tile (docs/design-assets/favicon).
     expect(svg).toContain('data-favicon="FAV-01 dark-tile@1.1.0"');
   });
 });

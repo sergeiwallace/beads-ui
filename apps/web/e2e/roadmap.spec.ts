@@ -7,9 +7,6 @@ const viewRead = (page: Page, path: string) =>
     timeout: 60_000,
   });
 
-// T-3.2: "When the Roadmap renders, the system shall place epics and milestones by due date and
-// shall draw blocks and parent-child dependencies as lines."
-
 const DAY = 86_400_000;
 const due = (offset: number) =>
   `${new Date(Date.now() + offset * DAY).toISOString().slice(0, 10)}T12:00:00Z`;
@@ -37,9 +34,6 @@ test.describe("the Roadmap", () => {
       await expect(chart.locator(`.bar-wrapper[data-issue-id="${id}"]`)).toBeVisible();
     }
     await expect(chart.locator(".bar-wrapper")).toHaveCount(3);
-    // Placed by due date: the earliest due on the top row, the latest furthest right.
-    // Read from the SVG, not the viewport: Frappe scrolls its chart after drawing, so two
-    // viewport boxes taken one after the other can straddle that scroll.
     const box = async (id: string) => {
       const bar = chart.locator(`.bar-wrapper[data-issue-id="${id}"] .bar`);
       const [x, y, width] = await Promise.all(
@@ -75,7 +69,6 @@ test.describe("the Roadmap", () => {
     await page.goto(`${app.url}roadmap`);
     await read;
 
-    // Frappe draws the label over the bar; the group holding both takes the click.
     const detail = viewRead(page, `/api/issues/${epic}`);
     await page.locator(`.bar-wrapper[data-issue-id="${epic}"]`).click();
     await detail;

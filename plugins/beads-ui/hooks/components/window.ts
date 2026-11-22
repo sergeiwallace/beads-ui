@@ -4,11 +4,6 @@ import { glyphOf, type Token, truncate } from "../../core/src/index.js";
 import type { Surface } from "./adapters.js";
 import { colorOf, weight } from "./look.js";
 
-// The band's form of a view (D-35, T-2C.8): where a surface scrolls a view by its own controls
-// (the band's overview, D-36), a view draws as lines of one row each, and the surface's rows
-// hold a window of them with a button for the lines above and below. The pane draws its views
-// whole, scrolled by the engine, so a view's pane form is its own tree.
-
 /** True where the surface draws each view as one-row lines in a window it scrolls itself. */
 export const windowed = (surface: Surface): boolean => surface.scroll !== undefined;
 

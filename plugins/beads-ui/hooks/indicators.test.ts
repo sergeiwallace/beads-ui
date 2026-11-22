@@ -28,9 +28,6 @@ import {
   world,
 } from "./tests/world.js";
 
-// D-41, D-42 and T-2C.3: the row indicator gutter on every task row, band and pane, at the hooks
-// entry point. A host refresher is played running, its snapshot naming the live sessions.
-
 const USER_CONFIG = "/home/me/.config/beads-ui/beads-ui.toml";
 const SNAPSHOT = `${STATE_DIR}/counts-${REFRESHER_TOKEN}.json`;
 const AGENT = "⟳";

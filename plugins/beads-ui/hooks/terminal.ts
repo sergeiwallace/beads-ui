@@ -1,10 +1,6 @@
 import { type ImageVerdict, type TerminalFacts, terminalImages } from "../core/src/index.js";
 import type { Host } from "./host.js";
 
-// What the terminal can draw (D-43, T-2C.13), read once at session start: whether an Image's
-// pixels reach the screen. Inside tmux that needs allow-passthrough on, which tmux is asked for
-// read-only, and a terminal outside it that draws pictures.
-
 const TMUX_TIMEOUT_MS = 2_000;
 
 const answer = (host: Host, argv: readonly string[]) =>
@@ -25,7 +21,6 @@ export async function readTerminal(host: Host): Promise<ImageVerdict> {
   };
   if (env?.tmux !== undefined && env.tmux !== "") {
     const passthrough = await answer(host, ["tmux", "show-options", "-gv", "allow-passthrough"]);
-    // The terminal outside tmux is asked for only when passthrough would let a picture through.
     const clientTermtype =
       passthrough === "on" || passthrough === "all"
         ? await answer(host, ["tmux", "display-message", "-p", "#{client_termtype}"])

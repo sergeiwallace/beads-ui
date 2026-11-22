@@ -5,14 +5,6 @@ import { describeRefusal, findSecrets } from "./secrets.ts";
 import type { Skill } from "./skills.ts";
 import type { DispatchStatus, DispatchSummary, SendOptions } from "./types.ts";
 
-// The composer on a task or a Review item (web app design § Composer and dispatch, D-4, D-5,
-// T-W1.3). Lexical is the heaviest thing the app loads, so the editor is its own chunk, fetched
-// the first time the launcher is focused (D-4's mitigation). The secret guard runs on the exact
-// Markdown that would be sent, and a refusal sends nothing. A sent dispatch shows its three
-// indicators until it can no longer change. Every prompt asks the receiver to arm a goal unless
-// the user clears that for the one dispatch, and a dispatch waiting on a paused goal offers
-// "Deliver now" (T-W2.3, D-10).
-
 const Composer = lazy(() => import("./Composer.tsx"));
 
 /** How often an outstanding dispatch's indicators are read again. */
@@ -90,7 +82,6 @@ export function PromptComposer({
   const focusEditor = useCallback((editor: LexicalEditor) => editor.focus(), []);
 
   const submit = async (draft: string) => {
-    // Nothing to send; the action stays enabled so it is still a visible target.
     if (!draft.trim()) return;
     const [finding] = findSecrets(draft);
     if (finding !== undefined) {
@@ -102,12 +93,9 @@ export function PromptComposer({
     try {
       const written = armGoal ? await send(draft) : await send(draft, { armGoal: false });
       setSent(written);
-      // Cleared for one dispatch only: the next prompt arms a goal again.
       setArmGoal(true);
-      // The editor holds its own document, so it is remounted to empty it with the draft.
       setComposerKey((value) => value + 1);
     } catch (error) {
-      // The draft is the author's text and is kept on any failure.
       setRefusal(`This prompt was not sent: ${(error as Error).message}`);
     } finally {
       setSubmitting(false);

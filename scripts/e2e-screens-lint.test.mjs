@@ -1,5 +1,3 @@
-// No screen's readiness waits on networkidle (frontend test harness design, D-4, T-1.3): beads-ui
-// holds an event stream open, so the network may never idle, or idle for the wrong reason.
 import assert from "node:assert/strict";
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

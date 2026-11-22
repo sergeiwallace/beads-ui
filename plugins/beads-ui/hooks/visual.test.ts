@@ -21,10 +21,6 @@ import {
   world,
 } from "./tests/world.js";
 
-// T-2C.12, the pane's visual pass (D-43): framed sections, the header bar, accented Board cards,
-// one spacing scale and one weight scale, hover on pressable rows, and an empty and an error
-// state per view, walked over the trees the pane draws as Claude Code mounts it.
-
 const USER_CONFIG = "/home/me/.config/beads-ui/beads-ui.toml";
 const WIDTHS = [40, 48, 64, 72, 80, 120];
 const VIEWS = ["tasks", "board", "backlog", "timeline", "settings", "review"] as const;
@@ -308,7 +304,6 @@ describe("the spacing and weight scales (T-2C.12)", () => {
     expect(title?.props?.bold).toBe(true);
     expect(title?.props?.color).toBe(colorOf("accent"));
 
-    // BU-mg2.3: the issue the world's bd shows, with its dependencies, history and comments.
     await ui.press({ key: "tab:board" });
     await ui.press({ key: "open:BU-mg2.3" });
     await w.clock.settle();

@@ -1,5 +1,3 @@
-// Runners: Vitest only. It starts the host refresher (refresher/refresher.mjs) as a real Node
-// process against a stub `bd` in a temporary directory, which the mod environment cannot.
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
@@ -25,9 +23,6 @@ const FAST = ["--beat-ms", "300", "--renew-ms", "100", "--stale-ms", "1500", "--
 /** FAST, but a lease stays live for a minute and so does an idle refresher: only a build ousts. */
 const LIVE_HOLDER = [...FAST.slice(0, 4), "--stale-ms", "60000", "--idle-ms", "60000"];
 
-// A stub bd: it logs each call with the directory it ran in and the process that ran it, fails when the store directory holds
-// a `fail` file, never answers when it holds a `hang` file, and answers `bd count --by-assignee`
-// from the store's `issues.json`.
 const STUB = `#!/usr/bin/env node
 const fs = require("node:fs");
 const args = process.argv.slice(2);
@@ -92,8 +87,6 @@ interface Issue {
 const scratch: string[] = [];
 const started: number[] = [];
 
-// Each refresher leads its own process group, its stub bd children with it: the whole group is
-// ended, and its directory removed only once the refresher is gone.
 afterEach(async () => {
   const pids = started.splice(0);
   for (const pid of pids) {
@@ -223,8 +216,6 @@ const STORES: Record<string, Issue[]> = {
   BU: [{ status: "blocked", assignee: "ops-vm-3" }, { status: "open" }],
 };
 
-// Each test starts real Node processes, and a stub bd for every count: on a loaded host the first
-// snapshot alone can take seconds, so the tests get room that does not depend on load.
 describe("the host refresher", { timeout: 30_000 }, () => {
   it("should start detached in its own process group and write every store's counts by owner with a heartbeat", async () => {
     const h = host(STORES);
@@ -263,7 +254,6 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     const winner = pids.find(alive);
     expect(holder.pid).toBe(winner);
     expect(snapshot(h).pid).toBe(winner);
-    // Only the holder ran bd: the stub logs the process that started it.
     expect(new Set(calls(h).map((call) => call.ppid))).toEqual(new Set([winner]));
   });
 
@@ -276,9 +266,6 @@ describe("the host refresher", { timeout: 30_000 }, () => {
         JSON.stringify({ token: "someone-else1", pid: 1, beatAt: Date.now(), version: held }),
       );
 
-      // The holder's beat is written once, so it must stay live for as long as the launch takes:
-      // under FAST's 1500 ms stale-ms a launch slower than that on a loaded host found it stale
-      // and rightly took the lease over. A minute of stale-ms keeps it live whatever the load.
       const pid = launch(h, "token-loser111", LIVE_HOLDER);
       await until(() => (alive(pid) ? undefined : true));
 
@@ -289,9 +276,6 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     });
   }
 
-  // BU-4af: a refresher from an older build kept its lease across a plugin upgrade, so sessions
-  // of the newer build found no snapshot they read and counted every store themselves. Builds
-  // before 0.9.2 write only counts.json; builds before 0.9.4 record no build in their lease.
   it("should take over the live lease of an older build's refresher, its last snapshot current under the new token from the moment the lease names it", async () => {
     const h = host({ ...STORES, HUNG: [{ status: "open" }] });
     writeFileSync(join(h.root, "HUNG", "hang"), "");
@@ -310,8 +294,6 @@ describe("the host refresher", { timeout: 30_000 }, () => {
       JSON.stringify({ token: "old-build-token1", pid: 1, beatAt: Date.now() }),
     );
 
-    // The hung store holds the new refresher's first snapshot back to its 3-second deadline, so
-    // what is current the moment it takes the lease is what it wrote before taking it.
     const pid = launch(h, "token-newbuild", [...LIVE_HOLDER, "--cycle-ms", "3000"]);
     await until(() => (lease(h)?.token === "token-newbuild" || !alive(pid) ? true : undefined));
 
@@ -323,8 +305,6 @@ describe("the host refresher", { timeout: 30_000 }, () => {
   it("should leave an older build's refresher no lease, so it stops reading and exits, once a newer build's refresher starts", async () => {
     const h = host(STORES);
     register(h, "ops-vm-3");
-    // The older build: this refresher with no manifest beside it, so its lease records no build,
-    // as every build before 0.9.4 wrote it.
     const older = join(h.root, "older-plugin");
     cpSync(resolve(import.meta.dirname, "../refresher"), join(older, "refresher"), {
       recursive: true,
@@ -408,7 +388,6 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     const ousted = launch(h, "token-ousted11");
     await until(() => snapshot(h));
 
-    // Stalled past the lease's staleness (1.5 s here), as swap or load stalls a real one.
     process.kill(ousted, "SIGSTOP");
     await new Promise((done) => setTimeout(done, 2_000));
     const holder = launch(h, "token-newhold1");
@@ -430,11 +409,7 @@ describe("the host refresher", { timeout: 30_000 }, () => {
   it("should leave the new holder's snapshot as the current one when it was stalled between its lease check and its write", async () => {
     const h = host(STORES);
     register(h, "ops-vm-3");
-    // The session registers once, so FAST's 4-second idle exit could stop the new holder before
-    // the stalled one wakes on a loaded host; a minute keeps both running for the whole case.
     const running = [...FAST.slice(0, 6), "--idle-ms", "60000"];
-    // The first refresher stalls after the lease check before each snapshot write, its renewals
-    // with it, for longer than the lease's staleness (1.5 s here).
     const ousted = launch(h, "token-stalled1", [...running, "--pause-ms", "6000"]);
     await until(() =>
       lease(h)?.token === "token-stalled1" && Date.now() - lease(h).beatAt > 1_800
@@ -448,7 +423,6 @@ describe("the host refresher", { timeout: 30_000 }, () => {
         ? true
         : undefined,
     );
-    // The stalled refresher wakes, writes and finds itself ousted.
     await until(() => (alive(ousted) ? undefined : true));
 
     expect(lease(h)?.token).toBe("token-holder01");
@@ -466,7 +440,6 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     await new Promise((done) => setTimeout(done, 2_000));
     launch(h, "token-newhold2");
     await until(() => (lease(h)?.token === "token-newhold2" ? true : undefined));
-    // SIGTERM is queued while it is stopped, so it runs the stop path the moment it resumes.
     process.kill(ousted, "SIGTERM");
     process.kill(ousted, "SIGCONT");
     await until(() => (alive(ousted) ? undefined : true));
@@ -498,7 +471,6 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     launch(h, "token-counting");
     const written = await until(() => snapshot(h));
 
-    // Three stores, three statuses and two windows: 15 calls, none per session.
     const first = calls(h).slice(0, 15);
     expect(first).toHaveLength(15);
     expect(new Set(first.map((call) => call.cwd)).size).toBe(3);
@@ -509,7 +481,6 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     expect(
       written.stores.find((store: { name: string }) => store.name === "qa-store"),
     ).toMatchObject({ ok: true, statuses: { open: { "qa-vm-3": 1 } } });
-    // D-42: the sessions registered live, which the agent indicator dims by; not the closed one.
     expect(written.sessions).toEqual(["ops-vm-3", "ops-vm-firstmate-1", "qa-vm-3"]);
   });
 
@@ -539,8 +510,6 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     register(h, "ops-vm-3");
 
     const launched = Date.now();
-    // A 3-second deadline. Read one after another, the hung store's four reads would wait out
-    // 8 seconds each before the first snapshot; the bound leaves room for a loaded host's launch.
     launch(h, "token-deadline", [...FAST, "--cycle-ms", "3000"]);
     const written = await until(() => snapshot(h));
 
@@ -556,12 +525,9 @@ describe("the host refresher", { timeout: 30_000 }, () => {
 
   it("should count each database once when sessions reach it through a linked worktree or a symlinked path", async () => {
     const h = host(STORES);
-    // A linked worktree of OPS: its own `.beads` directory, the same database (prefix OPS).
     const worktree = join(h.root, "OPS", ".worktrees", "ops-vm-1");
     mkdirSync(worktree, { recursive: true });
     writeFileSync(join(worktree, "issues.json"), JSON.stringify(STORES.OPS));
-    // The main tree through a symlinked parent, as `~/projects` links to `/data/projects`, from a
-    // session whose bd named no prefix.
     const linked = join(h.root, "linked");
     symlinkSync(h.root, linked);
     writeFileSync(
@@ -667,7 +633,6 @@ describe("the host refresher", { timeout: 30_000 }, () => {
         "open",
         "in_progress",
       ]);
-      // 40 closed in the store, 25 drawn: the newest first.
       const closed = board.issues.filter((row: { status: string }) => row.status === "closed");
       expect(closed).toHaveLength(25);
       expect(closed[0].closed_at > closed[24].closed_at).toBe(true);
@@ -686,7 +651,6 @@ describe("the host refresher", { timeout: 30_000 }, () => {
         ].sort(),
       );
       expect(board.issues[0].metadata).toEqual({ display_id: "S-issue-0" });
-      // BU has no pane reading it: counted, but no board kept.
       expect(entryOf(h, "BU")).toBeUndefined();
       expect(
         lists(h).some((call) => call.args.includes("--all")),
@@ -698,14 +662,11 @@ describe("the host refresher", { timeout: 30_000 }, () => {
       const h = host(MANY);
       register(h, "ops-vm-3", { boards: [{ name: "OPS", path: join(h.root, "OPS") }] });
 
-      // The session registers once, so FAST's 4-second idle exit would stop the refresher before
-      // the head moves on a loaded host; a minute keeps it beating for the whole case.
       launch(h, "token-unchang1", [...FAST.slice(0, 6), "--idle-ms", "60000"]);
       await until(() => entryOf(h, "OPS"));
       const heads = () => calls(h).filter((call) => call.args[0] === "vc").length;
       await until(() => (heads() >= 3 ? true : undefined));
 
-      // Three beats, one head each, and the issues read at the first only.
       expect(lists(h)).toHaveLength(2);
       const first = entryOf(h, "OPS");
       expect(first.checkedAt).toBeGreaterThanOrEqual(first.readAt);
@@ -761,7 +722,6 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     it("should read a store again within a few seconds of a session's wake marker, not at the next beat", async () => {
       const h = host(STORES);
       register(h, "ops-vm-3", { boards: [{ name: "OPS", path: join(h.root, "OPS") }] });
-      // The default minute beat: only the marker can bring a read sooner.
       launch(h, "token-wakeup11", ["--renew-ms", "100", "--idle-ms", "60000"]);
       await until(() => entryOf(h, "OPS"));
 
@@ -782,7 +742,6 @@ describe("the host refresher", { timeout: 30_000 }, () => {
       const ops = snapshot(h).stores.find((store: { name: string }) => store.name === "OPS");
       expect(ops.statuses.open).toEqual({ "ops-vm-3": 2 });
       expect(existsSync(join(h.state, "wake", "_marker.json"))).toBe(false);
-      // BU was not woken: its counts are still the first beat's.
       expect(calls(h).filter((call) => call.cwd === join(h.root, "BU"))).toHaveLength(4);
     });
 
@@ -826,10 +785,6 @@ describe("the host refresher", { timeout: 30_000 }, () => {
     });
   });
 
-  // T-2C.5, D-37: the held store's review verb, run once a beat through the user's
-  // `[review] command`. A stub held command logs each call and prints `review.json` from its
-  // directory, or only `unchanged` while `--if-changed` names the fingerprint in `fingerprint`;
-  // a `fail` file there makes it exit 4 with the store's JSON refusal.
   describe("the review beat (T-2C.5)", () => {
     const HELD = `#!/usr/bin/env node
 const fs = require("node:fs");
@@ -851,7 +806,6 @@ if (at >= 0 && args[at + 1] === fingerprint) {
 const payload = JSON.parse(fs.readFileSync(path.join(dir, "review.json"), "utf8"));
 process.stdout.write(JSON.stringify({ ...payload, fingerprint }) + "\\n");
 `;
-    // The verb's own item shape (ai-harness held_cli.py review, REVIEW_KEYS and its derived fields).
     const item = (n: number, task: string, extra: Record<string, unknown> = {}) => ({
       path: `/home/me/projects/ai-harness/docs/held/host-c--ops-vm-3/2026-10-25-0${n}-decision-x.md`,
       store: "ai-harness",
@@ -903,7 +857,6 @@ process.stdout.write(JSON.stringify({ ...payload, fingerprint }) + "\\n");
       writeFileSync(join(held, "held.log"), "");
       const configPath = join(h.home, ".config", "beads-ui", "beads-ui.toml");
       mkdirSync(join(h.home, ".config", "beads-ui"), { recursive: true });
-      // The install's own form: the whole review call, whose verb the refresher replaces.
       writeFileSync(
         configPath,
         config
@@ -1012,7 +965,6 @@ process.stdout.write(JSON.stringify({ ...payload, fingerprint }) + "\\n");
     it("should run the review verb again within a few seconds of a session's review wake marker, not at the next beat", async () => {
       const h = reviewHost([item(1, "S-0")]);
       register(h, "ops-vm-3");
-      // The default minute beat: only the marker can bring a run sooner.
       launch(h, "token-review05", [
         "--renew-ms",
         "100",

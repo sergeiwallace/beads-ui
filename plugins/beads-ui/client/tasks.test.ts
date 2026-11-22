@@ -4,9 +4,6 @@ import { describe, expect, test } from "claude-code/testing";
 import type { TaskClientProps } from "../core/src/views/menu.js";
 import TaskList, { rowAt } from "./tasks.js";
 
-// The task list's Client (T-2B.5) called as Claude Code calls it, with a fake surface that keeps
-// what it was handed: the tree drawn, the pointer and key listeners, and every post.
-
 interface Drawn {
   type: string;
   props: Record<string, unknown>;

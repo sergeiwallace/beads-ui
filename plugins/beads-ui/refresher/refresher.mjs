@@ -1,35 +1,3 @@
-// The beads-ui host refresher (design D-26, T-1B.4): one process per host reads every Beads
-// store's counts once a minute and writes them to a snapshot every session's band reads, so the
-// number of `bd` calls no longer grows with the number of sessions.
-//
-//   node refresher.mjs start --state-dir <dir> --home <home> --token <token>
-//
-// `start` is what a session's mod spawns: it starts `run` detached from the session (its own
-// process group and session, so it outlives the session that started it, which Claude Code
-// ends with its module) and exits at once, printing `{"pid": N}`. `run` holds the file lease
-// `<state-dir>/lease.json` (a hard link to its own `lease-<token>.json`) under `--token`: it takes it only when no live refresher holds it,
-// or when the live one is an older plugin build (the lease records each refresher's build),
-// re-checks it before every read and write, and exits when it is not the holder. No
-// dependencies: Node runs this file and the core modules it imports with its type stripping, and
-// resolve-core.mjs maps the core's `.js` relative imports to their `.ts` sources, so the core
-// modules are imported once that hook is registered.
-//
-// For each store a live session's pane reads, it also keeps a board snapshot in
-// `<state-dir>/boards/<token>/`, re-read only when the store's Dolt head moved (T-1B.4, D-29),
-// and it re-reads a store a session just wrote to as soon as that session drops a marker in
-// `<state-dir>/wake/`.
-//
-// With `[review] command` set in the user's own beads-ui.toml (`--config`, the file the session
-// read it from), it also runs the held store's review verb once a beat behind its fingerprint and
-// writes the host pair's items, each joined to its issue, to `review-<token>.json` (D-37, T-2C.5).
-//
-// Every snapshot it writes is its own: `counts-<token>.json`, `review-<token>.json` and
-// `boards/<token>/`, which no other refresher writes. A session reads the snapshot of the token `lease.json` names, so a
-// refresher ousted while it was stopped between its lease check and its write writes only its
-// own files, which nobody reads any more. `counts.json`, the last published snapshot, is
-// replaced only after the holder's own file is written and the lease checked again; a session
-// reads it only when no lease names a refresher.
-
 import { execFile, spawn } from "node:child_process";
 import {
   closeSync,
@@ -116,8 +84,6 @@ const BOARD_BUFFER = 256 * 1024 * 1024;
 /** A registry file this old names a session long gone; the holder removes it. */
 const REGISTRY_KEEP_MS = 86_400_000;
 
-// `pause-ms` stalls the process, its timers with it, after each lease check before a snapshot
-// write, as swap or a stopped process stalls a real one: a test's window between the two.
 const NUMBER_FLAGS = [
   "beat-ms",
   "renew-ms",
@@ -279,8 +245,6 @@ class FileLease {
     for (let attempt = 0; attempt < 3; attempt++) {
       const held = this.read();
       if (held !== undefined && held.inode === inodeOf(this.own)) return true;
-      // A live holder keeps the lease unless this is a later build (BU-4af): an upgrade's first
-      // refresher replaces the older one, which finds the lease gone at its next check and exits.
       if (
         held !== undefined &&
         held.garbled !== true &&
@@ -293,7 +257,6 @@ class FileLease {
         const moved = this.moveAside("stale");
         if (moved === undefined) continue;
         if (moved.inode !== held.inode) {
-          // Another taker linked in after the read: its lease is fresh, so it goes back.
           this.putBack(moved.aside);
           continue;
         }
@@ -718,16 +681,11 @@ async function run(options) {
   const lease = new FileLease(dir, token, options["stale-ms"] ?? LEASE_DEAD_MS, build);
   const snapshotPath = join(dir, SNAPSHOT_FILE);
   const ownPath = join(dir, snapshotFileName(token));
-  // The last published counts, under this token before it takes the lease: a session reads them
-  // from the moment the lease names it, not after its first beat, so a takeover (of a killed
-  // refresher or of an older build's) leaves no minute where sessions read every store themselves.
   const seeded = seed(snapshotPath, ownPath, token, Date.now());
   if (!lease.acquire(Date.now())) {
     if (seeded) unlinkSync(ownPath);
     return;
   }
-  // The holder it replaced may have dropped the seed as another token's old file just before the
-  // takeover; it is written again now that no other refresher holds the lease.
   if (seeded && !existsSync(ownPath)) seed(snapshotPath, ownPath, token, Date.now());
 
   const pauseMs = options["pause-ms"] ?? 0;
@@ -742,12 +700,8 @@ async function run(options) {
   let renewTimer;
   let wakeTimer;
   let stopped = false;
-  // Each store's newest counts and board entry, with when their reads began: a wake read and a
-  // beat can overlap, and the read that began later wins.
   const counts = new Map();
   const boards = new Map();
-  // A restarted refresher keeps the boards the last one published, so an unchanged store is not
-  // read: their files are linked into its own directory.
   const previous = parseSnapshot(readText(snapshotPath) ?? "");
   const inherited = new Map();
   for (const entry of previous.ok ? (previous.value.boards ?? []) : []) {
@@ -756,8 +710,6 @@ async function run(options) {
       inherited.set(entry.path, join(dir, BOARDS_DIR, previous.value.token, entry.file));
     }
   }
-  // The review items the last refresher published, so its fingerprint lets this one's first run
-  // print only `unchanged` and its joins are re-read only for a store whose head moved.
   const reviewPath = join(dir, reviewFileName(token));
   let review;
   if (previous.ok && isRefresherToken(previous.value.token) && previous.value.token !== token) {
@@ -887,14 +839,11 @@ async function run(options) {
     review = next;
     return holds();
   };
-  // A beat's review read and a wake's never run at once: each waits for the one before it.
   let reviewQueue = Promise.resolve(true);
   const queueReview = (deadline) => {
     reviewQueue = reviewQueue.then((held) => held && readReview(deadline));
     return reviewQueue;
   };
-  // Stopping on purpose marks the snapshot, so a session starts the next refresher at its next
-  // minute check rather than three minutes on.
   const stop = () => {
     if (stopped) return;
     quit();
@@ -926,8 +875,6 @@ async function run(options) {
     storeList = storesToRead(options.home, sessions);
     boardList = unique(sessions.flatMap((session) => session.boards));
     liveIds = [...new Set(sessions.map((session) => session.id))].sort();
-    // CONCURRENT_STORES stores at a time, every read ending by the deadline: then the snapshot
-    // is written with what answered, and a store still unanswered is marked unread.
     const deadline = began + cycleMs;
     const reads = storeList.map((store) => () => {
       const withBoard = boardList.some((board) => samePath(board.path, store.path));
@@ -943,7 +890,6 @@ async function run(options) {
         return true;
       });
     }
-    // The review verb runs beside the counts, ending by the same deadline.
     const reviewing = queueReview(deadline);
     if (!(await inTurn(reads, CONCURRENT_STORES))) return quit();
     if (!(await reviewing)) return quit();
@@ -956,8 +902,6 @@ async function run(options) {
     beatTimer = setTimeout(beat, Math.max(0, beatMs - (Date.now() - began)));
   };
 
-  // A session that wrote to a store drops a marker naming it (T-1B.5): that store is read again
-  // within a second or so, rather than at the next beat, and the snapshot written.
   let waking = false;
   const wake = async () => {
     if (waking || stopped) return;
@@ -976,7 +920,6 @@ async function run(options) {
       for (const name of names) {
         const path = join(wakeDir, name);
         if (name === REVIEW_WAKE_FILE) {
-          // A session answered a held item: the review verb runs again now.
           reviewWoken = true;
           try {
             unlinkSync(path);
@@ -996,8 +939,6 @@ async function run(options) {
       }
       const deadline = Date.now() + cycleMs;
       for (const path of paths) {
-        // A session in a linked worktree names its own directory: its counts are its main
-        // tree's entry, and its board its own.
         const board = boardList.find((known) => samePath(known.path, path));
         const store =
           storeList.find((known) => samePath(known.path, path)) ??

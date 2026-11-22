@@ -15,11 +15,6 @@ import {
 } from "./auth-env.ts";
 import { createStore, type TestStore } from "./store.ts";
 
-// The MCP server's routes on the running server (web app design Phase W4, D-17): the dispatch
-// requests it submits with the MCP token, the refusals the web server makes, the drafts it keeps
-// until the user confirms them, and what a receiver is then offered, read through the receiver
-// API with the receiving host's own token.
-
 let store: TestStore;
 let env: HostEnv;
 let server: RunningServer;

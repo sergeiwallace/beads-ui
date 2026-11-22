@@ -35,8 +35,6 @@ const mount = ($: Engine, requestId: string, surface: "terminal" | "desktop" = "
     })
     .then((ui) => (requestId === PANE_ID ? onBoard(ui) : ui));
 
-// The person's Tab onto an element, as the engine raises it: ui.focus with the element's key.
-// The kit passes a test's call through as written, so the test spells the engine's input.
 const tabTo = ($: Engine, element: string) =>
   $.ui.focus({
     component: "Pane",
@@ -69,7 +67,6 @@ async function deleting(
 
 const forced = (keys: readonly string[]) => keys.filter((key) => key.includes("--force"));
 
-// The list once bd close has run: BU-mg2.3 as bd lists it, with the status bd close writes.
 const closedList = () =>
   ok(
     JSON.stringify(
@@ -89,7 +86,6 @@ describe("the delete confirmation", () => {
         closeOnEscape: true,
         holdToasts: true,
       });
-      // The board steps aside first: an opening pane gets the keyboard only from the prompt.
       expect(w.closed).toEqual([PANE_ID]);
       expect(since()[0]).toBe("bd delete BU-2zw --dry-run");
       expect(forced(since())).toEqual([]);
@@ -211,7 +207,6 @@ describe("the delete confirmation", () => {
     let previews = 0;
     const { w, confirm, since } = await deleting($, on, "BU-2zw", {
       script: (key) => {
-        // BU-2zw's cascade preview: BU-mg2.3's captured one, naming BU-2zw.
         if (key === "bd delete BU-2zw --cascade --dry-run") {
           return ok(cascadePreview.replace('"BU-mg2.3"', '"BU-2zw"'));
         }

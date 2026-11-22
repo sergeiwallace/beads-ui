@@ -19,7 +19,6 @@ export type QuickAddError =
 
 type Slot = "type" | "assignee" | "label" | "due" | "sprint";
 
-// Checked in order; `+` and `@` take the rest of the token, the others what follows the colon.
 const PREFIXES: readonly (readonly [string, Slot])[] = [
   ["type:", "type"],
   ["due:", "due"],

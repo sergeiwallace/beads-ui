@@ -1,0 +1,17 @@
+{
+  ".github/FUNDING.yml": 1,
+  "apps/terminal/server/companion-lifecycle.ts": 1,
+  "apps/web/e2e/detail.spec.ts": 1,
+  "apps/web/server/admin-cli.ts": 1,
+  "apps/web/server/dispatch-store/local.ts": 1,
+  "apps/web/server/dispatch.ts": 1,
+  "apps/web/server/held-detail.ts": 1,
+  "apps/web/server/service.ts": 1,
+  "apps/web/test/heads-feed.test.ts": 1,
+  "packages/mcp-server/src/web.ts": 1,
+  "plugins/beads-ui/core/test/fixtures/codegen/src/escapes.ts": 1,
+  "plugins/beads-ui/core/test/fixtures/impure/src/leaky.ts": 2,
+  "plugins/beads-ui/hooks/tally.ts": 2,
+  "plugins/beads-ui/refresher/refresher.mjs": 9,
+  "plugins/beads-ui/test/refresher.spec.ts": 1
+}

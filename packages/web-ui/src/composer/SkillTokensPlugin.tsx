@@ -31,15 +31,6 @@ export function SkillTokensPlugin({ catalog }: { catalog: SkillCatalog | null })
           return $createSkillTokenNode(text, skillVerdict(text.replace(/^\//, ""), catalog));
         },
       ),
-      // Re-decide validity whenever a token's own text changes.
-      //
-      // `createNode` above runs **once**, when the entity is first recognized --
-      // and a token is first recognized after the first character, so typing
-      // `/implement` creates the node while it still reads `/i` and the verdict
-      // would never be revisited as the text grew. Inserting a whole string at
-      // once (as a test or a paste does) hid this completely: creation saw the
-      // final text and the token was correct. Typed character by character in a
-      // real browser, every valid skill rendered invalid.
       editor.registerNodeTransform(SkillTokenNode, (node) => {
         const verdict = skillVerdict(node.skillName(), catalog);
         if (node.verdict() !== verdict) node.setVerdict(verdict);
@@ -47,9 +38,6 @@ export function SkillTokensPlugin({ catalog }: { catalog: SkillCatalog | null })
     );
   }, [editor, catalog]);
 
-  // The catalog is fetched after the first render, so a token typed (or restored)
-  // before it lands was marked against an empty catalog. Re-mark every token when
-  // the catalog changes rather than leaving a valid skill showing as invalid.
   useEffect(() => {
     editor.update(() => {
       const visit = (node: LexicalNode) => {

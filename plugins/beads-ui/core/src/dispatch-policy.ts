@@ -1,9 +1,3 @@
-// The dispatch ladder's policy (web app design D-6, D-7, D-10, § Configuration, T-W2.1, T-W2.3):
-// what `[dispatch]`, `[dispatch.carriers]` and `[dispatch.local]` say, what the target host's
-// wake policy says, and from both the plan one delivery follows. Also the hourly rate cap, the
-// goal-pause hold and the pointer a carrier sends, which names dispatches and never their bodies.
-// Pure: the server reads the files and runs the carriers.
-
 import { parseToml, type TomlTable, type TomlValue } from "./config.js";
 
 /** Cross-host carriers, in the fleet's ladder order (D-7). */

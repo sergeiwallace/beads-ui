@@ -80,8 +80,6 @@ async function hostSettings(
       ...(options.auth === undefined ? {} : { auth: options.auth }),
     }),
   );
-  // A private HOME too: the server reads the host's store inventory under HOME, and a spec
-  // serves only the stores it makes.
   await mkdir(join(configHome, "home"), { recursive: true });
   return {
     ...process.env,
@@ -122,7 +120,6 @@ export async function serve(
     cwd: dir,
     env,
     stdio: ["ignore", "pipe", "pipe"],
-    // Its own process group, so a forced stop also ends the bd processes it started.
     detached: true,
   });
   let output = "";
@@ -230,7 +227,6 @@ function servedApp(
       await full.served?.stop();
       const queue = full.queue;
       if (queue !== undefined) {
-        // A kept-alive connection would hold close() open until it times out.
         queue.closeAllConnections();
         await new Promise<void>((done) => queue.close(() => done()));
       }
@@ -377,9 +373,7 @@ async function storesOf(served: Served): Promise<string[]> {
       for (const entry of Object.values(parsed.stores ?? {}))
         if (entry.repo) stores.push(entry.repo);
       for (const entry of parsed.skipped ?? []) if (entry.repo) stores.push(entry.repo);
-    } catch {
-      // No inventory: the start directory's store alone.
-    }
+    } catch {}
   }
   return stores;
 }
@@ -523,8 +517,6 @@ export const beadsUiAdapter: AppAdapter<BeadsCtx> = {
       process.env.FTH_RUN_DIR ?? tmpdir(),
       `beads-ui-${shape}`,
       async (dir) => {
-        // bd runs where the store factory makes stores, never in the run directory: that sits
-        // inside this repository, and bd there would find the repository's own workspace.
         const scratch = await mkdtemp(join(tmpdir(), "beads-ui-web-store-"));
         const run = (...args: string[]) =>
           exec("bd", args, { cwd: scratch, encoding: "utf8", timeout: 300_000 });
@@ -550,8 +542,6 @@ export const beadsUiAdapter: AppAdapter<BeadsCtx> = {
         await rm(scratch, { recursive: true, force: true });
       },
     );
-    // A copy per cell, into the store boot() made, so the store keeps its name: the allowlist,
-    // the held item fixture and the run's list of created stores all name it.
     const served = app.ctx.served;
     if (served === undefined) throw new Error("only a served app is seeded");
     const store = served.cwd;

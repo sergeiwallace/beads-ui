@@ -4,11 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { installClipboardStubs } from "../composer/harness.ts";
 import { actions, heldOf, issue, item, loaded, renderReview, status, taskOf } from "./fixtures.tsx";
 
-// T-W1.1 and T-W1.6 through the rendered Review view: every item grouped by next action in core's
-// order, the filters handed to the app for its URL and a filtered state drawn from one, a failed
-// held read named with its exit code and never read as an empty queue, and an unblock with its
-// resolution and next-step prompt.
-
 const sectionRows = (name: string) =>
   within(screen.getByRole("region", { name }))
     .getAllByRole("button")

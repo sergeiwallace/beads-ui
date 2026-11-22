@@ -1,8 +1,3 @@
-// The `ui://beads-ui/board` resource as one HTML document: the view's page, the MCP Apps
-// extension's own bundled App module, and the view's script, inlined, since a host renders the
-// resource with no way to fetch more. The bundle is the published `app-with-deps` build; its
-// export list is bound to `globalThis.McpApps` for the view script, which runs after it.
-
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 
