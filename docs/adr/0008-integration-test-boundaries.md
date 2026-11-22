@@ -37,7 +37,11 @@ and real Beads stores. Each exposes a different boundary.
   SIGHUP. The lock case runs a bounded sleep with `--no-fork` so
   terminating the owned process releases the lock. Require child
   readiness to distinguish deduplication from early child failure.
-  Guard tests observe calls as well as rendered text.
+  Guard tests observe calls as well as rendered text. Their polling
+  deadlines are 30 seconds: a 3- or 5-second deadline failed on a
+  host at load 57 on 16 cores, even with each file run alone, and
+  passed there at 30 seconds. A poll returns as soon as its state is
+  reached, so the longer deadline costs nothing on an idle host.
 - `apps/web/playwright.config.ts` budgets page and server work after
   setup. The specs run at desktop and touch widths. Each uses its own
   stores and private home. Bd can keep writing an event log after its

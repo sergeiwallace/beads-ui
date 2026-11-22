@@ -10,7 +10,7 @@ import { expect, it } from "vitest";
 const exec = promisify(execFile);
 const launcher = fileURLToPath(new URL("../bin/launch.mjs", import.meta.url));
 async function until(check: () => Promise<boolean>, failure: string) {
-  const deadline = Date.now() + 3000;
+  const deadline = Date.now() + 30_000;
   while (!(await check())) {
     if (Date.now() >= deadline) throw new Error(failure);
     await new Promise((done) => setTimeout(done, 20));
@@ -135,7 +135,7 @@ it("should refuse ambiguous live unmarked companions without changing either", a
       expect(await tmux("display-message", "-p", "-t", pane, "#{@beads_ui_binding}")).toBe("");
     }
   });
-}, 12_000);
+}, 120_000);
 
 it("should preserve an unrelated process whose argv merely contains companion arguments", async () => {
   await fixture(async ({ dir, composer, launch, tmux, panes }) => {
@@ -165,4 +165,4 @@ it("should preserve an unrelated process whose argv merely contains companion ar
     expect(await tmux("display-message", "-p", "-t", lookalike, "#{pane_pid}")).toBe(beforePid);
     expect(await tmux("display-message", "-p", "-t", lookalike, "#{@beads_ui_binding}")).toBe("");
   });
-}, 12_000);
+}, 120_000);
