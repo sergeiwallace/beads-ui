@@ -1,0 +1,134 @@
+---
+title: "App shell on the libraries: Tailwind and shadcn on Base UI, an icon-rail sidebar and a top bar that stays one row"
+category: plan
+tags: [plan, web-app, app-shell, tailwind, shadcn, base-ui, responsive, e2e]
+status: active
+template_version: "plan-1.0.0"
+---
+
+<!-- doc:region name="overview" kind="replaceable" -->
+
+# App shell on the libraries: Tailwind and shadcn on Base UI, an icon-rail sidebar and a top bar that stays one row
+
+## Founding Ask Coverage
+
+`canonical_root_json`: `{"blob_oid":"96e3b0c019f57ed17be92f2c0d1196687974b124","capture_commit":"b5dfff8e09a70cbcbdf1b74083326ca7e65de93c","content_sha256":"f4f3face29592334a14a181165d488606f9bdec10b44567b897e60d649bc5939","entry_ids":["A001"],"generation":1,"path":"docs/asks/BU-zvf.md","previous_ref_sha256":null,"repository":"ai-harness","schema_version":1,"task_id":"BU-zvf"}`
+
+`founding_ask_ref_sha256`: `c1d1d957a578b36a164d21a98e8014a298c7b9c6d133dbbb17caf197ed7406d9`
+
+The founding ask record has one entry, A001, recorded verbatim in ai-harness at `docs/asks/BU-zvf.md`. This index is non-authoritative; the raw entry governs.
+
+| A001 clause | Where this plan covers it | Disposition |
+|---|---|---|
+| The top bar wraps at 100% zoom on a 13 inch laptop and Sign out drops to a second row | [T-03](#t-03-a-top-bar-that-never-wraps) | Built: the bar is one row by construction, and the viewport matrix proves it |
+| One row at every zoom level | [T-03](#t-03-a-top-bar-that-never-wraps), [T-04](#t-04-the-viewport-matrix) | Built: widths and zoom levels from 256 to 1920 CSS px |
+| What does not fit collapses into an overflow menu on the right | [T-03](#t-03-a-top-bar-that-never-wraps) | Built: a priority+ group over a Base UI Menu |
+| The side bar collapses to icons the same way | [T-02](#t-02-the-icon-rail-sidebar) | Built: shadcn's Sidebar with `collapsible="icon"` |
+| Use popular, mature libraries, not hand-rolled layout | [T-01](#t-01-tailwind-v4-and-shadcn-on-base-ui), [T-02](#t-02-the-icon-rail-sidebar) | Built: Tailwind v4, shadcn/ui on Base UI, lucide icons; the one local piece is the overflow hook, which no package in the stack provides |
+| Pivot the rest of the web app to the libraries | Out of this plan: build step 3 of the D-10 correction | Deferred by the build order, not narrowed |
+| Fork, contribute upstream, open source | Out of this plan | Deferred: the research doc's section 5 names the routes; each is an outward-facing act |
+
+## Summary for a wide audience
+
+The web app's top bar used to wrap: on a 13 inch laptop at 100% zoom, Sign out landed alone on a second row. The app now has a standard app shell built on shadcn/ui and Base UI: the views are in a left sidebar that collapses to an icon rail, the top bar holds a short fixed set of controls on one row, Sign out is in an account menu, and controls that do not fit move into a "More" menu instead of wrapping. A browser test checks the bar at widths and zoom levels from a phone to a wide monitor.
+
+## Overview
+
+The D-10 implementation correction in `docs/designs/beads-ui-design.md` and the research in `docs/research/beads-ui-ui-libraries-and-responsive-shell.md` set the order: Tailwind and shadcn first, then the shell, then the rest of the drift. This plan builds the first two steps. Out of scope: TanStack Query, Base UI Select for the native selects, shadcn Table, the palette on shadcn Command and the port of the remaining hand CSS (step 3).
+
+## Task Breakdown
+
+### T-01: Tailwind v4 and shadcn on Base UI
+
+**Size:** M
+**Batch:** 1
+
+Tailwind v4 through `@tailwindcss/vite`, with its theme and utilities layers and no Preflight, so the existing hand CSS renders as before. `shadcn init` on Base UI (`components.json` in `apps/web`, components under `apps/web/client/components/ui`), with shadcn's semantic variables set to D-19's `--bu-*` tokens instead of its own palette, so light, dark and more-contrast keep working through `light-dark()`.
+
+**Acceptance criteria:**
+
+- [ ] When the client is built, the system shall emit Tailwind's theme and utilities layers and no Preflight rules.
+- [ ] Every shadcn semantic variable shall be set to a `--bu-*` token that `theme.css` defines, and a test shall fail when one is missing or names an undefined token.
+- [ ] After this step, the main views (Board, Backlog, Roadmap, Analytics, Sessions, Review, Sprints, Queue, an issue's detail and the open palette) shall render pixel-identical at 1280 px and at 390 px to their render before it.
+- [ ] The Vitest and browser suites shall pass with the same counts as before.
+
+### T-02: The icon-rail sidebar
+
+**Size:** M
+**Batch:** 1
+
+shadcn's Sidebar with `collapsible="icon"` holds the eight views, each with an icon and its label as the collapsed rail's tooltip. Below 768 px it is shadcn's Sheet. Two fixes the research names are made in the copied component: the open-state cookie is scoped to the app's base path, and Ctrl or Cmd plus B does not toggle the sidebar from an editable target (the composer uses it for bold).
+
+**Acceptance criteria:**
+
+- [ ] When the sidebar is collapsed, each view link shall show only its icon and keep its view's name as its accessible name.
+- [ ] When the user presses the sidebar toggle or Ctrl+B outside an editable field, the sidebar shall collapse to the rail or expand back.
+- [ ] If Ctrl+B is pressed in an editable field, then the sidebar shall not toggle.
+- [ ] While the viewport is under 768 px, the views shall be in a sheet the toggle opens, and choosing a view shall close it.
+
+### T-03: A top bar that never wraps
+
+**Size:** M
+**Batch:** 1
+
+The bar is a `flex-wrap: nowrap` row and a size container. It holds the sidebar toggle, the store picker (which shrinks and truncates), the live-updates notice, a priority+ group with the Commands button and the freshness stamp, and an account menu with Sign out. Container queries drop the Commands and notice labels to icons with accessible names. The priority+ group is a local hook after GitHub Primer's technique: the group is clipped to one row, an IntersectionObserver rooted on it reports the items that wrapped out of view, and those render in a "More" menu (shadcn's dropdown-menu, a Base UI Menu).
+
+**Acceptance criteria:**
+
+- [ ] At every size of the viewport matrix, the bar shall be one row tall and no control shall sit below its first row.
+- [ ] At every size, Sign out shall be reachable through the account menu and shall end the session.
+- [ ] When a control of the priority+ group does not fit, it shall be hidden from the bar and listed in the More menu, and choosing it there shall do what it does in the bar.
+- [ ] When every control fits, the bar shall show no More menu.
+- [ ] Every icon-only control shall have an accessible name; Escape shall close an open menu and return focus to its trigger.
+
+### T-04: The viewport matrix
+
+**Size:** M
+**Batch:** 1
+
+`apps/web/e2e/shell.spec.ts` drives the shell at 1470 by 956 (the reporter's laptop at 100% zoom, scale 2), 1470 by 956 at 200% zoom (735 by 478), at 400% (368 by 239), 1280 by 800, 1920 by 1080, 390 by 844 on touch, and 1280 at 500% zoom (256 by 160). Specs that pressed Sign out in the bar, or found the views in the first navigation landmark, move to the account menu and to the sidebar, which opens first under 768 px.
+
+**Acceptance criteria:**
+
+- [ ] Each matrix assertion shall fail on the build before T-02 and T-03 (recorded in [Measurements](#measurements)).
+- [ ] The browser suite's pass count shall match the count before this plan, plus the new spec, with every difference explained test by test.
+
+### T-05: Docs
+
+**Size:** S
+**Batch:** 1
+
+`docs/procedures/web-run.md` (Sign out's place, the sidebar), `CONTRIBUTING.md` (the styling stack), the D-10 correction's progress and this plan's measurements, in the same commits as the change.
+
+## Batch Plan
+
+| Batch | Tasks | Focus | Exit gate |
+|-------|-------|-------|-----------|
+| 1 | T-01 | Libraries in, nothing visible changed | Screenshot comparison identical; commit hook green |
+| 1 | T-02 to T-05 | The shell and its tests | Viewport matrix green and proved red before; full browser suite green |
+
+## Measurements
+
+Filled in as the build runs.
+
+## Decisions
+
+### Decision Summary
+
+| # | Decision | Options Considered | Recommended (AI) | Chosen | Diverged? | Rationale | Status |
+|---|----------|-------------------|------------------|--------|-----------|-----------|--------|
+| <a id="d-1"></a>D-1 | Where the shadcn components live | (a) `apps/web/client/components/ui`, (b) `packages/web-ui` | (a) | (a) | No | The shell is the web app's own; the research moves shared pieces into a `packages/web-ui` registry once two surfaces use them | `Resolved` |
+| <a id="d-2"></a>D-2 | How shadcn components get the resets Preflight would give them | (a) A small base layer scoped to shadcn's `data-slot` elements, (b) Preflight on now | (a) | (a) | No | (b) restyles every hand-CSS screen at once, which step 3 does view by view | `Resolved` |
+| <a id="d-3"></a>D-3 | What the priority+ group holds | (a) The bar's variable right-hand controls: Commands and the freshness stamp, (b) the view links as well | (a) | (a) | No | The views move to the sidebar (research section 2, the app-shell design's D-1 (a)); Sign out and the sidebar toggle never collapse | `Resolved` |
+
+## Open Questions
+
+None.
+
+## Approval Log
+
+| Date | Decision | Actor | Notes |
+|------|----------|-------|-------|
+| 2026-11-22 | D-1 to D-3 | AI (Claude Opus, engineer) | Resolved; built on, for the maintainer's review after it is live |
+
+<!-- /doc:region name="overview" -->
