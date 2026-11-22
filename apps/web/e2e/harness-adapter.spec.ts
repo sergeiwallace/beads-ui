@@ -67,6 +67,9 @@ test("should land the page signed in through a labelled beads-ui-web login-link"
   const app = (await unbudgeted(() => fth.boot())) as RunningApp<BeadsCtx>;
   const session = await unbudgeted(() => fth.signIn(page));
   await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+  await expect(page.locator(".app-main .bu-board[aria-busy='false']")).toBeVisible({
+    timeout: 60_000,
+  });
   expect(session.label).toMatch(/^fth-[A-Za-z0-9._-]+$/);
   expect(await unbudgeted(() => sessionsOf(app))).toContain(`label ${session.label}`);
 });
