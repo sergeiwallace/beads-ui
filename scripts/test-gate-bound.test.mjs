@@ -4,6 +4,7 @@ import {
   appendFileSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -21,7 +22,10 @@ after(() => rmSync(scratch, { recursive: true, force: true }));
 const inherited = Object.fromEntries(
   Object.entries(process.env).filter(
     ([key]) =>
-      !key.startsWith("GIT_") && !key.startsWith("PRE_COMMIT_") && key !== "BEADS_UI_TEST_JOBS",
+      !key.startsWith("GIT_") &&
+      !key.startsWith("PRE_COMMIT_") &&
+      key !== "BEADS_UI_TEST_JOBS" &&
+      key !== "BEADS_UI_TEST_SCOPE",
   ),
 );
 const ENV = {
@@ -49,8 +53,10 @@ function write(dir, path, text) {
   writeFileSync(join(dir, path), text);
 }
 
-function run(command, args, { cwd = ROOT, jobs } = {}) {
-  return spawnSync(command, args, { cwd, env: envWith(jobs), encoding: "utf8" });
+function run(command, args, { cwd = ROOT, jobs, scope } = {}) {
+  const env =
+    scope === undefined ? envWith(jobs) : { ...envWith(jobs), BEADS_UI_TEST_SCOPE: scope };
+  return spawnSync(command, args, { cwd, env, encoding: "utf8" });
 }
 
 describe("the pre-commit test hooks' path filter", () => {
@@ -109,6 +115,15 @@ describe("the pre-commit test hooks' path filter", () => {
   test("should run the suite when nothing is staged", () => {
     const { dir } = repo();
     assert.match(hook(dir).stdout, /SUITE RAN/);
+  });
+
+  test("should run the suite under the commit scope", () => {
+    const { dir, git } = repo();
+    write(dir, "src/a.ts", "export const a = 4;\n");
+    git("add", "-A");
+    const result = hook(dir, ["-e", "console.log('SCOPE=' + process.env.BEADS_UI_TEST_SCOPE)"]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /^SCOPE=commit$/m);
   });
 
   test("should fail with the suite's status when the suite fails", () => {
@@ -215,7 +230,7 @@ setTimeout(() => appendFileSync(log, \`end \${name}\\n\`), 800);
     assert.equal(readFileSync(log, "utf8"), "");
   });
 
-  test("should hand BEADS_UI_TEST_JOBS to each package task under the repository's turbo.json", () => {
+  test("should hand BEADS_UI_TEST_JOBS and BEADS_UI_TEST_SCOPE to each package task under the repository's turbo.json", () => {
     const dir = fresh("turbo-env");
     const log = join(dir, "env.log");
     write(
@@ -233,7 +248,7 @@ setTimeout(() => appendFileSync(log, \`end \${name}\\n\`), 800);
       dir,
       "env.mjs",
       `import { appendFileSync } from "node:fs";
-appendFileSync(process.argv[2], \`JOBS=\${process.env.BEADS_UI_TEST_JOBS}\\n\`);
+appendFileSync(process.argv[2], \`JOBS=\${process.env.BEADS_UI_TEST_JOBS} SCOPE=\${process.env.BEADS_UI_TEST_SCOPE}\\n\`);
 `,
     );
     write(
@@ -241,9 +256,9 @@ appendFileSync(process.argv[2], \`JOBS=\${process.env.BEADS_UI_TEST_JOBS}\\n\`);
       "packages/a/package.json",
       JSON.stringify({ name: "a", scripts: { test: `node ../../env.mjs ${log}` } }),
     );
-    const result = run(process.execPath, turboCommand(), { cwd: dir, jobs: 2 });
+    const result = run(process.execPath, turboCommand(), { cwd: dir, jobs: 2, scope: "commit" });
     assert.equal(result.status, 0, result.stdout + result.stderr);
-    assert.equal(readFileSync(log, "utf8"), "JOBS=2\n");
+    assert.equal(readFileSync(log, "utf8"), "JOBS=2 SCOPE=commit\n");
   });
 });
 
@@ -282,6 +297,51 @@ await vitest.close();`;
     const result = maxWorkers("packages/bd-node", "two");
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /BEADS_UI_TEST_JOBS=two: expected a whole number from 1 to 2/);
+  });
+});
+
+describe("apps/web's suites under the commit scope", () => {
+  const WEB = join(ROOT, "apps", "web");
+  const PROBE = `import { relative } from "node:path";
+import { createVitest } from "vitest/node";
+const root = process.argv[1];
+const vitest = await createVitest("test", { root, watch: false }, {}, {});
+const found = await vitest.globTestSpecifications();
+console.log(JSON.stringify(found.map((spec) => relative(root, spec.moduleId)).sort()));
+await vitest.close();`;
+  const SERVER_IMPORT = /from "(\.\.\/server\/server|\.\/store|\.\/host-stores)\.ts"/;
+  const every = readdirSync(join(WEB, "test"))
+    .filter((name) => name.endsWith(".test.ts"))
+    .map((name) => `test/${name}`)
+    .sort();
+  const serving = every.filter((path) => SERVER_IMPORT.test(readFileSync(join(WEB, path), "utf8")));
+
+  const suites = (scope) => {
+    const result = run(process.execPath, ["--input-type=module", "-e", PROBE, WEB], { scope });
+    assert.equal(result.status, 0, result.stderr);
+    return JSON.parse(result.stdout.trim().split("\n").at(-1));
+  };
+
+  test("should run every apps/web suite when no scope is set", () => {
+    assert.ok(serving.length >= 20, `only ${serving.length} suites import the server or a store`);
+    assert.deepEqual(suites(undefined), every);
+  });
+
+  test("should run no suite that imports the server or a store factory, and every other suite, under the commit scope", () => {
+    const kept = suites("commit");
+    assert.deepEqual(
+      kept,
+      every.filter((path) => !serving.includes(path)),
+    );
+    assert.ok(kept.includes("test/envelope.test.ts"));
+  });
+
+  test("should fail to load apps/web's config when BEADS_UI_TEST_SCOPE holds another value", () => {
+    const result = run(process.execPath, ["--input-type=module", "-e", PROBE, WEB], {
+      scope: "push",
+    });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /BEADS_UI_TEST_SCOPE=push: expected commit or nothing/);
   });
 });
 

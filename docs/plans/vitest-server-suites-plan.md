@@ -124,7 +124,7 @@ Applied only if the commit hook is still above a few minutes after T-01
 ([D-2](#d-2)). The commit hook runs `npm test` with `BEADS_UI_TEST_SCOPE=commit`, which turbo
 passes through. Under that scope `apps/web`'s Vitest config leaves out every suite that imports the
 server (`../server/server.ts`) or a store factory (`./store.ts`, `./host-stores.ts`); the others
-(the dispatch store contract, the envelope, the favicon, the service installer) still run. Without
+(the dispatch store's contract and ladder, the envelope, the favicon, the service installer) still run. Without
 the scope, `npm test` and the pre-push `test-gate` hook's `npx vitest run` run every suite.
 
 **Deliverables:**
@@ -135,11 +135,11 @@ the scope, `npm test` and the pre-push `test-gate` hook's `npx vitest run` run e
 
 **Acceptance criteria:**
 
-- [ ] When the commit hook runs `npm test`, `apps/web`'s Vitest shall run no suite that imports
+- [x] When the commit hook runs `npm test`, `apps/web`'s Vitest shall run no suite that imports
   the server or a store factory, and shall run every other suite.
-- [ ] When `npx vitest run` or `npm test` runs without the scope, `apps/web`'s Vitest shall run
+- [x] When `npx vitest run` or `npm test` runs without the scope, `apps/web`'s Vitest shall run
   every suite.
-- [ ] If `BEADS_UI_TEST_SCOPE` holds a value other than `commit` or empty, then the run shall fail
+- [x] If `BEADS_UI_TEST_SCOPE` holds a value other than `commit` or empty, then the run shall fail
   before any test starts.
 
 **Dependencies:** T-01 and the measurement after it
@@ -220,6 +220,15 @@ install was added before every later run.
 | Summed file time outside any test | 325 s | 172 s |
 | `csp.test.ts` (five tests, 0.1 s together) | 12.3 s | 1.2 s |
 
+The commit hook, timed around the T-01 commit (`git commit` with `BEADS_UI_TEST_JOBS=2`), passed:
+
+| What | Before | After T-01 |
+|---|---|---|
+| Contention, start and end | LOOK, load 28.5 and 30.8 | LOOK, load 37.1 and 47.5 |
+| Commit hook, wall time | 1,077 s | 1,006 s (16.8 min) |
+
+That is still far above a few minutes, so T-02 applies ([D-2](#d-2)).
+
 Every one of the 395 tests the two runs share kept its result. The three tests only the after run
 has are `store-image.test.ts`'s. What is left outside the tests is the seeding the suites do
 themselves (`dispatch.test.ts` makes six issues and two receiver tokens), the `repoStore` stores
@@ -239,7 +248,7 @@ themselves (`dispatch.test.ts` makes six issues and two receiver tokens), the `r
 | # | Decision | Options Considered | Recommended (AI) | Chosen | Diverged? | Rationale | Status |
 |---|----------|-------------------|------------------|--------|-----------|-----------|--------|
 | <a id="d-1"></a>D-1 | How the per-worker server and reset land in Vitest | (a) A pristine store image per run, servers per file as they are, (b) one in-process server per file with a reset between tests, (c) one served process per worker across files | (a) | (a) | No | Server starts cost 0.2 s and are already per file; `bd init` is the per-file cost; a server across files would need one configuration for every file | `Resolved` |
-| <a id="d-2"></a>D-2 | Whether the web server suites leave the commit gate | Decided before this plan: only if the hook is above a few minutes after (a) | Per the measurement | Pending the measurement | No | See [Measurements](#measurements) | `Open` |
+| <a id="d-2"></a>D-2 | Whether the web server suites leave the commit gate | Decided before this plan: only if the hook is above a few minutes after (a) | Move them | Move them | No | The hook took 1,006 s at LOOK after T-01 | `Resolved` |
 
 ### Decision Details
 
@@ -297,10 +306,19 @@ database name, and `repoStore`, whose stores sit side by side in one registry, s
 A store is copied only while the image holds exactly what it held when it was made, else it gets
 `bd init`, so a test that writes into the image cannot reach another test's store.
 
-#### D-2: Whether the web server suites leave the commit gate
+#### D-2: Whether the web server suites leave the commit gate (✅ Resolved: move them to pre-push)
 
 Decided before this plan: (b) applies only if the commit hook is still above a few minutes at
-`LOOK` after (a). Filled in from [Measurements](#measurements).
+`LOOK` after (a). After T-01 the hook took 1,006 s at LOOK (load 37.1 to 47.5), and `apps/web`'s
+suite alone 525 s, so (b) applies.
+
+This narrows the commit gate, and is declared here: a commit no longer runs the 22 `apps/web`
+suites that import the server or a store factory (306 of its 398 tests). It still runs that
+package's other 5 suites (92 tests, 27.7 s at LOOK), every other package's suites and the script
+tests. Nothing reaches the remote without the 22: the pre-push `test-gate` hook runs
+`npx vitest run` from the root with no scope, which runs every project's suites in full, and
+`npm test` run by hand runs them too. The cost is that a server suite failure shows at push, not
+at commit, as the browser suites already do.
 
 ## Open Questions
 
@@ -311,5 +329,6 @@ None.
 | Date | Decision | Actor | Notes |
 |------|----------|-------|-------|
 | 2026-11-22 | D-1 | AI (Claude Opus, engineer) | Resolved from the baseline's timings; built on, for the maintainer's review after it is live |
+| 2026-11-22 | D-2 | AI (Claude Opus, engineer) | Resolved from the measurement after T-01; the narrowed commit gate is for the maintainer's review after it is live |
 
 <!-- /doc:region name="overview" -->

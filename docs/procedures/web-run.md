@@ -602,6 +602,10 @@ BEADS_UI_TEST_JOBS=2 npm test     # a faster run on a quiet host, at most 4 test
 
 The pre-commit test hooks run `npm test` and the mod's tests, never the Playwright specs, and skip
 a commit whose staged paths are all under `docs/` or end in `.md`; any other staged path, a
-deleted or renamed one included, runs them. The pre-push hooks run the Vitest suites, the ones that
-read documentation included, and then the Playwright specs in full (`npm run test:e2e`), so no push
-skips them.
+deleted or renamed one included, runs them. They run with `BEADS_UI_TEST_SCOPE=commit`, which turbo
+passes to each package: under it `apps/web`'s Vitest config leaves out every suite that imports the
+server (`../server/server.ts`) or a store factory (`./store.ts`, `./host-stores.ts`) and runs the
+rest. Any other value fails the run before a test starts; unset, every suite runs. The pre-push
+hooks run every Vitest suite, the web server suites and the ones that read documentation included
+(`test-gate` runs `npx vitest run` with no scope), and then the Playwright specs in full
+(`npm run test:e2e`), so no push skips them.

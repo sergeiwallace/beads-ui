@@ -44,9 +44,11 @@ npm run test:e2e    # the web app's Playwright specs, in full
 npx tsc --noEmit    # type check of the whole repository
 ```
 
-The pre-commit hooks run `npm test` and the mod's tests, which take minutes. The Playwright specs
-take much longer, so they run at pre-push, in full, and not at commit: run `npm run test:e2e`
-yourself when you want their answer before you push.
+The pre-commit hooks run `npm test` and the mod's tests with `BEADS_UI_TEST_SCOPE=commit`, under
+which `apps/web` runs only its suites that start no server and make no store. Its server suites and
+the Playwright specs take much longer, so they run at pre-push, in full, and not at commit: the
+`test-gate` hook runs every Vitest suite and the `e2e` hook every Playwright spec. Run `npm test`
+(no scope: every suite) and `npm run test:e2e` yourself when you want their answer before you push.
 
 `BEADS_UI_TEST_JOBS` (default 1, at most 2) bounds how many test processes `npm test`,
 `npm run test:e2e` and the test hooks start; a commit that stages only `docs/**` or `*.md` paths

@@ -1,8 +1,18 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { defineConfig } from "vitest/config";
-import { testJobs } from "../../scripts/test-jobs.mjs";
+import { configDefaults, defineConfig } from "vitest/config";
+import { COMMIT_SCOPE, testJobs, testScope } from "../../scripts/test-jobs.mjs";
 
 const coreSrc = fileURLToPath(new URL("../../plugins/beads-ui/core/src/", import.meta.url));
+const testDir = fileURLToPath(new URL("test/", import.meta.url));
+const SERVER_IMPORT = /from "(\.\.\/server\/server|\.\/store|\.\/host-stores)\.ts"/;
+
+const serverSuites = () =>
+  readdirSync(testDir, { recursive: true, encoding: "utf8" })
+    .filter((path) => path.endsWith(".test.ts"))
+    .filter((path) => SERVER_IMPORT.test(readFileSync(join(testDir, path), "utf8")))
+    .map((path) => `test/${path}`);
 
 export default defineConfig({
   resolve: {
@@ -15,6 +25,10 @@ export default defineConfig({
     maxWorkers: testJobs(),
     fsModuleCachePath: fileURLToPath(new URL("node_modules/.vitest-cache/", import.meta.url)),
     include: ["test/**/*.test.ts"],
+    exclude:
+      testScope() === COMMIT_SCOPE
+        ? [...configDefaults.exclude, ...serverSuites()]
+        : configDefaults.exclude,
     globalSetup: ["test/global-setup.ts"],
     testTimeout: 60_000,
     hookTimeout: 60_000,
