@@ -1,4 +1,5 @@
-import { access, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { createStore, STORE_IMAGE_VAR, type TestStore } from "./store.ts";
@@ -48,16 +49,22 @@ describe("the stores a Vitest run makes", () => {
   });
 
   it("should make the store with bd init, not copy the image, when the image changed after it was made", async () => {
-    await store("image");
-    const stray = join(imageStore(), "left-in-the-image.txt");
-    await writeFile(stray, "left\n");
+    const shared = process.env[STORE_IMAGE_VAR];
+    const root = await mkdtemp(join(tmpdir(), "beads-ui-web-image-test-"));
+    process.env[STORE_IMAGE_VAR] = root;
     try {
+      const image = join(root, "image", "store");
+      const copied = await store("image");
+      expect(await projectId(copied.dir)).toBe(await projectId(image));
+      await writeFile(join(image, "left-in-the-image.txt"), "left\n");
       const fresh = await store("image");
-      expect(await projectId(fresh.dir)).not.toBe(await projectId(imageStore()));
+      expect(await projectId(fresh.dir)).not.toBe(await projectId(image));
       await expect(access(join(fresh.dir, "left-in-the-image.txt"))).rejects.toThrow();
       expect(await issueIds(fresh)).toEqual([]);
     } finally {
-      await rm(stray, { force: true });
+      if (shared === undefined) delete process.env[STORE_IMAGE_VAR];
+      else process.env[STORE_IMAGE_VAR] = shared;
+      await rm(root, { recursive: true, force: true });
     }
   });
 });

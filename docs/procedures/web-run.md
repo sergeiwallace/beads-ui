@@ -576,8 +576,8 @@ owner handoff), gets the next test a fresh server (`apps/web/e2e/fixtures.ts`). 
 keeps outside those files, such as an unused sign-in link, outlives a test; no test can reach
 another test's. The Vitest suites under `apps/web/test/` start the server in the test process, one per
 file or per test as each suite needs. Their stores come from one store the run makes with `bd init`
-and copies for each suite, renamed to the suite's prefix; when that image has changed since it was
-made, the next store is made with `bd init` instead (`apps/web/test/store.ts`, its global setup in
+and copies for each suite, renamed to the suite's prefix; when that image, or the copy, differs
+from what the image held when it was made, the store is made with `bd init` instead (`apps/web/test/store.ts`, its global setup in
 `apps/web/test/global-setup.ts`). A spec that needs its own options starts its own server with
 `serve()`; the store registry's spec (`stores.spec.ts`) serves several stores from a private home's
 store inventory that way. The change feed's suite
@@ -605,7 +605,7 @@ a commit whose staged paths are all under `docs/` or end in `.md`; any other sta
 deleted or renamed one included, runs them. They run with `BEADS_UI_TEST_SCOPE=commit`, which turbo
 passes to each package: under it `apps/web`'s Vitest config leaves out every suite that imports the
 server (`../server/server.ts`) or a store factory (`./store.ts`, `./host-stores.ts`) and runs the
-rest. Any other value fails the run before a test starts; unset, every suite runs. The pre-push
+rest. Any other value fails the run before turbo starts; unset, every suite runs. The pre-push
 hooks run every Vitest suite, the web server suites and the ones that read documentation included
-(`test-gate` runs `npx vitest run` with no scope), and then the Playwright specs in full
+(`test-gate` runs `npx vitest run` with `BEADS_UI_TEST_SCOPE` cleared), and then the Playwright specs in full
 (`npm run test:e2e`), so no push skips them.

@@ -38,6 +38,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   let jobs;
   try {
     jobs = testJobs();
+    testScope();
   } catch (error) {
     console.error(error.message);
     process.exit(2);

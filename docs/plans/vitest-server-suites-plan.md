@@ -90,9 +90,10 @@ time here. The measurement after it decides T-02, and T-03 then stops the mod's 
 `apps/web`'s Vitest global setup makes an empty directory for the run and names it in
 `BEADS_UI_TEST_STORE_IMAGE`. The first `createStore` in the run makes the image there with
 `bd init` and records its tree (every path, size and modification time). Every later `createStore`
-compares the image with that record: when it matches, it copies the image and renames its prefix to
-the one asked for (`bd rename-prefix`); when anything differs, it makes a fresh store with
-`bd init` and leaves the image alone. Outside a Vitest run (the Playwright fixtures share
+compares the image with that record: when it matches, it copies the image (`cp -a`), checks the
+copy against the same record, and renames its prefix to the one asked for (`bd rename-prefix`);
+when the image or the copy differs, it makes a fresh store with `bd init` and leaves the image
+alone. Outside a Vitest run (the Playwright fixtures share
 `test/store.ts`) no image is named and every store is made with `bd init`, as before.
 `repoStore` (`test/host-stores.ts`), whose stores must carry their own database names side by side,
 is unchanged.
@@ -122,7 +123,9 @@ is unchanged.
 
 Applied only if the commit hook is still above a few minutes after T-01
 ([D-2](#d-2)). The commit hook runs `npm test` with `BEADS_UI_TEST_SCOPE=commit`, which turbo
-passes through. Under that scope `apps/web`'s Vitest config leaves out every suite that imports the
+passes through, and `scripts/test-jobs.mjs` checks before turbo starts. The pre-push `test-gate`
+hook runs with the variable cleared (`env -u`), so a push that inherits it still runs every suite.
+Under that scope `apps/web`'s Vitest config leaves out every suite that imports the
 server (`../server/server.ts`) or a store factory (`./store.ts`, `./host-stores.ts`); the others
 (the dispatch store's contract and ladder, the envelope, the favicon, the service installer) still run. Without
 the scope, `npm test` and the pre-push `test-gate` hook's `npx vitest run` run every suite.

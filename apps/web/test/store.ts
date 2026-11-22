@@ -53,15 +53,21 @@ async function storeImage(root: string): Promise<{ store: string; tree: string }
   return { store: join(image, "store"), tree: await made() };
 }
 
+const holds = async (dir: string, recorded: string) =>
+  (await tree(dir).catch(() => undefined)) === recorded;
+
 async function initStore(dir: string, prefix: string): Promise<void> {
   const root = process.env[STORE_IMAGE_VAR];
   const image = root === undefined || root === "" ? undefined : await storeImage(root);
-  if (image === undefined || (await tree(image.store)) !== image.tree) {
-    await bdInit(dir, prefix);
-    return;
+  if (image !== undefined && (await holds(image.store, image.tree))) {
+    await exec("cp", ["-a", `${image.store}/.`, dir]);
+    if (await holds(dir, image.tree)) {
+      if (prefix !== IMAGE_PREFIX) await bdIn(dir, "rename-prefix", `${prefix}-`);
+      return;
+    }
+    for (const name of await readdir(dir)) await rm(join(dir, name), { recursive: true });
   }
-  await exec("cp", ["-a", `${image.store}/.`, dir]);
-  if (prefix !== IMAGE_PREFIX) await bdIn(dir, "rename-prefix", `${prefix}-`);
+  await bdInit(dir, prefix);
 }
 
 /** A real Beads store in its own temporary directory, made with `bd init` (embedded Dolt). */

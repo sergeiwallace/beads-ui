@@ -101,8 +101,8 @@ repos:
         pass_filenames: false
         always_run: true
       - id: test-gate
-        name: test gate (mise-aware, tech-stack auto-detect)
-        entry: test-gate
+        name: test gate (mise-aware, tech-stack auto-detect), every Vitest suite with no scope
+        entry: env -u BEADS_UI_TEST_SCOPE test-gate
         language: system
         stages: [pre-push]
         pass_filenames: false

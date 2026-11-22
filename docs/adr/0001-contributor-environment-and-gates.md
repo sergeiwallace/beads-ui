@@ -35,7 +35,8 @@ plugin also updates only when its manifest version increases.
   `BEADS_UI_TEST_SCOPE=commit`, and under it `apps/web` leaves out every
   Vitest suite that imports the server or a store factory: those took
   most of a 17-minute hook on a loaded host. The pre-push `test-gate`
-  hook runs every Vitest suite with no scope, so a push still runs them.
+  hook clears the variable and runs every Vitest suite, so a push still
+  runs them.
   Empty staged input runs the suite. For deletes and renames the filter
   includes the old path. The old docs-index gate was retired because the
   generated index had no consumers and could not be regenerated correctly

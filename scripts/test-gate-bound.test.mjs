@@ -222,6 +222,14 @@ setTimeout(() => appendFileSync(log, \`end \${name}\\n\`), 800);
     });
   }
 
+  test("should refuse a test scope other than commit before starting turbo", () => {
+    const { dir, log } = workspace();
+    const result = run(process.execPath, turboCommand(), { cwd: dir, scope: "push" });
+    assert.equal(result.status, 2);
+    assert.match(result.stderr, /BEADS_UI_TEST_SCOPE=push: expected commit or nothing/);
+    assert.equal(readFileSync(log, "utf8"), "");
+  });
+
   test("should refuse a bound above 2 before starting turbo", () => {
     const { dir, log } = workspace();
     const result = run(process.execPath, turboCommand(), { cwd: dir, jobs: 3 });
@@ -333,7 +341,35 @@ await vitest.close();`;
       kept,
       every.filter((path) => !serving.includes(path)),
     );
-    assert.ok(kept.includes("test/envelope.test.ts"));
+    for (const path of ["test/envelope.test.ts", "test/favicon.test.ts", "test/service.test.ts"]) {
+      assert.ok(kept.includes(path), `${path} left the commit gate`);
+    }
+    for (const path of [
+      "test/server.test.ts",
+      "test/registry.test.ts",
+      "test/store-image.test.ts",
+    ]) {
+      assert.ok(!kept.includes(path), `${path} stayed in the commit gate`);
+    }
+  });
+
+  test("should run the pre-push test gate with no scope, even when the push inherits one", () => {
+    const config = readFileSync(join(ROOT, ".pre-commit-config.yaml"), "utf8");
+    const entry = config.match(/- id: test-gate\n(?: {8}.*\n)*? {8}entry: (.*)/)?.[1];
+    assert.ok(entry, "no test-gate hook in .pre-commit-config.yaml");
+    const bin = fresh("test-gate-bin");
+    write(
+      bin,
+      "test-gate",
+      '#!/bin/sh\necho "SCOPE=$(printenv BEADS_UI_TEST_SCOPE || echo unset)"\n',
+    );
+    execFileSync("chmod", ["+x", join(bin, "test-gate")]);
+    const result = spawnSync("sh", ["-c", entry], {
+      env: { ...ENV, PATH: `${bin}:${ENV.PATH}`, BEADS_UI_TEST_SCOPE: "commit" },
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout.trim(), "SCOPE=unset");
   });
 
   test("should fail to load apps/web's config when BEADS_UI_TEST_SCOPE holds another value", () => {
