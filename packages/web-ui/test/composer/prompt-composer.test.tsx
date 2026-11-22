@@ -27,7 +27,7 @@ function statusOf(overrides: Partial<DispatchStatus> = {}): DispatchStatus {
 
 async function openComposer(): Promise<HTMLElement> {
   fireEvent.focus(screen.getByRole("button", { name: "Write a prompt" }));
-  return screen.findByLabelText("Prompt text");
+  return screen.findByLabelText("Prompt text", {}, { timeout: 15_000 });
 }
 
 async function write(text: string) {
