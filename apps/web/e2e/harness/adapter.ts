@@ -1,4 +1,4 @@
-import { type ChildProcess, execFile, spawn } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { cp, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
@@ -6,7 +6,6 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
 import type { Page } from "@playwright/test";
 import {
   type AppAdapter,
@@ -23,13 +22,12 @@ import {
   UnsupportedShape,
 } from "@sergeiwallace/frontend-test-harness";
 import { hostConfig } from "../../test/auth-env.ts";
+import { exec, storeEnv } from "../../test/exec.ts";
 import { CREATED_STORES } from "../../test/run-stores.ts";
 import { createStore } from "../../test/store.ts";
 import { DECLARED_STATES, INTERACTIONS, inventory } from "./journey-inventory.ts";
 import { journeys } from "./journeys.ts";
 import { screens } from "./screens/index.ts";
-
-const exec = promisify(execFile);
 
 export const BIN = fileURLToPath(new URL("../../bin/beads-ui-web.mjs", import.meta.url));
 const E2E = fileURLToPath(new URL("../", import.meta.url));
@@ -84,7 +82,7 @@ async function hostSettings(
   );
   await mkdir(join(configHome, "home"), { recursive: true });
   return {
-    ...process.env,
+    ...storeEnv(),
     HOME: join(configHome, "home"),
     XDG_CONFIG_HOME: configHome,
     XDG_STATE_HOME: join(configHome, "state"),

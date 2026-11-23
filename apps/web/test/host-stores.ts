@@ -1,12 +1,9 @@
-import { execFile } from "node:child_process";
 import { chmod, mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { promisify } from "node:util";
 import { STORE_INVENTORY_FILE } from "@beads-ui/core";
+import { exec, storeEnv } from "./exec.ts";
 import { recordCreatedStore } from "./run-stores.ts";
-
-const exec = promisify(execFile);
 
 /** Quotes `text` for a POSIX sh script. */
 export const shQuote = (text: string): string => `'${text.replaceAll("'", `'\\''`)}'`;
@@ -22,7 +19,7 @@ export interface ScriptedBd {
  * in, symlinks resolved) before handing the call to the real bd; `script` may exit instead.
  */
 export async function scriptedBd(script: string): Promise<ScriptedBd> {
-  const real = (await exec("sh", ["-c", "command -v bd"], { encoding: "utf8" })).stdout.trim();
+  const real = (await exec("sh", ["-c", "command -v bd"])).stdout.trim();
   const dir = await mkdtemp(join(tmpdir(), "beads-ui-web-scripted-bd-"));
   const lines = [
     "#!/bin/sh",
@@ -34,7 +31,7 @@ export async function scriptedBd(script: string): Promise<ScriptedBd> {
   await writeFile(join(dir, "bd"), `${lines.join("\n")}\n`);
   await chmod(join(dir, "bd"), 0o755);
   return {
-    env: { ...process.env, PATH: `${dir}:${process.env.PATH ?? ""}` },
+    env: { ...storeEnv(), PATH: `${dir}:${process.env.PATH ?? ""}` },
     remove: () => rm(dir, { recursive: true }),
   };
 }
@@ -66,7 +63,7 @@ export async function repoStore(
 ): Promise<RepoStore> {
   await mkdir(dir, { recursive: true });
   const run = async (command: string, args: string[]) =>
-    (await exec(command, args, { cwd: dir, encoding: "utf8", timeout: 120_000 })).stdout;
+    (await exec(command, args, { cwd: dir, timeout: 120_000 })).stdout;
   if (options.git !== false) await run("git", ["init", "-q"]);
   await run("bd", ["init", "--non-interactive", "--skip-hooks", "-p", options.prefix]);
   await recordCreatedStore(dir);

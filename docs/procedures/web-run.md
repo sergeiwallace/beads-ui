@@ -593,7 +593,11 @@ another test's. The Vitest suites under `apps/web/test/` start the server in the
 file or per test as each suite needs. Their stores come from one store the run makes with `bd init`
 and copies for each suite, renamed to the suite's prefix; when that image, or the copy, differs
 from what the image held when it was made, the store is made with `bd init` instead (`apps/web/test/store.ts`, its global setup in
-`apps/web/test/global-setup.ts`). A spec that needs its own options starts its own server with
+`apps/web/test/global-setup.ts`). Every command a suite or spec starts for a store or a served host
+(`bd`, `git`, `beads-ui-web`) runs without the repository variables git exports to its hooks
+(`GIT_DIR`, `GIT_INDEX_FILE` and the rest, `apps/web/test/exec.ts`), and the Vitest global setup
+clears them for the whole run, so neither a store made while a hook runs nor an in-process server
+ever reads the hook's repository. A spec that needs its own options starts its own server with
 `serve()`; the store registry's spec (`stores.spec.ts`) serves several stores from a private home's
 store inventory that way. The change feed's suite
 (`apps/web/test/heads-feed.test.ts`) also starts its own Dolt sql-server on a free loopback port,
@@ -604,24 +608,33 @@ in-process queue that answers the queue service's routes with its shapes
 `BEADS_UI_LIVE_QUEUE_URL` set to its URL.
 
 One setting bounds how many test processes a run starts: `BEADS_UI_TEST_JOBS`, a whole number
-from 1 to 2, default 1 when unset. It sets turbo's `--concurrency` (package test tasks at once),
-each Vitest config's `maxWorkers`, Playwright's `workers` and how many mod test files
+from 1 to 2, default 1 when unset. It sets turbo's `--concurrency` (test tasks at once, the mod's
+loop and the script tests among them), each Vitest config's `maxWorkers`, Playwright's `workers` and how many mod test files
 `scripts/plugin-test.mjs` runs at once (one by one at 1). The bounds multiply: turbo runs up to
-`BEADS_UI_TEST_JOBS` package tasks and each runs up to `BEADS_UI_TEST_JOBS` workers, so one run
-starts at most `BEADS_UI_TEST_JOBS` squared test processes, 1 by default and 4 at the maximum of 2.
+`BEADS_UI_TEST_JOBS` tasks and each runs up to `BEADS_UI_TEST_JOBS` workers, so one run
+starts at most `BEADS_UI_TEST_JOBS` squared test workers, 1 by default and 4 at the maximum of 2.
+That counts the workers, not what a test itself starts: a web server suite's `bd` calls, or a script
+test's own fixture runs of turbo and of the loop.
 A value outside 1 to 2 fails the run before any test starts.
 
 ```sh
 BEADS_UI_TEST_JOBS=2 npm test     # a faster run on a quiet host, at most 4 test processes
 ```
 
-The pre-commit test hook runs `npm test`, the mod's `claude plugin test` loop included (the mod's
-`test` script runs it after its Vitest suite), never the Playwright specs, and skips
+`npm test` runs turbo over three tasks: every package's `test` (its Vitest suite), the mod's
+`test:mod` (its `claude plugin test` loop) and the root's `test:scripts` (the script tests).
+`npm run test:commit` runs the same but `test:mod`, and `npm run test:push` only `test:mod` and
+`test:scripts`.
+
+The pre-commit test hook runs `npm run test:commit`, never the mod's `claude plugin test` loop or
+the Playwright specs, and skips
 a commit whose staged paths are all under `docs/` or end in `.md`; any other staged path, a
 deleted or renamed one included, runs it. It runs with `BEADS_UI_TEST_SCOPE=commit`, which turbo
 passes to each package: under it `apps/web`'s Vitest config leaves out every suite that imports the
 server (`../server/server.ts`) or a store factory (`./store.ts`, `./host-stores.ts`) and runs the
 rest. Any other value fails the run before turbo starts; unset, every suite runs. The pre-push
 hooks run every Vitest suite, the web server suites and the ones that read documentation included
-(`test-gate` runs `npx vitest run` with `BEADS_UI_TEST_SCOPE` cleared), and then the Playwright specs in full
-(`npm run test:e2e`), so no push skips them.
+(`test-gate` runs `npx vitest run` with `BEADS_UI_TEST_SCOPE` cleared), then the mod's
+`claude plugin test` loop and the script tests (`mod-and-script-tests` runs `npm run test:push`,
+turbo's `test:mod` and `//#test:scripts` tasks, with `BEADS_UI_TEST_SCOPE` cleared), and then the
+Playwright specs in full (`npm run test:e2e`), so no push skips them.

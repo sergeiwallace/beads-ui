@@ -42,6 +42,7 @@ async function runGate(
     allowedWarnings = [],
     extraNotes = [],
     reportedNotes = notes,
+    before = [],
   } = {},
 ) {
   const gateAllowlist = allowedWarnings.length
@@ -62,12 +63,21 @@ async function runGate(
   const stopped = new Error("gate exited");
   let status = 0;
   const argv = process.argv;
+  const queued = [...before];
+  let calls = 0;
   t.mock.method(childProcess, "spawnSync", (command, args) => {
     assert.equal(command, "claude");
     assert.deepEqual(args, ["plugin", "validate", "--strict", "--json", plugin]);
-    return { status: success ? 0 : 1, stdout: JSON.stringify(report), stderr: "" };
+    calls++;
+    const next = queued.shift() ?? report;
+    return { status: next.success ? 0 : 1, stdout: JSON.stringify(next), stderr: "" };
   });
   t.mock.method(console, "log", (line) => lines.push(line));
+  const pauses = [];
+  t.mock.method(Atomics, "wait", (_array, _index, _value, ms) => {
+    pauses.push(ms);
+    return "timed-out";
+  });
   t.mock.method(process, "exit", (code) => {
     status = code;
     throw stopped;
@@ -83,8 +93,14 @@ async function runGate(
     t.mock.restoreAll();
     syncBuiltinESMExports();
   }
-  return { status, output: lines.join("\n") };
+  return { status, output: lines.join("\n"), calls, pauses };
 }
+
+const NO_ANSWER = "not type-checked: the check ended without an answer";
+const unanswered = {
+  success: false,
+  contents: [{ type: "hooks", notes, warnings: [{ message: NO_ANSWER }], errors: [] }],
+};
 
 test("should pass the real footprint when validate reports no warning", async (t) => {
   const result = await runGate(t);
@@ -180,4 +196,21 @@ test("should reject an unknown hook annotation rather than dropping it", async (
   const result = await runGate(t, { extraNotes: [`./register.ts hooks: ${hook}`] });
   assert.equal(result.status, 1);
   assert.ok(result.output.includes(`hooks: ${hook} is not in the allow-list`), result.output);
+});
+
+test("should run validate again when its type check ended without an answer, and use the answer", async (t) => {
+  const result = await runGate(t, { before: [unanswered] });
+  assert.equal(result.status, 0, result.output);
+  assert.equal(result.calls, 2);
+  assert.deepEqual(result.pauses, [10_000]);
+  assert.match(result.output, /matches .*validate-allowlist.json/);
+});
+
+test("should exit 2 without claiming a difference when no validate attempt answers", async (t) => {
+  const result = await runGate(t, { before: [unanswered, unanswered, unanswered] });
+  assert.equal(result.status, 2, result.output);
+  assert.equal(result.calls, 3);
+  assert.deepEqual(result.pauses, [10_000, 20_000]);
+  assert.match(result.output, /type check ended without an answer on all 3 attempts/);
+  assert.doesNotMatch(result.output, /differs from/);
 });

@@ -1,14 +1,11 @@
-import { execFile } from "node:child_process";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { promisify } from "node:util";
 import type { RunningApp } from "@sergeiwallace/frontend-test-harness";
+import { exec } from "../test/exec.ts";
 import { createStore } from "../test/store.ts";
 import { expect, loginLink, serve, test, unbudgeted } from "./fixtures.ts";
 import { type BeadsCtx, BIN, beadsUiAdapter } from "./harness/adapter.ts";
-
-const exec = promisify(execFile);
 
 test.beforeEach(({ isMobile }) => {
   test.skip(isMobile, "the adapter is exercised once, at 1280 px");

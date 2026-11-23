@@ -30,7 +30,7 @@ private repository (`https://github.com/sergeiwallace/frontend-test-harness`). `
 installs that root and Chromium, through your git's credential for that repository. Without read
 access to it, `npm ci`, `npm run lint` and the Vitest suites still work. `npm run test:e2e` and
 the pre-push `e2e` hook fail before any browser starts, naming the library and how to get access,
-and the script tests `npm test` runs after Vitest fail where they read that install, so a commit
+and the script tests `npm test` runs fail where they read that install, so a commit
 and a push are refused until you have it.
 
 ## Checks
@@ -39,16 +39,19 @@ Run these before you push. The hooks run them too.
 
 ```sh
 npm run lint        # Biome, the core purity gate and the core type check
-npm test            # Vitest and claude plugin test for the mod, then the script tests
+npm test            # Vitest, claude plugin test for the mod and the script tests, through turbo
 npm run test:e2e    # the web app's Playwright specs, in full
 npx tsc --noEmit    # type check of the whole repository
 ```
 
-The pre-commit hook runs `npm test`, the mod's tests included, with `BEADS_UI_TEST_SCOPE=commit`, under
-which `apps/web` runs only its suites that start no server and make no store. Its server suites and
-the Playwright specs take much longer, so they run at pre-push, in full, and not at commit: the
-`test-gate` hook runs every Vitest suite and the `e2e` hook every Playwright spec. Run `npm test`
-(no scope: every suite) and `npm run test:e2e` yourself when you want their answer before you push.
+The pre-commit hook runs `npm run test:commit` with `BEADS_UI_TEST_SCOPE=commit`: every package's
+Vitest suite and the script tests, where `apps/web` runs only its suites that start no server and
+make no store. Its server suites, the mod's `claude plugin test` loop and the Playwright specs take
+much longer, so they run at pre-push, in full, and not at commit: the `test-gate` hook runs every
+Vitest suite, the `mod-and-script-tests` hook the mod's loop and the script tests
+(`npm run test:push`), and the `e2e` hook every Playwright spec. Run `npm test` (no scope: every
+suite and the mod's loop) and `npm run test:e2e` yourself when you want their answer before you
+push.
 
 `BEADS_UI_TEST_JOBS` (default 1, at most 2) bounds how many test processes `npm test`,
 `npm run test:e2e` and the test hooks start; a commit that stages only `docs/**` or `*.md` paths

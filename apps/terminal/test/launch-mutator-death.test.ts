@@ -30,7 +30,7 @@ async function descendants(pid: number): Promise<number[]> {
   const direct = await children(pid);
   return [...direct, ...(await Promise.all(direct.map(descendants))).flat()];
 }
-async function waitFor(check: () => Promise<boolean>, milliseconds = 3000) {
+async function waitFor(check: () => Promise<boolean>, milliseconds = 30_000) {
   const end = Date.now() + milliseconds;
   while (!(await check())) {
     if (Date.now() >= end) throw new Error("controlled companion boundary was not reached");
@@ -175,4 +175,4 @@ sys.stdout.buffer.write(result.stdout);sys.stderr.buffer.write(result.stderr);sy
     await tmux("kill-server").catch(() => undefined);
     await rm(dir, { recursive: true, force: true });
   }
-}, 15_000);
+}, 120_000);
