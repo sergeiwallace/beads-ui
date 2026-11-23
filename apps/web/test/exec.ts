@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
-const GIT_REPOSITORY_VARS = [
+export const GIT_REPOSITORY_VARS = [
   "GIT_DIR",
   "GIT_WORK_TREE",
   "GIT_INDEX_FILE",
