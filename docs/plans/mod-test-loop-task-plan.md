@@ -22,7 +22,7 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 |---|---|---|
 | A001 | "why is the test job taking 2 hours? that's insane. way too long..." | [T-01](#t-01-the-mods-loop-runs-as-its-own-turbo-task-from-the-start) takes the mod's loop off the end of the mod's Vitest suite and starts it first; [T-02](#t-02-the-engine-start-measured-against-the-test-time) measures the engine start and records why the loop is not batched; [T-04](#t-04-the-pre-push-stage-runs-the-mods-loop-and-the-script-tests) makes the pre-push stage run the loop and the script tests; [T-03](#t-03-the-loop-leaves-the-commit-gate-only-if-still-needed) then moves the loop out of the commit gate, declared in [D-2](#d-2) with the measurement that forced it; [Measurements](#measurements) records each step |
 
-**Status:** ACTIVE
+**Status:** BUILT
 
 **Created:** 2026-11-22
 
@@ -36,6 +36,7 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
   - [T-02: The engine start, measured against the test time](#t-02-the-engine-start-measured-against-the-test-time)
   - [T-03: The loop leaves the commit gate, only if still needed](#t-03-the-loop-leaves-the-commit-gate-only-if-still-needed)
   - [T-04: The pre-push stage runs the mod's loop and the script tests](#t-04-the-pre-push-stage-runs-the-mods-loop-and-the-script-tests)
+  - [T-05: No test store sees a git hook's repository](#t-05-no-test-store-sees-a-git-hooks-repository)
 - [Batch Plan](#batch-plan)
 - [Measurements](#measurements)
 - [Implementation Audit](#implementation-audit)
@@ -50,18 +51,23 @@ The [second part](vitest-server-suites-plan.md) brought a commit's hook on a loa
 to about 6 minutes. What was left was one turbo task: the mod's Vitest suite and then, in the same
 task, its `claude plugin test` loop, which nothing else overlapped once the other packages were
 done. This part runs that loop as its own turbo task. Started first, beside everything else, it
-took the hook from 6.2 to 4.5 to 5.5 minutes on that host, and was then most of what was left. So
+took the hook from 6.2 minutes to between 4.5 and 5.5 on that host, and was then most of what was
+left. So
 the loop now runs before every push instead of at every commit, as the web app's server suites
-already do, and a commit's hook runs every other suite. The pre-push stage did not run the loop or
-the repository's script tests before; now it runs both.
+already do, and a commit's hook runs the rest of its suites: every package's Vitest suite (the web
+app's server suites aside, as before) and the repository's script tests. The pre-push stage did not
+run the loop or the repository's script tests before; now it runs both. On that host a commit's hook
+now takes 145 to 236 s (2.5 to 4 minutes) at LOOK, under 3 minutes in four of those five runs, and
+took 328 s once when the host went from LOOK to HOLD during it.
 
 ## Overview
 
-`npm test` runs `turbo run test` at `--concurrency=BEADS_UI_TEST_JOBS`, then the repository's
-script tests (`node --test scripts/*.test.mjs`). The mod's `test` script is
+At the base, `npm test` runs `turbo run test` at `--concurrency=BEADS_UI_TEST_JOBS`, then the
+repository's script tests (`node --test scripts/*.test.mjs`). The mod's `test` script is
 `vitest run && node ../../scripts/plugin-test.mjs .`, so its Vitest suite and its loop (978 tests in
 63 files, each file in its own `claude plugin test --file` process, `BEADS_UI_TEST_JOBS` at a time)
-run back to back in one turbo slot.
+run back to back in one turbo slot. At this plan's head the three are separate turbo tasks, and
+which of them each gate runs is set out in [T-03](#t-03-the-loop-leaves-the-commit-gate-only-if-still-needed).
 
 The decision taken before this plan, in order: (1) run the loop as its own turbo task, keeping the
 `BEADS_UI_TEST_JOBS` squared bound and every test in the commit gate, and measure; (2) measure what
@@ -154,10 +160,10 @@ script tests end, with one slot idle.
 
 **Acceptance criteria:**
 
-- [ ] When the commit hook runs, it shall run every task `npm test` runs except the mod's loop.
-- [ ] When `npm test`, `npm run test:commit` or `npm run test:push` runs, no more than
+- [x] When the commit hook runs, it shall run every task `npm test` runs except the mod's loop.
+- [x] When `npm test`, `npm run test:commit` or `npm run test:push` runs, no more than
   `BEADS_UI_TEST_JOBS` tasks shall run at once, and each shall get `BEADS_UI_TEST_JOBS`.
-- [ ] If the commit hook runs `npm test` again, or `test:commit` runs `test:mod`, then the script
+- [x] If the commit hook runs `npm test` again, or `test:commit` runs `test:mod`, then the script
   tests shall fail.
 
 **Dependencies:** T-01, T-02, T-04 and the measurement after them
@@ -188,12 +194,50 @@ Vitest suites again. This is the precondition for T-03.
 
 **Dependencies:** T-01
 
+### T-05: No test store sees a git hook's repository
+
+**Size:** S
+**Batch:** 3
+
+Found when this stack was first pushed: the pre-push `e2e` hook failed 136 of 143 specs, 133 at
+`bd init`, which refused because it found the pushed repository's own server-mode store. git
+exports `GIT_DIR` to its hooks, and a test's `bd init` in a fresh temporary directory resolved it.
+With an embedded store in the host repository `bd init` does not refuse: it commits the new store's
+files into that repository. `apps/web/test/exec.ts` runs a command with the repository variables
+git exports to hooks removed (`GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, `GIT_COMMON_DIR`,
+`GIT_OBJECT_DIRECTORY`, `GIT_PREFIX`), and every store factory, the command-line suites' host
+environment, the e2e adapter's served host and its seed templates, and every suite that runs `bd`
+or `git` itself use it. With the stores fixed, `apps/web`'s Vitest suite under `GIT_DIR` still
+failed 176 of 400 tests with 503s: the in-process server found the hook's repository through
+`GIT_DIR`, a fault the store failure had hidden (at the base the same run fails earlier, at
+`bd init`). The Vitest global setup now deletes the same variables before any worker starts.
+
+**Deliverables:**
+
+- Files created: `apps/web/test/exec.ts`, `apps/web/test/store-git-env.test.ts`
+- Files modified, for the run-wide clear: `apps/web/test/global-setup.ts`
+- Files modified: `apps/web/test/store.ts`, `apps/web/test/host-stores.ts`,
+  `apps/web/test/auth-env.ts`, `apps/web/test/heads-feed.test.ts`, `apps/web/e2e/harness/adapter.ts`,
+  `apps/web/e2e/harness-adapter.spec.ts`, `docs/procedures/web-run.md`
+
+**Acceptance criteria:**
+
+- [x] When `GIT_DIR` and `GIT_INDEX_FILE` name a repository with its own Beads store,
+  `createStore` (through `bd init`) and `repoStore` shall each make a store of their own, and the
+  host repository's HEAD, status and store metadata shall not change.
+- [x] When the e2e suite runs with `GIT_DIR` set to the worktree's git directory, as the pre-push
+  hook runs it, no spec shall fail at `bd init`.
+- [x] When `apps/web`'s Vitest suite runs with `GIT_DIR` set, it shall pass as it does without.
+
+**Dependencies:** None
+
 ## Batch Plan
 
 | Batch | Tasks | Focus | Exit gate |
 |-------|-------|-------|-----------|
 | 1 | T-01, T-02 | The loop as its own task; the engine start measured | ACs checked; the commit hook measured |
 | 2 | T-04, then T-03 | The loop and the script tests at pre-push; then, only if the hook is still above a few minutes, the loop out of the commit gate | ACs checked; the commit hook and the new pre-push hook measured |
+| 3 | T-05 | Test stores kept from a hook's repository | ACs checked; the e2e suite run as the pre-push hook runs it |
 
 ## Measurements
 
@@ -256,9 +300,113 @@ turbo now ends a few seconds after the loop does: the loop is the hook's floor. 
 LOOK the loop alone takes 244 to 313 s, so no commit hook that runs it can finish in a few minutes.
 T-03 applies ([D-2](#d-2)).
 
+### After T-03
+
+The commit hook on the final branch, the same small change, `pre-commit run --verbose`:
+
+| What | Base, first run | After T-03 |
+|---|---|---|
+| Contention, start and end | LOOK, load 26.2 and 26.1 | LOOK, load 29.3 and 29.9 |
+| Commit hook, wall time | 372 s (6.2 min) | 148 s (2.5 min) |
+| `npm-test` hook | 357 s | 138 s, turbo 137 s |
+| The mod's Vitest, then its loop | 89 s, then 232 s | 98 s; the loop runs at pre-push |
+| Script tests | 33 s, 73 passed, after turbo | 63 s, 83 passed, inside turbo |
+| Other packages' tests | `web-ui` 149, `apps/web` 92, `bd-node` 47, `terminal` 21, `mcp-server` 16 passed | the same |
+
+Each commit on the branch after T-03, timed around `git commit` with `BEADS_UI_TEST_JOBS=2`, every
+one passed: 236 s at LOOK, load 33.0 to 35.6, for T-03 itself; 165 s, load 34.6 to 30.2, for the
+test fix after it; 178 s, load 30.1 to 32.8, for T-05; 328 s for the T-05 follow-up, during which
+the host went from LOOK to HOLD (load 49.2 to 51.9, then about 400k swap-outs a minute); 145 s,
+load 30.8 to 30.4, for the run-wide clear.
+
+The pre-push `mod-and-script-tests` hook alone (`npm run test:push`, `BEADS_UI_TEST_SCOPE`
+cleared), at LOOK, load 29.9 to 34.0: 294 s, the loop 978 passed in 294 s and the script tests 83
+passed beside it. It adds that to a push, which before ran neither.
+
+The script tests went from 73 to 83: the ten are the wiring's tests in
+`scripts/test-gate-bound.test.mjs` (two dry-run checks of which tasks `npm test` and the commit
+hook run, four fixture runs of the commit hook and `npm run test:push` at each bound, and the four
+pre-push hook tests).
+
+### T-05: the e2e suite as the pre-push hook runs it
+
+`npm run test:e2e` at `BEADS_UI_TEST_JOBS=2` with `GIT_DIR` set to the worktree's git directory,
+as git sets it for the pre-push hook, every time at LOOK:
+
+| Run | Load start to end | Passed | Failed | Skipped | Wall time |
+|---|---|---|---|---|---|
+| The push that found it (the stack's base, as reported; not run here) | not recorded | 7 | 136, 133 at `bd init` | not recorded | not recorded |
+| After the store factories' fix (7f2b64c) | 30.1 to 40.3 | 123 | 17, every one at `bd init` in the adapter's seed template or a spec's own `bd init` | 46 | 1,244 s |
+| Those two spec files after the follow-up (926991b) | 43.4 at the start | 23 | 0 | 23 | 5.3 min |
+| After the follow-up (926991b) | 39.3 to 38.5 | 140 | 0 | 46 | 1,514 s |
+
+The 46 skipped are the specs that run at one viewport only, as on every run. After each run the
+branch head and the working tree were unchanged.
+
+`apps/web`'s whole Vitest suite (`npx vitest run` in `apps/web`) under the same `GIT_DIR`, at LOOK:
+after the store fixes, 223 passed, 1 skipped and 176 failed, almost all with 503 from an in-process server that
+read the hook's repository; after the run-wide clear, load 34.3 to 33.9, 585 s, 28 files, 399
+passed, 1 skipped, 0 failed.
+
+The pre-push `mod-and-script-tests` hook under the same `GIT_DIR` (`npm run test:push`, the
+scope cleared), at LOOK, load 38.5 to 33.6: 299 s; the loop 978 passed, the script tests 83 passed.
+
 ## Implementation Audit
 
-Recorded once T-01 is built.
+Checked against the branch head; each item names the test or the measurement that shows it. Every
+new test was run once with the behaviour it names removed, and failed.
+
+### T-01: The mod's loop runs as its own turbo task, from the start
+
+- [x] The loop runs once, as `test:mod`, in `npm test`: "should run every package's suite, the
+  mod's loop once and the script tests when npm test runs"; it fails when `npm test` drops
+  `test:mod` or the mod's `test` script runs the loop again.
+- [x] The loop and the script tests started first: built and measured ([After T-01 and
+  T-04](#after-t-01-and-t-04)); the dependency and its tests were then removed with T-03.
+- [x] The loop gets `BEADS_UI_TEST_JOBS` and passes 978: the fixture runs check the bound each task
+  sees, and every measured run passed 978.
+
+### T-02: The engine start, measured against the test time
+
+- [x] Recorded in [The engine start against the test time](#the-engine-start-against-the-test-time-t-02).
+
+### T-03: The loop leaves the commit gate
+
+- [x] The commit hook runs every task `npm test` runs but `test:mod`: "should run what npm test
+  runs but the mod's loop when the commit's test hook runs" and the commit hook fixture runs, which
+  drive the hook's own entry through `scripts/test-hook.mjs` and npm. They fail when the commit
+  runs `test:mod`, drops the script tests, or the hook runs `npm test` again.
+- [x] The bound holds for each gate: the fixture runs at `BEADS_UI_TEST_JOBS` unset and 2; they
+  fail when the commit's concurrency ignores the bound or the variable no longer reaches the tasks.
+
+### T-04: The pre-push stage runs the mod's loop and the script tests
+
+- [x] "should run the mod's loop and the script tests, and nothing else, at pre-push", "should pass
+  the push when the loop and the script tests pass, with the scope cleared" and the two "should
+  fail the push" tests; they fail when the hook is missing, moves to pre-commit, swallows a failure,
+  keeps the scope, or drops either task.
+
+### T-05: No test store sees a git hook's repository
+
+- [x] `store-git-env.test.ts`, both cases; both fail with the variables left in place (the host
+  repository gained a commit of the new store's metadata).
+- [x] The e2e runs and the `apps/web` Vitest runs above.
+
+### Review
+
+Two cross-family review rounds (Codex). The first, on T-01 and T-04, found the start-order
+guarantee holding only at `BEADS_UI_TEST_JOBS=2`, the squared bound not counting what a script test
+starts, the script tests never run inside an outer turbo task by a test, timer-based overlap in the
+start-order fixture, and the docs contradicting the new wiring. T-03 removed the dependency the
+first and fourth were about; the docs now say the bound counts test workers and describe the
+wiring at the head; the script tests run inside turbo in every commit hook and pre-push run
+measured above, which is the check the third asked for. The second, on T-03, found timer-based
+overlap in the new fixture, the plan's overview describing the base as if current, and the commit
+cases calling the root script instead of the hook. The fixture now waits on a barrier at
+`BEADS_UI_TEST_JOBS=2`, the overview says which state it describes, and the commit cases run the
+hook's own entry. The older `turbo's concurrency` fixture keeps its 800 ms timer, as it was.
+
+**Audit completed:** 2026-11-22.
 
 ## Human Gates
 
