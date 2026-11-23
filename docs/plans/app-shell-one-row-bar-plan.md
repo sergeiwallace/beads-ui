@@ -28,6 +28,10 @@ The founding ask record has one entry, A001, recorded verbatim in ai-harness at 
 | Pivot the rest of the web app to the libraries | Out of this plan: build step 3 of the D-10 correction | Deferred by the build order, not narrowed |
 | Fork, contribute upstream, open source | Out of this plan | Deferred: the research doc's section 5 names the routes; each is an outward-facing act |
 
+**Status:** BUILT
+
+**Created:** 2026-11-22
+
 ## Summary for a wide audience
 
 The web app's top bar used to wrap: on a 13 inch laptop at 100% zoom, Sign out landed alone on a second row. The app now has a standard app shell built on shadcn/ui and Base UI: the views are in a left sidebar that collapses to an icon rail, the top bar holds a short fixed set of controls on one row, Sign out is in an account menu, and controls that do not fit move into a "More" menu instead of wrapping. A browser test checks the bar at widths and zoom levels from a phone to a wide monitor.
@@ -50,7 +54,7 @@ Tailwind v4 through `@tailwindcss/vite`, with its theme and utilities layers and
 - [x] When the client is built, the system shall emit Tailwind's theme and utilities layers and no Preflight rules.
 - [x] Every shadcn semantic variable shall be set to a `--bu-*` token that `theme.css` defines, and a test shall fail when one is missing or names an undefined token.
 - [x] After this step, the main views (Board, Backlog, Roadmap, Analytics, Sessions, Review, Sprints, Queue, an issue's detail and the open palette) shall render pixel-identical at 1280 px and at 390 px to their render before it.
-- [ ] The Vitest and browser suites shall pass with the same counts as before.
+- [x] The Vitest and browser suites shall pass with the same counts as before.
 
 ### T-02: The icon-rail sidebar
 
@@ -91,7 +95,7 @@ The bar is a `flex-wrap: nowrap` row and a size container. It holds the sidebar 
 **Acceptance criteria:**
 
 - [x] Each matrix assertion shall fail on the build before T-02 and T-03 (recorded in [Measurements](#measurements)).
-- [ ] The browser suite's pass count shall match the count before this plan, plus the new spec, with every difference explained test by test.
+- [x] The browser suite's pass count shall match the count before this plan, plus the new spec, with every difference explained test by test.
 
 ### T-05: Docs
 
@@ -129,6 +133,30 @@ The matrix serves one store whose repository is named `a-repository-with-a-name-
 | Bar names, focus order, Escape | fails: the first bar control is the store picker, not the sidebar toggle | passes |
 
 The Ctrl+B guard is tested in the palette's text input; it also skips a contenteditable target such as the composer, which no test drives yet.
+
+### The suites before and after
+
+`npm run test:e2e` at `BEADS_UI_TEST_JOBS=1`, on the base (the plan commit) and on the branch after T-02 to T-04:
+
+| What | Before | After |
+|---|---|---|
+| Wall time of the Playwright run | 43.9 min | 48.5 min |
+| Tests | 186: 140 passed, 46 skipped | 204: 149 passed, 55 skipped |
+
+Every test the two runs share kept its result. The 18 the after run adds are `shell.spec.ts`: 9 pass at 1280 px and 9 skip at 390 px, since each cell opens its own window. The auth spec's forged-header test moved one line down and passed in both. The inventory test failed once in the after run, because the inventory did not yet list the new spec's two titles; with them added it passed on its own re-run (2 passed, 2 skipped by project), and that fix is in the T-02 to T-04 commit.
+
+`npm test` with no scope at `BEADS_UI_TEST_JOBS=1`, before and after:
+
+| Suite | Before | After |
+|---|---|---|
+| `packages/bd-node` | 47 passed | 47 passed |
+| `packages/web-ui` | 149 passed | 149 passed |
+| `apps/web` | 397 passed, 1 skipped | 399 passed, 1 skipped: the 2 added are `test/shell-theme.test.ts` |
+| `packages/terminal` | 21 passed | 21 passed |
+| `apps/mcp-server` | 16 passed | 16 passed |
+| `plugins/beads-ui`, Vitest | 584 passed | 584 passed |
+| `plugins/beads-ui`, `claude plugin test` | 978 passed | 978 passed |
+| `scripts/*.test.mjs` | 73 passed | 73 passed |
 
 ### What the shell looks like
 
