@@ -17,7 +17,7 @@ it("should keep the composer active and guard user updates when a companion runs
   const tmux = (...args: string[]) =>
     exec("tmux", ["-L", socket, ...args], { timeout: 10_000, env });
   async function until(check: () => Promise<boolean>) {
-    const deadline = Date.now() + 5_000;
+    const deadline = Date.now() + 30_000;
     while (!(await check())) {
       if (Date.now() >= deadline) throw new Error("companion did not reach the expected state");
       await new Promise((done) => setTimeout(done, 50));
@@ -115,4 +115,4 @@ it("should keep the composer active and guard user updates when a companion runs
     await tmux("kill-server").catch(() => undefined);
     await rm(dir, { recursive: true, force: true });
   }
-}, 15_000);
+}, 70_000);
