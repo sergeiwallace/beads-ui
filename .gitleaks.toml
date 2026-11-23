@@ -1,0 +1,4 @@
+title = "beads-ui publication security policy"
+
+[extend]
+useDefault = true
