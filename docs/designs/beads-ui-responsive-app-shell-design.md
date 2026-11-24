@@ -26,6 +26,7 @@ This coverage index follows the supplied brief. The original task record governs
 | Fit the board and make tiles, rows and tabs adapt to window size and zoom | [Root cause](#root-cause) and [Phase 1](#phase-1-responsive-layout) |
 | Expand, collapse and pin a left project panel, with hover preview and a top search bar | [App shell](#app-shell), [D-1](#d-1), [D-2](#d-2) and [Phase 2](#phase-2-app-shell) |
 | Find everything this host or machine pair can expose through Beads UI | [Project discovery](#project-discovery), [D-3](#d-3) and [Phase 3](#phase-3-unified-project-view) |
+| Keep the top bar on one row at zoom, move actions into menus as space runs out, and use established components for the shell and icon rail | [Top bar](#top-bar), [App shell](#app-shell) and [Build order](#build-order). The [research coverage index](../research/beads-ui-ui-libraries-and-responsive-shell.md#founding-ask-coverage) identifies the verbatim follow-up and tracks its wider app scope. |
 
 **Status:** DRAFT
 
@@ -44,12 +45,14 @@ This coverage index follows the supplied brief. The original task record governs
 - [Architecture](#architecture)
   - [Root cause](#root-cause)
   - [Responsive layout](#responsive-layout)
+  - [Top bar](#top-bar)
   - [App shell](#app-shell)
   - [Project discovery](#project-discovery)
   - [Current server inventory](#current-server-inventory)
 - [Data Model](#data-model)
 - [Integration](#integration)
 - [Implementation Phases](#implementation-phases)
+  - [Build order](#build-order)
   - [Phase 1: Responsive layout](#phase-1-responsive-layout)
   - [Phase 2: App shell](#phase-2-app-shell)
   - [Phase 3: Unified project view](#phase-3-unified-project-view)
@@ -67,11 +70,11 @@ This coverage index follows the supplied brief. The original task record governs
 
 ## Executive Summary
 
-Five Board columns should fit at a 1440 CSS px viewport with default text size and 100% browser zoom. At higher zoom or in smaller windows, text and controls adapt to the space available, and the board switches to a vertical layout when it gets too narrow. This layout work ships before the new navigation. The proposed shell puts project navigation in a collapsible left panel and app-wide search and account actions at the top. The proposed Projects page brings together the stores, views, documents and sessions this deployment can serve. The chief still needs to rule on the shell and Projects proposals.
+Five Board columns should fit at a 1440 CSS px viewport with default text size and 100% browser zoom. At higher zoom or in smaller windows, text and controls adapt to the space available, and the board switches to a vertical layout when it gets too narrow. This layout work ships before the new navigation. The proposed shell puts project navigation in a collapsible left panel and app-wide search and account actions at the top. The proposed Projects page brings together the stores, views, documents and sessions this deployment can serve. The orchestrating Opus session ruled option (a) on the shell and Projects decisions (D-1 to D-3) on 2026-11-21; Sergei reviews them after they are live.
 
 ## Summary for a wide audience
 
-The layout update makes the board use the available width and lets you enlarge text while keeping controls usable. The proposed left panel gives you a place to switch projects and views, and the top bar gives you search. Open Projects to see what is available on the current Beads UI deployment.
+The layout update makes the board use the available width and lets you enlarge text while keeping controls usable. The top bar stays on one row, with menus for actions that need more space. The left panel gives you a place to switch projects and views. Open Projects to see what is available on the current Beads UI deployment.
 
 ## Problem Statement
 
@@ -104,19 +107,32 @@ Make status headers wrap independently of their counts. Use column container wid
 | Roadmap and Analytics (`Roadmap.tsx:47–85,89–125`, `Analytics.tsx:71–100,181–237`, `web-ui.css:447–452,483–509`) | Wrap controls and legends, use shrinkable chart cards and confine timeline panning to its chart. Add a wrapping text list of dated roadmap entries with links and dates alongside the existing dependencies and undated items. Keep Analytics summaries and data disclosures, and stack their rows if necessary. |
 | Review and Queue (`App.tsx:1163–1188,1290–1296`, `review.tsx:158–169,206–255`, `review/review.css:4–18,154–179`, `queue/QueueView.tsx`) | Review uses two shrinkable panes from `40rem` of view width, and its existing list/detail and Back behavior below that width. Queue remains a wrapping list. Preserve filters and their URL state, keyboard shortcuts and settings, ordering, details, bulk approval and unblock flows. |
 | Issue and Held Detail, Markdown, composer and palette (`App.tsx:1248–1308`, `web-ui.css:223–268,376–405`, `composer/composer.css:12–34`, `detail/Markdown.tsx:155–163`) | Wrap fields, descriptions, code and links, contain the width of structured content, and size menus, dialogs and the editor to leave focused controls visible. Preserve comments, option cards, draft editing, dispatch, goal arming, undo and Ctrl/Cmd+K. |
-| Header, alerts, sign-in/refusal, toasts (`app.css:9–85`, `App.tsx:978–1067`, `auth.ts:440–460`, `web-ui.css:287–329`) | Wrap the existing navigation, store picker and freshness/error text before the shell ships. Include a device-width viewport on server-rendered sign-in/refusal pages. Keep alerts visible and sign-in/sign-out behavior reachable. |
+| Header, alerts, sign-in/refusal, toasts (`app.css:9–85`, `App.tsx:955–1051`, `auth.ts:440–460`, `web-ui.css:287–329`) | Apply the [one-row top bar](#top-bar) in Phase 1B. Preserve store and view navigation until it moves to the sidebar. Keep freshness, errors and alerts visible in the affected view. Retain toasts and sign-in/sign-out behavior, and include a device-width viewport on server-rendered sign-in/refusal pages. |
 
 > **Feedback Round 1:**
 
+### Top bar
+
+Use `flex-wrap: nowrap` to replace the current wrapping row (`apps/web/client/app.css:12–16`). Give the title `min-width: 0` and single-line ellipsis while preserving its full accessible text. Use inline-size container queries to swap visible control labels for icons with tooltips. Give icon controls accessible names independent of tooltip visibility. Keep the existing `--bu-target` floor of 24 CSS px in both dimensions and 44 CSS px for coarse pointers. [MDN container size queries](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Containment/Container_queries) · [Base UI Tooltip](https://base-ui.com/react/components/tooltip) · [Beads UI target sizes](../../packages/web-ui/src/theme.css)
+
+In Phase 1B, keep the store picker bounded by available space and collapse the fixed view links into a labeled Views menu when space is short. Move Sign out to a shadcn Base UI `dropdown-menu` labeled Account. Add “Sign out everywhere” there when the sign-in design's bulk revocation action is available. Phase 2 moves store and view navigation to the sidebar and keeps the navigation toggle, Search and Account visible. Keep the existing Commands entry point through Search and Ctrl/Cmd+K. At compact widths, container queries place fixed secondary actions such as Create and Notifications in the More menu once those actions are available. [shadcn Base UI Dropdown Menu](https://ui.shadcn.com/docs/components/base/dropdown-menu) · [Persistent sign-in design](https://github.com/sergeiwallace/beads-ui/pull/114)
+
+Use a local priority+ hook only for a variable set of actions that must stay in the bar, such as view-specific actions. Use one IntersectionObserver rooted in a clipped, noninteractive measurement row, following Primer's technique. Leave room for the More trigger before measuring. Render fitting actions inline and expose the rest as items in the Base UI Menu. Keep the primary controls outside this group so More can never be the only visible control. If resizing moves the focused action into the menu, move focus to More. [Primer overflow observer](https://github.com/primer/react/blob/main/packages/react/src/internal/components/OverflowObserverProvider.tsx) · [Base UI Menu](https://base-ui.com/react/components/menu)
+
 ### App shell
 
-D-1 and D-2 govern this proposal. Put the Projects index and store switcher at the top of the left navigation. Group Board, Backlog, Sprints, Roadmap and Analytics under project views, and Review, Queue and Agents & Sessions under work coordination. Keep named views and filter links in the sidebar when shareable, and keep the controls that edit those filters beside their results. The top bar holds an app-wide search box with Ctrl/Cmd+K, Create, Notifications and an account menu with sign-in state, sign-out, theme and Help. Keep freshness and source failures with the affected view. Search first indexes navigable views, authorized stores and issues already loaded, with store labels on hits. It uses the existing command palette for actions and states the issue search scope. Expand to authorized document metadata when Projects provides it. Create targets an explicitly chosen open store when several are available. Notifications initially can link to existing review/dispatch state once an authorized feed exists. Surface Create and Notifications only when their supporting contracts are live. Theme uses the existing theme tokens and Help links to shortcuts and usage guidance.
+D-1 and D-2 govern the shell. Put the Projects index and store switcher at the top of the left navigation. Group Board, Backlog, Sprints, Roadmap and Analytics under project views, and Review, Queue and Agents & Sessions under work coordination. Keep named views and filter links in the sidebar when shareable, and keep the controls that edit those filters beside their results. The top bar holds app-wide Search, Create, Notifications and Account. Account also provides sign-in state, theme and Help. Keep freshness and source failures with the affected view.
+
+Search first indexes navigable views, authorized stores and issues already loaded, with store labels on hits. It uses the existing command palette for actions and states the issue search scope. Expand to authorized document metadata when Projects provides it. Create targets an explicitly chosen open store when several are available. Notifications initially can link to existing review/dispatch state once an authorized feed exists. Surface Create and Notifications only when their supporting contracts are live. Theme uses the existing theme tokens and Help links to shortcuts and usage guidance.
 
 Jira Cloud documents site-wide search and create in the header and boards, spaces and filters in the sidebar, with keyboard and pointer controls to resize or collapse it. Linear places workspace search and New Issue together in its sidebar, and puts documents and links in project resources. GitHub provides global project discovery and a command palette, and individual projects own their board and other layouts. These document two viable placements for global actions and corroborate grouping project resources with project views. The hover and pin behavior below is Beads UI's proposal. [Jira navigation](https://support.atlassian.com/jira-software-cloud/docs/what-is-the-new-navigation-in-jira/) · [Linear search](https://linear.app/docs/search) · [Linear Projects](https://linear.app/docs/projects) · [GitHub project discovery](https://docs.github.com/en/issues/planning-and-tracking-with-projects/finding-your-projects) · [GitHub Projects layouts](https://docs.github.com/en/issues/planning-and-tracking-with-projects/customizing-views-in-your-project) · [GitHub command palette](https://docs.github.com/en/get-started/accessibility/github-command-palette)
 
-- **Wide windows.** From `64rem` of app width, show a `3rem` rail. With a hover-capable fine pointer, entering the rail reveals a `16rem` nonmodal panel contiguous with it, above the main area. Pointer departure from both closes a hover preview when focus is outside. Explicit toggle opens it with keyboard, mouse or touch and keeps it open until dismissed or a destination is activated. Pin reserves `16rem` in the layout. Unpin restores the rail and keeps the preview available while engaged. Only pin or unpin changes the reserved width, so hover keeps the board's scroll position, track widths and drag targets stable.
-- **Keyboard and screen reader.** Use a named Navigation landmark, regular links with `aria-current="page"`, a named native toggle with `aria-expanded` and `aria-controls`, and a named pin toggle with `aria-pressed`. The collapsed links are absent from the tab order. Hover leaves focus where it was. Tab reaches the toggle and Enter or Space opens it, then Tab moves to the links. Escape dismisses the preview even with the pointer still over the rail. Return focus to the toggle if focus was inside, and suppress reopening until the pointer leaves and re-enters. Keep preview content open while the pointer or focus is inside. If focus moves outside the preview to main content, close the overlay before the newly focused item can be obscured. Keep the focus indicator visible around the sticky header, composer and overlays. [W3C WCAG 2.2](https://www.w3.org/TR/WCAG22/) · [W3C Content on Hover or Focus](https://www.w3.org/WAI/WCAG22/Understanding/content-on-hover-or-focus.html) · [ARIA disclosure pattern](https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/)
-- **Narrow and touch.** Below `64rem` or for a coarse primary pointer, use an explicit header button and a modal drawer. Its width is at most `min(16rem, 100%)`. Focus moves into the drawer, stays inside until dismissal, and returns to its opener on close or to the destination heading on navigation. Provide visible Close, Escape and backdrop dismissal. Reuse the same link list and put secondary header actions in a labeled menu so search and navigation stay reachable. Persist only the pin preference per browser origin and app base path. Ignore it in drawer mode and restore it when the wide layout returns. If storage fails, retain the in-memory value for the current page. [ARIA modal dialog pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/)
+Use shadcn's Base UI Sidebar with `collapsible="icon"`. Provide a `SidebarMenuButton` tooltip for every rail item and give each icon control the same accessible name even when its tooltip is closed. Use the stock Sidebar's controlled provider and separate panel and spacer as the extension points. [shadcn Sidebar](https://ui.shadcn.com/docs/components/sidebar) · [Base UI Sidebar source](https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/bases/base/ui/sidebar.tsx)
+
+- In wide mode, use a `3rem` rail and a `16rem` expanded panel. A thin extension reads `open` and calls `setOpen` from `useSidebar()` for hover and explicit opening. It derives the spacer width from pin state alone. Open the panel over the board on hover with a hover-capable fine pointer, leaving the spacer at `3rem`. Pin reserves `16rem`. Unpin restores the rail's reserved width and keeps the overlay open while engaged. [Base UI Sidebar source](https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/bases/base/ui/sidebar.tsx)
+- Use a named Navigation landmark, links with `aria-current="page"`, a named toggle with `aria-expanded` and `aria-controls`, and a named pin toggle with `aria-pressed`. Keep expanded-only links out of the collapsed tab order. Hover leaves focus in place. An explicit toggle opens the panel until dismissal or navigation. A hover preview stays open while the pointer or focus is inside. Escape closes it, restores focus to the toggle if focus was inside and suppresses hover reopening until pointer re-entry. On focus moving to main content, close the overlay before it obscures the new focus. Keep focus indicators visible around the sticky header, composer and overlays. [W3C WCAG 2.2](https://www.w3.org/TR/WCAG22/) · [W3C Content on Hover or Focus](https://www.w3.org/WAI/WCAG22/Understanding/content-on-hover-or-focus.html) · [ARIA disclosure pattern](https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/)
+- Adapt the Sidebar's mobile predicate so drawer mode applies below `64rem` of app width or for a coarse primary pointer. Use its built-in Sheet as the modal drawer, capped at `min(16rem, 100%)`. Reuse the same navigation and provide a visible Close action, Escape and backdrop dismissal. Focus moves into the drawer and stays inside. On dismissal, return focus to the toggle. On navigation, focus the destination heading. [Sidebar mobile hook](https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/bases/base/hooks/use-mobile.ts) · [Sidebar Sheet source](https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/bases/base/ui/sidebar.tsx) · [Base UI Dialog](https://base-ui.com/react/components/dialog) · [ARIA modal dialog pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/)
+- Adapt the provider's `sidebar_state` cookie to write only on pin changes. Set its path to the active app base path and record that base path in its value so a `/beads` mount can ignore a cookie from the root mount. Ignore the preference in drawer mode and restore it on return to wide mode. If persistence is unavailable, keep the pin in memory. Guard the provider's window-level Cmd/Ctrl+B before handling it so inputs, textareas and contenteditable targets, including the composer, retain their editing shortcuts. [Base UI Sidebar source](https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/bases/base/ui/sidebar.tsx)
 
 ### Project discovery
 
@@ -155,14 +171,22 @@ This design extends the [Beads UI web app design](beads-ui-web-app-design.md) an
 
 Each slice starts with the named failing acceptance tests or a recorded manual failure where browser chrome is required. Use the existing Playwright app harness and disposable fixtures for observed browser layout and real routes. A controlled five-status response can verify geometry regardless of bd's built-in status count. Cover real status, move and rank behavior with the existing bd-backed suite. Measure widths and scroll ranges in CSS pixels, allowing one pixel for fractional rounding. Run each slice's exit gate before starting dependent work.
 
+### Build order
+
+This shell is an implementation correction to [D-10 of the beads-ui design](beads-ui-design.md#d-10) to finish adopting the chosen stack.
+
+1. Set up Tailwind v4 without its Preflight import, then run `shadcn init --base base` and map its CSS variables to the existing [D-19 tokens](beads-ui-design.md#d-19). [Tailwind Preflight](https://tailwindcss.com/docs/preflight#disabling-preflight) · [shadcn CLI](https://ui.shadcn.com/docs/cli#init) · [shadcn theming](https://ui.shadcn.com/docs/theming)
+2. Build the one-row top bar in Phase 1B and finish the shell in Phase 2.
+3. Run the viewport matrix against the completed shell before starting Phase 3.
+
 ### Phase 1: Responsive layout
 
-Ships independently of D-1 to D-3. Keep the current route structure and header controls.
+Ships before the navigation moves to the sidebar. Preserve the current routes and header capabilities.
 
 | Slice | Scope and deliverables | Spec-first acceptance tests |
 |---|---|---|
 | 1A Board and Sprint Board | Shared Board markup and styles, app content sizing, browser layout spec at `apps/web/e2e/responsive-board.spec.ts` | `fits five complete columns at 1440`, `grows and shrinks tracks across the fit threshold`, `scrolls within the board at 720`, `stacks statuses at 320`, `keeps long card text and edits reachable`, `handles an empty board and extra statuses`, `preserves board and sprint moves at compact widths` |
-| 1B Other tabs and common controls | Shared list, Review, chart, detail, dialog and composer reflow, app header and public sign-in/refusal viewport, `apps/web/e2e/responsive-views.spec.ts` | `reflows each destination at 320`, `reflows a narrow content container in a wide window`, `keeps every compact row action accessible`, `preserves review controls and shareable filters`, `keeps detail, composer and palette controls visible`, `keeps navigation and sign-in reachable` |
+| 1B Other tabs and common controls | Shared list, Review, chart, detail, dialog and composer reflow, one-row top bar and public sign-in/refusal viewport, `apps/web/e2e/responsive-views.spec.ts` | `reflows each destination at 320`, `reflows a narrow content container in a wide window`, `keeps every compact row action accessible`, `preserves review controls and shareable filters`, `keeps detail, composer and palette controls visible`, `keeps top-bar controls in one row across the viewport matrix`, `keeps store, views, Commands and Sign out reachable` |
 
 **Acceptance criteria**
 
@@ -172,30 +196,37 @@ Ships independently of D-1 to D-3. Keep the current route structure and header c
 - When a card contains long unbroken text, repeated IDs from two stores or owner names wider than their current track, it shall keep the full title, repository and owner values available and keep priority, owner, rank and Move to controls keyboard reachable. While layout changes, the selected card, pending write state, action destination and detail link shall remain associated with the same store-qualified issue.
 - When resizing the content container from 48rem to 32rem with the window width unchanged, Backlog, Sessions and Review shall switch to their compact layouts without navigation or data loss. When a row is compact, its field relationships and keyboard actions shall remain exposed. When a write fails in a compact layout, the existing error/rollback behavior shall remain visible.
 - When opening every tab, both Sprints modes, issue detail, held detail and the signed-out page at 320 CSS px, the document shall have at most 1 CSS px horizontal overflow, and keyboard focus shall reach every operative control. If the timeline or a structured block needs horizontal scrolling, then only its local region shall scroll and equivalent text or details shall be reachable. When using Review, Queue, detail or composer at that width, the user shall retain access to the actions and state listed in the responsive parity table.
+- When the header renders at any width in the Phase 2 matrix, including with a long store name or a stale feed, all visible top-bar controls shall fit on one row. When the view links collapse, every destination shall remain reachable from Views with the current store filter. Account shall expose Sign out at every matrix width.
 
 **Exit gate:** Run `npm run test:e2e -w apps/web -- responsive-board.spec.ts responsive-views.spec.ts` and the adjacent `board`, `views`, `rank`, `detail`, `review`, `palette`, `auth` and `mcp-app` Playwright specs. Reuse the two configured desktop and touch projects. In desktop Chromium and Firefox, record actual page zoom at 100%, 125%, 150%, 200% on a window starting at 1440 CSS px, then 400% from 1280 CSS px. Record effective viewport and board widths, visible columns, document overflow and keyboard reachability. Check 200% text enlargement at the same window size separately. Automated viewport-size cases cover reflow geometry. Desktop browser zoom and text enlargement use browser controls, since device-pixel ratio and simulated pinch zoom exercise different mechanisms.
 
 ### Phase 2: App shell
 
-Start after Phase 1 and the chief's D-1 and D-2 rulings. Slice 2A covers navigation, scope and existing actions. Slice 2B covers sidebar layout, local preference and focus. Public create and notification capabilities can follow independently under their own browser contracts.
+Start after Phase 1 and apply D-1 and D-2. Slice 2A covers navigation, scope and existing actions. Slice 2B covers sidebar layout, local preference and focus. Public create and notification capabilities can follow independently under their own browser contracts.
 
 | Slice | Scope and deliverables | Spec-first acceptance tests |
 |---|---|---|
-| 2A Navigation and search | `apps/web/client/App.tsx`, app shell markup and styles, command palette integration, `apps/web/e2e/app-shell.spec.ts` | `keeps existing links, filters and shortcuts under both mount paths`, `searches loaded issues and views across store scope`, `keeps sign-out and account actions reachable` |
-| 2B Sidebar behavior | Same web-only shell and spec, with keyboard, mouse, touch and storage cases | `previews without changing board geometry`, `dismisses hover with Escape and waits for re-entry`, `keeps focus or pointer inside a preview`, `persists pin and restores it after drawer mode`, `returns drawer focus on dismissal`, `works when preference storage is unavailable` |
+| 2A Navigation and search | `apps/web/client/App.tsx`, app shell markup and styles, command palette integration, `apps/web/e2e/app-shell.spec.ts` | `keeps existing links, filters and shortcuts under both mount paths`, `searches loaded issues and views across store scope`, `keeps top-bar controls in one row across the viewport matrix`, `exposes account and overflow actions as menuitems` |
+| 2B Sidebar behavior | Same web-only shell and spec, with keyboard, mouse, touch and storage cases | `exposes named rail items with matching tooltips`, `previews without changing board geometry`, `dismisses hover with Escape and waits for re-entry`, `keeps focus or pointer inside a preview`, `scopes pin persistence and restores it after drawer mode`, `preserves bold in the composer`, `traps focus in the Sheet and returns it on dismissal`, `works when preference storage is unavailable` |
+
+Run the one-row and menu tests at `1470 × 956`, `1280 × 800`, `735`, `390` and `320` CSS px, using the existing desktop or touch fixture height where only a width is given. Include a variable-action fixture that forces overflow. Run rail assertions at the two wide sizes with a fine pointer and Sheet assertions at the three narrow widths. Also exercise the Sheet at `1280 × 800` with a coarse pointer.
+
+Locate the banner, controls, navigation, links, tooltips, menu items and dialog with `getByRole`. Use no CSS selectors. Compare visible top-bar controls' bounding boxes to confirm that they share a horizontal band and fit within the banner, allowing one CSS px for rounding. [Playwright locators](https://playwright.dev/docs/locators#locate-by-role)
 
 **Acceptance criteria for the recommendation**
 
 - When navigating through sidebar links, direct URLs, modified clicks and back/forward under either mount path, the shell shall preserve the current view and existing store/filter semantics. When search opens by typing or Ctrl/Cmd+K, it shall find matching view names and loaded authorized issue IDs/titles and identify their stores. If no match exists, then the result shall report the searched scope and remain usable.
+- When the shell renders at a matrix width, the top bar shall keep the navigation toggle, Search and Account in the row and honor the target size floor. When Account opens, Sign out and, once available, “Sign out everywhere” shall be reachable as `menuitem`s. If a variable action no longer fits, then it shall be reachable as a `menuitem` under More. When the action fits again, it shall return inline. If a focused action moves into More, focus shall move to its trigger.
+- When the wide sidebar is collapsed, each rail item shall retain its accessible name. When a rail item receives keyboard focus, its tooltip shall display the matching name. When Cmd/Ctrl+B is used in the composer, the edit shall apply bold and the sidebar shall keep its current state.
 - When someone previews and leaves the sidebar with a fine pointer, the board's bounding box and scroll position shall stay the same. While the pointer travels between rail and panel or focus stays inside, the preview shall remain available. When Escape dismisses it, it shall stay closed until a new interaction.
-- When a user toggles the pin at wide width, the app shall reserve or release panel space and retain the preference across a same-origin, same-base reload. If the viewport becomes narrow or the input is coarse, then navigation shall be a button-operated modal drawer without taking board width. If persistence is unavailable, then pinning shall still work for the current page.
-- When the drawer closes, focus shall return to its opener. When a link navigates, focus shall reach the destination heading. When the user tabs to the board past a temporary wide panel, the panel shall yield before it can cover the focused control. When a screen reader encounters the navigation toggle, it shall report its name and expansion state.
+- When a user toggles the pin at wide width, the app shall reserve or release panel space and retain the preference across a same-origin, same-base reload. Verify the cookie path on each mount and that opening or closing a preview leaves the stored pin untouched. If the viewport becomes narrow or the input is coarse, then navigation shall be a button-operated modal drawer without taking board width. If persistence is unavailable, then pinning shall still work for the current page.
+- While the Sheet is open, Tab and Shift+Tab shall cycle within it. When the drawer closes, focus shall return to its opener. When a link navigates, focus shall reach the destination heading. When the user tabs to the board past a temporary wide panel, the panel shall yield before it can cover the focused control. When a screen reader encounters the navigation toggle, it shall report its name and expansion state.
 
-**Exit gate:** Run `npm run test:e2e -w apps/web -- app-shell.spec.ts responsive-board.spec.ts responsive-views.spec.ts`. Verify the five-column fit at 1440 CSS px with the recommended panel pinned. Check landmarks, expanded/current announcements and focus with a screen reader, and hover, keyboard and touch dismissal at both widths.
+**Exit gate:** Run `npm run test:e2e -w apps/web -- app-shell.spec.ts responsive-board.spec.ts responsive-views.spec.ts`, including the matrix above. Verify the five-column fit at 1440 CSS px with the panel pinned. Check landmarks, expanded/current announcements and focus with a screen reader, and check hover, keyboard and touch dismissal in their respective layouts.
 
 ### Phase 3: Unified project view
 
-Start after the chief's D-3 ruling and Phase 2's navigation entry point. Slice 3A links the current authorized sources. Slice 3B adds explicitly published design docs under the recommended option.
+Apply D-3 after Phase 2's navigation entry point passes the viewport matrix. Slice 3A links the current authorized sources. Slice 3B adds explicitly published design docs.
 
 | Slice | Scope and deliverables | Spec-first acceptance tests |
 |---|---|---|
@@ -241,15 +272,15 @@ Start after the chief's D-3 ruling and Phase 2's navigation entry point. Slice 3
 
 | # | Decision | Options Considered | Recommended (AI) | Chosen | Diverged? | Rationale | Status |
 |---|---|---|---|---|---|---|---|
-| D-1 | Navigation ownership | (a) Header for app actions, left panel for project navigation. (b) Search in the header, other actions in the sidebar. | (a) | | | Keep search and account access available while the project panel is closed | Pending chief ruling |
-| D-2 | Sidebar expansion and layout | (a) Hover overlay, pinned layout reservation. (b) Always push in wide mode. | (a) | | | Keep board geometry stable during preview | Pending chief ruling |
-| D-3 | Project inventory and document discovery | (a) Inventory with explicit document publication. (b) Broker of existing views and remote links. | (a) | | | Discover authorized designs in-app with an explicit published set | Pending chief ruling |
+| D-1 | Navigation ownership | (a) Header for app actions, left panel for project navigation. (b) Search in the header, other actions in the sidebar. | (a) | (a) | No | Keep search and account access available while the project panel is closed | Settled |
+| D-2 | Sidebar expansion and layout | (a) Hover overlay, pinned layout reservation. (b) Always push in wide mode. | (a) | (a) | No | Keep board geometry stable during preview | Settled |
+| D-3 | Project inventory and document discovery | (a) Inventory with explicit document publication. (b) Broker of existing views and remote links. | (a) | (a) | No | Discover authorized designs in-app with an explicit published set | Settled |
 
 ### Decision Details
 
 <a id="d-1"></a>
 
-#### D-1: Navigation ownership — `[PENDING]`
+#### D-1: Navigation ownership — `✅ Resolved by driver (Opus)`
 
 **Context.** The current header combines store selection, navigation and Commands. Jira and Linear show two established placements for global actions, and GitHub scopes project layouts to their project. See [App shell](#app-shell) for the product references.
 
@@ -279,15 +310,15 @@ Start after the chief's D-3 ruling and Phase 2's navigation entry point. Slice 3
 
 ##### Recommendation
 
-> **Decision:** `PENDING`
-<!-- decision-record: chosen-option=PENDING; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
+> **Decision:** `✅ Resolved by driver (Opus)` — (a).
+<!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=claude-opus-5-5; ai-effort=UNVERIFIED; ai-profile=interactive -->
 <!-- decision-lineage: decision-id=BU-w2g/D-1; decision-topic=navigation ownership; governs=apps/web:app-shell; normalized-proposition=assign app actions and project navigation to their shell regions; applicability=phase:2; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
 Recommend (a). Label the landmarks and put secondary header actions in one menu at narrow widths. Expose Create and Notifications when their browser contracts are available.
 
 <a id="d-2"></a>
 
-#### D-2: Sidebar expansion and layout — `[PENDING]`
+#### D-2: Sidebar expansion and layout — `✅ Resolved by driver (Opus)`
 
 **Context.** A hover preview must leave the board steady and provide explicit access on keyboard and touch. Jira documents expand/collapse. The proposed preview is exploratory and uses the disclosure and modal patterns cited in [App shell](#app-shell).
 
@@ -317,15 +348,15 @@ Recommend (a). Label the landmarks and put secondary header actions in one menu 
 
 ##### Recommendation
 
-> **Decision:** `PENDING`
-<!-- decision-record: chosen-option=PENDING; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
+> **Decision:** `✅ Resolved by driver (Opus)` — (a).
+<!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=claude-opus-5-5; ai-effort=UNVERIFIED; ai-profile=interactive -->
 <!-- decision-lineage: decision-id=BU-w2g/D-2; decision-topic=sidebar expansion and layout; governs=apps/web:sidebar; normalized-proposition=define transient and persistent sidebar expansion behavior; applicability=phase:2; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
 Recommend (a). Keep the panel hoverable with Escape and close it when focus moves to the page. Centralize transitions around the toggle, pin, pointer and focus events and check each transition in the browser suite.
 
 <a id="d-3"></a>
 
-#### D-3: Project inventory and document discovery — `[PENDING]`
+#### D-3: Project inventory and document discovery — `✅ Resolved by driver (Opus)`
 
 **Context.** Existing reads expose different scopes and failure modes. There is no general design-doc reader. Linear project resources and GitHub project discovery document comparable ways to group links and project resources. See [App shell](#app-shell) for the references.
 
@@ -355,8 +386,8 @@ Recommend (a). Keep the panel hoverable with Escape and close it when focus move
 
 ##### Recommendation
 
-> **Decision:** `PENDING`
-<!-- decision-record: chosen-option=PENDING; ai-family=N/A; ai-model=N/A; ai-effort=N/A; ai-profile=N/A -->
+> **Decision:** `✅ Resolved by driver (Opus)` — (a).
+<!-- decision-record: chosen-option=(a); ai-family=claude; ai-model=claude-opus-5-5; ai-effort=UNVERIFIED; ai-profile=interactive -->
 <!-- decision-lineage: decision-id=BU-w2g/D-3; decision-topic=project inventory and document discovery; governs=apps/web:projects; normalized-proposition=define inventory scope and how design documents become discoverable; applicability=phase:3; outcome-id=; relation=different-question; related-decision-id=; supersedes=; approval-log-decision-id=; approval-actor=; approval-date=; approval-commit= -->
 
 Recommend (a). Deliver existing store and provider links first, then add one narrow, independently failing design-doc provider. Keep configuration to explicit published IDs and show its publication state in Projects so an unconfigured source is distinguishable from an empty one.
@@ -365,7 +396,7 @@ Recommend (a). Deliver existing store and provider links first, then add one nar
 
 ## Open Questions
 
-The outstanding choices are D-1 through D-3.
+None. D-1 to D-3 were settled on 2026-11-21 (option (a) each); Sergei reviews them after they are live.
 
 > **Feedback Round 1:**
 
@@ -385,5 +416,9 @@ No feedback rounds recorded.
 
 | Date | Decision | Actor | Notes |
 |---|---|---|---|
+| 2026-11-21 | BU-w2g/D-1 | Orchestrating session (Opus 5.5) | (a): app actions in the header, project navigation in the left panel. Search, account and sign-out stay reachable with the panel closed, which the sign-in work (BU-ute slice D) also relies on. |
+| 2026-11-21 | BU-w2g/D-2 | Orchestrating session (Opus 5.5) | (a): hover overlay, pin reserves width. Board geometry stays fixed during preview, so drag targets and the five-column fit hold; every transition is covered in app-shell.spec.ts. |
+| 2026-11-21 | BU-w2g/D-3 | Orchestrating session (Opus 5.5) | (a): unified inventory with an explicitly published design set, store links first (3A), then the bounded document provider (3B). Matches the ask for a unified project view. |
+| 2026-11-24 | D-10 implementation correction | Codex | Folded the fixed top bar, Base UI account menu and limited overflow hook from [§ 2](../research/beads-ui-ui-libraries-and-responsive-shell.md#2-a-one-row-top-bar-at-every-zoom-and-width), the Sidebar extension with an editable-target shortcut guard from [§ 3](../research/beads-ui-ui-libraries-and-responsive-shell.md#3-a-side-panel-that-collapses-to-an-icon-rail), setup from [§ 4](../research/beads-ui-ui-libraries-and-responsive-shell.md#4-whole-app-library-strategy) and the matrix from [§ 6](../research/beads-ui-ui-libraries-and-responsive-shell.md#6-testing-fit). This addresses [Gaps 1 and 2](../research/beads-ui-ui-libraries-and-responsive-shell.md#gaps-blindspots-and-emergent-findings). |
 
 <!-- /doc:region name="approval_log" -->
