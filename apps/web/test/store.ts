@@ -27,8 +27,13 @@ export async function createStore(prefix = "web"): Promise<TestStore> {
   const dir = await mkdtemp(join(tmpdir(), "beads-ui-web-store-"));
   const bd = async (...args: string[]) =>
     (await exec("bd", args, { cwd: dir, encoding: "utf8", timeout: 60_000 })).stdout;
-  await bd("init", "--non-interactive", "--skip-hooks", "-p", prefix);
-  await recordCreatedStore(dir);
+  try {
+    await bd("init", "--non-interactive", "--skip-hooks", "-p", prefix);
+    await recordCreatedStore(dir);
+  } catch (error) {
+    await rm(dir, { recursive: true, force: true });
+    throw error;
+  }
   return {
     dir,
     bd,
