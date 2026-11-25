@@ -1186,3 +1186,107 @@ describe("the band's colours (D-43, T-2C.9)", () => {
     ]);
   });
 });
+
+describe("the name Claude Code recorded for a session ai c did not start", () => {
+  const SESSION_ID = "1a1003bb-ff44-453a-b4b9-3dc416e11ab6";
+  const SESSIONS = "/home/me/.claude/sessions";
+  const TRANSCRIPT = `/home/me/.claude/projects/-work-beads-ui/${SESSION_ID}.jsonl`;
+  const QA = "[bd] 3 tasks (0 in progress, 1 blocked, 2 open, 0 done last 24h)";
+  const record = (sessionId: string, name: string, nameSource = "user") =>
+    JSON.stringify({ pid: 4242, sessionId, cwd: CWD, name, nameSource, kind: "interactive" });
+
+  /** A session a typed `claude -r <name>` started: Claude Code's records, and no task-list id. */
+  function resumed(
+    on: On,
+    records: Readonly<Record<string, string>>,
+    options: { env?: Record<string, string>; transcript?: string | Error } = {},
+  ): WorldOptions {
+    const transcript = options.transcript ?? TRANSCRIPT;
+    on("session.info", () =>
+      transcript instanceof Error
+        ? { deny: transcript.message }
+        : { value: { transcriptPath: transcript } },
+    );
+    on("fs.list", (_engine, e) =>
+      e.path === SESSIONS
+        ? {
+            value: Object.keys(records).map((name) => ({
+              name,
+              kind: "file" as const,
+              size: 1,
+              mtimeMs: 0,
+              isLink: false,
+            })),
+          }
+        : { deny: `ENOENT: ${e.path}` },
+    );
+    const recorded = Object.entries(records).map(([name, text]) => [`${SESSIONS}/${name}`, text]);
+    return {
+      refresher: true,
+      files: { ...LIVE, ...Object.fromEntries(recorded) },
+      env: options.env ?? { HOME: "/home/me" },
+    };
+  }
+
+  test("should count only its own beads when a typed claude -r started a session Claude Code records as ops-vm-3", async ($, on) => {
+    const records = {
+      "4242.json": record(SESSION_ID, "ops-vm-3"),
+      "77.json": record("0b5e3c1a-0000-4000-8000-000000000077", "qa-vm-1"),
+    };
+    await started($, on, resumed(on, records));
+
+    expect(await line($, "own")).toBe(OWN);
+    expect(await line($, "store")).toBeUndefined();
+    expect(await line($, "all")).toBeUndefined();
+  });
+
+  test("should read the session id from a Windows transcript path", async ($, on) => {
+    const transcript = ["C:", "Users", "me", ".claude", "projects", "C--work-beads-ui"]
+      .concat(`${SESSION_ID}.jsonl`)
+      .join("\\");
+    await started(
+      $,
+      on,
+      resumed(on, { "4242.json": record(SESSION_ID, "ops-vm-3") }, { transcript }),
+    );
+
+    expect(await line($, "own")).toBe(OWN);
+  });
+
+  test("should keep the name ai c pinned in CLAUDE_CODE_TASK_LIST_ID over the recorded one", async ($, on) => {
+    const env = { HOME: "/home/me", CLAUDE_CODE_TASK_LIST_ID: "qa-vm-1" };
+    await started($, on, resumed(on, { "4242.json": record(SESSION_ID, "ops-vm-3") }, { env }));
+
+    expect(await line($, "own")).toBe(QA);
+  });
+
+  test("should count every owner in its store when the recorded name is one Claude Code made up", async ($, on) => {
+    await started($, on, resumed(on, { "4242.json": record(SESSION_ID, "brisk-otter", "auto") }));
+
+    expect(await line($, "own")).toBeUndefined();
+    expect(await line($, "store")).toMatch(/^\[bd\] \d+ tasks /);
+  });
+
+  test("should count every owner in its store when two records name the session differently", async ($, on) => {
+    const records = {
+      "4242.json": record(SESSION_ID, "ops-vm-3"),
+      "4243.json": record(SESSION_ID, "qa-vm-1"),
+    };
+    await started($, on, resumed(on, records));
+
+    expect(await line($, "own")).toBeUndefined();
+    expect(await line($, "store")).toMatch(/^\[bd\] \d+ tasks /);
+  });
+
+  test("should count every owner in its store when Claude Code will not say which session it is", async ($, on) => {
+    const transcript = new Error("session.info is not offered to this mod");
+    await started(
+      $,
+      on,
+      resumed(on, { "4242.json": record(SESSION_ID, "ops-vm-3") }, { transcript }),
+    );
+
+    expect(await line($, "own")).toBeUndefined();
+    expect(await line($, "store")).toMatch(/^\[bd\] \d+ tasks /);
+  });
+});

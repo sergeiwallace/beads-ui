@@ -8,6 +8,18 @@ documentation.
 
 ## [Unreleased]
 
+## [0.26.7]
+
+### Fixed
+
+- The band counts only the session's own beads when the session was started by a typed
+  `claude -r <name>` instead of `ai c`. Such a session has no `CLAUDE_CODE_TASK_LIST_ID`, so the
+  band took it for an unnamed session and counted every owner's beads. It now takes the name
+  Claude Code recorded for the session in `~/.claude/sessions/<pid>.json` (or under
+  `CLAUDE_CONFIG_DIR`), found by the session id in the transcript path `$.session.info` gives, when
+  the person gave that name. A made-up name, two records that disagree, or a refused
+  `$.session.info` leave the session unnamed, as before; `CLAUDE_CODE_TASK_LIST_ID` still wins.
+
 ## [0.26.5]
 
 ### Fixed

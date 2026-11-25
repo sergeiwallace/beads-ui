@@ -78,7 +78,11 @@ export function register(on: On) {
         kind: await $.env.get("CLAUDE_CODE_SESSION_KIND"),
         backend: await $.env.get("CLAUDE_BG_BACKEND"),
         name: await $.env.get("CLAUDE_CODE_SESSION_NAME"),
+        configDir: await $.env.get("CLAUDE_CONFIG_DIR"),
+        userProfile: await $.env.get("USERPROFILE"),
       }),
+      transcriptPath: async () => (await $.session.info()).transcriptPath,
+      listDir: async (path) => (await $.fs.list(path)).map((entry) => entry.name),
       stream: (cwd, argv, timeoutMs) =>
         readStream($.process.spawn({ argv, cwd, env: { NO_COLOR: "1" } }), timeoutMs, (ms, fn) =>
           $.clock.after(ms, fn),

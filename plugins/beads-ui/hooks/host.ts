@@ -12,6 +12,10 @@ export interface SessionEnv {
   backend: string | undefined;
   /** `CLAUDE_CODE_SESSION_NAME`: the name Claude Code gives that worker's own session. */
   name: string | undefined;
+  /** `CLAUDE_CONFIG_DIR`: where Claude Code keeps its state when not in `~/.claude`. */
+  configDir: string | undefined;
+  /** `USERPROFILE`: the home directory a Windows session has when it has no `HOME`. */
+  userProfile: string | undefined;
 }
 
 /**
@@ -46,6 +50,10 @@ export interface Host {
   storeGet: (key: string) => Promise<unknown>;
   /** `$.store.set`. */
   storeSet: (key: string, value: unknown) => Promise<void>;
+  /** `$.session.info().transcriptPath`: the transcript, a file named for the session's id. */
+  transcriptPath: () => Promise<string>;
+  /** `$.fs.list`: the entry names in a directory; rejects when it cannot be listed. */
+  listDir: (path: string) => Promise<string[]>;
   /** `$.fs.read`; rejects when the file is missing. */
   readFile: (path: string) => Promise<string>;
   /** `$.fs.write`, creating the file and its directories; not atomic. */

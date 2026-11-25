@@ -356,7 +356,7 @@ export const KEYBINDINGS_BLOCK = `{
 export const SHORT_HELP_TEXT =
   "Help needs a docked pane 12 rows or taller: Ctrl+X then an arrow resizes the pane.";
 export const NO_NAME_TEXT =
-  "Mine needs the session's name, which ai c sets in CLAUDE_CODE_TASK_LIST_ID; this session has none, so the board shows all issues";
+  "Mine needs the session's name, which ai c sets in CLAUDE_CODE_TASK_LIST_ID and claude -n or /rename records; this session has neither, so the board shows all issues";
 
 const assigneeLabel = (assignee: string): string => (assignee === "" ? "" : `@${assignee}`);
 
