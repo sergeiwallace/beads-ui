@@ -39,9 +39,60 @@ const blank = (value: string | undefined) =>
  * this session can prove, so it counts as unnamed and never takes the firstmate's form.
  */
 function sessionNameOf(env: SessionEnv): string | undefined {
-  const hosted = env.kind === "bg" || env.backend === "daemon";
-  return blank(hosted ? env.name?.replace(/ \(\d+\)$/, "") : env.taskListId);
+  return blank(isHosted(env) ? env.name?.replace(/ \(\d+\)$/, "") : env.taskListId);
 }
+
+const isHosted = (env: SessionEnv) => env.kind === "bg" || env.backend === "daemon";
+
+/**
+ * The name Claude Code recorded for this session, for one `ai c` did not start (a typed
+ * `claude -r <name>`, or `claude -n <name>`), which has no `CLAUDE_CODE_TASK_LIST_ID`. Claude
+ * Code keeps one record a process in `<config>/sessions/<pid>.json`, holding the session's id and
+ * the name it goes by; the transcript `$.session.info` names is `<session id>.jsonl`. Only a name
+ * the person gave (`nameSource` `user`) is the session's: an `auto` or `collision` name owns no
+ * beads. A session id no record holds, or two records naming it differently, leaves the session
+ * unnamed, as before.
+ */
+async function recordedNameOf(host: Host, sessionsDir: string): Promise<string | undefined> {
+  const transcript = await host.transcriptPath().catch(() => undefined);
+  const id = transcript
+    ?.split(/[\\/]/)
+    .pop()
+    ?.replace(/\.jsonl$/, "");
+  if (id === undefined || id === "") return undefined;
+  const entries = await host.listDir(sessionsDir).catch((): string[] => []);
+  const names = new Set<string>();
+  for (const entry of entries.filter((name) => name.endsWith(".json"))) {
+    const text = await host.readFile(`${sessionsDir}/${entry}`).catch(() => undefined);
+    const record = recordOf(text);
+    const name = blank(record?.name);
+    if (record?.sessionId === id && record.nameSource === "user" && name !== undefined) {
+      names.add(name);
+    }
+  }
+  return names.size === 1 ? [...names][0] : undefined;
+}
+
+interface SessionRecord {
+  sessionId?: unknown;
+  name?: string;
+  nameSource?: unknown;
+}
+
+function recordOf(text: string | undefined): SessionRecord | undefined {
+  if (text === undefined) return undefined;
+  try {
+    const value: unknown = JSON.parse(text);
+    if (typeof value !== "object" || value === null) return undefined;
+    const { sessionId, name, nameSource } = value as Record<string, unknown>;
+    return { sessionId, nameSource, ...(typeof name === "string" ? { name } : {}) };
+  } catch {
+    return undefined;
+  }
+}
+
+const sessionsHome = (home: string | undefined) =>
+  home === undefined ? undefined : `${home.replace(/[\\/]+$/, "")}/.claude`;
 
 /**
  * The store the session's pane and band read (D-24), worked out by core's resolveStore from the
@@ -58,8 +109,6 @@ export class StoreResolver {
   async bind(host: Host): Promise<void> {
     this.host = host;
     this.where = undefined;
-    const env = await host.sessionEnv().catch(() => undefined);
-    this.session = env === undefined ? undefined : sessionNameOf(env);
     const { xdgConfigHome, home } = await host
       .configEnv()
       .catch(() => ({ xdgConfigHome: undefined, home: undefined }));
@@ -69,6 +118,11 @@ export class StoreResolver {
       ...(xdg === undefined ? {} : { xdgConfigHome: xdg }),
       ...(dir === undefined ? {} : { home: dir }),
     };
+    const env = await host.sessionEnv().catch(() => undefined);
+    this.session = env === undefined ? undefined : sessionNameOf(env);
+    if (this.session !== undefined || env === undefined || isHosted(env)) return;
+    const config = blank(env.configDir) ?? sessionsHome(dir ?? blank(env.userProfile));
+    if (config !== undefined) this.session = await recordedNameOf(host, `${config}/sessions`);
   }
 
   /** The session's name (sessionNameOf). */
