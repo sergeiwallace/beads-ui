@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Dark tile" data-favicon="FAV-01 dark-tile@1.1.0">
+  <title>FAV-01 dark-tile@1.1.0</title>
+  <rect width="64" height="64" rx="12" fill="#2a3346"/>
+  <!-- Centers and corner radius align to the 16 px grid. -->
+  <circle cx="12" cy="20" r="9" fill="#18c5a8"/>
+  <circle cx="12" cy="48" r="9" fill="#18c5a8"/>
+  <circle cx="32" cy="32" r="9" fill="#75e4d2"/>
+  <circle cx="52" cy="24" r="9" fill="#969bff"/>
+</svg>

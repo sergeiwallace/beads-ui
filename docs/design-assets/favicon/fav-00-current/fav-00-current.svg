@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Beads UI" data-favicon="FAV-00 current@1.0.0">
+  <title>FAV-00 current@1.0.0</title>
+  <g fill="#2a3346" stroke="#7a88a6" stroke-width="2">
+    <rect x="4" y="5" width="16" height="54" rx="5"/>
+    <rect x="24" y="5" width="16" height="54" rx="5"/>
+    <rect x="44" y="5" width="16" height="54" rx="5"/>
+  </g>
+  <path d="M12 17H18Q21 17 23 20T32 24H41Q44 24 46 26H52" fill="none" stroke="#25c2a0" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="12" cy="17" r="6" fill="#18c5a8"/>
+  <circle cx="12" cy="33" r="6" fill="#18c5a8"/>
+  <circle cx="12" cy="49" r="6" fill="#18c5a8"/>
+  <circle cx="32" cy="24" r="6" fill="#75e4d2"/>
+  <circle cx="32" cy="40" r="6" fill="#75e4d2"/>
+  <circle cx="52" cy="26" r="6" fill="#969bff"/>
+</svg>

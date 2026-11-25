@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Kanban relay" data-favicon="FAV-02 kanban-relay@1.0.0">
+  <title>FAV-02 kanban-relay@1.0.0</title>
+  <g fill="#61718d">
+    <rect x="4" y="8" width="16" height="48" rx="4"/>
+    <rect x="24" y="8" width="16" height="48" rx="4"/>
+    <rect x="44" y="8" width="16" height="48" rx="4"/>
+  </g>
+  <path d="M12 18h7l8 6h12l8 4h5" fill="none" stroke="#40d1b6" stroke-width="6" stroke-linejoin="round"/>
+  <g fill="#36d6b2">
+    <circle cx="12" cy="18" r="6"/>
+    <circle cx="12" cy="33" r="6"/>
+    <circle cx="12" cy="48" r="6"/>
+  </g>
+  <g fill="#9cf2db">
+    <circle cx="32" cy="24" r="6"/>
+    <circle cx="32" cy="40" r="6"/>
+  </g>
+  <circle cx="52" cy="28" r="6" fill="#d0bcff"/>
+</svg>
