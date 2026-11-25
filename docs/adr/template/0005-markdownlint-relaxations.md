@@ -14,7 +14,7 @@ Each relaxed rule, with the reason it is off:
 | MD051 link fragments | off | Anchors with special characters and generated READMEs break the checker. |
 | MD047 final newline | off | Generated files often end without one. |
 | MD007 list indentation | off | Generated docs indent lists in varied ways. |
-| MD029 ordered list prefix | off | Some lists deliberately start above 1, for example CLAUDE.md and GEMINI.md startup steps that continue the global config's numbering. |
+| MD029 ordered list prefix | off | Some lists deliberately start above 1, for example CLAUDE.md startup steps that continue the global config's numbering. |
 | MD040 fenced code language | off | Design and plan docs use plain blocks for shell sessions, config snippets and ASCII diagrams. |
 | MD028 blank line in blockquote | off | Feedback sections in design and plan docs use blank lines inside quotes for readability. |
 | MD003 heading style | off | Feedback sections use `> ---` as a divider, which markdownlint misreads as a setext heading underline. |
