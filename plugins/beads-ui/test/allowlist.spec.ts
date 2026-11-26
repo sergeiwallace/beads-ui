@@ -140,6 +140,23 @@ describe("the validate allow-list gate", { timeout: 180_000 }, () => {
     );
   });
 
+  it("should fail when the hooks module passes $ to a function it declares inside another", () => {
+    const dir = pluginWith((d) =>
+      editRegister(
+        d,
+        SESSION_START,
+        `${SESSION_START}\n    const view = (engine: { ui: { toast(text: string): unknown } }) => engine.ui.toast("x");\n    view($);`,
+      ),
+    );
+
+    const result = runGate(dir);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      '$ is passed to "view", which is not a function declared at the top of this file',
+    );
+  });
+
   it("should fail naming the line when the hooks module aliases $ before handing it on", () => {
     const dir = pluginWith((d) => {
       writeFileSync(
