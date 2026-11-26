@@ -1,4 +1,4 @@
-import type { On } from "claude-code";
+import type { EngineInterface, On } from "claude-code";
 
 import { isTaskPanelRetired, pictureForm } from "../core/src/index.js";
 import { BandSettingsPanel } from "./bandSettings.js";
@@ -28,6 +28,96 @@ const COMMAND_SPECS = [
   },
   { name: ALIAS_NAME, description: "Open or close the beads-ui board (short for /show-beads-ui)" },
 ] as const;
+
+/** What one copy of the module binds to its session's Host, and the bind once it began. */
+interface Binding {
+  stores: StoreResolver;
+  bandSettings: BandSettingsPanel;
+  pane: BeadsPane;
+  tally: BandTally;
+  levels: BandLevels;
+  sync: EditSync;
+  confirm: DeleteConfirm;
+  bound?: Promise<void>;
+}
+
+/** Builds the Host on `$` and binds every part to it, with the commands registered. */
+async function bindTo($: EngineInterface, cwd: string, parts: Binding): Promise<void> {
+  const host: Host = {
+    cwd,
+    run: (argv, timeoutMs) => $.process.run(argv, { cwd, timeoutMs, env: { NO_COLOR: "1" } }),
+    runIn: (cwd, argv, timeoutMs) =>
+      $.process.run(argv, { cwd, timeoutMs, env: { NO_COLOR: "1" } }),
+    sessionEnv: async () => ({
+      taskListId: await $.env.get("CLAUDE_CODE_TASK_LIST_ID"),
+      kind: await $.env.get("CLAUDE_CODE_SESSION_KIND"),
+      backend: await $.env.get("CLAUDE_BG_BACKEND"),
+      name: await $.env.get("CLAUDE_CODE_SESSION_NAME"),
+    }),
+    stream: (cwd, argv, timeoutMs) =>
+      readStream($.process.spawn({ argv, cwd, env: { NO_COLOR: "1" } }), timeoutMs, (ms, fn) =>
+        $.clock.after(ms, fn),
+      ),
+    now: () => $.clock.now(),
+    every: (ms, fn) => $.clock.every(ms, fn),
+    after: (ms, fn) => $.clock.after(ms, fn),
+    storeGet: (key) => $.store.get(key),
+    storeSet: (key, value) => $.store.set(key, value),
+    readFile: (path) => $.fs.read(path),
+    writeFile: (path, text) => $.fs.write(path, text),
+    pluginRoot: $.plugin.root,
+    stateHome: () => $.env.get("XDG_STATE_HOME"),
+    configEnv: async () => ({
+      xdgConfigHome: await $.env.get("XDG_CONFIG_HOME"),
+      home: await $.env.get("HOME"),
+    }),
+    slugBudgetEnv: async () => ({
+      body: await $.env.get("AIH_SLUG_BODY_MAX_CHARS"),
+      child: await $.env.get("AIH_SLUG_BODY_MAX_CHARS_CHILD"),
+    }),
+    invalidate: () => $.ui.invalidate("ui.render"),
+    toast: (text) => $.ui.toast(text),
+    notify: (text) => $.ui.notify(text),
+    submit: (text) => $.prompt.submit({ text }),
+    openPane: (args) => $.ui.open(args),
+    closePane: (id) => $.ui.close({ id }),
+    focus: (requestId, key) => $.ui.focus({ requestId, key }),
+    terminalEnv: async () => ({
+      term: await $.env.get("TERM"),
+      termProgram: await $.env.get("TERM_PROGRAM"),
+      termProgramVersion: await $.env.get("TERM_PROGRAM_VERSION"),
+      tmux: await $.env.get("TMUX"),
+    }),
+  };
+  for (const spec of COMMAND_SPECS) await $.command.register(spec);
+  parts.confirm.host = host;
+  await parts.stores.bind(host);
+  await parts.bandSettings.bind(host);
+  await parts.pane.bind(host);
+  await parts.tally.bind(host);
+  await parts.levels.bind(host);
+  parts.sync.bind(host);
+  void readTerminal(host)
+    .then((verdict) => {
+      parts.pane.images = verdict;
+      host.invalidate();
+    })
+    .catch(() => undefined);
+}
+
+async function bindToSession($: EngineInterface, parts: Binding): Promise<void> {
+  await bindTo($, await $.session.cwd(), parts);
+}
+
+function bindAt($: EngineInterface, cwd: string, binding: Binding): Promise<void> {
+  binding.bound ??= bindTo($, cwd, binding);
+  return binding.bound;
+}
+
+function bindLate($: EngineInterface, binding: Binding): Promise<void> {
+  binding.bound ??= bindToSession($, binding);
+  return binding.bound;
+}
 
 /**
  * Registers `/show-beads-ui` and `/bu`, the pane they toggle, its delete confirmation, the band above
@@ -65,69 +155,10 @@ export function register(on: On) {
       .then(() => confirm.open(issue, issues))
       .catch(() => undefined);
   };
+  const binding: Binding = { stores, bandSettings, pane, tally, levels, sync, confirm };
 
   on("session.start", async ($, e, next) => {
-    const host: Host = {
-      cwd: e.cwd,
-      run: (argv, timeoutMs) =>
-        $.process.run(argv, { cwd: e.cwd, timeoutMs, env: { NO_COLOR: "1" } }),
-      runIn: (cwd, argv, timeoutMs) =>
-        $.process.run(argv, { cwd, timeoutMs, env: { NO_COLOR: "1" } }),
-      sessionEnv: async () => ({
-        taskListId: await $.env.get("CLAUDE_CODE_TASK_LIST_ID"),
-        kind: await $.env.get("CLAUDE_CODE_SESSION_KIND"),
-        backend: await $.env.get("CLAUDE_BG_BACKEND"),
-        name: await $.env.get("CLAUDE_CODE_SESSION_NAME"),
-      }),
-      stream: (cwd, argv, timeoutMs) =>
-        readStream($.process.spawn({ argv, cwd, env: { NO_COLOR: "1" } }), timeoutMs, (ms, fn) =>
-          $.clock.after(ms, fn),
-        ),
-      now: () => $.clock.now(),
-      every: (ms, fn) => $.clock.every(ms, fn),
-      after: (ms, fn) => $.clock.after(ms, fn),
-      storeGet: (key) => $.store.get(key),
-      storeSet: (key, value) => $.store.set(key, value),
-      readFile: (path) => $.fs.read(path),
-      writeFile: (path, text) => $.fs.write(path, text),
-      pluginRoot: $.plugin.root,
-      stateHome: () => $.env.get("XDG_STATE_HOME"),
-      configEnv: async () => ({
-        xdgConfigHome: await $.env.get("XDG_CONFIG_HOME"),
-        home: await $.env.get("HOME"),
-      }),
-      slugBudgetEnv: async () => ({
-        body: await $.env.get("AIH_SLUG_BODY_MAX_CHARS"),
-        child: await $.env.get("AIH_SLUG_BODY_MAX_CHARS_CHILD"),
-      }),
-      invalidate: () => $.ui.invalidate("ui.render"),
-      toast: (text) => $.ui.toast(text),
-      notify: (text) => $.ui.notify(text),
-      submit: (text) => $.prompt.submit({ text }),
-      openPane: (args) => $.ui.open(args),
-      closePane: (id) => $.ui.close({ id }),
-      focus: (requestId, key) => $.ui.focus({ requestId, key }),
-      terminalEnv: async () => ({
-        term: await $.env.get("TERM"),
-        termProgram: await $.env.get("TERM_PROGRAM"),
-        termProgramVersion: await $.env.get("TERM_PROGRAM_VERSION"),
-        tmux: await $.env.get("TMUX"),
-      }),
-    };
-    for (const spec of COMMAND_SPECS) await $.command.register(spec);
-    confirm.host = host;
-    await stores.bind(host);
-    await bandSettings.bind(host);
-    await pane.bind(host);
-    await tally.bind(host);
-    await levels.bind(host);
-    sync.bind(host);
-    void readTerminal(host)
-      .then((verdict) => {
-        pane.images = verdict;
-        host.invalidate();
-      })
-      .catch(() => undefined);
+    await bindAt($, e.cwd, binding);
     if (e.isInteractive) {
       void $.settings
         .read({ key: "permissions" })
@@ -139,7 +170,8 @@ export function register(on: On) {
     return next(e);
   });
 
-  on("command.run", { command: ["show-beads-ui", "bu"] }, async () => {
+  on("command.run", { command: ["show-beads-ui", "bu"] }, async ($) => {
+    await bindLate($, binding);
     await pane.toggle();
 
     return {};
@@ -171,6 +203,7 @@ export function register(on: On) {
     if ((e.surface !== "terminal" && e.surface !== "desktop") || e.props.hasSurvey) {
       return next(e);
     }
+    void bindLate($, binding).catch(() => undefined);
     const { Box, Text, Button, Input, Select, Markdown } = await $.ui.resolve(e);
     const band = drawBand(
       { Box, Text, Button, Input, Select, Markdown },
