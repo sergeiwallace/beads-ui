@@ -211,6 +211,7 @@ export function world(on: On, options: WorldOptions = {}) {
   const focused: Args<"ui.focus">[] = [];
 
   on("session.start", (_engine, e) => ({ cwd: e.cwd }));
+  on("session.cwd", () => ({ value: CWD }));
   on("command.register", (_engine, e) => {
     registered.push(e.name);
     return { value: { command: e.name } };

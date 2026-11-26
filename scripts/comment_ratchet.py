@@ -30,8 +30,9 @@ file is classified by its shebang. Docstrings are not comment tokens, and a JSDo
 nor is any comment starting with a marker listed one per line in the optional
 ``comment-directives.txt`` at the repository root. Files under ``.beads/`` are
 written by bd and are not checked, nor is any path listed one per line in the
-copier-rendered ``comment-skip.txt`` (a line ending in ``/`` skips a directory). A
-skipped path's baseline entry is ignored, and ``--update`` drops it.
+copier-rendered ``comment-skip.txt`` or the repository's own optional
+``comment-skip.local.txt`` (a line ending in ``/`` skips a directory). A skipped
+path's baseline entry is ignored, and ``--update`` drops it.
 
 A file that cannot be lexed fails the check: an uncounted file is not a passing one.
 """
@@ -50,7 +51,7 @@ from pathlib import Path
 
 BASELINE = "comment-baseline.json"
 EXTRA_DIRECTIVES = "comment-directives.txt"
-SKIP_FILE = "comment-skip.txt"
+SKIP_FILES = ("comment-skip.txt", "comment-skip.local.txt")
 COMMAND = "python3 scripts/comment_ratchet.py"
 SKIPPED = (".beads/",)
 
@@ -619,7 +620,7 @@ def listed_lines(path: Path) -> tuple[str, ...]:
 
 
 def skipped(root: Path):
-    entries = listed_lines(root / SKIP_FILE)
+    entries = [line for name in SKIP_FILES for line in listed_lines(root / name)]
     directories = SKIPPED + tuple(e for e in entries if e.endswith("/"))
     files = {e for e in entries if not e.endswith("/")}
     return lambda path: path in files or path.startswith(directories)

@@ -53,7 +53,7 @@ export function registerDispatchTools(server: McpServer, web: WebClient): Dispat
     {
       title: "Draft a session prompt",
       description:
-        "Drafts a prompt for the Claude Code session that owns a task. Nothing is sent: the user confirms the draft in the beads-ui MCP App or in the web app. Returns the draft id.",
+        "Drafts a prompt for the session that owns a task. Nothing is sent: the user confirms the draft in the beads-ui MCP App or in the web app. Returns the draft id.",
       inputSchema: z.object(task),
     },
     async (args) => {

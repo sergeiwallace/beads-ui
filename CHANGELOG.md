@@ -8,6 +8,17 @@ documentation.
 
 ## [Unreleased]
 
+## [0.26.7]
+
+### Fixed
+
+- The band and `/bu` work in a copy of the mod that no `session.start` reached. Every bind used
+  to sit in the `session.start` hook, so a copy loaded into a session already running drew no
+  band, and `/bu` answered "beads-ui could not open its pane". The copy now binds on whichever
+  reaches it first: `session.start`, the band's first draw or the command, reading the session's
+  directory from `$.session.cwd` when no `session.start` gave it. The bind runs once per copy, so
+  a later or a repeated `session.start` registers no command twice and binds nothing again.
+
 ## [0.26.5]
 
 ### Fixed
