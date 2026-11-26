@@ -259,12 +259,37 @@ function isParameter(code, offset) {
   return false;
 }
 
+function calleeOf(code, offset) {
+  let depth = 0;
+  for (let k = offset - 1; k >= 0; k--) {
+    const char = code[k];
+    if (char === ")" || char === "]" || char === "}") depth++;
+    else if (char === "(" || char === "[" || char === "{") {
+      if (depth > 0) {
+        depth--;
+        continue;
+      }
+      if (char !== "(") return undefined;
+      return /([\w$]+)\s*$/.exec(code.slice(Math.max(0, k - 60), k))?.[1];
+    }
+  }
+  return undefined;
+}
+
+function declaredAtTop(code, name) {
+  const escaped = name.replace(/\$/g, "\\$");
+  return new RegExp(`^(?:export\\s+)?(?:async\\s+)?function\\s+${escaped}\\s*[<(]`, "m").test(code);
+}
+
 function engineHandedOut(code) {
   const found = [];
   for (const match of code.matchAll(BARE_ENGINE)) {
     const after = code.slice(match.index + 1).trimStart();
     if (after.startsWith(".") || after.startsWith("?.") || after.startsWith("[")) continue;
-    if (!isParameter(code, match.index)) found.push(match.index);
+    if (isParameter(code, match.index)) continue;
+    const callee = calleeOf(code, match.index);
+    if (callee !== undefined && declaredAtTop(code, callee)) continue;
+    found.push(match.index);
   }
   return found;
 }
