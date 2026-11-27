@@ -22,6 +22,7 @@ const CELLS: readonly Cell[] = [
   { name: "1280 at 500% zoom", width: 256, height: 160, scale: 5, overflows: ["Commands"] },
 ];
 
+const BASE_UI_ANIMATIONS_OFF = "BASE_UI_ANIMATIONS_DISABLED";
 const LONG_REPOSITORY = "a-repository-with-a-name-as-long-as-many-real-ones";
 
 let host: StoreHost;
@@ -50,6 +51,9 @@ async function open(browser: Browser, cell: Cell): Promise<Page> {
     hasTouch: cell.touch === true,
     isMobile: cell.touch === true,
   });
+  await context.addInitScript((flag) => {
+    Object.assign(globalThis, { [flag]: true });
+  }, BASE_UI_ANIMATIONS_OFF);
   const page = await context.newPage();
   await page.goto(await loginLink(served));
   await expect(page.locator(".app-main li.bu-card")).toHaveCount(1);
