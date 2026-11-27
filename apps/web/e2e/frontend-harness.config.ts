@@ -5,6 +5,11 @@ import { beadsUiAdapter } from "./harness/adapter.ts";
 import { beadsUiFaults } from "./harness/faults.ts";
 import { navLink, TABS } from "./harness/journeys.ts";
 
+const BD_CALL_MS = 10_000;
+const REFRESH_MS = 10_000;
+const SETTLE_MS = 5_000;
+const ONE_BD_RETRY_MS = BD_CALL_MS + REFRESH_MS + BD_CALL_MS + SETTLE_MS;
+
 const heavyHosts = (process.env.FTH_HEAVY_HOSTS ?? "")
   .split(",")
   .map((name) => name.trim())
@@ -50,7 +55,7 @@ export default defineHarnessConfig({
     testDir: ".",
     globalSetup: "./global-setup.ts",
     timeout: 90_000,
-    expect: { timeout: 15_000 },
+    expect: { timeout: ONE_BD_RETRY_MS },
     fullyParallel: true,
     workers: testJobs(),
     reporter: [["list"]],

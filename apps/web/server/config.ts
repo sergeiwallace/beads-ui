@@ -14,6 +14,7 @@ import {
   WEB_RANK_DEFAULT,
 } from "@beads-ui/core";
 import { DEFAULT_QUEUE_WAIT_SECONDS } from "./bd-queue.ts";
+import { DEFAULT_BD_CALL_TIMEOUT_SECONDS } from "./bd-timeout.ts";
 
 /** The address the server binds unless `[web] host` names another, which needs `[auth]`. */
 export const LOOPBACK = "127.0.0.1";
@@ -48,6 +49,7 @@ export interface WebConfig extends BeadsUiConfig {
    * it answers a failure naming the wait (bd-queue.ts); DEFAULT_QUEUE_WAIT_SECONDS when unset.
    */
   bdQueueWaitSeconds: number;
+  bdCallTimeoutSeconds: number;
   /**
    * `[web] service_probe_timeout_seconds`: how long `install-service --enable` waits for the
    * started service to answer its health probe; DEFAULT_PROBE_TIMEOUT_SECONDS when unset.
@@ -125,6 +127,7 @@ export async function readWebConfig(repoRoot: string, env: ConfigEnv): Promise<W
     ...base.config,
     rank: rank.rank,
     bdQueueWaitSeconds: DEFAULT_QUEUE_WAIT_SECONDS,
+    bdCallTimeoutSeconds: DEFAULT_BD_CALL_TIMEOUT_SECONDS,
     serviceProbeTimeoutSeconds: DEFAULT_PROBE_TIMEOUT_SECONDS,
     serviceProbeIntervalSeconds: DEFAULT_PROBE_INTERVAL_SECONDS,
     problems: [
@@ -144,6 +147,13 @@ export async function readWebConfig(repoRoot: string, env: ConfigEnv): Promise<W
   const queueWait = resolveBdQueueWait(text);
   config.problems.push(...queueWait.problems);
   if (queueWait.seconds !== undefined) config.bdQueueWaitSeconds = queueWait.seconds;
+  const callTimeout = resolveWebSeconds(
+    text,
+    "bd_call_timeout_seconds",
+    DEFAULT_BD_CALL_TIMEOUT_SECONDS,
+  );
+  config.problems.push(...callTimeout.problems);
+  if (callTimeout.seconds !== undefined) config.bdCallTimeoutSeconds = callTimeout.seconds;
   const probeTimeout = resolveWebSeconds(
     text,
     "service_probe_timeout_seconds",

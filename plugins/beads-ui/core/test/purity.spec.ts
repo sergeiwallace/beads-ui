@@ -1,14 +1,18 @@
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 const coreDir = resolve(import.meta.dirname, "..");
 const pluginDir = resolve(coreDir, "..");
 const repoRoot = resolve(pluginDir, "../..");
 const gate = join(repoRoot, "scripts/check-core-purity.mjs");
-const tsc = join(repoRoot, "node_modules/typescript/bin/tsc");
+const tsc = join(
+  dirname(createRequire(import.meta.url).resolve("typescript/package.json")),
+  "bin/tsc",
+);
 const impure = join(coreDir, "test/fixtures/impure");
 
 const run = (command: string, args: string[]) =>

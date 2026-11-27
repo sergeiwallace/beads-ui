@@ -9,7 +9,7 @@ import {
   STORE_INVENTORY_FILE,
   storeName,
 } from "@beads-ui/core";
-import { type BdClient, createBdClient } from "@sergeiwallace/beads-ui-bd-node";
+import type { BdClient } from "@sergeiwallace/beads-ui-bd-node";
 import {
   type AllowlistHealth,
   ambiguousLine,
@@ -18,6 +18,7 @@ import {
   StoreClosed,
 } from "./allowlist.ts";
 import { DEFAULT_QUEUE_WAIT_SECONDS, queuedBd } from "./bd-queue.ts";
+import { DEFAULT_BD_CALL_TIMEOUT_SECONDS, timedBd } from "./bd-timeout.ts";
 import type { ConfigEnv } from "./config.ts";
 
 const exec = promisify(execFile);
@@ -173,6 +174,7 @@ export interface RegistryOptions {
   health: AllowlistHealth;
   /** How long a bd call may wait for its store's earlier calls, read at each call (bd-queue.ts). */
   queueWaitMs?: () => Promise<number>;
+  callTimeoutMs?: () => Promise<number>;
 }
 
 async function readInventory(home: string | undefined) {
@@ -281,10 +283,13 @@ export function createStoreRegistry(options: RegistryOptions): StoreRegistry {
     if (bd === undefined) {
       bd = gatedBd(
         queuedBd(
-          createBdClient({
-            cwd: path,
-            ...(options.bdEnv === undefined ? {} : { env: options.bdEnv }),
-          }),
+          timedBd(
+            {
+              cwd: path,
+              ...(options.bdEnv === undefined ? {} : { env: options.bdEnv }),
+            },
+            options.callTimeoutMs ?? (async () => DEFAULT_BD_CALL_TIMEOUT_SECONDS * 1000),
+          ),
           options.queueWaitMs ?? (async () => DEFAULT_QUEUE_WAIT_SECONDS * 1000),
         ),
         async () => {
