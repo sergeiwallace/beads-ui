@@ -86,6 +86,18 @@ describe("one store's bd calls", () => {
     );
   }, 120_000);
 
+  it("should answer a Board read whose bd list outlasts [web] bd_call_timeout_seconds with a timeout naming that bound, read at the call", async () => {
+    await host.write(hosts());
+    slow = await lockedBd(["list"], 3);
+    const on = await start();
+    await host.write(hosts("[web]\nbd_call_timeout_seconds = 1"));
+
+    const reply = await board(on);
+
+    expect(reply.status).toBe(504);
+    expect(JSON.stringify(reply.body)).toContain("did not finish within 1000 ms");
+  }, 120_000);
+
   it("should drop a queued read whose request was abandoned before its bd call started", async () => {
     await host.write(hosts());
     slow = await lockedBd(["list"], 3);

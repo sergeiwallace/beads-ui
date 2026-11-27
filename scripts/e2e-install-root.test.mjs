@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { copyFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
@@ -10,7 +11,11 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const web = join(root, "apps", "web");
 const e2e = join(web, "e2e");
 const json = (path) => JSON.parse(readFileSync(path, "utf8"));
-const tsc = join(root, "node_modules", "typescript", "bin", "tsc");
+const tsc = join(
+  dirname(createRequire(import.meta.url).resolve("typescript/package.json")),
+  "bin",
+  "tsc",
+);
 
 test("should type-check apps/web with no file under apps/web/e2e and no apps/web/playwright.config.ts", () => {
   const listed = spawnSync(process.execPath, [tsc, "-p", web, "--listFilesOnly"], {

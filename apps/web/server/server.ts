@@ -5,6 +5,7 @@ import { AllowlistHealth, readAllowlist } from "./allowlist.ts";
 import { type App, createApp } from "./app.ts";
 import { AuthLayer, AuthRefused, type AuthSettings, loadAuth } from "./auth.ts";
 import { requestScope } from "./bd-queue.ts";
+import { DEFAULT_BD_CALL_TIMEOUT_SECONDS } from "./bd-timeout.ts";
 import { type ConfigEnv, isLoopback, LOOPBACK, readWebConfig } from "./config.ts";
 import { releaseFollowUps } from "./dispatch.ts";
 import { DispatchLadder } from "./dispatch-ladder.ts";
@@ -67,11 +68,15 @@ export interface RunningServer {
   close(): Promise<void>;
 }
 
+export const CLOSE_MARGIN_MS = 5_000;
+
 /**
- * How long a stop waits for requests in flight: past bd-node's 10-second call timeout. Then their
- * connections close, so a read still waiting in its store's bd queue is dropped; a write runs.
+ * How long a stop waits for requests in flight: past the bd call timeout, `[web]
+ * bd_call_timeout_seconds` read as the stop begins, by CLOSE_MARGIN_MS; this is its value at the
+ * default. Then their connections close, so a read still waiting in its store's bd queue is
+ * dropped; a write runs.
  */
-export const CLOSE_GRACE_MS = 15_000;
+export const CLOSE_GRACE_MS = DEFAULT_BD_CALL_TIMEOUT_SECONDS * 1000 + CLOSE_MARGIN_MS;
 
 /** A start the server refuses, with the reason it prints. */
 export class StartRefused extends Error {}
@@ -109,6 +114,8 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
     health,
     queueWaitMs: async () =>
       (await readWebConfig(options.repoRoot, options.configEnv)).bdQueueWaitSeconds * 1000,
+    callTimeoutMs: async () =>
+      (await readWebConfig(options.repoRoot, options.configEnv)).bdCallTimeoutSeconds * 1000,
   });
   const reading = await stores.read();
   if (reading.startedIn !== undefined) {
@@ -235,8 +242,11 @@ export async function startServer(options: StartOptions): Promise<RunningServer>
       ladder.close();
       started.closeStreams();
       await feed.stop();
+      const grace =
+        (await readWebConfig(options.repoRoot, options.configEnv)).bdCallTimeoutSeconds * 1000 +
+        CLOSE_MARGIN_MS;
       await new Promise<void>((resolve, reject) => {
-        const deadline = setTimeout(() => server.closeAllConnections(), CLOSE_GRACE_MS);
+        const deadline = setTimeout(() => server.closeAllConnections(), grace);
         server.close((error) => {
           clearTimeout(deadline);
           if (error) reject(error);

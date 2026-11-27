@@ -27,6 +27,18 @@ export const AUTH_DEFAULTS: Readonly<Record<string, string | string[]>> = {
   trusted_keys: "state:trusted-dispatch-keys.json",
 };
 
+export const TEST_BD_CALL_TIMEOUT_SECONDS = 30;
+const BD_CALL_TIMEOUT_KEY = "bd_call_timeout_seconds";
+const WEB_TABLE = "[web]\n";
+
+function withCallTimeout(extra: string | undefined): string {
+  const line = `${BD_CALL_TIMEOUT_KEY} = ${TEST_BD_CALL_TIMEOUT_SECONDS}\n`;
+  if (extra === undefined) return `${WEB_TABLE}${line}`;
+  if (extra.includes(BD_CALL_TIMEOUT_KEY)) return extra;
+  if (extra.includes(WEB_TABLE)) return extra.replace(WEB_TABLE, `${WEB_TABLE}${line}`);
+  return `${extra}\n${WEB_TABLE}${line}`;
+}
+
 const tomlValue = (value: string | string[]) =>
   Array.isArray(value)
     ? `[${value.map((item) => JSON.stringify(item)).join(", ")}]`
@@ -47,7 +59,7 @@ export function hostConfig(options: {
   for (const [key, value] of Object.entries(auth)) {
     if (value !== undefined) lines.push(`${key} = ${tomlValue(value)}`);
   }
-  if (options.extra !== undefined) lines.push("", options.extra);
+  lines.push("", withCallTimeout(options.extra));
   return `${lines.join("\n")}\n`;
 }
 
@@ -110,6 +122,7 @@ export function send(
       {
         host: "127.0.0.1",
         port: server.port,
+        agent: false,
         path,
         method: options.method ?? "GET",
         headers: { host: `127.0.0.1:${server.port}`, ...options.headers },

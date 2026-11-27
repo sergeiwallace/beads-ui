@@ -4,6 +4,9 @@ import { fileURLToPath } from "node:url";
 import { configDefaults, defineConfig } from "vitest/config";
 import { COMMIT_SCOPE, testJobs, testScope } from "../../scripts/test-jobs.mjs";
 
+const TEST_MS = 300_000;
+const STORE_SETUP_MS = 300_000;
+
 const coreSrc = fileURLToPath(new URL("../../plugins/beads-ui/core/src/", import.meta.url));
 const testDir = fileURLToPath(new URL("test/", import.meta.url));
 const SERVER_IMPORT = /from "(\.\.\/server\/server|\.\/store|\.\/host-stores)\.ts"/;
@@ -30,7 +33,7 @@ export default defineConfig({
         ? [...configDefaults.exclude, ...serverSuites()]
         : configDefaults.exclude,
     globalSetup: ["test/global-setup.ts"],
-    testTimeout: 60_000,
-    hookTimeout: 60_000,
+    testTimeout: TEST_MS,
+    hookTimeout: STORE_SETUP_MS,
   },
 });

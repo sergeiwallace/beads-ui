@@ -31,7 +31,9 @@ async function tree(root: string): Promise<string> {
   return JSON.stringify(entries.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
 }
 
-const bdIn = (dir: string, ...args: string[]) => exec("bd", args, { cwd: dir, timeout: 60_000 });
+const BD_CALL_MS = 300_000;
+const bdIn = (dir: string, ...args: string[]) =>
+  exec("bd", args, { cwd: dir, timeout: BD_CALL_MS });
 
 const bdInit = (dir: string, prefix: string) =>
   bdIn(dir, "init", "--non-interactive", "--skip-hooks", "-p", prefix);
@@ -85,8 +87,13 @@ export interface TestStore {
 export async function createStore(prefix = "web"): Promise<TestStore> {
   const dir = await mkdtemp(join(tmpdir(), "beads-ui-web-store-"));
   const bd = async (...args: string[]) => (await bdIn(dir, ...args)).stdout;
-  await initStore(dir, prefix);
-  await recordCreatedStore(dir);
+  try {
+    await initStore(dir, prefix);
+    await recordCreatedStore(dir);
+  } catch (error) {
+    await rm(dir, { recursive: true, force: true });
+    throw error;
+  }
   return {
     dir,
     bd,

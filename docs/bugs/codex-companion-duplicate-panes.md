@@ -49,7 +49,7 @@ This is a Linux-only companion adapter, not an embedded Codex component. Install
 
 ## Reproduction
 
-Base HEAD: `0f80e89`, plus the existing staged companion implementation. Environment: fw-lnx, Node 22.23.1, tmux 3.7c.
+Base HEAD: `0f80e89`, plus the existing staged companion implementation. Environment: a Linux host, Node 22.23.1, tmux 3.7c.
 The new regression exercises a real isolated tmux server, real launcher processes, rendered companion readiness, and fixture bd data.
 
 Run from `apps/terminal`:

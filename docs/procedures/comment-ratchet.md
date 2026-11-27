@@ -20,7 +20,8 @@ compares each count with `comment-baseline.json` at the repository root.
   content is not the language its extension names (a regex list saved as `.toml`) is
   renamed, not excused.
 - Files under `.beads/` are skipped, because bd writes them.
-- Paths listed in `comment-skip.txt` are skipped. See "Files no repository owns" below.
+- Paths listed in `comment-skip.txt` or `comment-skip.local.txt` are skipped. See "Files
+  no repository owns" below.
 - Renaming a file that has baselined comments: move its entry in `comment-baseline.json`
   by hand in the same commit. `--update` cannot tell a rename from a new file, so it
   refuses, and the hand edit is visible in review.
@@ -30,8 +31,9 @@ same stage as ruff) and as `tests/test_comment_ratchet.py` in Python repositorie
 
 Both files start with `# fmt: off`, like the other template-managed scripts, so a
 consumer's formatter leaves them byte-identical. A consumer whose ruff selects complexity
-rules (`C901`, `PLR0911`, `PLR0912`, `PLR0915`, `PLR2004`) lists the script under its own
-`per-file-ignores`, as it already does for `scripts/session-broker.py`.
+rules (`C901`, `PLR0911`, `PLR0912`, `PLR0915`, `PLR2004`) or `T201` (the script reports
+with `print`) lists the script under its own `per-file-ignores`, as it already does for
+`scripts/session-broker.py`.
 
 | Command | What it does |
 |---|---|
@@ -54,15 +56,21 @@ The installer overwrites both on every run, so a deletion in the repository does
 When ai-harness deletes their comments at the source, a repository that counted them
 would fail as "under baseline" with nobody there owning the fix.
 
-So the ratchet skips the paths listed in `comment-skip.txt` at the repository root. The
-file holds one repo-relative path per line, and a line ending in `/` skips everything
-under it. A skipped path's entry in `comment-baseline.json` is ignored, and the next
-`--update` drops it.
+So the ratchet skips the paths listed in two files at the repository root:
+
+- `comment-skip.txt` is template-owned. Copier renders it and rewrites it on update.
+- `comment-skip.local.txt` is repo-owned. The template ships no copy, so copier never
+  renders or rewrites it. A missing file skips nothing extra.
+
+Both files hold one repo-relative path per line, and a line ending in `/` skips
+everything under it. A path in either file is skipped. A skipped path's entry in
+`comment-baseline.json` is ignored, and the next `--update` drops it.
 
 Copier renders `comment-skip.txt` from the hidden answer `owns_installer_hooks`, which is
 false by default and then lists both hooks. Do not edit the file by hand, because copier
-rewrites it on update. A new installer-managed path is added in the template, so every
-repository gets it on its next update.
+rewrites it on update: list a file the repository does not author, such as a vendored
+"Do not edit" bundle, in `comment-skip.local.txt` instead. A new installer-managed path
+is added in the template, so every repository gets it on its next update.
 
 ai-harness holds the source of these hooks, so it must keep counting them. It answers
 `owns_installer_hooks: true` once, in the commit of its copier update:
@@ -217,3 +225,13 @@ Each decision lists what was chosen, why, and the rejected alternative.
       that no repository reads, and the opt-out would still need a config file.
     - Rejected: each repository lowering its baseline after every installer refresh. That
       turns every repository red on each hook change.
+16. Files a repository does not author but copier does not manage either, such as a
+    vendored "Do not edit" bundle, are skipped through `comment-skip.local.txt`. The
+    repository owns that file. The template ships no copy and does not list it under
+    `_skip_if_exists`, so copier never renders, rewrites or merges it.
+    - Rejected: a marked repository section inside the rendered `comment-skip.txt`.
+      Copier's 3-way merge would have to keep the hand-written lines, and any template
+      change to the file would then conflict in every repository that has a section.
+    - Rejected: keeping vendored bundles in the baseline. Each bundle refresh moves the
+      count and turns the ratchet red until someone runs `--update`, and a "Do not edit"
+      bundle is not the repository's code to clean.

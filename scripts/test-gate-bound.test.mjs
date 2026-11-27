@@ -9,6 +9,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { after, describe, test } from "node:test";
@@ -16,6 +17,11 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const BIN = join(ROOT, "node_modules", ".bin");
+const TURBO = join(
+  dirname(createRequire(import.meta.url).resolve("turbo/package.json")),
+  "bin",
+  "turbo",
+);
 const scratch = mkdtempSync(join(tmpdir(), "test-gate-bound-"));
 after(() => rmSync(scratch, { recursive: true, force: true }));
 
@@ -170,7 +176,7 @@ function turboCommand(name = "test") {
   const [node, ...args] = segment.split(" ");
   assert.equal(node, "node");
   return args.map((arg) =>
-    arg === "turbo" ? join(BIN, "turbo") : arg.startsWith("scripts/") ? join(ROOT, arg) : arg,
+    arg === "turbo" ? TURBO : arg.startsWith("scripts/") ? join(ROOT, arg) : arg,
   );
 }
 

@@ -6,6 +6,7 @@ import { exec } from "../test/exec.ts";
 import { createStore } from "../test/store.ts";
 import { expect, loginLink, serve, test, unbudgeted } from "./fixtures.ts";
 import { type BeadsCtx, BIN, beadsUiAdapter } from "./harness/adapter.ts";
+import { screens } from "./harness/screens/index.ts";
 
 test.beforeEach(({ isMobile }) => {
   test.skip(isMobile, "the adapter is exercised once, at 1280 px");
@@ -64,9 +65,7 @@ test("should land the page signed in through a labelled beads-ui-web login-link"
   const app = (await unbudgeted(() => fth.boot())) as RunningApp<BeadsCtx>;
   const session = await unbudgeted(() => fth.signIn(page));
   await expect(page.getByRole("button", { name: "Account" })).toBeVisible();
-  await expect(page.locator(".app-main .bu-board[aria-busy='false']")).toBeVisible({
-    timeout: 60_000,
-  });
+  await screens.get("board").ready(page);
   expect(session.label).toMatch(/^fth-[A-Za-z0-9._-]+$/);
   expect(await unbudgeted(() => sessionsOf(app))).toContain(`label ${session.label}`);
 });

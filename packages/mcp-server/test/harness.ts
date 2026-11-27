@@ -113,7 +113,13 @@ export interface Connected {
  */
 export async function connect(
   world: World,
-  options: { app: boolean; isolated?: boolean; token?: string },
+  options: {
+    app: boolean;
+    isolated?: boolean;
+    token?: string;
+    clientName?: string;
+    clientVersion?: string;
+  },
 ): Promise<Connected> {
   let env: Record<string, string>;
   let scratch: string | undefined;
@@ -152,7 +158,10 @@ export async function connect(
     ? { extensions: { [EXTENSION_ID]: { mimeTypes: [RESOURCE_MIME_TYPE] } } }
     : {};
   const client = new Client(
-    { name: options.app ? "app-host" : "text-host", version: "1.0.0" },
+    {
+      name: options.clientName ?? (options.app ? "app-host" : "text-host"),
+      version: options.clientVersion ?? "1.0.0",
+    },
     { capabilities },
   );
   await client.connect(transport);

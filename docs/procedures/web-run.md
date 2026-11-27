@@ -351,6 +351,7 @@ port = 4810            # --port overrides it
 host = "127.0.0.1"     # beyond loopback only with a valid [auth] table
 base_path = "/beads"   # the path the app is mounted under, such as behind app-portal; "/" unset
 bd_queue_wait_seconds = 60  # how long a bd call waits for its store's earlier calls; read at each call
+bd_call_timeout_seconds = 10  # how long one bd call may run before it answers a timeout; read at each call
 service_probe_timeout_seconds = 60   # how long install-service --enable waits for /healthz; read when it runs
 service_probe_interval_seconds = 1   # the wait between its probes; read when it runs
 
