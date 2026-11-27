@@ -23,7 +23,7 @@ it("should draw only the named session through the real CLI and bd-node when rea
   });
   const issues = JSON.stringify([
     {
-      ...issue("BU-0123456789abcdef0123456789abcdef", "aih-fw-cole", "Own task\u001b[2J"),
+      ...issue("BU-0123456789abcdef0123456789abcdef", "demo-session", "Own task\u001b[2J"),
       metadata: { display_id: "friendly-task-name" },
     },
     issue("BU-peer", "peer", "Peer task"),
@@ -36,7 +36,7 @@ it("should draw only the named session through the real CLI and bd-node when rea
     await chmod(join(dir, "bd"), 0o755);
     const out = await exec(
       process.execPath,
-      [cli, "--repo", dir, "--session", "aih-fw-cole", "--once"],
+      [cli, "--repo", dir, "--session", "demo-session", "--once"],
       {
         env: {
           ...process.env,

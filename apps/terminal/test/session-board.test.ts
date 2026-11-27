@@ -8,7 +8,7 @@ const issue: Issue = {
   status: "in_progress",
   priority: 1,
   type: "task",
-  assignee: "aih-fw-cole",
+  assignee: "demo-session",
   labels: [],
   dependencies: [],
   metadata: {},
@@ -39,7 +39,7 @@ function client() {
 describe("terminal session board", () => {
   it("should guard both owner and status and refresh without retry when a claim changes", async () => {
     const bd = client();
-    const board = new SessionBoard(bd, "aih-fw-cole");
+    const board = new SessionBoard(bd, "demo-session");
     await board.refresh("2026-11-15T01:00:00Z");
     expect(board.state.issues.map((one) => one.id)).toEqual(["BU-one"]);
     await board.move(issue.id, "blocked");
@@ -48,7 +48,7 @@ describe("terminal session board", () => {
       { status: "blocked" },
       {
         ifStatus: "in_progress",
-        ifAssignee: "aih-fw-cole",
+        ifAssignee: "demo-session",
       },
     );
     expect(bd.show).toHaveBeenCalledExactlyOnceWith(issue.id);
@@ -58,7 +58,7 @@ describe("terminal session board", () => {
 
   it("should make no write when a peer issue or unknown status is requested", async () => {
     const bd = client();
-    const board = new SessionBoard(bd, "aih-fw-cole");
+    const board = new SessionBoard(bd, "demo-session");
     await board.refresh("2026-11-15T01:00:00Z");
     await expect(board.move("BU-peer", "blocked")).rejects.toThrow("not on the board");
     await expect(board.move(issue.id, "invented")).rejects.toThrow("not a bd status");
@@ -75,7 +75,7 @@ it("should retain the last good tasks and mark the read failure when refresh fai
       board: async () =>
         failed ? { kind: "timeout", command: "bd list", timeoutMs: 10 } : bd.board(),
     },
-    "aih-fw-cole",
+    "demo-session",
   );
   await board.refresh("2026-11-15T01:00:00Z");
   failed = true;
@@ -88,7 +88,7 @@ it("should retain the last good tasks and mark the read failure when refresh fai
 it("should confirm the shared optimistic transition when the guarded update succeeds", async () => {
   const bd = client();
   const update = vi.fn(async () => ({ kind: "ok" as const, value: undefined }));
-  const board = new SessionBoard({ ...bd, update }, "aih-fw-cole");
+  const board = new SessionBoard({ ...bd, update }, "demo-session");
   await board.refresh("2026-11-15T01:00:00Z");
   await board.move(issue.id, "blocked");
   expect(board.state.issues[0]?.status).toBe("blocked");
@@ -108,7 +108,7 @@ it("should serialize a move after an unfinished refresh and retain the confirmed
   const waiting = new Promise<void>((done) => {
     release = done;
   });
-  const board = new SessionBoard({ ...bd, update }, "aih-fw-cole");
+  const board = new SessionBoard({ ...bd, update }, "demo-session");
   await board.refresh("2026-11-15T01:00:00Z");
   bd.statuses.mockImplementationOnce(async () => {
     entered?.();

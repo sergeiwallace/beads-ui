@@ -33,7 +33,7 @@ it("should keep the composer active and guard user updates when a companion runs
           status: "in_progress",
           priority: 1,
           issue_type: "task",
-          assignee: "aih-fw-cole",
+          assignee: "demo-session",
           created_at: "2026-11-15T00:00:00Z",
           updated_at: "2026-11-15T00:00:00Z",
         },
@@ -56,7 +56,7 @@ it("should keep the composer active and guard user updates when a companion runs
         'case "$1" in',
         'list|show) cat "$BEADS_TEST_STATE/issues.json";;',
         'statuses) cat "$BEADS_TEST_STATE/statuses.json";;',
-        'update) [ "$BEADS_ACTOR" = "aih-fw-cole" ] || exit 9',
+        'update) [ "$BEADS_ACTOR" = "demo-session" ] || exit 9',
         'printf "%s\\n" "$*" >> "$BEADS_TEST_STATE/writes.log"',
         "printf '{}';;",
         "*) exit 9;;",
@@ -82,7 +82,7 @@ it("should keep the composer active and guard user updates when a companion runs
     const before = (await tmux("display-message", "-p", "-t", "test", "#{pane_id}")).stdout.trim();
     const launched = await exec(
       process.execPath,
-      [launcher, "--socket", socket, "--pane", before, "--repo", dir, "--session", "aih-fw-cole"],
+      [launcher, "--socket", socket, "--pane", before, "--repo", dir, "--session", "demo-session"],
       { timeout: 10_000, env },
     );
     const companion = launched.stdout.trim();
@@ -107,7 +107,7 @@ it("should keep the composer active and guard user updates when a companion runs
     expect(writes).toHaveLength(1);
     expect(writes[0]).toContain("update BU-own --status blocked");
     expect(writes[0]).toContain("--if-status in_progress");
-    expect(writes[0]).toContain("--if-assignee=aih-fw-cole");
+    expect(writes[0]).toContain("--if-assignee=demo-session");
     expect((await tmux("display-message", "-p", "-t", "test", "#{pane_id}")).stdout.trim()).toBe(
       before,
     );
