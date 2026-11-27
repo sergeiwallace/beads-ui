@@ -1,15 +1,12 @@
-import { execFile } from "node:child_process";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { promisify } from "node:util";
 import type { RunningApp } from "@sergeiwallace/frontend-test-harness";
+import { exec } from "../test/exec.ts";
 import { createStore } from "../test/store.ts";
 import { expect, loginLink, serve, test, unbudgeted } from "./fixtures.ts";
 import { type BeadsCtx, BIN, beadsUiAdapter } from "./harness/adapter.ts";
 import { screens } from "./harness/screens/index.ts";
-
-const exec = promisify(execFile);
 
 test.beforeEach(({ isMobile }) => {
   test.skip(isMobile, "the adapter is exercised once, at 1280 px");
@@ -67,7 +64,7 @@ test("should land the page signed in through a labelled beads-ui-web login-link"
 }) => {
   const app = (await unbudgeted(() => fth.boot())) as RunningApp<BeadsCtx>;
   const session = await unbudgeted(() => fth.signIn(page));
-  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Account" })).toBeVisible();
   await screens.get("board").ready(page);
   expect(session.label).toMatch(/^fth-[A-Za-z0-9._-]+$/);
   expect(await unbudgeted(() => sessionsOf(app))).toContain(`label ${session.label}`);
@@ -116,12 +113,12 @@ test("should end only the run's own session when signOut runs with a second, unl
   const other = await browser.newContext();
   const second = await other.newPage();
   await second.goto(await unbudgeted(() => loginLink(served)));
-  await expect(second.getByRole("button", { name: "Sign out" })).toBeVisible();
+  await expect(second.getByRole("button", { name: "Account" })).toBeVisible();
   await unbudgeted(() => beadsUiAdapter.signOut(app, session));
   await page.reload();
   await expect(page.getByRole("heading", { name: "Sign in to beads-ui" })).toBeVisible();
   await second.reload();
-  await expect(second.getByRole("button", { name: "Sign out" })).toBeVisible();
+  await expect(second.getByRole("button", { name: "Account" })).toBeVisible();
   await other.close();
 });
 

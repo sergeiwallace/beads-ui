@@ -4,6 +4,7 @@ import {
   appendFileSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -15,6 +16,7 @@ import { after, describe, test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const BIN = join(ROOT, "node_modules", ".bin");
 const TURBO = join(
   dirname(createRequire(import.meta.url).resolve("turbo/package.json")),
   "bin",
@@ -26,7 +28,10 @@ after(() => rmSync(scratch, { recursive: true, force: true }));
 const inherited = Object.fromEntries(
   Object.entries(process.env).filter(
     ([key]) =>
-      !key.startsWith("GIT_") && !key.startsWith("PRE_COMMIT_") && key !== "BEADS_UI_TEST_JOBS",
+      !key.startsWith("GIT_") &&
+      !key.startsWith("PRE_COMMIT_") &&
+      key !== "BEADS_UI_TEST_JOBS" &&
+      key !== "BEADS_UI_TEST_SCOPE",
   ),
 );
 const ENV = {
@@ -54,8 +59,10 @@ function write(dir, path, text) {
   writeFileSync(join(dir, path), text);
 }
 
-function run(command, args, { cwd = ROOT, jobs } = {}) {
-  return spawnSync(command, args, { cwd, env: envWith(jobs), encoding: "utf8" });
+function run(command, args, { cwd = ROOT, jobs, scope } = {}) {
+  const env =
+    scope === undefined ? envWith(jobs) : { ...envWith(jobs), BEADS_UI_TEST_SCOPE: scope };
+  return spawnSync(command, args, { cwd, env, encoding: "utf8" });
 }
 
 describe("the pre-commit test hooks' path filter", () => {
@@ -116,6 +123,15 @@ describe("the pre-commit test hooks' path filter", () => {
     assert.match(hook(dir).stdout, /SUITE RAN/);
   });
 
+  test("should run the suite under the commit scope", () => {
+    const { dir, git } = repo();
+    write(dir, "src/a.ts", "export const a = 4;\n");
+    git("add", "-A");
+    const result = hook(dir, ["-e", "console.log('SCOPE=' + process.env.BEADS_UI_TEST_SCOPE)"]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /^SCOPE=commit$/m);
+  });
+
   test("should fail with the suite's status when the suite fails", () => {
     const { dir, git } = repo();
     write(dir, "src/a.ts", "export const a = 3;\n");
@@ -123,14 +139,22 @@ describe("the pre-commit test hooks' path filter", () => {
     assert.equal(hook(dir, ["-e", "process.exit(3)"]).status, 3);
   });
 
-  test("should put both test hooks of .pre-commit-config.yaml behind the filter", () => {
+  test("should put the commit's test hook behind the filter and run the mod's loop in no commit hook", () => {
     const config = readFileSync(join(ROOT, ".pre-commit-config.yaml"), "utf8");
-    const entryOf = (id) =>
-      config.match(new RegExp(`- id: ${id}\\n(?: {8}.*\\n)*? {8}entry: (.*)`))?.[1];
-    assert.equal(entryOf("npm-test"), "node scripts/test-hook.mjs npm test");
+    const hooks = config
+      .split(/^ {6}- id: /m)
+      .slice(1)
+      .map((block) => ({
+        id: block.split("\n")[0],
+        entry: block.match(/^ {8}entry: (.*)$/m)?.[1] ?? "",
+      }));
     assert.equal(
-      entryOf("plugin-test"),
-      "node scripts/test-hook.mjs node scripts/plugin-test.mjs plugins/beads-ui",
+      hooks.find((hook) => hook.id === "npm-test")?.entry,
+      "node scripts/test-hook.mjs npm run test:commit",
+    );
+    assert.deepEqual(
+      hooks.filter((hook) => hook.entry.includes("plugin-test.mjs")).map((hook) => hook.id),
+      [],
     );
   });
 });
@@ -145,18 +169,18 @@ function peak(lines, startOf, endOf) {
   return max;
 }
 
-describe("turbo's concurrency", () => {
-  function turboCommand() {
-    const script = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).scripts.test;
-    const segment = script.split(" && ").find((part) => part.includes(" turbo "));
-    assert.ok(segment, `no turbo command in the root test script: ${script}`);
-    const [node, ...args] = segment.split(" ");
-    assert.equal(node, "node");
-    return args.map((arg) =>
-      arg === "turbo" ? TURBO : arg.startsWith("scripts/") ? join(ROOT, arg) : arg,
-    );
-  }
+function turboCommand(name = "test") {
+  const script = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).scripts[name];
+  const segment = script.split(" && ").find((part) => part.includes(" turbo "));
+  assert.ok(segment, `no turbo command in the root test script: ${script}`);
+  const [node, ...args] = segment.split(" ");
+  assert.equal(node, "node");
+  return args.map((arg) =>
+    arg === "turbo" ? TURBO : arg.startsWith("scripts/") ? join(ROOT, arg) : arg,
+  );
+}
 
+describe("turbo's concurrency", () => {
   function workspace() {
     const dir = fresh("turbo");
     const log = join(dir, "events.log");
@@ -170,7 +194,17 @@ describe("turbo's concurrency", () => {
         workspaces: ["packages/*"],
       }),
     );
-    write(dir, "turbo.json", JSON.stringify({ tasks: { test: { cache: false } } }));
+    write(
+      dir,
+      "turbo.json",
+      JSON.stringify({
+        tasks: {
+          test: { cache: false },
+          "test:mod": { cache: false },
+          "//#test:scripts": { cache: false },
+        },
+      }),
+    );
     write(
       dir,
       "hold.mjs",
@@ -212,6 +246,14 @@ setTimeout(() => appendFileSync(log, \`end \${name}\\n\`), 800);
     });
   }
 
+  test("should refuse a test scope other than commit before starting turbo", () => {
+    const { dir, log } = workspace();
+    const result = run(process.execPath, turboCommand(), { cwd: dir, scope: "push" });
+    assert.equal(result.status, 2);
+    assert.match(result.stderr, /BEADS_UI_TEST_SCOPE=push: expected commit or nothing/);
+    assert.equal(readFileSync(log, "utf8"), "");
+  });
+
   test("should refuse a bound above 2 before starting turbo", () => {
     const { dir, log } = workspace();
     const result = run(process.execPath, turboCommand(), { cwd: dir, jobs: 3 });
@@ -219,6 +261,292 @@ setTimeout(() => appendFileSync(log, \`end \${name}\\n\`), 800);
     assert.match(result.stderr, /BEADS_UI_TEST_JOBS=3: expected a whole number from 1 to 2/);
     assert.equal(readFileSync(log, "utf8"), "");
   });
+
+  test("should hand BEADS_UI_TEST_JOBS and BEADS_UI_TEST_SCOPE to each package task under the repository's turbo.json", () => {
+    const dir = fresh("turbo-env");
+    const log = join(dir, "env.log");
+    write(
+      dir,
+      "package.json",
+      JSON.stringify({
+        name: "fixture",
+        private: true,
+        packageManager: "npm@11.19.0",
+        workspaces: ["packages/*"],
+      }),
+    );
+    write(dir, "turbo.json", readFileSync(join(ROOT, "turbo.json"), "utf8"));
+    write(
+      dir,
+      "env.mjs",
+      `import { appendFileSync } from "node:fs";
+appendFileSync(process.argv[2], \`JOBS=\${process.env.BEADS_UI_TEST_JOBS} SCOPE=\${process.env.BEADS_UI_TEST_SCOPE}\\n\`);
+`,
+    );
+    write(
+      dir,
+      "packages/a/package.json",
+      JSON.stringify({ name: "a", scripts: { test: `node ../../env.mjs ${log}` } }),
+    );
+    const result = run(process.execPath, turboCommand(), { cwd: dir, jobs: 2, scope: "commit" });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal(readFileSync(log, "utf8"), "JOBS=2 SCOPE=commit\n");
+  });
+});
+
+describe("which tasks npm test and the commit's test hook run", () => {
+  const MOD = "@sergeiwallace/beads-ui-plugin";
+  const rootScripts = () => JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).scripts;
+
+  const planned = (name) => {
+    const result = run(process.execPath, [...turboCommand(name), "--dry=json"], { jobs: 2 });
+    assert.equal(result.status, 0, result.stderr);
+    return JSON.parse(result.stdout)
+      .tasks.filter((task) => task.command !== "<NONEXISTENT>")
+      .map((task) => [task.taskId, task.command]);
+  };
+
+  test("should run every package's suite, the mod's loop once and the script tests when npm test runs", () => {
+    const tasks = planned("test");
+    const ids = tasks.map(([id]) => id);
+    assert.ok(ids.filter((id) => id.endsWith("#test")).length >= 6, ids.join(", "));
+    assert.deepEqual(
+      tasks.filter(([, command]) => command.includes("plugin-test.mjs")),
+      [[`${MOD}#test:mod`, "node ../../scripts/plugin-test.mjs ."]],
+    );
+    assert.ok(ids.includes("//#test:scripts"));
+    assert.match(
+      rootScripts()["test:scripts"],
+      /node --test --test-concurrency=\{jobs\} scripts\/\*\.test\.mjs$/,
+    );
+  });
+
+  test("should run what npm test runs but the mod's loop when the commit's test hook runs", () => {
+    const full = planned("test").map(([id]) => id);
+    const commit = planned("test:commit").map(([id]) => id);
+    assert.deepEqual(commit.sort(), full.filter((id) => id !== `${MOD}#test:mod`).sort());
+  });
+
+  function entryOf(id) {
+    const config = readFileSync(join(ROOT, ".pre-commit-config.yaml"), "utf8");
+    const block = config
+      .split(/^ {6}- id: /m)
+      .slice(1)
+      .find((b) => b.startsWith(`${id}\n`));
+    assert.ok(block, `no ${id} hook in .pre-commit-config.yaml`);
+    return block.match(/^ {8}entry: (.*)$/m)?.[1];
+  }
+
+  function workspace(log, total) {
+    const dir = fresh("turbo-gates");
+    const hold = (name) => `node ../../hold.mjs ${log} ${name} ${total}`;
+    write(
+      dir,
+      "package.json",
+      JSON.stringify({
+        name: "fixture",
+        private: true,
+        packageManager: "npm@11.19.0",
+        workspaces: ["packages/*", "plugins/*"],
+        scripts: {
+          "test:commit": rootScripts()["test:commit"],
+          "test:push": rootScripts()["test:push"],
+          "test:scripts": `node hold.mjs ${log} scripts ${total}`,
+        },
+      }),
+    );
+    write(dir, "turbo.json", readFileSync(join(ROOT, "turbo.json"), "utf8"));
+    for (const script of ["test-hook.mjs", "test-jobs.mjs"]) {
+      write(dir, `scripts/${script}`, readFileSync(join(ROOT, "scripts", script), "utf8"));
+    }
+    write(
+      dir,
+      "hold.mjs",
+      `import { appendFileSync, readFileSync } from "node:fs";
+const [log, name, total] = process.argv.slice(2);
+const jobs = Number(process.env.BEADS_UI_TEST_JOBS ?? 1);
+appendFileSync(log, \`start \${name} \${process.env.BEADS_UI_TEST_JOBS}\\n\`);
+const count = (word) => readFileSync(log, "utf8").split("\\n").filter((l) => l.startsWith(word)).length;
+const deadline = Date.now() + 60000;
+const end = () => appendFileSync(log, \`end \${name}\\n\`);
+const poll = () =>
+  count("start ") - count("end ") >= jobs || count("start ") >= Number(total) || Date.now() > deadline
+    ? end()
+    : setTimeout(poll, 20);
+if (jobs > 1) poll();
+else setTimeout(end, 500);
+`,
+    );
+    for (const name of ["a", "b", "c"]) {
+      write(
+        dir,
+        `packages/${name}/package.json`,
+        JSON.stringify({ name, scripts: { test: hold(name) } }),
+      );
+    }
+    write(
+      dir,
+      "plugins/mod/package.json",
+      JSON.stringify({
+        name: MOD,
+        scripts: { test: hold("mod-vitest"), "test:mod": hold("mod-loop") },
+      }),
+    );
+    write(dir, "src/a.ts", "export const a = 1;\n");
+    execFileSync("git", ["init", "-q", "-b", "main"], { cwd: dir, env: ENV });
+    execFileSync("git", ["add", "src/a.ts"], { cwd: dir, env: ENV });
+    appendFileSync(log, "");
+    return dir;
+  }
+
+  const gates = [
+    [
+      "the commit's test hook",
+      ["a", "b", "c", "mod-vitest", "scripts"],
+      (jobs) => [
+        "sh",
+        ["-c", entryOf("npm-test")],
+        { ...envWith(jobs), PATH: `${BIN}:${ENV.PATH}` },
+      ],
+    ],
+    [
+      "npm run test:push",
+      ["mod-loop", "scripts"],
+      (jobs) => [process.execPath, turboCommand("test:push"), envWith(jobs)],
+    ],
+  ];
+  for (const [gate, ran, command] of gates) {
+    for (const [jobs, expected] of [
+      [undefined, 1],
+      [2, 2],
+    ]) {
+      test(`should run ${ran.join(", ")}, ${expected} at a time, when ${gate} runs with BEADS_UI_TEST_JOBS ${jobs ?? "unset"}`, () => {
+        const log = join(fresh("turbo-gates-log"), "events.log");
+        const dir = workspace(log, ran.length);
+        const [file, args, env] = command(jobs);
+        const result = spawnSync(file, args, { cwd: dir, env, encoding: "utf8" });
+        assert.equal(result.status, 0, result.stdout + result.stderr);
+        const lines = readFileSync(log, "utf8").split("\n").filter(Boolean);
+        const starts = lines.filter((l) => l.startsWith("start ")).map((l) => l.split(" "));
+        assert.deepEqual(starts.map(([, task]) => task).sort(), ran);
+        assert.deepEqual(
+          starts.map(([, , seen]) => seen),
+          starts.map(() => String(jobs ?? "undefined")),
+        );
+        assert.equal(
+          peak(
+            lines,
+            (l) => l.startsWith("start "),
+            (l) => l.startsWith("end "),
+          ),
+          expected,
+        );
+      });
+    }
+  }
+});
+
+describe("the pre-push hook for the mod's loop and the script tests", () => {
+  const MOD = "@sergeiwallace/beads-ui-plugin";
+  const rootScripts = () => JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).scripts;
+
+  function hookEntry() {
+    const config = readFileSync(join(ROOT, ".pre-commit-config.yaml"), "utf8");
+    const block = config
+      .split(/^ {6}- id: /m)
+      .slice(1)
+      .find((b) => b.startsWith("mod-and-script-tests\n"));
+    assert.ok(block, "no mod-and-script-tests hook in .pre-commit-config.yaml");
+    assert.match(block, /^ {8}stages: \[pre-push\]$/m);
+    return block.match(/^ {8}entry: (.*)$/m)?.[1];
+  }
+
+  test("should run the mod's loop and the script tests, and nothing else, at pre-push", () => {
+    assert.equal(hookEntry(), "env -u BEADS_UI_TEST_SCOPE npm run test:push");
+    const [node, script, turbo, ...rest] = rootScripts()["test:push"].split(" ");
+    assert.deepEqual([node, script, turbo], ["node", "scripts/test-jobs.mjs", "turbo"]);
+    const result = run(
+      process.execPath,
+      [join(ROOT, script), join(BIN, "turbo"), ...rest, "--dry=json"],
+      { jobs: 2 },
+    );
+    assert.equal(result.status, 0, result.stderr);
+    const tasks = JSON.parse(result.stdout)
+      .tasks.filter((task) => task.command !== "<NONEXISTENT>")
+      .map((task) => [task.taskId, task.command])
+      .sort();
+    assert.deepEqual(tasks, [
+      ["//#test:scripts", rootScripts()["test:scripts"]],
+      [`${MOD}#test:mod`, "node ../../scripts/plugin-test.mjs ."],
+    ]);
+  });
+
+  function pushWorkspace({ loop, scripts }) {
+    const dir = fresh("push");
+    const log = join(dir, "ran.log");
+    const step = (name, status) =>
+      `node -e "require('fs').appendFileSync('${log}', '${name} ' + process.env.BEADS_UI_TEST_SCOPE + ' ' + process.env.BEADS_UI_TEST_JOBS + '\\n'); process.exit(${status})"`;
+    write(
+      dir,
+      "package.json",
+      JSON.stringify({
+        name: "fixture",
+        private: true,
+        packageManager: "npm@11.19.0",
+        workspaces: ["plugins/*"],
+        scripts: {
+          "test:push": rootScripts()["test:push"],
+          "test:scripts": step("scripts", scripts),
+        },
+      }),
+    );
+    write(dir, "turbo.json", readFileSync(join(ROOT, "turbo.json"), "utf8"));
+    write(
+      dir,
+      "scripts/test-jobs.mjs",
+      readFileSync(join(ROOT, "scripts", "test-jobs.mjs"), "utf8"),
+    );
+    write(
+      dir,
+      "plugins/mod/package.json",
+      JSON.stringify({ name: MOD, scripts: { "test:mod": step("loop", loop) } }),
+    );
+    appendFileSync(log, "");
+    return { dir, log };
+  }
+
+  const push = (dir) =>
+    spawnSync("sh", ["-c", hookEntry()], {
+      cwd: dir,
+      env: {
+        ...ENV,
+        PATH: `${BIN}:${ENV.PATH}`,
+        BEADS_UI_TEST_SCOPE: "commit",
+        BEADS_UI_TEST_JOBS: "2",
+      },
+      encoding: "utf8",
+    });
+
+  test("should pass the push when the loop and the script tests pass, with the scope cleared", () => {
+    const { dir, log } = pushWorkspace({ loop: 0, scripts: 0 });
+    const result = push(dir);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.deepEqual(readFileSync(log, "utf8").split("\n").filter(Boolean).sort(), [
+      "loop undefined 2",
+      "scripts undefined 2",
+    ]);
+  });
+
+  for (const [failing, outcome] of [
+    ["a mod test", { loop: 1, scripts: 0 }],
+    ["a script test", { loop: 0, scripts: 1 }],
+  ]) {
+    test(`should fail the push when ${failing} fails`, () => {
+      const { dir } = pushWorkspace(outcome);
+      const result = push(dir);
+      assert.notEqual(result.status, 0, result.stdout + result.stderr);
+    });
+  }
 });
 
 describe("Vitest's worker cap", () => {
@@ -256,6 +584,79 @@ await vitest.close();`;
     const result = maxWorkers("packages/bd-node", "two");
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /BEADS_UI_TEST_JOBS=two: expected a whole number from 1 to 2/);
+  });
+});
+
+describe("apps/web's suites under the commit scope", () => {
+  const WEB = join(ROOT, "apps", "web");
+  const PROBE = `import { relative } from "node:path";
+import { createVitest } from "vitest/node";
+const root = process.argv[1];
+const vitest = await createVitest("test", { root, watch: false }, {}, {});
+const found = await vitest.globTestSpecifications();
+console.log(JSON.stringify(found.map((spec) => relative(root, spec.moduleId)).sort()));
+await vitest.close();`;
+  const SERVER_IMPORT = /from "(\.\.\/server\/server|\.\/store|\.\/host-stores)\.ts"/;
+  const every = readdirSync(join(WEB, "test"))
+    .filter((name) => name.endsWith(".test.ts"))
+    .map((name) => `test/${name}`)
+    .sort();
+  const serving = every.filter((path) => SERVER_IMPORT.test(readFileSync(join(WEB, path), "utf8")));
+
+  const suites = (scope) => {
+    const result = run(process.execPath, ["--input-type=module", "-e", PROBE, WEB], { scope });
+    assert.equal(result.status, 0, result.stderr);
+    return JSON.parse(result.stdout.trim().split("\n").at(-1));
+  };
+
+  test("should run every apps/web suite when no scope is set", () => {
+    assert.ok(serving.length >= 20, `only ${serving.length} suites import the server or a store`);
+    assert.deepEqual(suites(undefined), every);
+  });
+
+  test("should run no suite that imports the server or a store factory, and every other suite, under the commit scope", () => {
+    const kept = suites("commit");
+    assert.deepEqual(
+      kept,
+      every.filter((path) => !serving.includes(path)),
+    );
+    for (const path of ["test/envelope.test.ts", "test/favicon.test.ts", "test/service.test.ts"]) {
+      assert.ok(kept.includes(path), `${path} left the commit gate`);
+    }
+    for (const path of [
+      "test/server.test.ts",
+      "test/registry.test.ts",
+      "test/store-image.test.ts",
+    ]) {
+      assert.ok(!kept.includes(path), `${path} stayed in the commit gate`);
+    }
+  });
+
+  test("should run the pre-push test gate with no scope, even when the push inherits one", () => {
+    const config = readFileSync(join(ROOT, ".pre-commit-config.yaml"), "utf8");
+    const entry = config.match(/- id: test-gate\n(?: {8}.*\n)*? {8}entry: (.*)/)?.[1];
+    assert.ok(entry, "no test-gate hook in .pre-commit-config.yaml");
+    const bin = fresh("test-gate-bin");
+    write(
+      bin,
+      "test-gate",
+      '#!/bin/sh\necho "SCOPE=$(printenv BEADS_UI_TEST_SCOPE || echo unset)"\n',
+    );
+    execFileSync("chmod", ["+x", join(bin, "test-gate")]);
+    const result = spawnSync("sh", ["-c", entry], {
+      env: { ...ENV, PATH: `${bin}:${ENV.PATH}`, BEADS_UI_TEST_SCOPE: "commit" },
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout.trim(), "SCOPE=unset");
+  });
+
+  test("should fail to load apps/web's config when BEADS_UI_TEST_SCOPE holds another value", () => {
+    const result = run(process.execPath, ["--input-type=module", "-e", PROBE, WEB], {
+      scope: "push",
+    });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /BEADS_UI_TEST_SCOPE=push: expected commit or nothing/);
   });
 });
 

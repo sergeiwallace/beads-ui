@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 export const TEST_JOBS_VAR = "BEADS_UI_TEST_JOBS";
 export const DEFAULT_TEST_JOBS = 1;
 export const MAX_TEST_JOBS = 2;
+export const TEST_SCOPE_VAR = "BEADS_UI_TEST_SCOPE";
+export const COMMIT_SCOPE = "commit";
 
 export function testJobs(env = process.env) {
   const raw = env[TEST_JOBS_VAR];
@@ -19,6 +21,14 @@ export function testJobs(env = process.env) {
   return jobs;
 }
 
+export function testScope(env = process.env) {
+  const scope = env[TEST_SCOPE_VAR] ?? "";
+  if (scope !== "" && scope !== COMMIT_SCOPE) {
+    throw new Error(`${TEST_SCOPE_VAR}=${scope}: expected ${COMMIT_SCOPE} or nothing`);
+  }
+  return scope;
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const [command, ...args] = process.argv.slice(2);
   if (!command) {
@@ -28,6 +38,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   let jobs;
   try {
     jobs = testJobs();
+    testScope();
   } catch (error) {
     console.error(error.message);
     process.exit(2);

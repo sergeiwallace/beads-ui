@@ -1,4 +1,4 @@
-import { type ChildProcess, execFile, spawn } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { cp, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
@@ -6,7 +6,6 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
 import type { Page } from "@playwright/test";
 import {
   type AppAdapter,
@@ -23,13 +22,12 @@ import {
   UnsupportedShape,
 } from "@sergeiwallace/frontend-test-harness";
 import { hostConfig } from "../../test/auth-env.ts";
+import { exec, storeEnv } from "../../test/exec.ts";
 import { CREATED_STORES } from "../../test/run-stores.ts";
 import { createStore } from "../../test/store.ts";
 import { DECLARED_STATES, INTERACTIONS, inventory } from "./journey-inventory.ts";
 import { journeys } from "./journeys.ts";
 import { screens } from "./screens/index.ts";
-
-const exec = promisify(execFile);
 
 export const BIN = fileURLToPath(new URL("../../bin/beads-ui-web.mjs", import.meta.url));
 const E2E = fileURLToPath(new URL("../", import.meta.url));
@@ -45,6 +43,8 @@ export interface Served {
   env: NodeJS.ProcessEnv;
   cwd: string;
   output(): string;
+  /** How many characters of output the command has printed, the ones `output()` dropped included. */
+  logged(): number;
   stop(): Promise<void>;
 }
 
@@ -82,7 +82,7 @@ async function hostSettings(
   );
   await mkdir(join(configHome, "home"), { recursive: true });
   return {
-    ...process.env,
+    ...storeEnv(),
     HOME: join(configHome, "home"),
     XDG_CONFIG_HOME: configHome,
     XDG_STATE_HOME: join(configHome, "state"),
@@ -123,6 +123,7 @@ export async function serve(
     detached: true,
   });
   let output = "";
+  let logged = 0;
   const exited = () => child.exitCode !== null || child.signalCode !== null;
   const stop = () =>
     new Promise<void>((resolve) => {
@@ -152,7 +153,9 @@ export async function serve(
       void stop();
     }, START_DEADLINE_MS);
     const onData = (chunk: Buffer) => {
-      output = (output + chunk.toString()).slice(-LOG_CAP);
+      const text = chunk.toString();
+      logged += text.length;
+      output = (output + text).slice(-LOG_CAP);
       const match = /at (http:\/\/127\.0\.0\.1:\d+\/)/.exec(output);
       if (match?.[1] !== undefined) {
         clearTimeout(late);
@@ -174,6 +177,7 @@ export async function serve(
     env,
     cwd: dir,
     output: () => output,
+    logged: () => logged,
     stop,
   };
   if (register) currentTest()?.registerApp(servedApp({ served, configHome }));
@@ -215,14 +219,22 @@ export interface BeadsCtx {
 
 const redact = (text: string) => defaultRedact(text);
 
-function servedApp(
+const outputSince = (served: Served | undefined, from: number) => {
+  if (served === undefined) return "";
+  const grown = served.logged() - from;
+  return grown <= 0 ? "" : served.output().slice(-grown);
+};
+
+/** A served server as the harness's app; its log starts at `from`, a count `logged()` gave. */
+export function servedApp(
   ctx: Omit<BeadsCtx, "labels" | "sessionLabels"> & { served: Served },
+  from = 0,
 ): RunningApp<BeadsCtx> {
   const full: BeadsCtx = { ...ctx, labels: 0, sessionLabels: [] };
   return {
     url: new URL(ctx.served.url),
     ctx: full,
-    serverLog: () => redact(full.served?.output() ?? "").slice(-LOG_CAP),
+    serverLog: () => redact(outputSince(full.served, from)).slice(-LOG_CAP),
     stop: async () => {
       await full.served?.stop();
       const queue = full.queue;
@@ -572,7 +584,7 @@ export const beadsUiAdapter: AppAdapter<BeadsCtx> = {
   async signIn(app, page: Page): Promise<Session> {
     const { url, session } = await beadsUiAdapter.signInUrl(app);
     await page.goto(url);
-    await page.getByRole("button", { name: "Sign out" }).waitFor();
+    await page.getByRole("button", { name: "Account" }).waitFor();
     return session;
   },
   async signOut(app, session) {

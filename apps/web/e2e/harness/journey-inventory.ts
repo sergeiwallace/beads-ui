@@ -106,6 +106,14 @@ export const SPEC_TITLES: readonly (readonly [string, string])[] = [
     "should list the store's assignees and say liveness is unavailable when queue.url is empty",
   ],
   [
+    "shell.spec.ts",
+    "should toggle the sidebar with Ctrl+B outside a text field and not inside one",
+  ],
+  [
+    "shell.spec.ts",
+    "should name every bar control and reach the bar and its menus from the keyboard in order",
+  ],
+  [
     "stores.spec.ts",
     "should show every open store's cards naming their repository, and narrow to the store the picker chooses, in the URL",
   ],

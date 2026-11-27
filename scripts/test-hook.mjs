@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
+import { COMMIT_SCOPE, TEST_SCOPE_VAR } from "./test-jobs.mjs";
 
 const isDocsPath = (path) => path.startsWith("docs/") || path.endsWith(".md");
 
@@ -25,7 +26,10 @@ if (staged.length > 0 && staged.every(isDocsPath)) {
   );
   process.exit(0);
 }
-const result = spawnSync(command, args, { stdio: "inherit" });
+const result = spawnSync(command, args, {
+  stdio: "inherit",
+  env: { ...process.env, [TEST_SCOPE_VAR]: COMMIT_SCOPE },
+});
 if (result.error) {
   console.error(`${command}: ${result.error.message}`);
   process.exit(1);

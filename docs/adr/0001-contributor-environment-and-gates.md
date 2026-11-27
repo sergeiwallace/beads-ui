@@ -23,15 +23,37 @@ plugin also updates only when its manifest version increases.
   itself. Run `npm ci` for the Node gates and have `claude` on PATH for
   the mod gates. The hygiene fixture constructs a fabricated key at runtime
   because gitleaks ignores low-entropy and example keys.
-- `scripts/test-hook.mjs` skips the two pre-commit test suites for staged
+- `scripts/test-hook.mjs` skips the pre-commit test suite for staged
   docs-only changes. Pre-push still checks documentation-linked tests.
+- The pre-commit `npm-test` hook runs `npm run test:commit`: every
+  package's Vitest suite and the script tests (the root turbo task
+  `test:scripts`), with no Playwright and no mod loop. The mod's
+  `claude plugin test` loop is its own turbo task, `test:mod`, which
+  `npm test` and the pre-push `mod-and-script-tests` hook run: run beside
+  the other tasks it still took 244 to 313 s of a 271 to 332 s commit hook
+  on a loaded host, so no commit hook can include it and finish in a few
+  minutes. The web app's Playwright specs run in full at
+  pre-push, in the `e2e` hook (`npm run test:e2e`), because they took over
+  an hour on a loaded host and made every commit wait for them. Each
+  Playwright worker serves one store and resets it between tests; a test
+  that leaves other server state behind gets the next test a fresh server.
+  `scripts/test-hook.mjs` runs the hook's suite with
+  `BEADS_UI_TEST_SCOPE=commit`, and under it `apps/web` leaves out every
+  Vitest suite that imports the server or a store factory: those took
+  most of a 17-minute hook on a loaded host. The pre-push `test-gate`
+  hook clears the variable and runs every Vitest suite, so a push still
+  runs them. The pre-push `mod-and-script-tests` hook runs the mod's loop
+  and the script tests (`npm run test:push`) with the variable cleared,
+  because neither `test-gate` nor `e2e` runs them, and a push whose last
+  change no commit hook ran would otherwise carry neither.
   Empty staged input runs the suite. For deletes and renames the filter
   includes the old path. The old docs-index gate was retired because the
   generated index had no consumers and could not be regenerated correctly
   from a linked worktree.
 - Set `BEADS_UI_TEST_JOBS` to 1 or 2 to bound Turbo, Vitest, Playwright and
   `scripts/plugin-test.mjs`. The default is 1. Turbo and worker limits
-  multiply. `node scripts/test-jobs.mjs <command> [args...]` substitutes
+  multiply, and turbo's limit counts the loop and script-test tasks too.
+  The bound counts test workers, not what a test itself starts. `node scripts/test-jobs.mjs <command> [args...]` substitutes
   the bound for `{jobs}` and returns the command's status. The mod test
   wrapper runs `claude plugin test --file <file> <dir>` in bounded groups
   because the unsplit command starts one child per file without a limit.

@@ -14,10 +14,10 @@ const viewRead = (page: Page, path: string) =>
 const QUEUE_REPO = "demo";
 
 const withQueue = test.extend<{ queue: FakeQueue }>({
-  queue: async ({ app, configHome }, use) => {
+  queue: async ({ app }, use) => {
     const queue = await startFakeQueue();
     await writeFile(
-      join(configHome, "beads-ui", "beads-ui.toml"),
+      join(app.configHome, "beads-ui", "beads-ui.toml"),
       hostConfig({
         allowRepos: [basename(app.store.dir), QUEUE_REPO],
         extra: `[queue]\nurl = "${queue.url}"\nrepo = "${QUEUE_REPO}"\n`,

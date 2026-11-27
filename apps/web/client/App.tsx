@@ -49,6 +49,13 @@ import {
   usePaletteChord,
 } from "@sergeiwallace/beads-ui-web-ui";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { DropdownMenuItem, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+  sidebarCookieOpen,
+} from "@/components/ui/sidebar";
 import { pageFeed } from "../src/live/shared-feed.ts";
 import {
   ApiFailure,
@@ -63,6 +70,15 @@ import {
 } from "./api.ts";
 import { base } from "./base.ts";
 import { ReviewPage, shortcutCommand, TaskComposer, TaskHandoff, useKeymap } from "./review.tsx";
+import {
+  AccountMenu,
+  AppSidebar,
+  type BarAction,
+  CommandsButton,
+  OverflowActions,
+  StaleNotice,
+  type ViewLink,
+} from "./shell.tsx";
 
 /** The views with a page of their own, in the order the nav lists them. */
 const VIEWS = [
@@ -951,326 +967,334 @@ export function App() {
           );
         })();
 
+  const staleText =
+    feedStale === undefined
+      ? undefined
+      : `Live updates stale since ${clockStamp(Date.parse(feedStale), new Date().getTimezoneOffset())}; retrying`;
+  const openPalette = () => setPaletteOpen(true);
+  const barActions: BarAction[] = [
+    {
+      id: "commands",
+      bar: <CommandsButton onOpen={openPalette} />,
+      menu: <DropdownMenuItem onClick={openPalette}>Commands</DropdownMenuItem>,
+    },
+    ...(board.asOf === undefined
+      ? []
+      : [
+          {
+            id: "stamp",
+            bar: (
+              <span className="app-stamp text-xs whitespace-nowrap text-muted-foreground">
+                {board.asOf}
+              </span>
+            ),
+            menu: <DropdownMenuLabel>{board.asOf}</DropdownMenuLabel>,
+          },
+        ]),
+  ];
+  const viewLinks: ViewLink[] = VIEWS.map((entry) => ({
+    view: entry.view,
+    label: entry.label,
+    href: hrefOf({ view: entry.view, store: listStore }),
+    current: route.view === entry.view,
+    go: () => navigate({ view: entry.view, store: listStore }),
+  }));
+
   return (
-    <div className="app">
-      <header className="app-bar">
-        {repositories.length === 0 ? (
-          <span className="app-store" title="The Beads stores this server reads">
-            {meta?.store ?? "beads-ui"}
-          </span>
-        ) : (
-          <select
-            className="bu-select app-store"
-            aria-label="Store"
-            title="The Beads stores this server reads"
-            value={listStore ?? ""}
-            onChange={(event) =>
-              navigate({ view: navView, store: event.target.value || undefined })
-            }
-          >
-            <option value="">All stores</option>
-            {repositories.map((repository) => (
-              <option key={repository} value={repository}>
-                {repository}
-              </option>
-            ))}
-          </select>
-        )}
-        <nav className="app-nav" aria-label="Views">
-          {VIEWS.map((entry) => (
-            <a
-              key={entry.view}
-              href={hrefOf({ view: entry.view, store: listStore })}
-              aria-current={route.view === entry.view ? "page" : undefined}
-              onClick={(event) => {
-                if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
-                event.preventDefault();
-                navigate({ view: entry.view, store: listStore });
-              }}
+    <SidebarProvider defaultOpen={sidebarCookieOpen()}>
+      <AppSidebar views={viewLinks} />
+      <SidebarInset className="app min-w-0">
+        <header className="app-bar @container/bar sticky top-0 z-20 flex h-12 shrink-0 flex-nowrap items-center gap-2 border-b border-border bg-secondary px-2 [--bar-control:2rem] pointer-coarse:h-14 pointer-coarse:[--bar-control:2.75rem]">
+          <SidebarTrigger className="pointer-coarse:size-11" />
+          {repositories.length === 0 ? (
+            <span className="app-store min-w-0 truncate" title="The Beads stores this server reads">
+              {meta?.store ?? "beads-ui"}
+            </span>
+          ) : (
+            <select
+              className="bu-select app-store min-w-16 max-w-64 shrink truncate"
+              aria-label="Store"
+              title="The Beads stores this server reads"
+              value={listStore ?? ""}
+              onChange={(event) =>
+                navigate({ view: navView, store: event.target.value || undefined })
+              }
             >
-              {entry.label}
-            </a>
-          ))}
-        </nav>
-        <span className="app-stamp">{board.asOf ?? ""}</span>
-        {feedStale === undefined ? null : (
-          <span className="app-stale" role="status">
-            {`Live updates stale since ${clockStamp(Date.parse(feedStale), new Date().getTimezoneOffset())}; retrying`}
-          </span>
-        )}
-        <button
-          type="button"
-          className="bu-button app-palette"
-          onClick={() => setPaletteOpen(true)}
-        >
-          Commands <kbd>Ctrl K</kbd>
-        </button>
-        <button
-          type="button"
-          className="bu-button app-sign-out"
-          onClick={() => {
-            void signOut().finally(() => window.location.reload());
-          }}
-        >
-          Sign out
-        </button>
-      </header>
-      {board.errorLine !== undefined && (
-        <p className="app-error" role="alert">
-          {board.errorLine}
-        </p>
-      )}
-      {failedReads.map((read) => (
-        <p
-          key={read.repository}
-          className="app-error"
-          role="alert"
-          data-failed-store={read.repository}
-        >
-          {read.repository}: {read.error.source ?? "the read"} failed: {read.error.message}
-        </p>
-      ))}
-      {(meta?.problems ?? []).map((problem) => (
-        <p key={problem} className="app-problem">
-          beads-ui.toml: {problem}
-        </p>
-      ))}
-      {(meta?.health ?? []).map((line) => (
-        <p key={line} className="app-problem">
-          {line}
-        </p>
-      ))}
-      <main className="app-main">
-        {route.view === "board" && (
-          <Board
-            view={board}
-            rank={rank}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-            issueHref={issueHref}
-            onOpen={openIssue}
-            onMove={move}
-            onReorder={(id, index) => reorder(id, index)}
-            sprintTargets={sprintTargets}
-            onSprint={moveToSprint}
-            renderPriority={renderPriority}
-            renderOwner={renderOwner}
-            {...(repositoryOf === undefined ? {} : { repositoryOf })}
+              <option value="">All stores</option>
+              {repositories.map((repository) => (
+                <option key={repository} value={repository}>
+                  {repository}
+                </option>
+              ))}
+            </select>
+          )}
+          {staleText !== undefined && <StaleNotice text={staleText} />}
+          <OverflowActions actions={barActions} />
+          <AccountMenu
+            onSignOut={() => {
+              void signOut().finally(() => window.location.reload());
+            }}
           />
+        </header>
+        {board.errorLine !== undefined && (
+          <p className="app-error" role="alert">
+            {board.errorLine}
+          </p>
         )}
-        {route.view === "backlog" && (
-          <Backlog
-            view={backlog}
-            issue={shownIssue}
-            statuses={statusNames}
-            pending={pending}
-            issueHref={issueHref}
-            onOpen={openIssue}
-            onStatus={move}
-            onPriority={setPriority}
-            sprintTargets={sprintTargets}
-            onSprint={moveToSprint}
-            renderOwner={renderOwner}
-            {...(rank
-              ? {
-                  onStep: (id: string, delta: -1 | 1) => stepList(backlogRows, id, delta),
-                  onDropOnto: (id: string, target: string, below: boolean) =>
-                    dropList(backlogRows, id, target, below),
-                }
-              : {})}
-            {...(repositoryOf === undefined ? {} : { repositoryOf })}
-          />
-        )}
-        {route.view === "sprints" && (
-          <SprintView
-            view={sprintModel}
-            mode={sprintMode}
-            onMode={setSprintMode}
-            onSelect={(selection) =>
-              navigate({
-                view: "sprints",
-                store: listStore,
-                query: withParam(listQuery, SPRINT_PARAM, sprintSelectionText(selection)),
-              })
-            }
-            onDropTo={moveToSprint}
+        {failedReads.map((read) => (
+          <p
+            key={read.repository}
+            className="app-error"
+            role="alert"
+            data-failed-store={read.repository}
           >
-            {sprintMode === "board" ? (
-              <Board
-                view={sprintBoard}
-                rank={rank}
-                selectedId={selectedId}
-                onSelect={setSelectedId}
-                issueHref={issueHref}
-                onOpen={openIssue}
-                onMove={move}
-                onReorder={(id, index) => reorder(id, index, sprintModel.list)}
-                sprintTargets={sprintTargets}
-                onSprint={moveToSprint}
-                renderPriority={renderPriority}
-                renderOwner={renderOwner}
-                {...(repositoryOf === undefined ? {} : { repositoryOf })}
-              />
-            ) : (
-              <Backlog
-                view={listView(sprintModel.list)}
-                issue={shownIssue}
-                statuses={statusNames}
-                pending={pending}
-                issueHref={issueHref}
-                onOpen={openIssue}
-                onStatus={move}
-                onPriority={setPriority}
-                sprintTargets={sprintTargets}
-                onSprint={moveToSprint}
-                renderOwner={renderOwner}
-                {...(rank
-                  ? {
-                      onStep: (id: string, delta: -1 | 1) => stepList(sprintModel.list, id, delta),
-                      onDropOnto: (id: string, target: string, below: boolean) =>
-                        dropList(sprintModel.list, id, target, below),
-                    }
-                  : {})}
-                {...(repositoryOf === undefined ? {} : { repositoryOf })}
-              />
-            )}
-          </SprintView>
-        )}
-        {route.view === "queue" && (
-          <>
-            <ReadState read={queue} />
-            {(queue.data?.reads ?? []).map((read) =>
-              read.ok ? null : (
-                <p key={read.repository} className="app-error" role="alert">
-                  {read.repository}: {read.error.source ?? "the read"} failed: {read.error.message}
-                </p>
-              ),
-            )}
-            {queue.data !== undefined && (
-              <QueueView
-                rows={queue.data.rows}
-                order={queue.data.order}
-                filters={queueFilters}
-                onFilters={(filters: QueueFilters) =>
-                  setQueueQuery(withQueueFilters(listQuery ?? "", filters))
-                }
-                blocked={queueBlocked}
-                onBlocked={(blocked) =>
-                  setQueueQuery(withParam(listQuery, BLOCKED_PARAM, blocked ? "1" : undefined))
-                }
-                issueHref={(row) => hrefOf({ view: "issue", id: row.id, store: row.repository })}
-                onOpen={(row) => navigate({ view: "issue", id: row.id, store: row.repository })}
-              />
-            )}
-          </>
-        )}
-        {route.view === "roadmap" && (
-          <>
-            <PickStore needed={viewStore === null} />
-            <ReadState read={roadmap} />
-            {roadmap.data !== undefined && (
-              <Roadmap
-                view={roadmap.data.view}
-                issueHref={viewIssueHref}
-                onOpen={(id) => navigate(viewIssueRoute(id))}
-              />
-            )}
-          </>
-        )}
-        {route.view === "analytics" && (
-          <>
-            <PickStore needed={viewStore === null} />
-            <ReadState read={analytics} />
-            {analytics.data !== undefined && (
-              <Analytics
-                view={analytics.data.view}
-                sprints={analytics.data.sprints}
-                sprint={analytics.data.sprint}
-                weeks={weeks}
-                cost={analytics.data.cost}
-                historyFailures={analytics.data.histories.failed}
-                issueHref={viewIssueHref}
-                onWeeks={setWeeks}
-                onSprint={(name) => setSprint(name === "" ? undefined : name)}
-              />
-            )}
-          </>
-        )}
-        {route.view === "sessions" && (
-          <>
-            <PickStore needed={viewStore === null} />
-            <ReadState read={sessions} />
-            {sessions.data !== undefined && (
-              <Sessions
-                view={sessions.data.view}
-                queueError={
-                  sessions.data.queueError === undefined
-                    ? undefined
-                    : {
-                        source: sessions.data.queueError.source ?? "the work queue",
-                        message: sessions.data.queueError.message,
-                      }
-                }
-                issueHref={(row) => {
-                  const task = row.currentTask;
-                  if (task === undefined) return undefined;
-                  const here = task.repo === undefined || task.repo === sessions.data?.store;
-                  return here ? viewIssueHref(task.id) : undefined;
-                }}
-              />
-            )}
-          </>
-        )}
-        {route.view === "issue" && (
-          <IssueDetail
-            loading={detail?.payload === undefined && detail?.error === undefined}
-            issue={detail?.payload?.issue}
-            repository={
-              detail?.payload?.repository ??
-              detail?.failedIn ??
-              route.store ??
-              (repositories.length === 1 ? repositories[0] : undefined)
-            }
-            issueError={detail?.error}
-            comments={detail?.payload?.comments ?? null}
-            commentsError={
-              detail?.payload?.commentsError === undefined
-                ? undefined
-                : {
-                    source: detail.payload.commentsError.source ?? "bd comments",
-                    message: detail.payload.commentsError.message,
+            {read.repository}: {read.error.source ?? "the read"} failed: {read.error.message}
+          </p>
+        ))}
+        {(meta?.problems ?? []).map((problem) => (
+          <p key={problem} className="app-problem">
+            beads-ui.toml: {problem}
+          </p>
+        ))}
+        {(meta?.health ?? []).map((line) => (
+          <p key={line} className="app-problem">
+            {line}
+          </p>
+        ))}
+        <main className="app-main">
+          {route.view === "board" && (
+            <Board
+              view={board}
+              rank={rank}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              issueHref={issueHref}
+              onOpen={openIssue}
+              onMove={move}
+              onReorder={(id, index) => reorder(id, index)}
+              sprintTargets={sprintTargets}
+              onSprint={moveToSprint}
+              renderPriority={renderPriority}
+              renderOwner={renderOwner}
+              {...(repositoryOf === undefined ? {} : { repositoryOf })}
+            />
+          )}
+          {route.view === "backlog" && (
+            <Backlog
+              view={backlog}
+              issue={shownIssue}
+              statuses={statusNames}
+              pending={pending}
+              issueHref={issueHref}
+              onOpen={openIssue}
+              onStatus={move}
+              onPriority={setPriority}
+              sprintTargets={sprintTargets}
+              onSprint={moveToSprint}
+              renderOwner={renderOwner}
+              {...(rank
+                ? {
+                    onStep: (id: string, delta: -1 | 1) => stepList(backlogRows, id, delta),
+                    onDropOnto: (id: string, target: string, below: boolean) =>
+                      dropList(backlogRows, id, target, below),
                   }
-            }
-            issueHref={(id) =>
-              hrefOf({ view: "issue", id, store: detail?.payload?.repository ?? route.store })
-            }
-            ownerPicker={detailOwner}
-          />
-        )}
-        {route.view === "held" && (
-          <HeldDetail
-            loading={held.data === undefined && held.error === undefined}
-            item={held.data?.item}
-            store={held.data?.store}
-            body={held.data?.body}
-            bodyError={held.data?.bodyError}
-            options={held.data?.options}
-            optionsError={held.data?.optionsError}
-            error={
-              held.error === undefined
-                ? undefined
-                : { source: held.error.source, message: held.error.message }
-            }
-          />
-        )}
-        {route.view === "review" && <ReviewPage />}
-        {route.view === "issue" && detail?.payload !== undefined && (
-          <>
-            <TaskHandoff id={detail.payload.issue.id} repository={detail.payload.repository} />
-            <TaskComposer id={detail.payload.issue.id} repository={detail.payload.repository} />
-          </>
-        )}
-      </main>
+                : {})}
+              {...(repositoryOf === undefined ? {} : { repositoryOf })}
+            />
+          )}
+          {route.view === "sprints" && (
+            <SprintView
+              view={sprintModel}
+              mode={sprintMode}
+              onMode={setSprintMode}
+              onSelect={(selection) =>
+                navigate({
+                  view: "sprints",
+                  store: listStore,
+                  query: withParam(listQuery, SPRINT_PARAM, sprintSelectionText(selection)),
+                })
+              }
+              onDropTo={moveToSprint}
+            >
+              {sprintMode === "board" ? (
+                <Board
+                  view={sprintBoard}
+                  rank={rank}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                  issueHref={issueHref}
+                  onOpen={openIssue}
+                  onMove={move}
+                  onReorder={(id, index) => reorder(id, index, sprintModel.list)}
+                  sprintTargets={sprintTargets}
+                  onSprint={moveToSprint}
+                  renderPriority={renderPriority}
+                  renderOwner={renderOwner}
+                  {...(repositoryOf === undefined ? {} : { repositoryOf })}
+                />
+              ) : (
+                <Backlog
+                  view={listView(sprintModel.list)}
+                  issue={shownIssue}
+                  statuses={statusNames}
+                  pending={pending}
+                  issueHref={issueHref}
+                  onOpen={openIssue}
+                  onStatus={move}
+                  onPriority={setPriority}
+                  sprintTargets={sprintTargets}
+                  onSprint={moveToSprint}
+                  renderOwner={renderOwner}
+                  {...(rank
+                    ? {
+                        onStep: (id: string, delta: -1 | 1) =>
+                          stepList(sprintModel.list, id, delta),
+                        onDropOnto: (id: string, target: string, below: boolean) =>
+                          dropList(sprintModel.list, id, target, below),
+                      }
+                    : {})}
+                  {...(repositoryOf === undefined ? {} : { repositoryOf })}
+                />
+              )}
+            </SprintView>
+          )}
+          {route.view === "queue" && (
+            <>
+              <ReadState read={queue} />
+              {(queue.data?.reads ?? []).map((read) =>
+                read.ok ? null : (
+                  <p key={read.repository} className="app-error" role="alert">
+                    {read.repository}: {read.error.source ?? "the read"} failed:{" "}
+                    {read.error.message}
+                  </p>
+                ),
+              )}
+              {queue.data !== undefined && (
+                <QueueView
+                  rows={queue.data.rows}
+                  order={queue.data.order}
+                  filters={queueFilters}
+                  onFilters={(filters: QueueFilters) =>
+                    setQueueQuery(withQueueFilters(listQuery ?? "", filters))
+                  }
+                  blocked={queueBlocked}
+                  onBlocked={(blocked) =>
+                    setQueueQuery(withParam(listQuery, BLOCKED_PARAM, blocked ? "1" : undefined))
+                  }
+                  issueHref={(row) => hrefOf({ view: "issue", id: row.id, store: row.repository })}
+                  onOpen={(row) => navigate({ view: "issue", id: row.id, store: row.repository })}
+                />
+              )}
+            </>
+          )}
+          {route.view === "roadmap" && (
+            <>
+              <PickStore needed={viewStore === null} />
+              <ReadState read={roadmap} />
+              {roadmap.data !== undefined && (
+                <Roadmap
+                  view={roadmap.data.view}
+                  issueHref={viewIssueHref}
+                  onOpen={(id) => navigate(viewIssueRoute(id))}
+                />
+              )}
+            </>
+          )}
+          {route.view === "analytics" && (
+            <>
+              <PickStore needed={viewStore === null} />
+              <ReadState read={analytics} />
+              {analytics.data !== undefined && (
+                <Analytics
+                  view={analytics.data.view}
+                  sprints={analytics.data.sprints}
+                  sprint={analytics.data.sprint}
+                  weeks={weeks}
+                  cost={analytics.data.cost}
+                  historyFailures={analytics.data.histories.failed}
+                  issueHref={viewIssueHref}
+                  onWeeks={setWeeks}
+                  onSprint={(name) => setSprint(name === "" ? undefined : name)}
+                />
+              )}
+            </>
+          )}
+          {route.view === "sessions" && (
+            <>
+              <PickStore needed={viewStore === null} />
+              <ReadState read={sessions} />
+              {sessions.data !== undefined && (
+                <Sessions
+                  view={sessions.data.view}
+                  queueError={
+                    sessions.data.queueError === undefined
+                      ? undefined
+                      : {
+                          source: sessions.data.queueError.source ?? "the work queue",
+                          message: sessions.data.queueError.message,
+                        }
+                  }
+                  issueHref={(row) => {
+                    const task = row.currentTask;
+                    if (task === undefined) return undefined;
+                    const here = task.repo === undefined || task.repo === sessions.data?.store;
+                    return here ? viewIssueHref(task.id) : undefined;
+                  }}
+                />
+              )}
+            </>
+          )}
+          {route.view === "issue" && (
+            <IssueDetail
+              loading={detail?.payload === undefined && detail?.error === undefined}
+              issue={detail?.payload?.issue}
+              repository={
+                detail?.payload?.repository ??
+                detail?.failedIn ??
+                route.store ??
+                (repositories.length === 1 ? repositories[0] : undefined)
+              }
+              issueError={detail?.error}
+              comments={detail?.payload?.comments ?? null}
+              commentsError={
+                detail?.payload?.commentsError === undefined
+                  ? undefined
+                  : {
+                      source: detail.payload.commentsError.source ?? "bd comments",
+                      message: detail.payload.commentsError.message,
+                    }
+              }
+              issueHref={(id) =>
+                hrefOf({ view: "issue", id, store: detail?.payload?.repository ?? route.store })
+              }
+              ownerPicker={detailOwner}
+            />
+          )}
+          {route.view === "held" && (
+            <HeldDetail
+              loading={held.data === undefined && held.error === undefined}
+              item={held.data?.item}
+              store={held.data?.store}
+              body={held.data?.body}
+              bodyError={held.data?.bodyError}
+              options={held.data?.options}
+              optionsError={held.data?.optionsError}
+              error={
+                held.error === undefined
+                  ? undefined
+                  : { source: held.error.source, message: held.error.message }
+              }
+            />
+          )}
+          {route.view === "review" && <ReviewPage />}
+          {route.view === "issue" && detail?.payload !== undefined && (
+            <>
+              <TaskHandoff id={detail.payload.issue.id} repository={detail.payload.repository} />
+              <TaskComposer id={detail.payload.issue.id} repository={detail.payload.repository} />
+            </>
+          )}
+        </main>
+      </SidebarInset>
       <CommandPalette
         open={paletteOpen}
         onOpenChange={setPaletteOpen}
@@ -1281,6 +1305,6 @@ export function App() {
             : `Selected: ${selected.displayId ?? selected.id} ${selected.title}`
         }
       />
-    </div>
+    </SidebarProvider>
   );
 }

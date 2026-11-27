@@ -29,7 +29,7 @@ function view(
     route: () => `/${path}`,
     ready: (page) => viewReady(page, evidence),
     landmarks: {
-      nav: (page) => page.getByRole("navigation").first(),
+      nav: (page) => page.getByRole("navigation", { name: "Views" }),
       main,
     },
     scope: ".app-main",

@@ -96,7 +96,8 @@ beads-ui-web login-link
 It prints a link; open it in your browser for the Board. The link works once, for five minutes,
 and the server trades it for a session cookie (HttpOnly, SameSite=Strict), so the browser's
 address bar and storage never hold a token. A session ends 12 hours after sign-in, or after 2
-hours with no request; Sign out in the app bar ends it at once. Run `login-link` with
+hours with no request; Sign out, in the account menu at the right of the top bar, ends it at
+once. Run `login-link` with
 `--port <n>` for a server on another port, and with `--origin <url>` when your browser reaches the
 server at another address than the first `[auth] origins` entry (through a port forward, say).
 
@@ -216,6 +217,15 @@ fallback while its stream is down.
 
 ## Use it
 
+- The views are in the sidebar on the left. Its toggle at the left of the top bar, or Ctrl+B
+  (Cmd+B on a Mac) outside a text field, collapses it to a rail of icons, each named in a tooltip,
+  and expands it again; the browser remembers the choice for the app's path. Under 768 px wide,
+  which a 1470 px window reaches at 200% zoom, the sidebar is a panel the toggle opens over the
+  page, and choosing a view closes it.
+- The top bar stays one row at every width and zoom level. It holds the sidebar toggle, the store
+  picker, the live-updates notice, Commands, the time of the last read and the account menu, where
+  Sign out is. Labels give way to icons as the bar narrows, and what still does not fit moves into
+  the More menu at the bar's right.
 - With no store chosen, the Board and the Backlog show every open store's issues, and each card
   and row names its repository. The store picker in the app bar narrows the view to one store,
   and the choice is in the URL (`?store=my-repo`), so a narrowed view can be shared or reloaded.
@@ -553,7 +563,8 @@ other address. This needs a Linux Docker host, or Docker Desktop with host netwo
 
 ```sh
 npm run e2e:install -w apps/web   # once: apps/web/e2e's own install, the harness library and Chromium
-npm test                          # includes the web server suite and the Playwright specs
+npm test                          # the Vitest suites, the web server suite included
+npm run test:e2e                  # the Playwright specs, in full
 ```
 
 `apps/web/e2e/` is its own install root, outside the npm workspaces, because it alone depends on the
@@ -566,9 +577,30 @@ with `FTH_HEAVY_HOSTS` unset, no host runs them.
 
 The Playwright specs under `apps/web/e2e/` run the Board, Backlog, Issue detail, palette,
 Roadmap, Analytics, Sessions, Sprints and Queue specs at 1280 px with a mouse and at 390 px on a touch screen; the
-pointer drags run at 1280 px and the touch Move to menu at 390 px. Each spec gets its own server
-and a temporary store made with `bd init`; the store registry's spec (`stores.spec.ts`) serves
-several such stores from a private home's store inventory. The change feed's suite
+pointer drags run at 1280 px and the touch Move to menu at 390 px. The app shell's spec
+(`apps/web/e2e/shell.spec.ts`) opens its own browser windows instead: a 1470 by 956 laptop window
+at 100%, 200% and 400% zoom, 1280 and 1920 px desktops, a 390 px phone and 1280 px at 500% zoom
+(256 px), and checks at each that the top bar is one row, that Commands works from the bar or the
+More menu, that Sign out is in the account menu and that the sidebar collapses and expands; a
+keyboard test checks the bar's focus order, its names and Escape. Each Playwright worker starts
+one server on a temporary store made with `bd init`. Before each test it waits until the server
+runs no `bd` call, ends every browser session, puts the store, the config file, the write log and
+the server's HOME back as they were after the start, then waits again and checks that nothing
+changed meanwhile, so a test sees no other test's issues, config or sessions. A test that leaves
+the server stopped or busy, or leaves any other server state behind (a dispatch, a draft, an
+owner handoff), gets the next test a fresh server (`apps/web/e2e/fixtures.ts`). Memory the server
+keeps outside those files, such as an unused sign-in link, outlives a test; no test can reach
+another test's. The Vitest suites under `apps/web/test/` start the server in the test process, one per
+file or per test as each suite needs. Their stores come from one store the run makes with `bd init`
+and copies for each suite, renamed to the suite's prefix; when that image, or the copy, differs
+from what the image held when it was made, the store is made with `bd init` instead (`apps/web/test/store.ts`, its global setup in
+`apps/web/test/global-setup.ts`). Every command a suite or spec starts for a store or a served host
+(`bd`, `git`, `beads-ui-web`) runs without the repository variables git exports to its hooks
+(`GIT_DIR`, `GIT_INDEX_FILE` and the rest, `apps/web/test/exec.ts`), and the Vitest global setup
+clears them for the whole run, so neither a store made while a hook runs nor an in-process server
+ever reads the hook's repository. A spec that needs its own options starts its own server with
+`serve()`; the store registry's spec (`stores.spec.ts`) serves several stores from a private home's
+store inventory that way. The change feed's suite
 (`apps/web/test/heads-feed.test.ts`) also starts its own Dolt sql-server on a free loopback port,
 when `dolt` is on `PATH`, to read two stores' heads in one query; without `dolt` that case is
 skipped and the embedded-store cases still run. The work-queue cases run against an
@@ -577,17 +609,33 @@ in-process queue that answers the queue service's routes with its shapes
 `BEADS_UI_LIVE_QUEUE_URL` set to its URL.
 
 One setting bounds how many test processes a run starts: `BEADS_UI_TEST_JOBS`, a whole number
-from 1 to 2, default 1 when unset. It sets turbo's `--concurrency` (package test tasks at once),
-each Vitest config's `maxWorkers`, Playwright's `workers` and how many mod test files
+from 1 to 2, default 1 when unset. It sets turbo's `--concurrency` (test tasks at once, the mod's
+loop and the script tests among them), each Vitest config's `maxWorkers`, Playwright's `workers` and how many mod test files
 `scripts/plugin-test.mjs` runs at once (one by one at 1). The bounds multiply: turbo runs up to
-`BEADS_UI_TEST_JOBS` package tasks and each runs up to `BEADS_UI_TEST_JOBS` workers, so one run
-starts at most `BEADS_UI_TEST_JOBS` squared test processes, 1 by default and 4 at the maximum of 2.
+`BEADS_UI_TEST_JOBS` tasks and each runs up to `BEADS_UI_TEST_JOBS` workers, so one run
+starts at most `BEADS_UI_TEST_JOBS` squared test workers, 1 by default and 4 at the maximum of 2.
+That counts the workers, not what a test itself starts: a web server suite's `bd` calls, or a script
+test's own fixture runs of turbo and of the loop.
 A value outside 1 to 2 fails the run before any test starts.
 
 ```sh
 BEADS_UI_TEST_JOBS=2 npm test     # a faster run on a quiet host, at most 4 test processes
 ```
 
-The pre-commit test hooks skip a commit whose staged paths are all under `docs/` or end in `.md`,
-and run the suite for any other staged path, a deleted or renamed one included. The pre-push test
-gate still runs the Vitest suites, the ones that read documentation included.
+`npm test` runs turbo over three tasks: every package's `test` (its Vitest suite), the mod's
+`test:mod` (its `claude plugin test` loop) and the root's `test:scripts` (the script tests).
+`npm run test:commit` runs the same but `test:mod`, and `npm run test:push` only `test:mod` and
+`test:scripts`.
+
+The pre-commit test hook runs `npm run test:commit`, never the mod's `claude plugin test` loop or
+the Playwright specs, and skips
+a commit whose staged paths are all under `docs/` or end in `.md`; any other staged path, a
+deleted or renamed one included, runs it. It runs with `BEADS_UI_TEST_SCOPE=commit`, which turbo
+passes to each package: under it `apps/web`'s Vitest config leaves out every suite that imports the
+server (`../server/server.ts`) or a store factory (`./store.ts`, `./host-stores.ts`) and runs the
+rest. Any other value fails the run before turbo starts; unset, every suite runs. The pre-push
+hooks run every Vitest suite, the web server suites and the ones that read documentation included
+(`test-gate` runs `npx vitest run` with `BEADS_UI_TEST_SCOPE` cleared), then the mod's
+`claude plugin test` loop and the script tests (`mod-and-script-tests` runs `npm run test:push`,
+turbo's `test:mod` and `//#test:scripts` tasks, with `BEADS_UI_TEST_SCOPE` cleared), and then the
+Playwright specs in full (`npm run test:e2e`), so no push skips them.

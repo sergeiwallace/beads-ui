@@ -27,7 +27,7 @@ function statusOf(overrides: Partial<DispatchStatus> = {}): DispatchStatus {
 
 async function writeAndSend(text: string) {
   fireEvent.focus(screen.getByRole("button", { name: "Write a prompt" }));
-  const editor = editorOf(await screen.findByLabelText("Prompt text"));
+  const editor = editorOf(await screen.findByLabelText("Prompt text", {}, { timeout: 15_000 }));
   await act(async () => typeIntoEditor(editor, text));
   fireEvent.click(screen.getByTestId("composer-submit"));
 }

@@ -62,8 +62,8 @@ repos:
         pass_filenames: false
         always_run: true
       - id: npm-test
-        name: npm test (Vitest, then the mod's tests file by file)
-        entry: node scripts/test-hook.mjs npm test
+        name: npm run test:commit (Vitest and the script tests; the mod's loop runs at pre-push)
+        entry: node scripts/test-hook.mjs npm run test:commit
         language: system
         pass_filenames: false
         always_run: true
@@ -86,12 +86,6 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-      - id: plugin-test
-        name: claude plugin test plugins/beads-ui, file by file (the mod's tests and the import probe)
-        entry: node scripts/test-hook.mjs node scripts/plugin-test.mjs plugins/beads-ui
-        language: system
-        pass_filenames: false
-        always_run: true
 
       - id: plugin-version
         name: plugin version is above main's when shipped plugin files changed
@@ -101,8 +95,22 @@ repos:
         pass_filenames: false
         always_run: true
       - id: test-gate
-        name: test gate (mise-aware, tech-stack auto-detect)
-        entry: test-gate
+        name: test gate (mise-aware, tech-stack auto-detect), every Vitest suite with no scope
+        entry: env -u BEADS_UI_TEST_SCOPE test-gate
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true
+      - id: mod-and-script-tests
+        name: the mod's claude plugin test loop and the script tests, with no scope
+        entry: env -u BEADS_UI_TEST_SCOPE npm run test:push
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true
+      - id: e2e
+        name: npm run test:e2e (the web app's Playwright suites, in full)
+        entry: npm run test:e2e
         language: system
         stages: [pre-push]
         pass_filenames: false

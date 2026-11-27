@@ -1,11 +1,72 @@
-import { execFile } from "node:child_process";
-import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  lstat,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { promisify } from "node:util";
+import { join, relative } from "node:path";
+import { exec, storeEnv } from "./exec.ts";
 import { recordCreatedStore } from "./run-stores.ts";
 
-const exec = promisify(execFile);
+export const STORE_IMAGE_VAR = "BEADS_UI_TEST_STORE_IMAGE";
+const IMAGE_PREFIX = "web";
+
+async function tree(root: string): Promise<string> {
+  const entries: [string, { dir: boolean; mode: number; size: number; mtimeMs: number }][] = [];
+  for (const found of await readdir(root, { recursive: true, withFileTypes: true })) {
+    const path = join(found.parentPath, found.name);
+    const info = await lstat(path);
+    const dir = info.isDirectory();
+    entries.push([
+      relative(root, path),
+      { dir, mode: info.mode, size: dir ? 0 : info.size, mtimeMs: dir ? 0 : info.mtimeMs },
+    ]);
+  }
+  return JSON.stringify(entries.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+}
+
+const BD_CALL_MS = 300_000;
+const bdIn = (dir: string, ...args: string[]) =>
+  exec("bd", args, { cwd: dir, timeout: BD_CALL_MS });
+
+const bdInit = (dir: string, prefix: string) =>
+  bdIn(dir, "init", "--non-interactive", "--skip-hooks", "-p", prefix);
+
+async function storeImage(root: string): Promise<{ store: string; tree: string }> {
+  const image = join(root, "image");
+  const made = () => readFile(join(image, "tree.json"), "utf8");
+  const ready = await made().catch(() => undefined);
+  if (ready !== undefined) return { store: join(image, "store"), tree: ready };
+  const build = await mkdtemp(join(root, "build-"));
+  await mkdir(join(build, "store"));
+  await bdInit(join(build, "store"), IMAGE_PREFIX);
+  await writeFile(join(build, "tree.json"), await tree(join(build, "store")));
+  await rename(build, image).catch(() => rm(build, { recursive: true, force: true }));
+  return { store: join(image, "store"), tree: await made() };
+}
+
+const holds = async (dir: string, recorded: string) =>
+  (await tree(dir).catch(() => undefined)) === recorded;
+
+async function initStore(dir: string, prefix: string): Promise<void> {
+  const root = process.env[STORE_IMAGE_VAR];
+  const image = root === undefined || root === "" ? undefined : await storeImage(root);
+  if (image !== undefined && (await holds(image.store, image.tree))) {
+    await exec("cp", ["-a", `${image.store}/.`, dir]);
+    if (await holds(dir, image.tree)) {
+      if (prefix !== IMAGE_PREFIX) await bdIn(dir, "rename-prefix", `${prefix}-`);
+      return;
+    }
+    for (const name of await readdir(dir)) await rm(join(dir, name), { recursive: true });
+  }
+  await bdInit(dir, prefix);
+}
 
 /** A real Beads store in its own temporary directory, made with `bd init` (embedded Dolt). */
 export interface TestStore {
@@ -25,10 +86,9 @@ export interface TestStore {
 
 export async function createStore(prefix = "web"): Promise<TestStore> {
   const dir = await mkdtemp(join(tmpdir(), "beads-ui-web-store-"));
-  const bd = async (...args: string[]) =>
-    (await exec("bd", args, { cwd: dir, encoding: "utf8", timeout: 300_000 })).stdout;
+  const bd = async (...args: string[]) => (await bdIn(dir, ...args)).stdout;
   try {
-    await bd("init", "--non-interactive", "--skip-hooks", "-p", prefix);
+    await initStore(dir, prefix);
     await recordCreatedStore(dir);
   } catch (error) {
     await rm(dir, { recursive: true, force: true });
@@ -66,7 +126,7 @@ export interface WrappedBd {
 }
 
 async function wrappedBd(subcommands: readonly string[], special: string): Promise<WrappedBd> {
-  const real = (await exec("sh", ["-c", "command -v bd"], { encoding: "utf8" })).stdout.trim();
+  const real = (await exec("sh", ["-c", "command -v bd"])).stdout.trim();
   const dir = await mkdtemp(join(tmpdir(), "beads-ui-web-wrapped-bd-"));
   const marker = join(dir, "reached");
   const quote = (text: string) => `'${text.replaceAll("'", `'\\''`)}'`;
@@ -82,7 +142,7 @@ async function wrappedBd(subcommands: readonly string[], special: string): Promi
   await writeFile(join(dir, "bd"), script);
   await chmod(join(dir, "bd"), 0o755);
   return {
-    env: { ...process.env, PATH: `${dir}:${process.env.PATH ?? ""}` },
+    env: { ...storeEnv(), PATH: `${dir}:${process.env.PATH ?? ""}` },
     marker,
     remove: () => rm(dir, { recursive: true }),
   };

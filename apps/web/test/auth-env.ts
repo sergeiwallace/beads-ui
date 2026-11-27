@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import type { ConfigEnv } from "../server/config.ts";
 import type { RunningServer } from "../server/server.ts";
+import { storeEnv } from "./exec.ts";
 
 const exec = promisify(execFile);
 
@@ -90,7 +91,7 @@ export async function hostEnv(text?: string): Promise<HostEnv> {
     stateDir: join(stateHome, "beads-ui", "web"),
     configFile,
     write: (content) => writeFile(configFile, content),
-    processEnv: () => ({ ...process.env, XDG_CONFIG_HOME: configHome, XDG_STATE_HOME: stateHome }),
+    processEnv: () => ({ ...storeEnv(), XDG_CONFIG_HOME: configHome, XDG_STATE_HOME: stateHome }),
     remove: () => rm(root, { recursive: true }),
   };
   if (text !== undefined) await env.write(text);

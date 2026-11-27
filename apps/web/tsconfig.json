@@ -3,7 +3,12 @@
   "compilerOptions": {
     "lib": ["es2023", "dom", "dom.iterable"],
     "jsx": "react-jsx",
-    "types": ["node", "vite/client"]
+    "types": ["node", "vite/client"],
+    "paths": {
+      "@beads-ui/core": ["../../plugins/beads-ui/core/src/index.ts"],
+      "@beads-ui/core/*": ["../../plugins/beads-ui/core/src/*"],
+      "@/*": ["./client/*"]
+    }
   },
   "include": [
     "client/**/*.ts",
