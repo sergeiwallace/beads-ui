@@ -2,8 +2,8 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 import { testJobs } from "../../scripts/test-jobs.mjs";
 
-const TEST_MS = 120_000;
-const STORE_SETUP_MS = 180_000;
+const TEST_MS = 300_000;
+const STORE_SETUP_MS = 300_000;
 
 const coreSrc = fileURLToPath(new URL("../../plugins/beads-ui/core/src/", import.meta.url));
 

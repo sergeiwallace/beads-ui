@@ -518,28 +518,31 @@ export const beadsUiAdapter: AppAdapter<BeadsCtx> = {
       `beads-ui-${shape}`,
       async (dir) => {
         const scratch = await mkdtemp(join(tmpdir(), "beads-ui-web-store-"));
-        const run = (...args: string[]) =>
-          exec("bd", args, { cwd: scratch, encoding: "utf8", timeout: 300_000 });
-        await run("init", "--non-interactive", "--skip-hooks", "-p", "fth");
-        if (rows.length > 0) {
+        try {
+          const run = (...args: string[]) =>
+            exec("bd", args, { cwd: scratch, encoding: "utf8", timeout: 300_000 });
+          await run("init", "--non-interactive", "--skip-hooks", "-p", "fth");
+          if (rows.length > 0) {
+            await writeFile(
+              join(scratch, "seed.jsonl"),
+              rows.map((row) => JSON.stringify(row)).join("\n"),
+            );
+            await run("import", "seed.jsonl");
+          }
+          const listed = JSON.parse(
+            (await run("list", "--all", "--limit", "0", "--json")).stdout || "[]",
+          ) as {
+            id: string;
+            title: string;
+          }[];
           await writeFile(
-            join(scratch, "seed.jsonl"),
-            rows.map((row) => JSON.stringify(row)).join("\n"),
+            join(scratch, "records.json"),
+            JSON.stringify(listed.map((r) => ({ id: r.id, visible: [r.id, r.title] }))),
           );
-          await run("import", "seed.jsonl");
+          await cp(scratch, dir, { recursive: true });
+        } finally {
+          await rm(scratch, { recursive: true, force: true });
         }
-        const listed = JSON.parse(
-          (await run("list", "--all", "--limit", "0", "--json")).stdout || "[]",
-        ) as {
-          id: string;
-          title: string;
-        }[];
-        await writeFile(
-          join(scratch, "records.json"),
-          JSON.stringify(listed.map((r) => ({ id: r.id, visible: [r.id, r.title] }))),
-        );
-        await cp(scratch, dir, { recursive: true });
-        await rm(scratch, { recursive: true, force: true });
       },
     );
     const served = app.ctx.served;
