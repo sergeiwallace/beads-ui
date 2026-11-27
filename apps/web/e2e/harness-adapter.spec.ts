@@ -7,6 +7,7 @@ import type { RunningApp } from "@sergeiwallace/frontend-test-harness";
 import { createStore } from "../test/store.ts";
 import { expect, loginLink, serve, test, unbudgeted } from "./fixtures.ts";
 import { type BeadsCtx, BIN, beadsUiAdapter } from "./harness/adapter.ts";
+import { screens } from "./harness/screens/index.ts";
 
 const exec = promisify(execFile);
 
@@ -67,6 +68,7 @@ test("should land the page signed in through a labelled beads-ui-web login-link"
   const app = (await unbudgeted(() => fth.boot())) as RunningApp<BeadsCtx>;
   const session = await unbudgeted(() => fth.signIn(page));
   await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+  await screens.get("board").ready(page);
   expect(session.label).toMatch(/^fth-[A-Za-z0-9._-]+$/);
   expect(await unbudgeted(() => sessionsOf(app))).toContain(`label ${session.label}`);
 });
